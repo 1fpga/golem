@@ -28,3 +28,6 @@ host
 *.user
 .vs
 MiSTer
+
+# Rust stuff
+target/

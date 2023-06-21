@@ -54,18 +54,6 @@ as rotated copies of the first 128 entries.  -- AMR
 #define OSD_CMD_ENABLE   0x41      // OSD enable command
 #define OSD_CMD_DISABLE  0x40      // OSD disable command
 
-static int osd_size = 8;
-
-void OsdSetSize(int n)
-{
-	osd_size = n;
-}
-
-int OsdGetSize()
-{
-	return osd_size;
-}
-
 struct star
 {
 	int x, y;
@@ -149,9 +137,9 @@ static void rotatechar(unsigned char *in, unsigned char *out)
 	}
 }
 
-#define OSDHEIGHT (uint)(osd_size*8)
+#define OSDHEIGHT (uint)(OsdGetSize()*8)
 
-void OsdSetTitle(const char *s, int a)
+void OsdSetTitleLEGACY(const char *s, int a)
 {
 	// Compose the title, condensing character gaps
 	arrow = a;
@@ -205,11 +193,6 @@ void OsdSetTitle(const char *s, int a)
 	}
 }
 
-void OsdSetArrow(int a)
-{
-	arrow = a;
-}
-
 void OsdWrite(unsigned char n, const char *s, unsigned char invert, unsigned char stipple, char usebg, int maxinv, int mininv)
 {
 	OsdWriteOffset(n, s, invert, stipple, 0, 0, usebg, maxinv, mininv);
@@ -253,7 +236,7 @@ void OsdWriteOffset(unsigned char n, const char *s, unsigned char invert, unsign
 	unsigned char stipplemask = 0xff;
 	int linelimit = OSDLINELEN;
 	int arrowmask = arrow;
-	if (n == (osd_size-1) && (arrow & OSD_ARROW_RIGHT))
+	if (n == (OsdGetSize()-1) && (arrow & OSD_ARROW_RIGHT))
 		linelimit -= 22;
 
 	if (n && n < OsdGetSize() - 1) leftchar = 0;
@@ -277,7 +260,7 @@ void OsdWriteOffset(unsigned char n, const char *s, unsigned char invert, unsign
 		if (invert && i / 8 >= mininv) xormask = 255;
 		if (invert && i / 8 >= maxinv) xormask = 0;
 
-		if (i == 0 && (n < osd_size))
+		if (i == 0 && (n < OsdGetSize()))
 		{	// Render sidestripe
 			unsigned char tmp[8];
 
@@ -290,13 +273,13 @@ void OsdWriteOffset(unsigned char n, const char *s, unsigned char invert, unsign
 			}
 			else
 			{
-				p = &titlebuffer[(osd_size - 1 - n) * 8];
+				p = &titlebuffer[(OsdGetSize() - 1 - n) * 8];
 			}
 
 			draw_title(p);
 			i += 22;
 		}
-		else if (n == (osd_size-1) && (arrowmask & OSD_ARROW_LEFT))
+		else if (n == (OsdGetSize()-1) && (arrowmask & OSD_ARROW_LEFT))
 		{	// Draw initial arrow
 			unsigned char b;
 
@@ -362,7 +345,7 @@ void OsdWriteOffset(unsigned char n, const char *s, unsigned char invert, unsign
 		osdbuf[osdbufpos++] = xormask | bg;
 	}
 
-	if (n == (osd_size-1) && (arrowmask & OSD_ARROW_RIGHT))
+	if (n == (OsdGetSize()-1) && (arrowmask & OSD_ARROW_RIGHT))
 	{	// Draw final arrow if needed
 		unsigned char c;
 		osdbuf[osdbufpos++] = xormask;
@@ -404,7 +387,7 @@ void OsdDrawLogo(int row)
 	{
 		if (i == 0)
 		{
-			draw_title(&titlebuffer[(osd_size - 1 - row) * 8]);
+			draw_title(&titlebuffer[(OsdGetSize() - 1 - row) * 8]);
 			i += 22;
 		}
 
@@ -563,7 +546,7 @@ static void print_line(unsigned char line, const char *hdr, const char *text, un
 
 	// select buffer and line to write to
 	osd_start(line);
-	draw_title(&titlebuffer[(osd_size - 1 - line) * 8]);
+	draw_title(&titlebuffer[(OsdGetSize() - 1 - line) * 8]);
 
 	while (*hdr)
 	{
@@ -648,22 +631,10 @@ void ScrollReset(int idx)
 	scroll_offset[idx] = 0; // start scrolling from the start
 }
 
-/* core currently loaded */
-static char lastcorename[261 + 10] = "CORE";
-void OsdCoreNameSet(const char* str)
-{
-	sprintf(lastcorename, "%s", str);
-}
-
-char* OsdCoreNameGet()
-{
-	return lastcorename;
-}
-
 void OsdUpdate()
 {
 	PROFILE_FUNCTION();
-	int n = is_menu() ? 19 : osd_size;
+	int n = is_menu() ? 19 : OsdGetSize();
 	for (int i = 0; i < n; i++)
 	{
 		if (osdset & (1 << i))

@@ -1,0 +1,21 @@
+[package]
+name = "mister"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = [ "staticlib" ] # to generate a `lib<package_name>.a`
+
+[dependencies] # you may depend on libc if you so wish:
+libc = { version = "*", default-features = false }
+libc-print = "0.1.21"
+
+[profile.dev]
+panic = "abort"
+overflow-checks = false
+
+[profile.release]
+lto = true
+panic = "abort"
+overflow-checks = false
+strip = "debuginfo"

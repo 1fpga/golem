@@ -15,8 +15,9 @@
 #define OSD_ARROW_RIGHT  2
 
 /*functions*/
-void OsdSetTitle(const char *s, int arrow = 0);	// arrow > 0 = display right arrow in bottom right, < 0 = display left arrow
-void OsdSetArrow(int arrow);
+extern "C" void OsdSetTitle(const char *s, int arrow = 0);	// arrow > 0 = display right arrow in bottom right, < 0 = display left arrow
+extern "C" void OsdSetTitleLEGACY(const char *s, int arrow = 0);	// arrow > 0 = display right arrow in bottom right, < 0 = display left arrow
+extern "C" void OsdSetArrow(int arrow);
 void OsdWrite(unsigned char n, const char *s="", unsigned char inver=0, unsigned char stipple=0, char usebg = 0, int maxinv = 32, int mininv = 0);
 void OsdWriteOffset(unsigned char n, const char *s, unsigned char inver, unsigned char stipple, char offset, char leftchar, char usebg = 0, int maxinv = 32, int mininv = 0); // Used for scrolling "Exit" text downwards...
 void OsdClear();
@@ -35,10 +36,10 @@ void StarsUpdate();
 void OsdShiftDown(unsigned char n);
 
 // get/set core currently loaded
-void OsdCoreNameSet(const char* str);
-char* OsdCoreNameGet();
-void OsdSetSize(int n);
-int OsdGetSize();
+extern "C" void OsdCoreNameSet(const char* str);
+extern "C" char* OsdCoreNameGet();
+extern "C" void OsdSetSize(int n);
+extern "C" int OsdGetSize();
 
 #define OsdIsBig (OsdGetSize()>8)
 

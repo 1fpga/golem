@@ -1,6 +1,8 @@
 # makefile to fail if any command in pipe is failed.
 SHELL = /bin/bash -o pipefail
 
+MISTER_IP = 127.0.0.1
+
 # using gcc version 10.2.1
 
 BASE    = arm-none-linux-gnueabihf
@@ -33,30 +35,31 @@ C_SRC =   $(wildcard *.c) \
           $(wildcard ./lib/lzma/*.c) \
           $(wildcard ./lib/flac/src/*.c) \
           $(wildcard ./lib/libchdr/*.c) \
-          lib/libco/arm.c 
+          lib/libco/arm.c
 
 CPP_SRC = $(wildcard *.cpp) \
           $(wildcard ./lib/serial_server/library/*.cpp) \
-          $(wildcard ./support/*/*.cpp) 
+          $(wildcard ./support/*/*.cpp)
 
 IMG =     $(wildcard *.png)
 
 IMLIB2_LIB  = -Llib/imlib2 -lfreetype -lbz2 -lpng16 -lz -lImlib2
+RUST_LIB = -Ltarget/armv7-unknown-linux-gnueabihf/release/ -lmister
 
 OBJ	= $(C_SRC:.c=.c.o) $(CPP_SRC:.cpp=.cpp.o) $(IMG:.png=.png.o)
 DEP	= $(C_SRC:.c=.c.d) $(CPP_SRC:.cpp=.cpp.d)
 
 DFLAGS	= $(INCLUDE) -D_7ZIP_ST -DPACKAGE_VERSION=\"1.3.3\" -DFLAC_API_EXPORTS -DFLAC__HAS_OGG=0 -DHAVE_LROUND -DHAVE_STDINT_H -DHAVE_STDLIB_H -DHAVE_SYS_PARAM_H -DENABLE_64_BIT_WORDS=0 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -DVDATE=\"`date +"%y%m%d"`\"
 CFLAGS	= $(DFLAGS) -Wall -Wextra -Wno-strict-aliasing -Wno-stringop-overflow -Wno-stringop-truncation -Wno-format-truncation -Wno-psabi -Wno-restrict -c -O3
-LFLAGS	= -lc -lstdc++ -lm -lrt $(IMLIB2_LIB) -Llib/bluetooth -lbluetooth -lpthread
+LFLAGS	= -lc -lstdc++ -ldl -lm -lrt $(IMLIB2_LIB) -Llib/bluetooth -lbluetooth -lpthread $(RUST_LIB)
 
 ifeq ($(PROFILING),1)
 	DFLAGS += -DPROFILING
 endif
 
-$(PRJ): $(OBJ)
+$(PRJ): $(OBJ) target/armv7-unknown-linux-gnueabihf/release/libmister.a
 	$(Q)$(info $@)
-	$(Q)$(CC) -o $@ $+ $(LFLAGS) 
+	$(Q)$(CC) -o $@ $+ $(LFLAGS)
 	$(Q)cp $@ $@.elf
 	$(Q)$(STRIP) $@
 
@@ -89,3 +92,16 @@ endif
 
 # Ensure correct time stamp
 main.cpp.o: $(filter-out main.cpp.o, $(OBJ))
+
+# Custom rule to build rust libmister.
+#target/armv7-unknown-linux-gnueabihf/release/libmister.a:
+.PHONY: rust
+rust:
+	cargo build --release
+
+# Custom rule to send the binary to the MiSTer.
+.PHONY: send
+send: $(PRJ)
+	ssh root@$(MISTER_IP) 'killall MiSTer'
+	scp ./MiSTer root@$MISTER_IP:/media/fat/MiSTer
+	ssh root@$(MISTER_IP) 'sync; PATH=/media/fat:$PATH; MiSTer'
