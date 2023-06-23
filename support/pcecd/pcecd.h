@@ -132,7 +132,7 @@ private:
 extern pcecdd_t pcecdd;
 
 
-void pcecd_poll();
+extern "C" void pcecd_poll();
 void pcecd_set_image(int num, const char *filename);
 int pcecd_send_data(uint8_t* buf, int len, uint8_t index);
 void pcecd_reset();

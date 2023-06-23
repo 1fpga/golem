@@ -9,6 +9,7 @@ crate-type = [ "staticlib" ] # to generate a `lib<package_name>.a`
 [dependencies] # you may depend on libc if you so wish:
 libc = { version = "*", default-features = false }
 libc-print = "0.1.21"
+strum = { version = "0.25.0", features = ["derive"] }
 
 [profile.dev]
 panic = "abort"

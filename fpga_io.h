@@ -10,7 +10,7 @@
 int fpga_io_init();
 
 void fpga_spi_en(uint32_t mask, uint32_t en);
-uint16_t fpga_spi(uint16_t word);
+extern "C" uint16_t fpga_spi(uint16_t word);
 uint16_t fpga_spi_fast(uint16_t word);
 
 void fpga_spi_fast_block_write(const uint16_t *buf, uint32_t length);

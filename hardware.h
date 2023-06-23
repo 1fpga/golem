@@ -4,8 +4,8 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-unsigned long GetTimer(unsigned long offset);
-unsigned long CheckTimer(unsigned long t);
+extern "C" unsigned long GetTimer(unsigned long offset);
+extern "C" unsigned long CheckTimer(unsigned long t);
 void WaitTimer(unsigned long time);
 
 void hexdump(void *data, uint16_t size, uint16_t offset = 0);

@@ -96,7 +96,7 @@ private:
 extern satcdd_t satcdd;
 extern uint32_t frame_cnt;
 
-void saturn_poll();
+extern "C" void saturn_poll();
 void saturn_set_image(int num, const char *filename);
 void saturn_reset();
 void saturn_fill_blanksave(uint8_t *buffer, uint32_t lba);

@@ -3,7 +3,6 @@ use libc::c_char;
 use libc_print::libc_eprintln;
 
 #[export_name = "charfont"]
-#[no_mangle]
 pub static mut CHAR_FONT: [[u8; 8]; 256] = [
     [0; 8],                                           // 0    [0x0]
     [0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55, 0x55], // 1    [0x1]

@@ -166,7 +166,7 @@ void user_io_read_core_name();
 void user_io_poll();
 char user_io_menu_button();
 char user_io_user_button();
-void user_io_osd_key_enable(char);
+extern "C" void user_io_osd_key_enable(char);
 int user_io_get_kbd_reset();
 void user_io_set_kbd_reset(int reset);
 
@@ -263,22 +263,22 @@ void diskled_on();
 
 char is_minimig();
 char is_sharpmz();
-char is_menu();
-char is_x86();
-char is_snes();
-char is_sgb();
-char is_neogeo();
-char is_neogeo_cd();
-char is_megacd();
-char is_pce();
-char is_archie();
-char is_gba();
-char is_c64();
-char is_st();
-char is_psx();
-char is_arcade();
-char is_saturn();
-char is_pcxt();
+extern "C" char is_menu();
+extern "C" char is_x86();
+extern "C" char is_snes();
+extern "C" char is_sgb();
+extern "C" char is_neogeo();
+extern "C" char is_neogeo_cd();
+extern "C" char is_megacd();
+extern "C" char is_pce();
+extern "C" char is_archie();
+extern "C" char is_gba();
+extern "C" char is_c64();
+extern "C" char is_st();
+extern "C" char is_psx();
+extern "C" char is_arcade();
+extern "C" char is_saturn();
+extern "C" char is_pcxt();
 
 #define HomeDir(x) user_io_get_core_path(x)
 #define CoreName user_io_get_core_name()
