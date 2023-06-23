@@ -11,6 +11,6 @@ struct battery_data_t
 	short cell[4];
 };
 
-int getBattery(int quick, struct battery_data_t *data);
+extern "C" int getBattery(int quick, struct battery_data_t *data);
 
 #endif
