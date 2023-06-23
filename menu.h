@@ -5,7 +5,7 @@
 
 void SelectFile(const char* path, const char* pFileExt, int Options, unsigned char MenuSelect, unsigned char MenuCancel);
 
-void HandleUI(void);
+extern "C" void HandleUI(void);
 void menu_key_set(unsigned int c);
 void menu_process_save();
 void PrintDirectory(int expand = 0);

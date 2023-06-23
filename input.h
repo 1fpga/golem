@@ -77,7 +77,7 @@ int  toggle_kbdled(int mask);
 void sysled_enable(int en);
 
 void input_notify_mode();
-int input_poll(int getchar);
+extern "C" int input_poll(int getchar);
 int is_key_pressed(int key);
 
 void start_map_setting(int cnt, int set = 0);

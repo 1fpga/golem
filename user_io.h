@@ -163,7 +163,7 @@
 void user_io_init(const char *path, const char *xml);
 unsigned char user_io_core_type();
 void user_io_read_core_name();
-void user_io_poll();
+extern "C" void user_io_poll();
 char user_io_menu_button();
 char user_io_user_button();
 extern "C" void user_io_osd_key_enable(char);

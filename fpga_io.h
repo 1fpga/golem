@@ -28,7 +28,7 @@ void fpga_core_reset(int reset);
 void fpga_core_write(uint32_t offset, uint32_t value);
 uint32_t fpga_core_read(uint32_t offset);
 int fpga_core_id();
-int is_fpga_ready(int quick);
+extern "C" int is_fpga_ready(int quick);
 
 int fpga_get_fio_size();
 int fpga_get_io_version();
@@ -39,6 +39,6 @@ void reboot(int cold);
 void app_restart(const char *path, const char *xml = 0);
 char *getappname();
 
-void fpga_wait_to_reset();
+extern "C" void fpga_wait_to_reset();
 
 #endif

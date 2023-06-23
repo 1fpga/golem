@@ -1,6 +1,7 @@
 #[allow(unused)]
 extern "C" {
     pub fn user_io_osd_key_enable(enabled: u8) -> ();
+    pub fn user_io_poll();
 
     pub fn is_menu() -> u8;
     pub fn is_x86() -> u8;

@@ -1,6 +1,8 @@
 pub mod charrom;
 pub mod fpga;
 pub mod hardware;
+pub mod input;
+pub mod menu;
 pub mod osd;
 pub mod scheduler;
 pub mod spi;
