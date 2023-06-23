@@ -19,19 +19,4 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdlib.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <sched.h>
-#include <inttypes.h>
-#include <ctype.h>
-#include <string.h>
-#include "menu.h"
-#include "user_io.h"
-#include "input.h"
-#include "fpga_io.h"
-#include "scheduler.h"
-#include "osd.h"
-#include "offload.h"
-
 const char *version = "$VER:" VDATE;

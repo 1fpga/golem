@@ -1,5 +1,4 @@
 use crate::charrom::CHAR_FONT;
-use crate::spi::DisableOsd;
 use crate::{charrom, hardware, spi, user_io};
 use std::ffi::{c_char, c_int, c_uchar, c_ulong, CStr, CString};
 
@@ -522,7 +521,7 @@ pub extern "C" fn OsdRotation(rotate: u8) {
         spi::spi_w(0);
         spi::spi_w(0);
         spi::spi_w(rotate as u16);
-        DisableOsd();
+        spi::DisableOsd();
     }
 }
 
@@ -567,7 +566,7 @@ pub extern "C" fn OsdUpdate() {
             if (OSD_SET & (1 << i)) != 0 {
                 spi::spi_osd_cmd_cont(OSD_CMD_WRITE | (i as u8));
                 spi::spi_write(OSD_BUFFER.as_ptr().add((i as usize) * 256), 256, 0);
-                DisableOsd();
+                spi::DisableOsd();
 
                 if user_io::is_megacd() != 0 {
                     mcd_poll();
@@ -588,24 +587,25 @@ pub extern "C" fn OsdUpdate() {
 
 #[no_mangle]
 pub extern "C" fn OSD_PrintInfo(
-    message: *const c_char,
+    mut message: *const c_char,
     width: *mut c_int,
     height: *mut c_int,
     frame: c_int,
 ) {
     unsafe {
-        let message = CStr::from_ptr(message);
         let mut str = [' ' as u8; INFO_MAXH * INFO_MAXW];
 
         // calc height/width if none provided. Add frame to calculated size.
         // no frame will be added if width and height are provided.
-        let calc = (*width != 0) || (*height != 0) || (frame != 0);
+        let calc = (*width != 0) || (*height != 0) || (frame == 0);
 
         let mut maxw = 0;
         let mut x = if calc { 1 } else { 0 };
         let mut y = if calc { 1 } else { 0 };
 
-        for c in message.to_bytes() {
+        while *message != 0 {
+            let c = *message;
+            message = message.add(1);
             match c {
                 0x0D => {}
                 0x0A => {
@@ -614,7 +614,7 @@ pub extern "C" fn OSD_PrintInfo(
                 }
                 c => {
                     if x < INFO_MAXW && y < INFO_MAXH {
-                        str[(y * INFO_MAXW + x) as usize] = *c;
+                        str[(y * INFO_MAXW + x) as usize] = c;
                     }
                 }
             }
