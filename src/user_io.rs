@@ -1,7 +1,10 @@
+use std::ffi::c_char;
+
 #[allow(unused)]
 extern "C" {
     pub fn user_io_osd_key_enable(enabled: u8) -> ();
     pub fn user_io_poll();
+    pub fn user_io_init(path: *const c_char, xml: *const c_char);
 
     pub fn is_menu() -> u8;
     pub fn is_x86() -> u8;

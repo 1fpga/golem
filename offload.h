@@ -4,8 +4,8 @@
 #include <stddef.h>
 #include <functional>
 
-void offload_start();
-void offload_stop();
+extern "C" void offload_start();
+extern "C" void offload_stop();
 
 void offload_add_work(std::function<void()> work);
 

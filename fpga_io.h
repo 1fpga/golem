@@ -7,7 +7,7 @@
 #define BUTTON_OSD  1
 #define BUTTON_USR  2
 
-int fpga_io_init();
+extern "C" int fpga_io_init();
 
 void fpga_spi_en(uint32_t mask, uint32_t en);
 extern "C" uint16_t fpga_spi(uint16_t word);

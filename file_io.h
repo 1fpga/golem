@@ -73,7 +73,7 @@ char* flist_GetPrevNext(const char* base_path, const char* file, const char* ext
 #define SCANO_CLEAR      0b010000000 // allow backspace key, clear FC option
 #define SCANO_SAVES      0b100000000
 
-void FindStorage();
+extern "C" void FindStorage();
 int  getStorage(int from_setting);
 void setStorage(int dev);
 int  isUSBMounted();
