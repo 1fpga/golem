@@ -2862,19 +2862,21 @@ void video_mode_adjust()
 	}
 }
 
-static void fb_write_module_params()
-{
+extern "C" void fb_write_module_params_worker() {
 	int width = fb_width;
 	int height = fb_height;
-	offload_add_work([=]
-	{
-		FILE *fp = fopen("/sys/module/MiSTer_fb/parameters/mode", "wt");
-		if (fp)
-		{
-			fprintf(fp, "%d %d %d %d %d\n", 8888, 1, width, height, width * 4);
-			fclose(fp);
-		}
-	});
+
+    FILE *fp = fopen("/sys/module/MiSTer_fb/parameters/mode", "wt");
+    if (fp)
+    {
+        fprintf(fp, "%d %d %d %d %d\n", 8888, 1, width, height, width * 4);
+        fclose(fp);
+    }
+}
+
+static void fb_write_module_params()
+{
+	offload_add_work(fb_write_module_params_worker);
 }
 
 void video_fb_enable(int enable, int n)

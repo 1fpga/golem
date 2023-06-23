@@ -7,6 +7,6 @@
 extern "C" void offload_start();
 extern "C" void offload_stop();
 
-void offload_add_work(std::function<void()> work);
+extern "C" void offload_add_work(std::function<void()> work);
 
 #endif
