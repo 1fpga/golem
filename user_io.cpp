@@ -594,14 +594,11 @@ static void parse_config()
 	joy_force = 0;
 	joy_bcount = 0;
 
-	fprintf(stderr, "parsing config\n");
-
 	do {
 		p = user_io_get_confstr(i);
-		fprintf(stderr, "get cfgstring %d = %s\n", i, p ? p : "NULL");
+		printf("get cfgstring %d = %s\n", i, p ? p : "NULL");
 		if (!i)
 		{
-            fprintf(stderr, "!!!?p: %s\n", p);
 			OsdCoreNameSet((p && p[0]) ? p : "CORE");
 		}
 
@@ -794,11 +791,10 @@ static void parse_config()
 			if (p[0] == 'V')
 			{
 				// get version string
-				fprintf(stderr, "Version: %s\n", p);
 				char s[128];
-				snprintf(s, 128, "%s %s", OsdCoreNameGet(), p);
-				fprintf(stderr, "OsdCoreNameSet... %s\n", s);
-
+				strcpy(s, OsdCoreNameGet());
+				strcat(s, " ");
+				substrcpy(s + strlen(s), p, 1);
 				OsdCoreNameSet(s);
 			}
 
