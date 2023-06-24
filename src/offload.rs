@@ -1,106 +1,77 @@
-use std::collections::VecDeque;
-use std::ffi::c_void;
+use core_affinity::CoreId;
+use std::sync::mpsc;
+use std::time::Duration;
 
-static mut THREAD_HANDLE: Option<libc::pthread_t> = None;
-static mut THREAD_COND_WORK: Option<libc::pthread_cond_t> = None;
-static mut THREAD_COND_AVAILABLE: Option<libc::pthread_cond_t> = None;
-static mut QUEUE_LOCK: Option<libc::pthread_mutex_t> = None;
+/// A worker thread that executes work from a queue. The CPU affinity can be
+/// specified at creation. The worker thread will run until the `quit` method
+/// is called. Send work to it by calling the `queue` method with a Rust
+/// function or an extern "C" function pointer.
+pub struct Worker {
+    thread: std::thread::JoinHandle<()>,
+    queue: mpsc::Sender<Box<dyn FnOnce() -> () + Send>>,
+    quit: mpsc::Sender<()>,
+}
 
-static mut QUEUE: VecDeque<*const fn() -> ()> = VecDeque::new();
-static mut QUIT: bool = false;
+impl Worker {
+    pub fn new(cpu: Option<CoreId>) -> Self {
+        let (queue, queue_recv) = mpsc::channel::<Box<dyn FnOnce() -> () + Send>>();
+        let (quit, quit_recv) = mpsc::channel::<()>();
 
-extern "C" fn worker_thread(_context: *mut c_void) -> *mut c_void {
-    unsafe {
-        loop {
-            // Wait for work.
-            libc::pthread_mutex_lock(QUEUE_LOCK.as_mut().unwrap());
-            if QUEUE.is_empty() {
-                if QUIT {
-                    libc::pthread_mutex_unlock(QUEUE_LOCK.as_mut().unwrap());
-                    break;
-                }
+        let thread = std::thread::spawn(move || {
+            if let Some(cpu) = cpu {
+                core_affinity::set_for_current(cpu);
+            }
 
-                // Wait for work signal.
-                libc::pthread_cond_wait(
-                    THREAD_COND_WORK.as_mut().unwrap(),
-                    QUEUE_LOCK.as_mut().unwrap(),
-                );
-
-                // Quit flag was set and quuee still empty, quit.
-                if QUIT && QUEUE.is_empty() {
-                    libc::pthread_mutex_unlock(QUEUE_LOCK.as_mut().unwrap());
+            loop {
+                // Wait for work or check if we need to quit.
+                // Don't stop as long as we have work to do.
+                if let Ok(work) = queue_recv.recv_timeout(Duration::from_millis(100)) {
+                    // Execute the function we received.
+                    work();
+                } else if quit_recv.try_recv().is_ok() {
                     break;
                 }
             }
+        });
 
-            // Get work.
-            let work = QUEUE.pop_front().unwrap();
-            libc::pthread_mutex_unlock(QUEUE_LOCK.as_mut().unwrap());
-
-            // Execute.
-            (*work)();
-
-            libc::pthread_cond_signal(THREAD_COND_AVAILABLE.as_mut().unwrap());
+        Self {
+            thread,
+            queue,
+            quit,
         }
+    }
 
-        std::ptr::null_mut()
+    /// Request to quit the worker thread
+    pub fn quit(self) -> std::thread::JoinHandle<()> {
+        self.quit.send(()).unwrap();
+        self.thread
+    }
+
+    /// Queue a function to be executed by the worker thread. The function must
+    /// return and be able to be sent across threads.
+    pub fn queue(&self, work: impl FnOnce() + Send + 'static) {
+        self.queue.send(Box::new(work)).unwrap();
     }
 }
 
+static mut BASE_WORKER: Option<Worker> = None;
+
 #[no_mangle]
 pub unsafe extern "C" fn offload_start() {
-    THREAD_COND_AVAILABLE = Some(std::mem::zeroed());
-    libc::pthread_cond_init(
-        THREAD_COND_AVAILABLE.as_mut().unwrap(),
-        std::ptr::null_mut(),
-    );
-
-    THREAD_COND_WORK = Some(std::mem::zeroed());
-    libc::pthread_cond_init(THREAD_COND_WORK.as_mut().unwrap(), std::ptr::null_mut());
-
-    QUEUE_LOCK = Some(std::mem::zeroed());
-    libc::pthread_mutex_init(QUEUE_LOCK.as_mut().unwrap(), std::ptr::null_mut());
-
-    QUEUE = VecDeque::new();
-    QUIT = false;
-
-    let mut attr: libc::pthread_attr_t = std::mem::zeroed();
-    libc::pthread_attr_init(&mut attr);
-
-    // Set affinity to core #0 since main runs on core #1
-    let mut set: libc::cpu_set_t = std::mem::zeroed();
-    libc::CPU_ZERO(&mut set);
-    libc::CPU_SET(0, &mut set);
-    libc::pthread_attr_setaffinity_np(&mut attr, std::mem::size_of::<libc::cpu_set_t>(), &set);
-
-    THREAD_HANDLE = Some(std::mem::zeroed());
-    libc::pthread_create(
-        THREAD_HANDLE.as_mut().unwrap(),
-        &attr,
-        worker_thread,
-        std::ptr::null_mut(),
-    );
+    // Use the first CPU available.
+    BASE_WORKER = Some(Worker::new(
+        core_affinity::get_core_ids().and_then(|cids| cids.first().cloned()),
+    ));
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn offload_stop() {
-    libc::pthread_mutex_lock(QUEUE_LOCK.as_mut().unwrap());
-
-    QUIT = true;
-    libc::pthread_cond_signal(THREAD_COND_WORK.as_mut().unwrap());
-
-    libc::pthread_mutex_unlock(QUEUE_LOCK.as_mut().unwrap());
-
     println!("Waiting for offloaded work to finish...");
-    libc::pthread_join(THREAD_HANDLE.unwrap(), std::ptr::null_mut());
-    println!("Done");
+    BASE_WORKER.take().unwrap().quit().join().unwrap();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn offload_add_work(handler: *const fn() -> ()) {
-    libc::pthread_mutex_lock(QUEUE_LOCK.as_mut().unwrap());
-
-    QUEUE.push_back(handler);
-    libc::pthread_cond_signal(THREAD_COND_WORK.as_mut().unwrap());
-    libc::pthread_mutex_unlock(QUEUE_LOCK.as_mut().unwrap());
+    let h = *handler;
+    BASE_WORKER.as_ref().unwrap().queue(move || h());
 }
