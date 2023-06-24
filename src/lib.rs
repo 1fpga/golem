@@ -1,3 +1,4 @@
+use clap::Parser;
 use std::ffi::{CStr, CString};
 
 pub mod battery;
@@ -19,6 +20,18 @@ extern "C" {
     static version: *const u8;
 }
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Opts {
+    /// Path to the core to load instantly.
+    #[clap()]
+    core: Option<String>,
+
+    /// Path to the XML configuration file for the core.
+    #[clap()]
+    xml: Option<String>,
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn main() {
     let mut set: libc::cpu_set_t = std::mem::zeroed();
@@ -33,36 +46,24 @@ pub unsafe extern "C" fn main() {
 
     // DISKLED_OFF();
 
+    let v = CStr::from_ptr(version.offset(5)).to_string_lossy();
     println!(
         r#"
         Minimig by Dennis van Weeren
         ARM Controller by Jakub Bednarski
         MiSTer code by Sorgelig
-        Rust code by hansl
+        Rust code by Hans Larsen
 
-    "#
+        Version {v}"#
     );
 
-    println!(
-        "Version {}\n",
-        CStr::from_ptr(version.add(5)).to_string_lossy()
-    );
-
-    let mut args = std::env::args();
-    let (core, xml) = match [args.next(), args.next()] {
-        [Some(c), Some(x)] => (
-            Some(CString::new(c).unwrap()),
-            Some(CString::new(x).unwrap()),
-        ),
-        [Some(c), _] => (Some(CString::new(c).unwrap()), None),
-        _ => (None, None),
-    };
+    let Opts { core, xml } = Opts::parse();
 
     if let Some(core) = &core {
-        println!("Core path: {}", core.to_string_lossy());
+        println!("Core path: {}", core);
     }
     if let Some(xml) = &xml {
-        println!("XML path: {}", xml.to_string_lossy());
+        println!("XML path: {}", xml);
     }
 
     if fpga::is_fpga_ready(1) == 0 {
@@ -72,6 +73,10 @@ pub unsafe extern "C" fn main() {
     }
 
     file_io::FindStorage();
+    let (core, xml) = (
+        core.map(|str| CString::new(str).unwrap()),
+        xml.map(|str| CString::new(str).unwrap()),
+    );
     user_io::user_io_init(
         core.map(|str| str.as_ptr()).unwrap_or(std::ptr::null()),
         xml.map(|str| str.as_ptr()).unwrap_or(std::ptr::null()),
