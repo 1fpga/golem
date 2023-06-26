@@ -33,7 +33,7 @@ extern "C" int is_fpga_ready(int quick);
 int fpga_get_fio_size();
 int fpga_get_io_version();
 
-int fpga_load_rbf(const char *name, const char *cfg = 0, const char *xml = 0);
+extern "C" int fpga_load_rbf(const char *name, const char *cfg = 0, const char *xml = 0);
 
 void reboot(int cold);
 void app_restart(const char *path, const char *xml = 0);

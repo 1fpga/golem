@@ -2,7 +2,7 @@
 #define ROMUTILS_H_
 
 int arcade_send_rom(const char *xml);
-int xml_load(const char *xml);
+extern "C" int xml_load(const char *xml);
 void arcade_check_error();
 
 struct dip_struct

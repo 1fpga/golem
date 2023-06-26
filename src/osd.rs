@@ -90,14 +90,12 @@ pub extern "C" fn OsdSetArrow(arrow: c_int) {
 static mut OSD_CORE_NAME: Option<CString> = None;
 
 #[no_mangle]
-pub extern "C" fn OsdCoreNameSet(name: *const c_char) {
+pub unsafe extern "C" fn OsdCoreNameSet(name: *const c_char) {
     // Verify this is a valid string too.
-    let name = unsafe { CStr::from_ptr(name) };
+    let name = CStr::from_ptr(name);
     let _ = name.to_str().unwrap();
 
-    unsafe {
-        *&mut OSD_CORE_NAME = Some(name.into());
-    }
+    OSD_CORE_NAME = Some(name.into());
 }
 
 #[no_mangle]
@@ -123,6 +121,8 @@ fn rotate_char_(i: *const c_char, o: *mut c_char) {
     }
 }
 
+/// Update the title, and optionally arrows on the last line (the exit line)
+/// of the OSD.
 #[no_mangle]
 pub unsafe extern "C" fn OsdSetTitle(title: *const c_char, arrow: c_int) {
     let title_cstr = unsafe { CStr::from_ptr(title) };
@@ -170,9 +170,7 @@ pub unsafe extern "C" fn OsdSetTitle(title: *const c_char, arrow: c_int) {
     for i in (0..osd_size).step_by(8) {
         let mut tmp = [0u8; 8];
         rotate_char_(TITLE_BUFFER.as_ptr().add(i), tmp.as_mut_ptr());
-        for c in 0..8 {
-            TITLE_BUFFER[i + c] = tmp[c];
-        }
+        TITLE_BUFFER[i..(8 + i)].copy_from_slice(&tmp[..8]);
     }
 }
 
@@ -182,7 +180,7 @@ static mut OSD_BUFFER_POS: usize = 0;
 static mut OSD_SET: c_int = 0;
 
 #[no_mangle]
-pub extern "C" fn OsdWrite(
+pub unsafe extern "C" fn OsdWrite(
     n: u8,
     s: *const c_char,
     invert: c_uchar,
@@ -191,9 +189,7 @@ pub extern "C" fn OsdWrite(
     maxinv: c_int,
     mininv: c_int,
 ) {
-    unsafe {
-        OsdWriteOffset(n, s, invert, stipple, 0, 0, usebg, maxinv, mininv);
-    }
+    OsdWriteOffset(n, s, invert, stipple, 0, 0, usebg, maxinv, mininv);
 }
 
 fn osd_start_(line: u8) {
@@ -353,7 +349,7 @@ pub unsafe extern "C" fn OsdWriteOffset(
         if i == 0 && (n as c_int) < OsdGetSize() {
             let mut tmp = [0u8; 8];
             if leftchar != 0 {
-                let mut tmp2 = unsafe { CHAR_FONT[leftchar as usize].clone() };
+                let mut tmp2 = CHAR_FONT[leftchar as usize];
                 rotate_char_(tmp2.as_mut_ptr(), tmp.as_mut_ptr());
                 p = tmp.as_ptr();
             } else {
@@ -395,7 +391,7 @@ pub unsafe extern "C" fn OsdWriteOffset(
                 s = s.add(1);
             }
         } else {
-            let b = unsafe { *s };
+            let b = *s;
             s = s.add(1);
             if b == 0 {
                 break;
@@ -586,81 +582,79 @@ pub extern "C" fn OsdUpdate() {
 }
 
 #[no_mangle]
-pub extern "C" fn OSD_PrintInfo(
+pub unsafe extern "C" fn OSD_PrintInfo(
     mut message: *const c_char,
     width: *mut c_int,
     height: *mut c_int,
     frame: c_int,
 ) {
-    unsafe {
-        let mut str = [' ' as u8; INFO_MAXH * INFO_MAXW];
+    let mut str = [b' '; INFO_MAXH * INFO_MAXW];
 
-        // calc height/width if none provided. Add frame to calculated size.
-        // no frame will be added if width and height are provided.
-        let calc = (*width != 0) || (*height != 0) || (frame == 0);
+    // calc height/width if none provided. Add frame to calculated size.
+    // no frame will be added if width and height are provided.
+    let calc = (*width != 0) || (*height != 0) || (frame == 0);
 
-        let mut maxw = 0;
-        let mut x = if calc { 1 } else { 0 };
-        let mut y = if calc { 1 } else { 0 };
+    let mut maxw = 0;
+    let mut x = if calc { 1 } else { 0 };
+    let mut y = if calc { 1 } else { 0 };
 
-        while *message != 0 {
-            let c = *message;
-            message = message.add(1);
-            match c {
-                0x0D => {}
-                0x0A => {
-                    x = if calc { 1 } else { 0 };
-                    y += 1;
-                }
-                c => {
-                    if x < INFO_MAXW && y < INFO_MAXH {
-                        str[(y * INFO_MAXW + x) as usize] = c;
-                    }
-                }
+    while *message != 0 {
+        let c = *message;
+        message = message.add(1);
+        match c {
+            0x0D => {}
+            0x0A => {
+                x = if calc { 1 } else { 0 };
+                y += 1;
             }
-            x += 1;
-            if x > maxw {
-                maxw = x;
+            c => {
+                if x < INFO_MAXW && y < INFO_MAXH {
+                    str[y * INFO_MAXW + x] = c;
+                }
             }
         }
-
-        let w: usize = (if !calc {
-            (*width + 2) as usize
-        } else {
-            maxw + 1
-        })
-        .min(INFO_MAXW);
-        *width = w as c_int;
-
-        let h: usize = (if !calc { (*height + 2) as usize } else { y + 2 }).min(INFO_MAXH);
-        *height = h as c_int;
-
-        if frame != 0 {
-            let frame: u8 = (frame as u8 - 1) * 6;
-            for x in 1..(w - 1) {
-                str[(0 * INFO_MAXW) + x] = 0x81 + frame;
-                str[((h - 1) * INFO_MAXW) + x] = 0x81 + frame;
-            }
-            for y in 1..(h - 1) {
-                str[(y * INFO_MAXW) + 0] = 0x83 + frame;
-                str[(y * INFO_MAXW) + (w - 1)] = 0x83 + frame;
-            }
-            str[0] = 0x80 + frame;
-            str[w - 1] = 0x82 + frame;
-            str[(h - 1) * INFO_MAXW] = 0x85 + frame;
-            str[((h - 1) * INFO_MAXW) + w - 1] = 0x84 + frame;
+        x += 1;
+        if x > maxw {
+            maxw = x;
         }
+    }
 
-        for y in 0..h {
-            osd_start_(y as u8);
+    let w: usize = (if !calc {
+        (*width + 2) as usize
+    } else {
+        maxw + 1
+    })
+    .min(INFO_MAXW);
+    *width = w as c_int;
 
-            for x in 0..w {
-                let mut p = CHAR_FONT[str[(y * INFO_MAXW) + x] as usize].as_ptr();
-                for _ in 0..8 {
-                    OSD_BUFFER[OSD_BUFFER_POS] = *p;
-                    OSD_BUFFER_POS += 1;
-                    p = p.add(1);
-                }
+    let h: usize = (if !calc { (*height + 2) as usize } else { y + 2 }).min(INFO_MAXH);
+    *height = h as c_int;
+
+    if frame != 0 {
+        let frame: u8 = (frame as u8 - 1) * 6;
+        for x in 1..(w - 1) {
+            str[x] = 0x81 + frame;
+            str[((h - 1) * INFO_MAXW) + x] = 0x81 + frame;
+        }
+        for y in 1..(h - 1) {
+            str[y * INFO_MAXW] = 0x83 + frame;
+            str[(y * INFO_MAXW) + (w - 1)] = 0x83 + frame;
+        }
+        str[0] = 0x80 + frame;
+        str[w - 1] = 0x82 + frame;
+        str[(h - 1) * INFO_MAXW] = 0x85 + frame;
+        str[((h - 1) * INFO_MAXW) + w - 1] = 0x84 + frame;
+    }
+
+    for y in 0..h {
+        osd_start_(y as u8);
+
+        for x in 0..w {
+            let mut p = CHAR_FONT[str[(y * INFO_MAXW) + x] as usize].as_ptr();
+            for _ in 0..8 {
+                OSD_BUFFER[OSD_BUFFER_POS] = *p;
+                OSD_BUFFER_POS += 1;
+                p = p.add(1);
             }
         }
     }
@@ -692,7 +686,7 @@ pub unsafe extern "C" fn OsdDrawLogo(row: c_int) {
             i += 22;
         }
 
-        if lp != std::ptr::null() && bytes != 0 {
+        if lp.is_null() && bytes != 0 {
             bt = *lp;
             lp = lp.add(1);
             bytes -= 1;
@@ -746,7 +740,7 @@ pub unsafe extern "C" fn ScrollText(
     let mut s = [b' '; 40];
 
     // get name length
-    if len <= 0 {
+    if len == 0 {
         len = str.len();
     }
 

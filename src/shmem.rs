@@ -2,9 +2,34 @@ use std::ffi::c_int;
 
 static mut MEM_FD: Option<c_int> = None;
 
+/// Map a physical memory address to a virtual address. Returns a buffer that has access
+/// to the physical memory.
+///
+/// Safety: This function is unsafe because it can cause undefined behavior if the given
+/// address is invalid or if the given size is too large. In addition, the caller must
+/// ensure that the returned buffer is not used after it is unmapped. AND the caller
+/// must acknowledge that they're playing with dangerous forces.
+pub fn map(address: usize, size: usize) -> &'static [u8] {
+    let ptr = unsafe { shmem_map_c(address as u32, size as u32) };
+    unsafe { std::slice::from_raw_parts_mut(ptr, size) }
+}
+
+pub fn unmap(map: &'static [u8]) -> bool {
+    unsafe { shmem_unmap_c(map.as_ptr(), map.len() as u32) != 0 }
+}
+
+pub fn put(address: usize, data: &[u8]) -> bool {
+    unsafe { shmem_put_c(address as u32, data.len() as u32, data.as_ptr()) != 0 }
+}
+
+pub fn get(address: usize, data: &mut [u8]) -> bool {
+    unsafe { shmem_get_c(address as u32, data.len() as u32, data.as_ptr()) != 0 }
+}
+
+#[export_name = "shmem_map"]
 #[no_mangle]
-pub unsafe extern "C" fn shmem_map(address: u32, size: u32) -> *mut u8 {
-    if MEM_FD == None {
+pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
+    if MEM_FD.is_none() {
         // libc expects a CString, so we need to add \0 at the end.
         let fd = libc::open(
             "/dev/mem\0".as_ptr(),
@@ -31,11 +56,12 @@ pub unsafe extern "C" fn shmem_map(address: u32, size: u32) -> *mut u8 {
         return std::ptr::null_mut();
     }
 
-    return res as *mut u8;
+    res as *mut u8
 }
 
+#[export_name = "shmem_unmap"]
 #[no_mangle]
-pub unsafe fn shmem_unmap(map: *const u8, size: u32) -> c_int {
+pub unsafe fn shmem_unmap_c(map: *const u8, size: u32) -> c_int {
     if libc::munmap(map as *mut libc::c_void, size as libc::size_t) < 0 {
         println!("Error: Unable to unmap({map:?}, {size})!");
         return 0;
@@ -44,32 +70,34 @@ pub unsafe fn shmem_unmap(map: *const u8, size: u32) -> c_int {
     1
 }
 
+#[export_name = "shmem_put"]
 #[no_mangle]
-pub unsafe fn shmem_put(address: u32, size: u32, buf: *const u8) -> c_int {
-    let shmem = shmem_map(address, size);
+pub unsafe fn shmem_put_c(address: u32, size: u32, buf: *const u8) -> c_int {
+    let shmem = shmem_map_c(address, size);
     if !shmem.is_null() {
         libc::memcpy(
             shmem as *mut libc::c_void,
             buf as *const libc::c_void,
             size as libc::size_t,
         );
-        shmem_unmap(shmem, size);
+        shmem_unmap_c(shmem, size);
         1
     } else {
         0
     }
 }
 
+#[export_name = "shmem_get"]
 #[no_mangle]
-pub unsafe fn shmem_get(address: u32, size: u32, buf: *const u8) -> c_int {
-    let shmem = shmem_map(address, size);
+pub unsafe fn shmem_get_c(address: u32, size: u32, buf: *const u8) -> c_int {
+    let shmem = shmem_map_c(address, size);
     if !shmem.is_null() {
         libc::memcpy(
             buf as *mut libc::c_void,
             shmem as *const libc::c_void,
             size as libc::size_t,
         );
-        shmem_unmap(shmem, size);
+        shmem_unmap_c(shmem, size);
         1
     } else {
         0

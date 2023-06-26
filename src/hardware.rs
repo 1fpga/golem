@@ -35,7 +35,7 @@ pub extern "C" fn hexdump(data: *const u8, size: u16, offset: u16) {
             );
         }
 
-        print!("\n");
+        println!();
         ptr = unsafe { ptr.add(b2c) };
         size -= b2c;
         n += b2c;
@@ -56,7 +56,7 @@ pub extern "C" fn GetTimer(offset: c_ulong) -> c_ulong {
     let mut res = tp.tv_sec as c_ulong;
     res *= 1000;
     res += tp.tv_nsec as c_ulong / 1000000;
-    return res + offset;
+    res + offset
 }
 
 #[no_mangle]

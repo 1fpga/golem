@@ -1,7 +1,14 @@
+#![allow(clippy::missing_safety_doc)]
 use clap::Parser;
+use clap_verbosity_flag::Level as VerbosityLevel;
+use clap_verbosity_flag::Verbosity;
 use std::ffi::{CStr, CString};
+use tracing::Level;
+use tracing_subscriber::fmt::Subscriber;
 
 pub mod battery;
+pub mod bootcore;
+pub mod cfg;
 pub mod charrom;
 pub mod file_io;
 pub mod fpga;
@@ -14,6 +21,7 @@ pub mod scheduler;
 pub mod shmem;
 pub mod smbus;
 pub mod spi;
+pub mod support;
 pub mod user_io;
 
 extern "C" {
@@ -30,6 +38,9 @@ struct Opts {
     /// Path to the XML configuration file for the core.
     #[clap()]
     xml: Option<String>,
+
+    #[command(flatten)]
+    verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
 }
 
 #[no_mangle]
@@ -56,7 +67,7 @@ Rust code by Hans Larsen
 Version {v}"#
     );
 
-    let Opts { core, xml } = Opts::parse();
+    let Opts { core, xml, verbose } = Opts::parse();
 
     if !core.is_empty() {
         println!("Core path: {}", core);
@@ -64,6 +75,21 @@ Version {v}"#
     if let Some(xml) = &xml {
         println!("XML path: {}", xml);
     }
+
+    // Initialize tracing.
+    let subscriber = Subscriber::builder();
+    let subscriber = match verbose.log_level() {
+        None => subscriber,
+        Some(VerbosityLevel::Error) => subscriber.with_max_level(Level::ERROR),
+        Some(VerbosityLevel::Warn) => subscriber.with_max_level(Level::WARN),
+        Some(VerbosityLevel::Info) => subscriber.with_max_level(Level::INFO),
+        Some(VerbosityLevel::Trace) => subscriber.with_max_level(Level::TRACE),
+        Some(VerbosityLevel::Debug) => subscriber.with_max_level(Level::DEBUG),
+    };
+    subscriber
+        .with_ansi(true)
+        .with_writer(std::io::stderr)
+        .init();
 
     if fpga::is_fpga_ready(1) == 0 {
         println!("\nGPI[31]==1. FPGA is uninitialized or incompatible core loaded.");
@@ -82,6 +108,12 @@ Version {v}"#
         xml.map(|str| str.as_bytes_with_nul().as_ptr())
             .unwrap_or(std::ptr::null()),
     );
+
+    // Make sure we're in the right directory. Otherwise, relative paths
+    // won't work. We set the current directory to be in the MiSTer
+    // executable.
+    // TODO: fix relative paths everywhere.
+    std::env::set_current_dir(std::env::current_exe().unwrap().parent().unwrap()).unwrap();
 
     scheduler::scheduler_init();
     scheduler::scheduler_run();

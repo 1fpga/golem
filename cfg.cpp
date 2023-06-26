@@ -555,6 +555,21 @@ bool cfg_has_video_sections()
 	return has_video_sections;
 }
 
+uint16_t cfg_bootcore_timeout() {
+    return cfg.bootcore_timeout;
+}
+
+void cfg_set_bootcore_timeout(uint16_t timeout) {
+    cfg.bootcore_timeout = timeout;
+}
+
+const char* cfg_bootcore() {
+    return cfg.bootcore;
+}
+
+void cfg_set_bootcore(const char* path) {
+    strncpy(cfg.bootcore, path, sizeof(cfg.bootcore));
+}
 
 void cfg_error(const char *fmt, ...)
 {

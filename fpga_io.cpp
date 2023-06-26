@@ -29,8 +29,6 @@
 #define MAP_ADDR(x) (volatile uint32_t*)(&map_base[(((uint32_t)(x)) & 0xFFFFFF)>>2])
 #define IS_REG(x) (((((uint32_t)(x))-1)>=(FPGA_REG_BASE - 1)) && ((((uint32_t)(x))-1)<(FPGA_REG_BASE + FPGA_REG_SIZE - 1)))
 
-#define fatal(x) munmap((void*)map_base, FPGA_REG_SIZE); close(fd); exit(x)
-
 static struct socfpga_reset_manager  *reset_regs   = (socfpga_reset_manager *)SOCFPGA_RSTMGR_ADDRESS;
 static struct socfpga_fpga_manager   *fpgamgr_regs = (socfpga_fpga_manager *)SOCFPGA_FPGAMGRREGS_ADDRESS;
 static struct socfpga_system_manager *sysmgr_regs  = (socfpga_system_manager *)SOCFPGA_SYSMGR_ADDRESS;

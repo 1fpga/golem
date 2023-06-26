@@ -265,11 +265,11 @@ pub static mut CHAR_FONT: [[u8; 8]; 256] = [
 ];
 
 #[no_mangle]
-pub extern "C" fn LoadFont(name: *const c_char) {
+pub unsafe extern "C" fn LoadFont(name: *const c_char) {
     // This will verify that name is a valid string.
-    let name_cstr = unsafe { CStr::from_ptr(name) };
+    let name_cstr = CStr::from_ptr(name);
 
-    let fd = unsafe { libc::open(name, libc::O_RDONLY) };
+    let fd = libc::open(name, libc::O_RDONLY);
     if fd < 0 {
         libc_eprintln!(
             "Failed to open font file: {}",
@@ -279,7 +279,7 @@ pub extern "C" fn LoadFont(name: *const c_char) {
     }
 
     let mut buffer = [0u8; 2048];
-    let size = unsafe { libc::read(fd, buffer.as_mut_ptr() as *mut c_void, buffer.len()) };
+    let size = libc::read(fd, buffer.as_mut_ptr() as *mut c_void, buffer.len());
     if size < 0 {
         libc_eprintln!(
             "Failed to read font file: {}",
@@ -303,10 +303,9 @@ pub extern "C" fn LoadFont(name: *const c_char) {
     // Transpose the font.
     // Characters are stored in columns, but we want them in rows.
     for pos in start..(size as usize) {
-        let mut n = 0;
-        for i in [128, 64, 32, 16, 8, 4, 2, 1] {
+        for (n, i) in [128, 64, 32, 16, 8, 4, 2, 1].iter().enumerate() {
             let mut b: u8 = 0;
-            if buffer[pos + 0] & i != 0 {
+            if buffer[pos] & i != 0 {
                 b |= 1
             }
             if buffer[pos + 1] & i != 0 {
@@ -334,7 +333,6 @@ pub extern "C" fn LoadFont(name: *const c_char) {
             unsafe {
                 CHAR_FONT[ch][n] = b;
             }
-            n += 1;
         }
 
         ch += 1;

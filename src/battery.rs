@@ -30,11 +30,13 @@ unsafe fn get_reg_(reg: u8, min: i32, max: i32) -> Option<i32> {
             libc::usleep(REGISTER_POLLING_RATE_IN_USEC);
         }
     }
-    return None;
+    None
 }
 
+/// Get the battery status.
+#[export_name = "getBattery"]
 #[no_mangle]
-pub unsafe extern "C" fn getBattery(quick: c_int, data: *mut BatteryData) -> c_int {
+pub unsafe extern "C" fn getBattery_c(quick: c_int, data: *mut BatteryData) -> c_int {
     if I2C_HANDLE.is_none() {
         unsafe {
             let handle = smbus::i2c_open(0x16, 0);

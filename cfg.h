@@ -103,6 +103,11 @@ const char* cfg_get_name(uint8_t alt);
 const char* cfg_get_label(uint8_t alt);
 bool cfg_has_video_sections();
 
+extern "C" uint16_t cfg_bootcore_timeout();
+extern "C" void cfg_set_bootcore_timeout(uint16_t timeout);
+extern "C" const char* cfg_bootcore();
+extern "C" void cfg_set_bootcore(const char* path);
+
 void cfg_error(const char *fmt, ...);
 bool cfg_check_errors(char *msg, size_t max_len);
 

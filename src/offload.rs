@@ -8,13 +8,13 @@ use std::time::Duration;
 /// function or an extern "C" function pointer.
 pub struct Worker {
     thread: std::thread::JoinHandle<()>,
-    queue: mpsc::Sender<Box<dyn FnOnce() -> () + Send>>,
+    queue: mpsc::Sender<Box<dyn FnOnce() + Send>>,
     quit: mpsc::Sender<()>,
 }
 
 impl Worker {
     pub fn new(cpu: Option<CoreId>) -> Self {
-        let (queue, queue_recv) = mpsc::channel::<Box<dyn FnOnce() -> () + Send>>();
+        let (queue, queue_recv) = mpsc::channel::<Box<dyn FnOnce() + Send>>();
         let (quit, quit_recv) = mpsc::channel::<()>();
 
         let thread = std::thread::spawn(move || {
@@ -71,7 +71,7 @@ pub unsafe extern "C" fn offload_stop() {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn offload_add_work(handler: *const fn() -> ()) {
+pub unsafe extern "C" fn offload_add_work(handler: *const fn()) {
     let h = *handler;
-    BASE_WORKER.as_ref().unwrap().queue(move || h());
+    BASE_WORKER.as_ref().unwrap().queue(h);
 }

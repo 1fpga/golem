@@ -128,11 +128,11 @@ void prefixGameDir(char *dir, size_t dir_len);
 int findPrefixDir(char *dir, size_t dir_len);
 
 const char *getStorageDir(int dev);
-const char *getRootDir();
+extern "C" const char *getRootDir();
 const char *getFullPath(const char *name);
 
 uint32_t getFileType(const char *name);
-int isXmlName(const char *path); // 1 - MRA, 2 - MGL
+extern "C" int isXmlName(const char *path); // 1 - MRA, 2 - MGL
 
 bool FileOpenTextReader(fileTextReader *reader, const char *path);
 const char* FileReadLine(fileTextReader *reader);
