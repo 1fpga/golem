@@ -1,4 +1,5 @@
 use std::ffi::c_ulong;
+use std::time::SystemTime;
 
 #[export_name = "rstval"]
 pub static mut RSTVAL: u8 = 0;

@@ -6,23 +6,43 @@ use std::ffi::{CStr, CString};
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
+// TODO: make all these modules test friendly.
+#[cfg(not(test))]
 pub mod battery;
+#[cfg(not(test))]
 pub mod bootcore;
+#[cfg(not(test))]
 pub mod cfg;
+#[cfg(not(test))]
 pub mod charrom;
+#[cfg(not(test))]
 pub mod file_io;
+#[cfg(not(test))]
 pub mod fpga;
+#[cfg(not(test))]
 pub mod hardware;
+#[cfg(not(test))]
 pub mod input;
+#[cfg(not(test))]
 pub mod menu;
+#[cfg(not(test))]
 pub mod offload;
+#[cfg(not(test))]
 pub mod osd;
+#[cfg(not(test))]
 pub mod scheduler;
+#[cfg(not(test))]
 pub mod shmem;
+#[cfg(not(test))]
 pub mod smbus;
+#[cfg(not(test))]
 pub mod spi;
+#[cfg(not(test))]
 pub mod support;
+#[cfg(not(test))]
 pub mod user_io;
+
+pub mod core;
 
 extern "C" {
     static version: *const u8;
@@ -43,8 +63,9 @@ struct Opts {
     verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
 }
 
+#[cfg(not(test))]
 #[no_mangle]
-pub unsafe extern "C" fn main() {
+pub unsafe extern "C" fn main() -> isize {
     let cores = core_affinity::get_core_ids().unwrap();
     // Always use the second core available, or the first one if there is only one.
     let core = cores.get(1).unwrap_or(cores.get(0).unwrap());
@@ -117,4 +138,6 @@ Version {v}"#
 
     scheduler::scheduler_init();
     scheduler::scheduler_run();
+
+    0
 }

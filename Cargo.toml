@@ -6,10 +6,6 @@ edition = "2018"
 [lib]
 crate-type = [ "staticlib" ] # to generate a `lib<package_name>.a`
 
-[profile.dev]
-panic = "abort"
-overflow-checks = false
-
 [profile.release]
 lto = true
 panic = "abort"
@@ -25,3 +21,6 @@ libc-print = "0.1.21"
 strum = { version = "0.25.0", features = ["derive"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["tracing-log"] }
+
+[dev-dependencies]
+tempdir = "0.3.7"
