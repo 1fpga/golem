@@ -94,7 +94,7 @@ typedef struct {
 	uint32_t controller_unique_mapping[256];
 } cfg_t;
 
-extern cfg_t cfg;
+extern "C" cfg_t cfg;
 
 //// functions ////
 void cfg_parse();

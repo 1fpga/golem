@@ -18,14 +18,6 @@ pub fn unmap(map: &'static [u8]) -> bool {
     unsafe { shmem_unmap_c(map.as_ptr(), map.len() as u32) != 0 }
 }
 
-pub fn put(address: usize, data: &[u8]) -> bool {
-    unsafe { shmem_put_c(address as u32, data.len() as u32, data.as_ptr()) != 0 }
-}
-
-pub fn get(address: usize, data: &mut [u8]) -> bool {
-    unsafe { shmem_get_c(address as u32, data.len() as u32, data.as_ptr()) != 0 }
-}
-
 #[export_name = "shmem_map"]
 #[no_mangle]
 pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {

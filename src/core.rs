@@ -1,19 +1,26 @@
+use crate::cfg;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+fn strip_version(name: &str) -> &str {
+    name.rsplit_once('_').map(|(name, _)| name).unwrap_or(name)
+}
+
 fn core_name_of_(path: &Path) -> Option<&str> {
+    Some(strip_version(exact_core_name_of_(path)?))
+}
+
+fn exact_core_name_of_(path: &Path) -> Option<&str> {
     if path.extension().and_then(OsStr::to_str) != Some("rbf") {
         return None;
     }
 
-    path.file_name()?
-        .to_str()?
-        .rsplit_once('_')
-        .map(|(name, _)| name.into())
-        .or_else(|| path.file_stem().and_then(OsStr::to_str))
+    path.file_stem()?.to_str()
 }
 
 fn find_core_(path: &Path, name: &str) -> Result<Option<PathBuf>, std::io::Error> {
+    let stripped_name = strip_version(name);
+
     for entry in path.read_dir()? {
         let entry = entry?;
         let path = entry.path();
@@ -24,16 +31,15 @@ fn find_core_(path: &Path, name: &str) -> Result<Option<PathBuf>, std::io::Error
                 continue;
             }
             if let Some(core) = find_core_(&path, name)? {
-                eprintln!("find_core_().1 == {:?}", core);
                 return Ok(Some(core));
             }
-        } else if path
-            .file_stem()
-            .and_then(OsStr::to_str)
-            .map(|n| n.starts_with(name))
-            .unwrap_or(false)
-        {
-            return Ok(Some(entry.path()));
+        } else {
+            let current_path = path.file_stem().and_then(OsStr::to_str);
+            if let Some(current_path) = current_path {
+                if strip_version(current_path) == stripped_name {
+                    return Ok(Some(entry.path()));
+                }
+            }
         }
     }
     Ok(None)
@@ -72,6 +78,58 @@ impl Core {
             Ok(name.map(|name| (Self::new(name, &path))))
         } else {
             Ok(None)
+        }
+    }
+
+    pub fn from_exact_name(
+        name: impl AsRef<str>,
+        core_root_dir: impl AsRef<Path>,
+    ) -> Result<Option<Self>, std::io::Error> {
+        let name = name.as_ref();
+        let path = find_core_(core_root_dir.as_ref(), name.as_ref())?;
+
+        if let Some(path) = path {
+            // Check that the exact name is the same.
+            if exact_core_name_of_(&path) != Some(name) {
+                return Ok(None);
+            }
+
+            // Override name with core_name_of, to make sure we remove the version number if any.
+            let name = core_name_of_(&path);
+            Ok(name.map(|name| (Self::new(name, &path))))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn exact_name(&self) -> &str {
+        exact_core_name_of_(&self.path).unwrap()
+    }
+}
+
+impl From<cfg::BootCoreConfig> for Option<Core> {
+    fn from(value: cfg::BootCoreConfig) -> Self {
+        match value {
+            cfg::BootCoreConfig::None => None,
+            cfg::BootCoreConfig::LastCore => {
+                let last_core_name = cfg::Config::last_core_data()?;
+                Some(Core::from_name(last_core_name, cfg::Config::cores_root()).ok()??)
+            }
+            cfg::BootCoreConfig::ExactLastCore => {
+                let last_core_name = cfg::Config::last_core_data()?;
+                Some(Core::from_exact_name(last_core_name, cfg::Config::cores_root()).ok()??)
+            }
+            cfg::BootCoreConfig::CoreName(name) => {
+                Some(Core::from_name(name, cfg::Config::cores_root()).ok()??)
+            }
         }
     }
 }
@@ -147,4 +205,45 @@ fn from_name_works() {
     let core = Core::from_name("Bar", root).unwrap().unwrap();
     assert_eq!(core.name, "Bar");
     assert_eq!(core.path, root.join("_Other/_Again/Bar_12345678.rbf"));
+
+    // Testing skipping directories not starting with `_`.
+    let core = Core::from_name("Wrong", root).unwrap();
+    assert_eq!(core, None);
+}
+
+#[test]
+fn from_bootcore_config() {
+    let root_dir = tempdir::TempDir::new("mister").unwrap();
+    let root = root_dir.path();
+    cfg::testing::set_config_root(root);
+
+    // Create a structure like this:
+    //   mister/
+    //   └── config/
+    //       └── lastcore.dat (contains "Core")
+    //       └── Core_12345678.rbf
+    //       └── Wrong_12345678.rbf
+    //   └── _Cores/
+    //       └── Core_12345678.rbf
+    //       └── hello.rbf
+    //   └── _Other/
+    //       └── Other_12345678.rbf
+    //       └── _Again/
+    //           └── Bar_12345678.rbf
+
+    std::fs::create_dir_all(root.join("config")).unwrap();
+    std::fs::create_dir_all(root.join("_Cores")).unwrap();
+    std::fs::create_dir_all(root.join("_Other")).unwrap();
+    std::fs::create_dir_all(root.join("_Other/_Again")).unwrap();
+    std::fs::write(root.join("config/Core_12345678.rbf"), "").unwrap();
+    std::fs::write(root.join("config/lastcore.dat"), "Core").unwrap();
+    std::fs::write(root.join("_Cores/Core_12345678.rbf"), "").unwrap();
+    std::fs::write(root.join("_Cores/hello.rbf"), "").unwrap();
+    std::fs::write(root.join("_Other/Other_12345678.rbf"), "").unwrap();
+    std::fs::write(root.join("_Other/_Again/Bar_12345678.rbf"), "").unwrap();
+
+    let x: Option<Core> = Option::<Core>::from(cfg::BootCoreConfig::LastCore);
+    let core = x.unwrap();
+    assert_eq!(core.name, "Core");
+    assert_eq!(core.path, root.join("_Cores/Core_12345678.rbf"));
 }

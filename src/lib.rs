@@ -12,11 +12,7 @@ pub mod battery;
 #[cfg(not(test))]
 pub mod bootcore;
 #[cfg(not(test))]
-pub mod cfg;
-#[cfg(not(test))]
 pub mod charrom;
-#[cfg(not(test))]
-pub mod file_io;
 #[cfg(not(test))]
 pub mod fpga;
 #[cfg(not(test))]
@@ -42,7 +38,10 @@ pub mod support;
 #[cfg(not(test))]
 pub mod user_io;
 
+pub mod cfg;
 pub mod core;
+pub mod file_io;
+pub mod video;
 
 extern "C" {
     static version: *const u8;
@@ -80,10 +79,17 @@ pub unsafe extern "C" fn main() -> isize {
     let v = CStr::from_ptr(version.offset(5)).to_string_lossy();
     println!(
         r#"
-Minimig by Dennis van Weeren
-ARM Controller by Jakub Bednarski
-MiSTer code by Sorgelig
-Rust code by Hans Larsen
+
+       ^55555Y!       ~55555Y!  .P&@&#~   ^?PGBBBG5J! :YYYYYYYYYYYYYJ!
+       &@@@@@@@&     ~@@@@@@@@& J@@@@@G J@@@@@@@@@@@@:&@@@@@@@@@@@@@@@&
+      ~@@@@@@@@@^   ^@@@@@@@@@&  ~YYJ~ G@@@@@#7!7J5J..PPPPP@@@@@@GPP55Y
+      #@@@@5@@@@!  :@@@@P@@@@@?.##B5.  @@@@@@B.           .@@@@@#    ~5#&@@@&#J. .####&7:G&@!
+     :@@@@&^@@@@J .@@@@~#@@@@@ 5@@@@@  5@@@@@@@&P~        Y@@@@@~  5@@@@#5#@@@@& 7@@@@@&@@@@
+     G@@@@5 @@@@5 &@@@^^@@@@@5 @@@@@#   ~B@@@@@@@@&^      @@@@@&  &@@@@5..G@@@@& &@@@@@&J!7^
+    .@@@@@. &@@@B#@@@~ B@@@@@.?@@@@@~      :?&@@@@@&     7@@@@@7 5@@@@@@@@@@@#Y ^@@@@@P
+    5@@@@B  #@@@@@@@! :@@@@@G &@@@@& :#J^.   5@@@@@&     &@@@@@  G@@@@@?^::...  B@@@@@
+    &@@@@^  G@@@@@@7  ?@@@@@::@@@@@7 G@@@@@@@@@@@@&^    .@@@@@Y  ^@@@@@&BGB#@#  @@@@@5
+    :B&@B   J@&&&&7    Y&&@B  7#&&#  ?B&@@@@@@@&G!       7#&&&.   .Y#@@@@@@&B^  ~B&&&.
 
 Version {v}"#
     );
@@ -113,9 +119,9 @@ Version {v}"#
         .init();
 
     if fpga::is_fpga_ready(1) == 0 {
-        println!("\nGPI[31]==1. FPGA is uninitialized or incompatible core loaded.");
-        println!("Quitting. Bye bye...\n");
-        std::process::exit(1);
+        eprintln!("\nGPI[31]==1. FPGA is uninitialized or incompatible core loaded.");
+        eprintln!("Quitting. Bye bye...\n");
+        return 1;
     }
 
     file_io::FindStorage();

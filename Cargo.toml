@@ -16,11 +16,23 @@ strip = "debuginfo"
 clap = { version = "4.3.5", features = ["derive"] }
 clap-verbosity-flag = "2.0.1"
 core_affinity = "0.8.0"
+embedded-graphics = "0.8.0"
+hex = "0.4.3"
+json5 = "0.4.1"
 libc = { version = "*", default-features = false }
 libc-print = "0.1.21"
+merge = { git = "https://github.com/hansl/merge-rs.git", rev = "ef451941cf3faefc8b6514fa2fb9105f823e6d60", features = ["num", "derive"] }
+num-traits = "0.2.15"
+serde = { version = "1.0.164", features = ["derive"] }
+serde-hex = "0.1.0"
+serde_ini = "0.2.0"
+serde_with = { version = "3.0.0", features = ["hex"] }
 strum = { version = "0.25.0", features = ["derive"] }
+thiserror = "1.0.40"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["tracing-log"] }
+validator = { version = "0.16.1", features = ["derive"] }
 
 [dev-dependencies]
 tempdir = "0.3.7"
+test-generator = "0.3.1"

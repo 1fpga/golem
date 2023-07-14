@@ -512,8 +512,21 @@ const char* cfg_get_label(uint8_t alt)
 	return label;
 }
 
+static bool inited = false;
+
+extern "C" void rust_load_config();
+
 void cfg_parse()
 {
+    if (inited) return;
+    inited = true;
+
+    // Use the Rust code until we can move this completely into Rust.
+    rust_load_config();
+    return;
+}
+
+extern "C" void cfg_parse_original() {
 	memset(&cfg, 0, sizeof(cfg));
 	cfg.bootscreen = 1;
 	cfg.fb_terminal = 1;
