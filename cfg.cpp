@@ -515,6 +515,7 @@ const char* cfg_get_label(uint8_t alt)
 static bool inited = false;
 
 extern "C" void rust_load_config();
+extern "C" void cfg_parse_original();
 
 void cfg_parse()
 {
@@ -523,6 +524,7 @@ void cfg_parse()
 
     // Use the Rust code until we can move this completely into Rust.
     rust_load_config();
+
     return;
 }
 

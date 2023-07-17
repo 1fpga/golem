@@ -5,7 +5,6 @@ use serde_with::{serde_as, DeserializeFromStr, DurationSeconds};
 use std::collections::HashMap;
 use std::ffi::{c_char, c_int};
 use std::io;
-use std::io::BufRead;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
@@ -16,6 +15,7 @@ mod bootcore;
 mod fb_size;
 mod hdmi_limited;
 mod hdr;
+mod ini; // Internal module.
 mod ntsc_mode;
 mod osd_rotate;
 mod reset_combo;
@@ -24,6 +24,7 @@ mod vrr_mode;
 mod vscale_mode;
 mod vsync_adjust;
 
+use crate::video::aspect::AspectRatio;
 pub use bootcore::*;
 pub use fb_size::*;
 pub use hdmi_limited::*;
@@ -144,7 +145,10 @@ pub enum ConfigError {
     Io(#[from] io::Error),
 
     #[error("Could not read INI file: {0}")]
-    IniError(#[from] serde_ini::de::Error),
+    IniError(#[from] ini::Error),
+
+    #[error("Could not read JSON file: {0}")]
+    JsonError(#[from] serde_json::Error),
 }
 
 /// A helper function to read minutes into durations from the config.
@@ -208,12 +212,19 @@ mod mister_hexa {
     {
         Option::deserialize(deserializer).and_then(|v: Option<String>| {
             if let Some(s) = v {
-                if let Some(s) = s.strip_prefix("0x") {
-                    T::from_str_radix(s, 16)
-                        .map_err(|_| serde::de::Error::custom("Invalid hexadecimal value"))
+                if let Some(hs) = s.strip_prefix("0x") {
+                    T::from_str_radix(hs, 16)
+                        .map_err(|_| {
+                            serde::de::Error::custom(format!("Invalid hexadecimal value: {s}"))
+                        })
                         .map(Some)
+                } else if s == "0" {
+                    Ok(Some(T::zero()))
                 } else {
-                    Err(serde::de::Error::custom("Invalid hexadecimal value"))
+                    Err(serde::de::Error::custom(format!(
+                        "Invalid hexadecimal value: {}",
+                        s
+                    )))
                 }
             } else {
                 Ok(None)
@@ -233,11 +244,17 @@ mod mister_hexa_seq {
         Vec::deserialize(deserializer).and_then(|v: Vec<String>| {
             v.into_iter()
                 .map(|s| {
-                    if let Some(s) = s.strip_prefix("0x") {
-                        T::from_str_radix(s, 16)
-                            .map_err(|_| serde::de::Error::custom("Invalid hexadecimal value"))
+                    if let Some(hs) = s.strip_prefix("0x") {
+                        T::from_str_radix(hs, 16).map_err(|_| {
+                            serde::de::Error::custom(format!("Invalid hexadecimal value: {s}"))
+                        })
+                    } else if s == "0" {
+                        Ok(T::zero())
                     } else {
-                        Err(serde::de::Error::custom("Invalid hexadecimal value"))
+                        Err(serde::de::Error::custom(format!(
+                            "Invalid hexadecimal value: {}",
+                            s
+                        )))
                     }
                 })
                 .collect()
@@ -801,10 +818,10 @@ pub struct Config {
     #[serde(rename = "MiSTer")]
     mister: MisterConfig,
 
-    /// The `[video=123x456@78]` sections.
+    /// The `[video=123x456@78]` sections, or core section.
     #[serde(flatten)]
     #[merge(strategy = merge::hashmap::recurse)]
-    video_mode_overrides: HashMap<VideoResolutionString, MisterConfig>,
+    overrides: HashMap<String, MisterConfig>,
 }
 
 impl Config {
@@ -838,25 +855,89 @@ impl Config {
         bootcore.parse().unwrap()
     }
 
-    pub fn from_ini<R: io::Read>(content: R) -> Result<Self, ConfigError> {
-        let mut c = String::new();
-        let reader = std::io::BufReader::new(content);
-        for line in reader.lines() {
-            let line = line?;
-            if let Some(i) = line.find(';') {
-                c.push_str(line[..i].trim());
-            } else {
-                c.push_str(line.trim());
-            }
-            c.push('\n');
+    pub fn merge_core_override(&mut self, corename: &str) {
+        if let Some(o) = self.overrides.get(corename) {
+            self.mister.merge(o.clone());
         }
-        Ok(serde_ini::from_str(&c)?)
+    }
+
+    pub fn merge_video_override(&mut self, aspect: AspectRatio) {
+        let video_str = format!("video={}", aspect);
+        if let Some(o) = self.overrides.get(&video_str) {
+            self.mister.merge(o.clone());
+        }
+    }
+
+    /// Read INI config using our custom parser, then output the JSON, then parse that into
+    /// the config struct. This is surprisingly fast, solid and byte compatible with the
+    /// original CPP code (checked manually on various files).
+    pub fn from_ini<R: io::Read>(mut content: R) -> Result<Self, ConfigError> {
+        let mut s = String::new();
+        content.read_to_string(&mut s)?;
+
+        if s.is_empty() {
+            return Ok(Default::default());
+        }
+
+        let json = ini::parse(&s).unwrap().to_json_string(
+            |name, value: &str| match name {
+                "mouse_throttle"
+                | "video_info"
+                | "controller_info"
+                | "refresh_min"
+                | "refresh_max"
+                | "vscale_border"
+                | "bootcore_timeout"
+                | "osd_timeout"
+                | "spinner_throttle"
+                | "spinner_axis"
+                | "shmask_mode_default"
+                | "bt_auto_disconnect"
+                | "wheel_force"
+                | "wheel_range"
+                | "vrr_min_framerate"
+                | "vrr_max_framerate"
+                | "vrr_vesa_framerate"
+                | "video_off"
+                | "video_brightness"
+                | "video_contrast"
+                | "video_saturation"
+                | "video_hue"
+                | "hdr_max_nits"
+                | "hdr_avg_nits" => Some(value.to_string()),
+                _ => None,
+            },
+            |name| {
+                [
+                    "custom_aspect_ratio",
+                    "no_merge_vidpid",
+                    "player_controller",
+                    "player_1_controller",
+                    "player_2_controller",
+                    "player_3_controller",
+                    "player_4_controller",
+                    "player_5_controller",
+                    "player_6_controller",
+                    "controller_unique_mapping",
+                ]
+                .contains(&name)
+            },
+        );
+
+        Config::from_json(json.as_bytes())
+    }
+
+    pub fn from_json<R: io::Read>(mut content: R) -> Result<Self, ConfigError> {
+        let mut c = String::new();
+        content.read_to_string(&mut c)?;
+        Ok(serde_json::from_str(&c)?)
     }
 
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ConfigError> {
         let path = path.as_ref();
         match path.extension().and_then(|ext| ext.to_str()) {
             Some("ini") => Self::from_ini(std::fs::File::open(path)?),
+            Some("json") => Self::from_json(std::fs::File::open(path)?),
             _ => Err(
                 io::Error::new(io::ErrorKind::InvalidInput, "Invalid config file extension").into(),
             ),
@@ -877,7 +958,7 @@ impl Config {
 
         let m = &self.mister;
 
-        dest.keyrah_mode = m.keyrah_mode.unwrap_or(0);
+        dest.keyrah_mode = m.keyrah_mode.unwrap_or_default();
         dest.forced_scandoubler = m.forced_scandoubler.unwrap_or_default() as u8;
         dest.key_menu_as_rgui = m.key_menu_as_rgui.unwrap_or_default() as u8;
         dest.reset_combo = m.reset_combo.unwrap_or_default() as u8;
@@ -885,7 +966,8 @@ impl Config {
         dest.vga_scaler = m.vga_scaler.unwrap_or_default() as u8;
         dest.vga_sog = m.vga_sog.unwrap_or_default() as u8;
         dest.hdmi_audio_96k = m.hdmi_audio_96k.unwrap_or_default() as u8;
-        dest.dvi_mode = m.dvi_mode.unwrap_or_default() as u8;
+        // For some reason, dvi_mode is set to 2 by default in the C++ code, instead of false.
+        dest.dvi_mode = m.dvi_mode.map(|x| x as u8).unwrap_or(2);
         dest.hdmi_limited = m.hdmi_limited.unwrap_or_default() as u8;
         dest.direct_video = m.direct_video.unwrap_or_default() as u8;
         dest.video_info = m.video_info.unwrap_or_default().as_secs() as u8;
@@ -1038,11 +1120,8 @@ pub extern "C" fn rust_load_config() {
         .unwrap()
         .join("MiSTer.ini");
 
-    let mut config = Config::load(p).unwrap();
+    let mut config = Config::load(&p).unwrap();
     config.mister.set_defaults();
-    eprintln!("...");
-    eprintln!("{config:#?}");
-    eprintln!("...");
 
     unsafe {
         config.copy_to_cfg_cpp(&mut cfg);
@@ -1067,11 +1146,16 @@ fn works_with_empty_file() {
     }
 }
 
-#[test_generator::test_resources("tests/assets/config/*.ini")]
-fn works_with_example(p: &str) {
-    unsafe {
-        let mut cpp_cfg: cpp::CppCfg = std::mem::zeroed();
-        let config = Config::load(p).unwrap();
-        config.copy_to_cfg_cpp(&mut cpp_cfg);
+#[cfg(test)]
+mod examples {
+    use crate::cfg::*;
+
+    #[test_generator::test_resources("tests/assets/config/*.ini")]
+    fn works_with_example(p: &str) {
+        unsafe {
+            let mut cpp_cfg: cpp::CppCfg = std::mem::zeroed();
+            let config = Config::load(p).unwrap();
+            config.copy_to_cfg_cpp(&mut cpp_cfg);
+        }
     }
 }
