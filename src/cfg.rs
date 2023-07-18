@@ -25,6 +25,7 @@ mod vscale_mode;
 mod vsync_adjust;
 
 use crate::video::aspect::AspectRatio;
+use crate::video::resolution::Resolution;
 pub use bootcore::*;
 pub use fb_size::*;
 pub use hdmi_limited::*;
@@ -351,17 +352,17 @@ pub struct MisterConfig {
     /// Specify a custom aspect ratio in the format `a:b`. This can be repeated.
     /// They are applied in order, so the first one matching will be the one used.
     #[merge(strategy = merge::vec::append)]
-    custom_aspect_ratio: Vec<aspect::AspectRatio>,
+    custom_aspect_ratio: Vec<AspectRatio>,
 
     /// Specify a custom aspect ratio, allowing for backward compatibility with older
     /// MiSTer config files. We only need 2 as that's what the previous version supported.
     #[merge(strategy = merge::option::overwrite_some)]
-    custom_aspect_ratio_1: Option<aspect::AspectRatio>,
+    custom_aspect_ratio_1: Option<AspectRatio>,
 
     /// Specify a custom aspect ratio, allowing for backward compatibility with older
     /// MiSTer config files. We only need 2 as that's what the previous version supported.
     #[merge(strategy = merge::option::overwrite_some)]
-    custom_aspect_ratio_2: Option<aspect::AspectRatio>,
+    custom_aspect_ratio_2: Option<AspectRatio>,
 
     /// Set to 1 to run scandoubler on VGA output always (depends on core).
     #[serde(with = "mister_bool")]
@@ -737,6 +738,7 @@ impl MisterConfig {
         config
     }
 
+    /// Set the default values for this config.
     pub fn set_defaults(&mut self) {
         self.bootscreen.get_or_insert(true);
         self.fb_terminal.get_or_insert(true);
@@ -861,8 +863,9 @@ impl Config {
         }
     }
 
-    pub fn merge_video_override(&mut self, aspect: AspectRatio) {
-        let video_str = format!("video={}", aspect);
+    pub fn merge_video_override(&mut self, resolution: Resolution) {
+        // Try to get `123x456@78` format first.
+        let video_str = format!("video={}", resolution);
         if let Some(o) = self.overrides.get(&video_str) {
             self.mister.merge(o.clone());
         }
@@ -1114,14 +1117,22 @@ impl Config {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn rust_load_config() {
-    let p = std::env::current_exe()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("MiSTer.ini");
+    use crate::file_io::root_dir;
 
+    let root = root_dir();
+
+    let p = root.join("MiSTer.ini");
     let mut config = Config::load(&p).unwrap();
     config.mister.set_defaults();
+
+    // Check the altcfg.
+    let alt = crate::user_io::altcfg(-1);
+    if alt != 0 {
+        let p = root.join(format!("MiSTer_{alt}.ini"));
+        if let Ok(alt_config) = Config::load(&p) {
+            config.merge(alt_config);
+        }
+    }
 
     unsafe {
         config.copy_to_cfg_cpp(&mut cfg);
