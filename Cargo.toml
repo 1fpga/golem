@@ -5,6 +5,7 @@ edition = "2018"
 
 [lib]
 crate-type = [ "staticlib" ] # to generate a `lib<package_name>.a`
+path = "src/lib.rs"
 
 [profile.release]
 lto = true

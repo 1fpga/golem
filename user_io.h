@@ -237,7 +237,7 @@ const char* get_rbf_path();
 
 uint16_t sdram_sz(int sz = -1);
 int user_io_is_dualsdr();
-uint16_t altcfg(int alt = -1);
+extern "C" uint16_t altcfg(int alt = -1);
 
 void MakeFile(const char * filename, const char * data);
 int GetUARTMode();

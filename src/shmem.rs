@@ -1,4 +1,5 @@
 use std::ffi::c_int;
+use std::ops::{Deref, DerefMut};
 
 static mut MEM_FD: Option<c_int> = None;
 
@@ -9,13 +10,45 @@ static mut MEM_FD: Option<c_int> = None;
 /// address is invalid or if the given size is too large. In addition, the caller must
 /// ensure that the returned buffer is not used after it is unmapped. AND the caller
 /// must acknowledge that they're playing with dangerous forces.
-pub fn map(address: usize, size: usize) -> &'static [u8] {
+pub fn map(address: usize, size: usize) -> &'static mut [u8] {
     let ptr = unsafe { shmem_map_c(address as u32, size as u32) };
     unsafe { std::slice::from_raw_parts_mut(ptr, size) }
 }
 
 pub fn unmap(map: &'static [u8]) -> bool {
     unsafe { shmem_unmap_c(map.as_ptr(), map.len() as u32) != 0 }
+}
+
+pub struct Mapper(&'static mut [u8]);
+
+impl Mapper {
+    pub fn new(address: usize, size: usize) -> Self {
+        let ptr = unsafe { shmem_map_c(address as u32, size as u32) };
+
+        Self(unsafe { std::slice::from_raw_parts_mut(ptr, size) })
+    }
+}
+
+impl Deref for Mapper {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        self.0
+    }
+}
+
+impl DerefMut for Mapper {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0
+    }
+}
+
+impl Drop for Mapper {
+    fn drop(&mut self) {
+        unsafe {
+            shmem_unmap_c(self.0.as_ptr(), self.0.len() as u32);
+        }
+    }
 }
 
 #[export_name = "shmem_map"]

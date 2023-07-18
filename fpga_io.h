@@ -9,7 +9,7 @@
 
 extern "C" int fpga_io_init();
 
-void fpga_spi_en(uint32_t mask, uint32_t en);
+extern "C" void fpga_spi_en(uint32_t mask, uint32_t en);
 extern "C" uint16_t fpga_spi(uint16_t word);
 uint16_t fpga_spi_fast(uint16_t word);
 

@@ -59,6 +59,6 @@ void video_cmd(char *cmd);
 
 void video_core_description(char *str, size_t len);
 void video_scaler_description(char *str, size_t len);
-char* video_get_core_mode_name(int with_vrefresh = 1);
+extern "C" char* video_get_core_mode_name(int with_vrefresh = 1);
 
 #endif // VIDEO_H

@@ -1,8 +1,9 @@
+use crate::video::resolution::Resolution;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-fn gcd_(mut u: u16, mut v: u16) -> u16 {
+fn gcd_(mut u: u32, mut v: u32) -> u32 {
     if u == v {
         return u;
     }
@@ -39,6 +40,9 @@ fn gcd_(mut u: u16, mut v: u16) -> u16 {
     u << shift
 }
 
+/// An aspect ratio is similar to a resolution, but will always find the smallest ratio between
+/// the width and the height. For example, 1920x1080 and 3840x2160 will both have an aspect ratio
+/// of 16:9.
 #[derive(
     SerializeDisplay,
     DeserializeFromStr,
@@ -53,12 +57,12 @@ fn gcd_(mut u: u16, mut v: u16) -> u16 {
     PartialEq,
 )]
 pub struct AspectRatio {
-    pub vertical: u16,
-    pub horizontal: u16,
+    pub vertical: u32,
+    pub horizontal: u32,
 }
 
 impl AspectRatio {
-    pub fn new(vertical: u16, horizontal: u16) -> Self {
+    pub fn new(horizontal: u32, vertical: u32) -> Self {
         let gcd = gcd_(vertical, horizontal);
         AspectRatio {
             vertical: vertical / gcd,
@@ -78,17 +82,29 @@ impl FromStr for AspectRatio {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((v, h)) = s.split_once(':') {
-            let vertical = v.parse::<u16>().unwrap();
-            let horizontal = h.parse::<u16>().unwrap();
-            Ok(AspectRatio::new(vertical, horizontal))
+            let horizontal = h.parse::<u32>().unwrap();
+            let vertical = v.parse::<u32>().unwrap();
+            Ok(AspectRatio::new(horizontal, vertical))
         } else {
             Err("Invalid aspect ratio: expected 'horizontal:vertical'")
         }
     }
 }
 
-impl From<(u16, u16)> for AspectRatio {
-    fn from((horizontal, vertical): (u16, u16)) -> Self {
+impl From<(u32, u32)> for AspectRatio {
+    fn from((horizontal, vertical): (u32, u32)) -> Self {
         Self::new(horizontal, vertical)
     }
+}
+
+impl From<Resolution> for AspectRatio {
+    fn from(res: Resolution) -> Self {
+        Self::new(res.width, res.height)
+    }
+}
+
+#[test]
+fn works() {
+    let ratio = AspectRatio::new(3840, 2160);
+    assert_eq!(ratio.to_string(), "16:9");
 }

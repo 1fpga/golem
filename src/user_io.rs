@@ -1,4 +1,5 @@
-use std::ffi::c_char;
+use crate::shmem;
+use std::ffi::{c_char, c_int};
 
 #[allow(unused)]
 extern "C" {
@@ -22,4 +23,26 @@ extern "C" {
     pub fn is_arcade() -> u8;
     pub fn is_saturn() -> u8;
     pub fn is_pcxt() -> u8;
+}
+
+#[no_mangle]
+pub extern "C" fn altcfg(alt: c_int) -> u16 {
+    let mut map = shmem::Mapper::new(0x1FFFF000, 0x1000);
+    let par = &mut map[0xF04..];
+    if alt >= 0 {
+        par[0] = 0x34;
+        par[1] = 0x99;
+        par[2] = 0xBA;
+        par[3] = alt as u8;
+
+        println!("** altcfg({alt})");
+    } else if (par[0] == 0x34) && (par[1] == 0x99) && (par[2] == 0xBA) {
+        let res = par[3];
+        println!("** altcfg: got cfg {res}");
+        return res as u16;
+    } else {
+        println!("** altcfg: no cfg");
+    }
+
+    0
 }

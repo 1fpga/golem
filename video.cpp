@@ -2425,52 +2425,11 @@ int hasAPI1_5()
 	return api1_5 || is_menu();
 }
 
+extern "C" uint8_t get_video_info_rust(uint8_t force, VideoInfo *video_info);
+
 static bool get_video_info(bool force, VideoInfo *video_info)
 {
-	static uint16_t nres = 0;
-	bool res_changed = false;
-	bool fb_changed = false;
-
-	spi_uio_cmd_cont(UIO_GET_VRES);
-	uint16_t res = spi_w(0);
-	if ((nres != res) || force)
-	{
-		res_changed = (nres != res);
-		nres = res;
-		video_info->width = spi_w(0) | (spi_w(0) << 16);
-		video_info->height = spi_w(0) | (spi_w(0) << 16);
-		video_info->htime = spi_w(0) | (spi_w(0) << 16);
-		video_info->vtime = spi_w(0) | (spi_w(0) << 16);
-		video_info->ptime = spi_w(0) | (spi_w(0) << 16);
-		video_info->vtimeh = spi_w(0) | (spi_w(0) << 16);
-		video_info->ctime = spi_w(0) | (spi_w(0) << 16);
-		video_info->interlaced = ( res & 0x100 ) != 0;
-		video_info->rotated = ( res & 0x200 ) != 0;
-	}
-	else
-	{
-		*video_info = current_video_info;
-	}
-	DisableIO();
-
-	static uint8_t fb_crc = 0;
-	uint8_t crc = spi_uio_cmd_cont(UIO_GET_FB_PAR);
-	if (fb_crc != crc || force || res_changed)
-	{
-		fb_changed |= (fb_crc != crc);
-		fb_crc = crc;
-		video_info->arx = spi_w(0);
-		video_info->arxy = !!(video_info->arx & 0x1000);
-		video_info->arx &= 0xFFF;
-		video_info->ary = spi_w(0) & 0xFFF;
-		video_info->fb_fmt = spi_w(0);
-		video_info->fb_width = spi_w(0);
-		video_info->fb_height = spi_w(0);
-		video_info->fb_en = !!(video_info->fb_fmt & 0x40);
-	}
-	DisableIO();
-
-	return res_changed || fb_changed;
+    return !!get_video_info_rust(force, video_info);
 }
 
 static void video_core_description(const VideoInfo *vi, const vmode_custom_t */*vm*/, char *str, size_t len)

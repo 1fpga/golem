@@ -1224,40 +1224,6 @@ uint16_t sdram_sz(int sz)
 	return res;
 }
 
-uint16_t altcfg(int alt)
-{
-	int res = 0;
-
-	void* buf = shmem_map(0x1FFFF000, 0x1000);
-	if (!buf) return 0;
-
-	volatile uint8_t* par = (volatile uint8_t*)buf;
-	par += 0xF04;
-	if (alt >= 0)
-	{
-		*par++ = 0x34;
-		*par++ = 0x99;
-		*par++ = 0xBA;
-		*par++ = (uint8_t)alt;
-		printf("** altcfg(%d)\n", alt);
-	}
-	else
-	{
-		if ((par[0] == 0x34) && (par[1] == 0x99) && (par[2] == 0xBA))
-		{
-			res = par[3];
-			printf("** altcfg: got cfg %d\n", res);
-		}
-		else
-		{
-			printf("** altcfg: no cfg\n");
-		}
-	}
-
-	shmem_unmap(buf, 0x1000);
-	return res;
-}
-
 int user_io_is_dualsdr()
 {
 	return dual_sdr;

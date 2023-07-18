@@ -91,7 +91,8 @@ pub unsafe extern "C" fn main() -> isize {
     &@@@@^  G@@@@@@7  ?@@@@@::@@@@@7 G@@@@@@@@@@@@&^    .@@@@@Y  ^@@@@@&BGB#@#  @@@@@5
     :B&@B   J@&&&&7    Y&&@B  7#&&#  ?B&@@@@@@@&G!       7#&&&.   .Y#@@@@@@&B^  ~B&&&.
 
-Version {v}"#
+                                                                       Version {v}
+"#
     );
 
     let Opts { core, xml, verbose } = Opts::parse();

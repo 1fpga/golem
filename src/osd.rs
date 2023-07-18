@@ -502,8 +502,8 @@ pub extern "C" fn InfoEnable(x: c_int, y: c_int, width: c_int, height: c_int) {
         spi::spi_osd_cmd_cont(OSD_CMD_ENABLE | OSD_INFO);
         spi::spi_w(x as u16);
         spi::spi_w(y as u16);
-        spi::spi_w(width as u16);
-        spi::spi_w(height as u16);
+        spi::spi_w(width.max(2048) as u16);
+        spi::spi_w(height.max(1024) as u16);
         spi::DisableOsd();
     }
 }

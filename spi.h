@@ -14,7 +14,7 @@ void DisableFpga();
 void EnableOsd();
 extern "C" void DisableOsd();
 void EnableIO();
-void DisableIO();
+extern "C" void DisableIO();
 
 // base functions
 uint8_t  inline spi_b(uint8_t parm)
@@ -22,10 +22,7 @@ uint8_t  inline spi_b(uint8_t parm)
 	return (uint8_t)fpga_spi(parm);
 }
 
-extern "C" uint16_t inline spi_w(uint16_t word)
-{
-	return fpga_spi(word);
-}
+extern "C" uint16_t spi_w(uint16_t word);
 
 // input only helper
 uint8_t inline spi_in()
@@ -52,7 +49,7 @@ void spi_osd_cmd8_cont(uint8_t cmd, uint8_t parm);
 void spi_osd_cmd8(uint8_t cmd, uint8_t parm);
 
 /* User_io related SPI functions */
-uint16_t spi_uio_cmd_cont(uint16_t cmd);
+extern "C" uint16_t spi_uio_cmd_cont(uint16_t cmd);
 uint16_t spi_uio_cmd(uint16_t cmd);
 uint8_t spi_uio_cmd8_cont(uint8_t cmd, uint8_t parm);
 uint8_t spi_uio_cmd8(uint8_t cmd, uint8_t parm);

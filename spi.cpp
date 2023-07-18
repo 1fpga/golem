@@ -52,6 +52,11 @@ void DisableIO()
 	fpga_spi_en(SSPI_IO_EN, 0);
 }
 
+uint16_t spi_w(uint16_t word)
+{
+	return fpga_spi(word);
+}
+
 uint32_t spi32_w(uint32_t parm)
 {
 	uint32_t res;
