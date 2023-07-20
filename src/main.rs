@@ -1,5 +1,3 @@
-#![allow(clippy::missing_safety_doc)]
-
 // TODO: make all these modules test friendly.
 #[cfg(not(test))]
 pub mod application;
@@ -20,8 +18,6 @@ pub mod input;
 #[cfg(not(test))]
 pub mod menu;
 #[cfg(not(test))]
-pub mod offload;
-#[cfg(not(test))]
 pub mod osd;
 #[cfg(not(test))]
 pub mod scheduler;
@@ -41,11 +37,16 @@ mod main_inner;
 pub mod cfg;
 pub mod core;
 pub mod file_io;
+pub mod offload;
 pub mod video;
 
 #[cfg(feature = "de10")]
 #[no_mangle]
-pub unsafe extern "C" fn main() -> isize {
+pub unsafe extern "C" fn main() {
+    main_inner();
+}
+
+#[cfg(not(feature = "de10"))]
+fn main() {
     main_inner::main();
-    0
 }

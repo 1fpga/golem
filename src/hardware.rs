@@ -1,4 +1,5 @@
 use std::ffi::c_ulong;
+use std::time::SystemTime;
 
 #[export_name = "rstval"]
 pub static mut RSTVAL: u8 = 0;
@@ -50,7 +51,7 @@ pub extern "C" fn GetTimer(offset: c_ulong) -> c_ulong {
     };
 
     unsafe {
-        libc::clock_gettime(libc::CLOCK_BOOTTIME, &mut tp);
+        libc::clock_gettime(libc::CLOCK_REALTIME, &mut tp);
     }
 
     let mut res = tp.tv_sec as c_ulong;

@@ -1,3 +1,4 @@
+
 # Main_MiSTer Main Firmware
 
 This repo serves as the home for the MiSTer Main binaries and the Wiki.
@@ -9,11 +10,11 @@ From the [wiki](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki):
 
 > MiSTer is an open project that aims to recreate various classic computers, game consoles and arcade machines, using modern hardware. It allows software and game images to run as they would on original hardware, using peripherals such as mice, keyboards, joysticks and other game controllers.
 
-This specific repo is the main firmware that runs on the MiSTer hardware, responsible to initialize and coordinate with the FPGA and the various cores.
+This specific repo is the main firmware that runs on the MiSTer hardware, responsible to initialize and coordinate with the FPGA and the various cores, rebuilt in Rust.
 
 ### What are you doing to it?
 The MiSTer code is currently coded in C++.
-This fork is an attempt to rewrite the main firmware in Rust.
+This fork is an attempt to rewrite it firmware in Rust.
 
 ### Why?
 Multiple reasons:
@@ -105,12 +106,11 @@ Instructions can be found [here](https://rustup.rs/).
 
 The easiest way to build the `MiSTer` binary is to use the Docker container provided by `misterkun` [here](https://hub.docker.com/r/misterkun/toolchain).
 
-### Building
-
-To build the `MiSTer` binary, run the following commands:
+### Building MiSTer for DE10-Nano
+To build the DE10 target executable, run the following command:
 
 ```bash
-cargo build --release
+cargo build --lib --target=armv7-unknown-linux-gnueabihf --no-default-features --features=de10 --release
 docker run -it --rm -v $PWD:/mister misterkun/toolchain make BASE=arm-linux-gnueabihf
 ```
 
@@ -123,6 +123,19 @@ ssh root@$MISTER_IP 'killall MiSTer' # Make sure MiSTer is not running
 scp MiSTer root@$MISTER_IP:/media/fat/ # Copy the binary to the device
 ssh root@$MISTER_IP 'sync; PATH=/media/fat:$PATH; MiSTer' # Restart the firmware
 ```
+
+### Desktop Executable
+There is no a Desktop version of this, which can be ran locally in debug mode with:
+
+```bash
+cargo run
+```
+
+This version should help develop some features that don't require an FPGA (like menus and configs).
+
+### Tests
+Tests can be run with `cargo test` as you would.
+The DE10-Nano feature should be disabled for tests.
 
 # Contributing
 This repo is not the main fork of the MiSTer firmware.

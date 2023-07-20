@@ -1,4 +1,5 @@
 use crate::cfg;
+use libc::c_char;
 use std::ffi::CStr;
 use tracing::info;
 
@@ -9,7 +10,7 @@ extern "C" {
 
 #[no_mangle]
 pub unsafe extern "C" fn bootcore_init(path: *const u8) {
-    let path = CStr::from_ptr(path).to_str().ok();
+    let path = CStr::from_ptr(path as *const c_char).to_str().ok();
     let path = if path == Some("") { None } else { Some(path) };
     info!("bootcore_init: path = {path:?}");
 

@@ -835,8 +835,7 @@ impl Config {
 
         #[cfg(not(test))]
         unsafe {
-            let root = crate::file_io::getRootDir();
-            std::ffi::CStr::from_ptr(root).to_str().unwrap().into()
+            crate::file_io::root_dir()
         }
     }
 

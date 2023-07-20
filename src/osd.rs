@@ -10,13 +10,13 @@ const INFO_MAXW: usize = 32;
 const INFO_MAXH: usize = 16;
 
 const DISABLE_KEYBOARD: u8 = 0x02; // disable keyboard while OSD is active
-const OSD_INFO: u8 = 0x04; // display info
+pub const OSD_INFO: u8 = 0x04; // display info
 const OSD_MSG: u8 = 0x08; // display message window
 
-const OSD_LINE_LENGTH: usize = 256; // single line length in bytes
-const OSD_CMD_WRITE: u8 = 0x20; // OSD write video data command
-const OSD_CMD_ENABLE: u8 = 0x41; // OSD enable command
-const OSD_CMD_DISABLE: u8 = 0x40; // OSD disable command
+pub const OSD_LINE_LENGTH: usize = 256; // single line length in bytes
+pub const OSD_CMD_WRITE: u8 = 0x20; // OSD write video data command
+pub const OSD_CMD_ENABLE: u8 = 0x41; // OSD enable command
+pub const OSD_CMD_DISABLE: u8 = 0x40; // OSD disable command
 
 #[derive(Debug, Clone, Copy, PartialEq, strum::Display)]
 pub enum OsdArrow {
@@ -102,7 +102,7 @@ pub unsafe extern "C" fn OsdCoreNameSet(name: *const c_char) {
 pub extern "C" fn OsdCoreNameGet() -> *const c_char {
     unsafe {
         match &OSD_CORE_NAME {
-            None => "CORE\0".as_ptr(), // We expect a NUL-terminated string.
+            None => "CORE\0".as_ptr() as *const c_char, // We expect a NUL-terminated string.
             Some(x) => x.as_ptr(),
         }
     }
@@ -169,15 +169,15 @@ pub unsafe extern "C" fn OsdSetTitle(title: *const c_char, arrow: c_int) {
     // Rotate the characters one by one.
     for i in (0..osd_size).step_by(8) {
         let mut tmp = [0u8; 8];
-        rotate_char_(TITLE_BUFFER.as_ptr().add(i), tmp.as_mut_ptr());
-        TITLE_BUFFER[i..(8 + i)].copy_from_slice(&tmp[..8]);
+        // rotate_char_(TITLE_BUFFER.as_ptr().add(i), tmp.as_mut_ptr());
+        // TITLE_BUFFER[i..(8 + i)].copy_from_slice(&tmp[..8]);
     }
 }
 
 static mut STAR_FRAME_BUFFER: [u8; 16 * 256] = [0; 16 * 256];
-static mut OSD_BUFFER: [u8; 256 * 32] = [0; 256 * 32];
+pub static mut OSD_BUFFER: [u8; 256 * 32] = [0; 256 * 32];
 static mut OSD_BUFFER_POS: usize = 0;
-static mut OSD_SET: c_int = 0;
+pub static mut OSD_SET: c_int = 0;
 
 #[no_mangle]
 pub unsafe extern "C" fn OsdWrite(
@@ -350,7 +350,7 @@ pub unsafe extern "C" fn OsdWriteOffset(
             let mut tmp = [0u8; 8];
             if leftchar != 0 {
                 let mut tmp2 = CHAR_FONT[leftchar as usize];
-                rotate_char_(tmp2.as_mut_ptr(), tmp.as_mut_ptr());
+                // rotate_char_(tmp2.as_mut_ptr(), tmp.as_mut_ptr());
                 p = tmp.as_ptr();
             } else {
                 p = TITLE_BUFFER
@@ -502,8 +502,8 @@ pub extern "C" fn InfoEnable(x: c_int, y: c_int, width: c_int, height: c_int) {
         spi::spi_osd_cmd_cont(OSD_CMD_ENABLE | OSD_INFO);
         spi::spi_w(x as u16);
         spi::spi_w(y as u16);
-        spi::spi_w(width.max(2048) as u16);
-        spi::spi_w(height.max(1024) as u16);
+        spi::spi_w(width as u16);
+        spi::spi_w(height as u16);
         spi::DisableOsd();
     }
 }
@@ -609,7 +609,7 @@ pub unsafe extern "C" fn OSD_PrintInfo(
             }
             c => {
                 if x < INFO_MAXW && y < INFO_MAXH {
-                    str[y * INFO_MAXW + x] = c;
+                    // str[y * INFO_MAXW + x] = c;
                 }
             }
         }
@@ -770,14 +770,14 @@ pub unsafe extern "C" fn ScrollText(
             s[len + BLANKSPACE..len + BLANKSPACE + overflow].copy_from_slice(&str[0..overflow]);
         }
 
-        print_line_(
-            n,
-            hdr.as_ptr(),
-            s.as_ptr(),
-            ((max_len - 1) << 3) as c_ulong,
-            (SCROLL_OFFSET[idx] & 0x7) as c_ulong,
-            invert,
-        ); // OSD print function with pixel precision
+        // print_line_(
+        //     n,
+        //     hdr.as_ptr(),
+        //     s.as_ptr(),
+        //     ((max_len - 1) << 3) as c_ulong,
+        //     (SCROLL_OFFSET[idx] & 0x7) as c_ulong,
+        //     invert,
+        // ); // OSD print function with pixel precision
     }
 }
 
