@@ -1,9 +1,8 @@
-use bitvec::prelude::*;
+use crate::macgyver::buffer::DrawBuffer;
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
-use embedded_graphics_simulator::SimulatorDisplay;
 
 mod sizes {
     use embedded_graphics::geometry::Size;
@@ -26,7 +25,7 @@ pub struct OsdDisplayView<C> {
     /// The inner framebuffer. Even in case where we run on the embedded
     /// platform itself, we use the SimulatorDisplay as a framebuffer (and
     /// disable the SDL portion).
-    pub inner: SimulatorDisplay<C>,
+    pub inner: DrawBuffer<C>,
 
     /// An offset of the display in the framebuffer. This is only used
     /// on embedded platforms for the title bar. The title bar is the
@@ -68,7 +67,7 @@ impl<C: PixelColor> OsdDisplayView<C> {
     /// default color is wanted.
     fn with_default_color_(size: Size, default_color: C) -> Self {
         Self {
-            inner: SimulatorDisplay::with_default_color(size, default_color),
+            inner: DrawBuffer::with_default_color(size, default_color),
             offset_y: 0,
             lines: size.height / 8,
             top_line: 0,
@@ -106,7 +105,7 @@ where
     C: PixelColor + From<BinaryColor>,
 {
     /// Get a binary line array from the buffer (a single line).
-    #[cfg(feature = "de10")]
+    #[cfg(feature = "platform_de10")]
     pub fn get_binary_line_array(&self, line: u32) -> Vec<u8> {
         let inner = &self.inner;
         let height = inner.size().height as i32;

@@ -1,4 +1,5 @@
-use crate::{application, file_io, fpga, offload, user_io};
+use crate::application::Application;
+use crate::{application, file_io, fpga, offload, user_io, window_manager};
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
@@ -90,7 +91,7 @@ pub fn main() {
         .with_writer(std::io::stderr)
         .init();
 
-    #[cfg(feature = "de10")]
+    #[cfg(feature = "platform_de10")]
     unsafe {
         if fpga::is_fpga_ready(1) == 0 {
             eprintln!("\nGPI[31]==1. FPGA is uninitialized or incompatible core loaded.");
@@ -118,7 +119,7 @@ pub fn main() {
     std::env::set_current_dir(std::env::current_exe().unwrap().parent().unwrap()).unwrap();
 
     // Create the application and run it.
-    let mut app = application::Application::new();
+    let mut app = application::MiSTer::new();
     match app.run() {
         Ok(_) => {}
         Err(e) => {

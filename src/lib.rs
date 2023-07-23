@@ -2,15 +2,11 @@
 
 // TODO: make all these modules test friendly.
 #[cfg(not(test))]
-pub mod application;
-#[cfg(not(test))]
 pub mod battery;
 #[cfg(not(test))]
 pub mod bootcore;
 #[cfg(not(test))]
 pub mod charrom;
-#[cfg(not(test))]
-pub mod display;
 #[cfg(not(test))]
 pub mod fpga;
 #[cfg(not(test))]
@@ -35,17 +31,22 @@ pub mod spi;
 pub mod support;
 #[cfg(not(test))]
 pub mod user_io;
+#[cfg(not(test))]
+pub mod window_manager;
 
+mod application;
 mod main_inner;
 
 pub mod cfg;
 pub mod core;
 pub mod file_io;
+pub mod macgyver;
 pub mod video;
+pub mod widgets;
 
-#[cfg(feature = "de10")]
+#[cfg(feature = "platform_de10")]
 #[no_mangle]
-pub unsafe extern "C" fn main() -> isize {
+pub extern "C" fn main() -> isize {
     main_inner::main();
     0
 }

@@ -1,5 +1,5 @@
 [toolchain]
-channel = "nightly-2023-06-20"
+channel = "stable"
 components = [ "rustfmt", "rustc", "rust-std", "clippy" ]
 targets = [ "armv7-unknown-linux-gnueabihf" ]
 profile = "minimal"

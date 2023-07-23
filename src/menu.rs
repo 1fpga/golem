@@ -1,7 +1,7 @@
-#[cfg(feature = "de10")]
+#[cfg(feature = "platform_de10")]
 extern "C" {
     pub fn HandleUI();
 }
 
-#[cfg(not(feature = "de10"))]
+#[cfg(not(feature = "platform_de10"))]
 pub fn HandleUI() {}

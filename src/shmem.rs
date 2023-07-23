@@ -51,7 +51,7 @@ impl Drop for Mapper {
     }
 }
 
-#[cfg(feature = "de10")]
+#[cfg(feature = "platform_de10")]
 #[export_name = "shmem_map"]
 #[no_mangle]
 pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
@@ -85,7 +85,7 @@ pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
     res as *mut u8
 }
 
-#[cfg(not(feature = "de10"))]
+#[cfg(not(feature = "platform_de10"))]
 pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
     std::ptr::null_mut()
 }

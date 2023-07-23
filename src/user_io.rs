@@ -1,7 +1,7 @@
 use crate::shmem;
 use std::ffi::{c_char, c_int};
 
-#[cfg(feature = "de10")]
+#[cfg(feature = "platform_de10")]
 #[allow(unused)]
 extern "C" {
     pub fn user_io_osd_key_enable(enabled: u8);
@@ -26,7 +26,7 @@ extern "C" {
     pub fn is_pcxt() -> u8;
 }
 
-#[cfg(not(feature = "de10"))]
+#[cfg(not(feature = "platform_de10"))]
 mod de10_impl {
     use super::*;
 
@@ -84,7 +84,7 @@ mod de10_impl {
     }
 }
 
-#[cfg(not(feature = "de10"))]
+#[cfg(not(feature = "platform_de10"))]
 pub use de10_impl::*;
 
 #[no_mangle]
