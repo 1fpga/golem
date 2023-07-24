@@ -1,5 +1,6 @@
 use crate::macgyver::buffer::DrawBuffer;
 use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::prelude::DrawTarget;
 use embedded_graphics::Drawable;
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
@@ -58,7 +59,12 @@ impl DesktopWindowManager {
     pub fn run(&mut self, app: &mut impl Application) {
         'main: loop {
             let _ = app.update();
+            // Clear the buffers.
+            self.osd.clear(BinaryColor::Off).unwrap();
+            self.title.clear(BinaryColor::Off).unwrap();
+
             app.draw(&mut self.osd);
+            app.draw_title(&mut self.title);
 
             let mut display = SimulatorDisplay::new(self.osd.size());
             self.osd.draw(&mut display).unwrap();
@@ -82,5 +88,5 @@ impl DesktopWindowManager {
     }
 }
 
-use crate::application::{Application, Command};
+use crate::application::Application;
 pub use DesktopWindowManager as PlatformWindowManager;

@@ -1,11 +1,11 @@
 use crate::macgyver::buffer::DrawBuffer;
 use crate::window_manager::WindowManager;
 use chrono::Timelike;
-use embedded_graphics::mono_font::ascii::FONT_6X9;
-use embedded_graphics::mono_font::MonoTextStyle;
+use embedded_graphics::mono_font::ascii::{FONT_6X9, FONT_8X13};
+use embedded_graphics::mono_font::{MonoFont, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
-use embedded_graphics::text::Text;
+use embedded_graphics::text::{Baseline, Text};
 use embedded_layout::View;
 
 #[derive(Debug)]
@@ -37,14 +37,20 @@ impl Application for MiSTer {
         }
     }
 
-    fn update(&mut self) {}
+    fn update(&mut self) {
+        self.clock.message(());
+    }
 
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+    fn draw_title(&self, target: &mut DrawBuffer<BinaryColor>) {
         self.clock.draw(target);
     }
+
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {}
 }
 
-pub trait Widget<Message> {
+pub trait Widget {
+    type Message: std::fmt::Debug + Send;
+
     fn component_added(&mut self) {}
     fn component_removed(&mut self) {}
 
@@ -52,28 +58,9 @@ pub trait Widget<Message> {
         parent_size
     }
 
-    fn message(&mut self, message: Message) -> Option<Command<Message>> {
-        None
-    }
+    fn message(&mut self, message: Self::Message) {}
 
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>);
-}
-
-#[derive(Debug)]
-pub struct Command<Message> {
-    pub message: Option<Message>,
-}
-
-impl<Message> Command<Message> {
-    pub fn none() -> Self {
-        Self { message: None }
-    }
-
-    pub fn message(message: Message) -> Self {
-        Self {
-            message: Some(message),
-        }
-    }
 }
 
 pub trait Application {
@@ -85,26 +72,43 @@ pub trait Application {
 
     fn update(&mut self);
 
+    fn draw_title(&self, target: &mut DrawBuffer<BinaryColor>);
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>);
 }
 
 pub struct ClockWidget {
     time: chrono::NaiveTime,
+    style: MonoTextStyle<'static, BinaryColor>,
 }
 
 impl ClockWidget {
     pub fn new() -> Self {
         Self {
             time: chrono::Local::now().time(),
+            style: MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
         }
     }
 
     pub fn set_time(&mut self, time: chrono::NaiveTime) {
         self.time = time;
     }
+
+    fn build_text<'a>(&self, text: &'a str) -> Text<'a, MonoTextStyle<'static, BinaryColor>> {
+        Text::with_baseline(text, Point::new(0, 0), self.style, Baseline::Top)
+    }
 }
 
-impl Widget<()> for ClockWidget {
+impl Widget for ClockWidget {
+    type Message = ();
+
+    fn size_hint(&self, _parent: Size) -> Size {
+        self.build_text("00:00:00 AM").size()
+    }
+
+    fn message(&mut self, _message: Self::Message) {
+        self.time = chrono::Local::now().time();
+    }
+
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
         let size = target.size();
 
@@ -115,22 +119,20 @@ impl Widget<()> for ClockWidget {
             am_pm = "PM";
         }
 
-        let mut time = format!(
-            "{:02}:{:02}:{:02} {}",
+        let time = format!(
+            "{:2}:{:02}:{:02} {}",
             hours,
             self.time.minute(),
             self.time.second(),
             am_pm
         );
-        let text_style = MonoTextStyle::new(&FONT_6X9, BinaryColor::On);
-        let mut text = Text::new(&time, Point::new(0, 0), text_style);
+        let mut text = self.build_text(&time);
         let text_size = text.size();
         let text_width = text_size.width;
         let text_height = text_size.height;
-        let text_x = (size.width - text_width) / 2;
+        let text_x = (size.width - text_width);
         let text_y = (size.height - text_height) / 2;
         View::translate_mut(&mut text, Point::new(text_x as i32, text_y as i32));
-        // text.translate_mut(Point::new(text_x as i32, text_y as i32));
         text.draw(target).unwrap();
     }
 }
