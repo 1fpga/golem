@@ -1,10 +1,16 @@
-use crate::macgyver::buffer::DrawBuffer;
+use crate::macguiver::application::Application;
+use crate::macguiver::buffer::DrawBuffer;
+use crate::platform::{PlatformInner, PlatformState};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::DrawTarget;
 use embedded_graphics::Drawable;
 use embedded_graphics_simulator::{
     BinaryColorTheme, OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
 };
+use std::convert::TryInto;
+pub use DesktopWindowManager as PlatformWindowManager;
+
+pub mod keyboard;
 
 mod sizes {
     use embedded_graphics::geometry::Size;
@@ -27,13 +33,13 @@ pub struct DesktopWindowManager {
 
 impl Default for DesktopWindowManager {
     fn default() -> Self {
-        let mut title = DrawBuffer::new(sizes::TITLE);
-        let mut osd = DrawBuffer::new(sizes::MAIN);
+        let title = DrawBuffer::new(sizes::TITLE);
+        let osd = DrawBuffer::new(sizes::MAIN);
 
         let window_title = Window::new(
             "Title",
             &OutputSettingsBuilder::new()
-                .max_fps(1000)
+                .max_fps(10000)
                 .theme(BinaryColorTheme::OledBlue)
                 .build(),
         );
@@ -41,7 +47,7 @@ impl Default for DesktopWindowManager {
         let window_osd = Window::new(
             "OSD",
             &OutputSettingsBuilder::new()
-                .max_fps(1000)
+                .max_fps(10000)
                 .theme(BinaryColorTheme::OledBlue)
                 .build(),
         );
@@ -55,10 +61,15 @@ impl Default for DesktopWindowManager {
     }
 }
 
-impl DesktopWindowManager {
-    pub fn run(&mut self, app: &mut impl Application) {
+impl PlatformInner for DesktopWindowManager {
+    type Color = BinaryColor;
+
+    fn run(&mut self, app: &mut impl Application<Color = BinaryColor>) {
+        let mut state: PlatformState = Default::default();
+
         'main: loop {
-            let _ = app.update();
+            app.update(&state);
+
             // Clear the buffers.
             self.osd.clear(BinaryColor::Off).unwrap();
             self.title.clear(BinaryColor::Off).unwrap();
@@ -74,19 +85,26 @@ impl DesktopWindowManager {
             self.title.draw(&mut display).unwrap();
             self.window_title.update(&display);
 
-            if self.window_osd.events().any(|e| e == SimulatorEvent::Quit) {
-                break 'main;
-            }
-            if self
-                .window_title
-                .events()
-                .any(|e| e == SimulatorEvent::Quit)
-            {
-                break 'main;
+            for ev in self.window_osd.events().chain(self.window_title.events()) {
+                match ev {
+                    SimulatorEvent::KeyUp { keycode, .. } => {
+                        if let Ok(kc) = keycode.try_into() {
+                            state.keys.up(kc);
+                        }
+                    }
+                    SimulatorEvent::KeyDown { keycode, .. } => {
+                        if let Ok(kc) = keycode.try_into() {
+                            state.keys.down(kc);
+                        }
+                    }
+
+                    SimulatorEvent::MouseButtonUp { .. } => {}
+                    SimulatorEvent::MouseButtonDown { .. } => {}
+                    SimulatorEvent::MouseWheel { .. } => {}
+                    SimulatorEvent::MouseMove { .. } => {}
+                    SimulatorEvent::Quit => break 'main,
+                }
             }
         }
     }
 }
-
-use crate::application::Application;
-pub use DesktopWindowManager as PlatformWindowManager;

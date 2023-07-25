@@ -1,4 +1,4 @@
-use crate::macgyver::buffer::DrawBuffer;
+use crate::macguiver::buffer::DrawBuffer;
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -21,11 +21,11 @@ mod sizes {
 /// crate, except for how the index of a pixel is calculated, because of how we
 /// transfer the data to the core.
 #[derive(Debug)]
-pub struct OsdDisplayView<C> {
+pub struct OsdDisplayView {
     /// The inner framebuffer. Even in case where we run on the embedded
     /// platform itself, we use the SimulatorDisplay as a framebuffer (and
     /// disable the SDL portion).
-    pub inner: DrawBuffer<C>,
+    pub inner: DrawBuffer<BinaryColor>,
 
     /// An offset of the display in the framebuffer. This is only used
     /// on embedded platforms for the title bar. The title bar is the
@@ -40,13 +40,13 @@ pub struct OsdDisplayView<C> {
     top_line: u32,
 }
 
-impl<C> OsdDisplayView<C> {
+impl OsdDisplayView {
     pub fn line_iter(&self) -> impl Iterator<Item = u32> {
         self.top_line..self.top_line + self.lines
     }
 }
 
-impl<C: PixelColor> OsdDisplayView<C> {
+impl OsdDisplayView {
     fn with_offset(mut self, offset_y: usize) -> Self {
         Self { offset_y, ..self }
     }
@@ -65,7 +65,7 @@ impl<C: PixelColor> OsdDisplayView<C> {
     ///
     /// This constructor can be used if `C` doesn't implement `From<BinaryColor>` or another
     /// default color is wanted.
-    fn with_default_color_(size: Size, default_color: C) -> Self {
+    fn with_default_color_(size: Size, default_color: BinaryColor) -> Self {
         Self {
             inner: DrawBuffer::with_default_color(size, default_color),
             offset_y: 0,
@@ -80,12 +80,12 @@ impl<C: PixelColor> OsdDisplayView<C> {
     ///
     /// Panics if `point` is outside the display.
     #[inline]
-    pub fn get_pixel(&self, point: Point) -> C {
+    pub fn get_pixel(&self, point: Point) -> BinaryColor {
         self.inner.get_pixel(point)
     }
 }
 
-impl OsdDisplayView<BinaryColor> {
+impl OsdDisplayView {
     /// Creates a title bar display for the MiSTer.
     pub fn title() -> Self {
         Self::with_default_color_(sizes::TITLE, BinaryColor::Off)
@@ -100,19 +100,15 @@ impl OsdDisplayView<BinaryColor> {
     }
 }
 
-impl<C> OsdDisplayView<C>
-where
-    C: PixelColor + From<BinaryColor>,
-{
+impl OsdDisplayView {
     /// Get a binary line array from the buffer (a single line).
-    #[cfg(feature = "platform_de10")]
     pub fn get_binary_line_array(&self, line: u32) -> Vec<u8> {
         let inner = &self.inner;
         let height = inner.size().height as i32;
         let y = ((line - self.top_line) * 8) as i32 - self.offset_y as i32;
 
         let mut line_buffer = vec![0u8; inner.size().width as usize];
-        let off = C::from(BinaryColor::Off);
+        let off = BinaryColor::Off;
 
         let px = |x, y| {
             if y >= 0 && y < height && inner.get_pixel(Point::new(x, y)) != off {
@@ -136,11 +132,7 @@ where
     }
 }
 
-impl<C> OsdDisplayView<C>
-where
-    C: PixelColor + ToBytes,
-    <C as ToBytes>::Bytes: AsRef<[u8]>,
-{
+impl OsdDisplayView {
     /// Converts the display content to big endian raw data.
     #[inline]
     pub fn to_be_bytes(&self) -> Vec<u8> {
@@ -160,17 +152,14 @@ where
     }
 }
 
-impl<C> Dimensions for OsdDisplayView<C> {
+impl Dimensions for OsdDisplayView {
     fn bounding_box(&self) -> Rectangle {
         self.inner.bounding_box()
     }
 }
 
-impl<C> DrawTarget for OsdDisplayView<C>
-where
-    C: PixelColor,
-{
-    type Color = C;
+impl DrawTarget for OsdDisplayView {
+    type Color = BinaryColor;
     type Error = core::convert::Infallible;
 
     fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>

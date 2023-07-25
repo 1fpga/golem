@@ -1,9 +1,8 @@
-use crate::application::Application;
-use crate::{application, file_io, fpga, offload, user_io, window_manager};
+use crate::macguiver::application::Application;
+use crate::{application, offload};
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
-use std::ffi::{CStr, CString};
 use std::process;
 use tracing::{error, Level};
 use tracing_subscriber::fmt::Subscriber;
@@ -23,6 +22,7 @@ struct Opts {
     verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
 }
 
+#[allow(unused)]
 pub fn main() {
     let cores = core_affinity::get_core_ids().unwrap();
     // Always use the second core available, or the first one if there is only one.
@@ -32,7 +32,7 @@ pub fn main() {
     unsafe {
         offload::offload_start();
 
-        fpga::fpga_io_init();
+        crate::fpga::fpga_io_init();
     }
 
     // DISKLED_OFF();
@@ -93,19 +93,19 @@ pub fn main() {
 
     #[cfg(feature = "platform_de10")]
     unsafe {
-        if fpga::is_fpga_ready(1) == 0 {
+        if crate::fpga::is_fpga_ready(1) == 0 {
             eprintln!("\nGPI[31]==1. FPGA is uninitialized or incompatible core loaded.");
             eprintln!("Quitting. Bye bye...\n");
             process::exit(1);
         }
 
-        file_io::FindStorage();
+        crate::file_io::FindStorage();
         let (core, xml) = (
-            CString::new(core).unwrap(),
-            xml.map(|str| CString::new(str).unwrap()),
+            std::ffi::CString::new(core).unwrap(),
+            xml.map(|str| std::ffi::CString::new(str).unwrap()),
         );
 
-        user_io::user_io_init(
+        crate::user_io::user_io_init(
             core.as_bytes_with_nul().as_ptr(),
             xml.map(|str| str.as_bytes_with_nul().as_ptr())
                 .unwrap_or(std::ptr::null()),

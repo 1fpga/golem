@@ -31,20 +31,21 @@ pub mod spi;
 pub mod support;
 #[cfg(not(test))]
 pub mod user_io;
-#[cfg(not(test))]
-pub mod window_manager;
 
+#[cfg(not(test))]
 mod application;
+#[cfg(not(test))]
 mod main_inner;
 
 pub mod cfg;
 pub mod core;
 pub mod file_io;
-pub mod macgyver;
+pub mod macguiver;
+pub mod platform;
 pub mod video;
-pub mod widgets;
 
 #[cfg(feature = "platform_de10")]
+#[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn main() -> isize {
     main_inner::main();

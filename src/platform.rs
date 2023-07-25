@@ -1,25 +1,54 @@
-use crate::osd::OsdSetSize;
-use crate::{fpga, input, menu, spi, user_io};
+use crate::macguiver::application::Application;
+use crate::macguiver::events::keyboard::KeycodeMap;
+use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 
 mod _static_assertions {
     // Verify that at most one platform is enabled.
-    #[cfg(not(any(feature = "platform_de10", feature = "platform_desktop")))]
+    #[cfg(not(any(feature = "platform_de10", feature = "platform_desktop", test)))]
     compile_error!("At least one platform must be enabled.");
 
-    #[cfg(any(all(feature = "platform_de10", feature = "platform_desktop",)))]
+    #[cfg(any(
+        all(feature = "platform_de10", feature = "platform_desktop"),
+        all(feature = "platform_de10", test),
+        all(feature = "platform_desktop", test),
+    ))]
     compile_error!("Only one platform can be enabled at a time.");
 }
 
 #[cfg(feature = "platform_de10")]
 mod de10;
+
 #[cfg(feature = "platform_de10")]
 use de10 as platform_impl;
 
 #[cfg(feature = "platform_desktop")]
 mod desktop;
-use crate::application::Application;
+
 #[cfg(feature = "platform_desktop")]
 use desktop as platform_impl;
+
+#[cfg(test)]
+mod null;
+
+#[cfg(test)]
+use null as platform_impl;
+
+#[derive(Default)]
+pub struct PlatformState {
+    pub(self) keys: KeycodeMap,
+}
+
+impl PlatformState {
+    pub fn keys(&self) -> &KeycodeMap {
+        &self.keys
+    }
+}
+
+trait PlatformInner {
+    type Color: PixelColor;
+
+    fn run(&mut self, application: &mut impl Application<Color = BinaryColor>);
+}
 
 /// The [WindowManager] structure is responsible for managing and holding the state
 /// of the application itself. It takes the main loop, and with every iteration will
@@ -37,7 +66,10 @@ pub struct WindowManager {
 }
 
 impl WindowManager {
-    pub fn run(&mut self, application: &mut impl Application) -> Result<(), String> {
+    pub fn run(
+        &mut self,
+        application: &mut impl Application<Color = BinaryColor>,
+    ) -> Result<(), String> {
         self.inner.run(application);
         Ok(())
 
