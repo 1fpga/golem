@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, CString, OsStr};
+use std::ffi::{c_char, c_int, OsStr};
 use std::path::PathBuf;
 
 #[cfg(feature = "platform_de10")]
@@ -13,12 +13,13 @@ pub fn FindStorage() {}
 
 #[cfg(not(feature = "platform_de10"))]
 pub fn getRootDir() -> *const u8 {
-    static mut ROOT_DIR: Option<CString> = None;
+    static mut ROOT_DIR: Option<std::ffi::CString> = None;
 
     unsafe {
         if ROOT_DIR.is_none() {
-            ROOT_DIR =
-                Some(CString::new(std::env::current_dir().unwrap().to_str().unwrap()).unwrap());
+            ROOT_DIR = Some(
+                std::ffi::CString::new(std::env::current_dir().unwrap().to_str().unwrap()).unwrap(),
+            );
         }
 
         ROOT_DIR.as_ref().unwrap().as_ptr() as *const u8

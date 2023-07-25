@@ -27,7 +27,7 @@ core_affinity = "0.8.0"
 embedded-graphics = "0.8.0"
 embedded-graphics-simulator = { git = "https://github.com/hansl/embedded-graphics-simulator.git", rev = "e33d171d3f38a242e5cb6a85f6dc36b8e689f403", default-features = false }
 embedded-graphics-transform = "0.1.0"
-embedded-iconoir = "0.2.1"
+embedded-iconoir = { git = "https://github.com/hansl/embedded-iconoir.git", branch = "add-16px", default-features = false, features = ["16px"] }
 embedded-layout = "0.3.1"
 embedded-menu = "0.2.0"
 hex = "0.4.3"

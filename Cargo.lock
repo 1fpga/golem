@@ -493,8 +493,7 @@ dependencies = [
 [[package]]
 name = "embedded-iconoir"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b5f8052b93fe3693ea3800724d57405533af3b066498b8c141461c525d196e6"
+source = "git+https://github.com/hansl/embedded-iconoir.git?branch=add-16px#c902793d424601aaf9a1bcc856bde4a87b00d1fe"
 dependencies = [
  "bit_field",
  "embedded-graphics",

@@ -1,6 +1,6 @@
 use crate::macguiver::application::Application;
 use crate::platform::{PlatformInner, PlatformState};
-use crate::{fpga, osd, spi};
+use crate::{fpga, menu, osd, spi};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 
@@ -37,6 +37,7 @@ impl PlatformInner for De10Platform {
             loop {
                 crate::user_io::user_io_poll();
                 crate::input::input_poll(0);
+                menu::HandleUI();
 
                 app.update(&state);
 

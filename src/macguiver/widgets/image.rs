@@ -20,6 +20,10 @@ impl<C: PixelColor + From<BinaryColor>> ImageWidget<C> {
         Self { buffer }
     }
 
+    pub fn empty() -> Self {
+        Self::new(DrawBuffer::new(Size::zero()))
+    }
+
     fn from_reader<T: Read + Seek>(
         reader: image::io::Reader<BufReader<T>>,
     ) -> Result<Self, String> {

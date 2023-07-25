@@ -9,6 +9,7 @@ use std::rc::Rc;
 pub mod boxed;
 pub mod clock;
 pub mod group;
+pub mod iconoir;
 pub mod image;
 pub mod menu;
 pub mod text;

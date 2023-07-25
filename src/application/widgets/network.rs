@@ -1,16 +1,16 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::group::HorizontalWidgetGroup;
-use crate::macguiver::widgets::image::ImageWidget;
+use crate::macguiver::widgets::iconoir::IconoirWidget;
 use crate::macguiver::widgets::Widget;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use network_interface::{Addr, NetworkInterface, NetworkInterfaceConfig};
 use std::cell::RefCell;
-use std::io::Cursor;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+/// Check that an address is valid (not 169.254.0.0/16) and is local.
 pub fn is_valid(iface: &NetworkInterface) -> bool {
     iface.addr.iter().all(|addr| match addr {
         Addr::V4(addr) => {
@@ -19,20 +19,6 @@ pub fn is_valid(iface: &NetworkInterface) -> bool {
                 [169, 254, _, _] => false,
                 // Loopback
                 [127, _, _, _] => false,
-                _ => true,
-            }
-        }
-        Addr::V6(addr) => {
-            // Impossible to know...
-            return true;
-        }
-    })
-}
-
-pub fn is_lan(iface: &NetworkInterface) -> bool {
-    iface.addr.iter().any(|addr| match addr {
-        Addr::V4(addr) => {
-            match addr.ip.octets() {
                 // Class A
                 [10, _, _, _] => true,
                 // Class B
@@ -63,21 +49,16 @@ impl NetworkStatus {
             Err(_) => return,
         };
 
-        let ifaces = connections.into_iter().filter(is_valid);
+        let mut ifaces = connections.into_iter().filter(is_valid);
 
         // Local is any connection that's not `wlan` and has an IP address that's not 169.254.x.x.
         self.local.store(
-            ifaces
-                .clone()
-                .filter(is_lan)
-                .any(|iface| !iface.name.starts_with("wlan")),
+            ifaces.clone().any(|iface| !iface.name.starts_with("wlan")),
             Ordering::Relaxed,
         );
 
         self.wifi.store(
-            ifaces
-                .filter(is_lan)
-                .any(|iface| iface.name.starts_with("wlan")),
+            ifaces.any(|iface| iface.name.starts_with("wlan")),
             Ordering::Relaxed,
         );
 
@@ -95,9 +76,9 @@ pub struct NetworkWidget {
     status: Arc<NetworkStatus>,
     group: HorizontalWidgetGroup<BinaryColor>,
 
-    widget_local: Rc<RefCell<ImageWidget<BinaryColor>>>,
-    widget_wifi: Rc<RefCell<ImageWidget<BinaryColor>>>,
-    widget_internet: Rc<RefCell<ImageWidget<BinaryColor>>>,
+    widget_local: Rc<RefCell<IconoirWidget>>,
+    widget_wifi: Rc<RefCell<IconoirWidget>>,
+    widget_internet: Rc<RefCell<IconoirWidget>>,
 
     quit_send: std::sync::mpsc::Sender<()>,
 }
@@ -123,15 +104,15 @@ impl NetworkWidget {
             }
         });
 
-        let widget_local = Rc::new(RefCell::new(ImageWidget::from_png(Cursor::new(
-            include_bytes!("../../../assets/network-16x16.png"),
-        ))));
-        let widget_wifi = Rc::new(RefCell::new(ImageWidget::from_png(Cursor::new(
-            include_bytes!("../../../assets/wifi-16x16.png"),
-        ))));
-        let widget_internet = Rc::new(RefCell::new(ImageWidget::from_png(Cursor::new(
-            include_bytes!("../../../assets/internet-16x16.png"),
-        ))));
+        let widget_local = Rc::new(RefCell::new(IconoirWidget::new::<
+            embedded_iconoir::size16px::connectivity::Network,
+        >()));
+        let widget_wifi = Rc::new(RefCell::new(IconoirWidget::new::<
+            embedded_iconoir::size16px::connectivity::Wifi,
+        >()));
+        let widget_internet = Rc::new(RefCell::new(IconoirWidget::new::<
+            embedded_iconoir::size16px::communication::Globe,
+        >()));
 
         let group = HorizontalWidgetGroup::new().with_spacing(1);
 

@@ -7,6 +7,8 @@ use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::Drawable;
 use std::fmt::Debug;
 
+pub mod fps;
+
 #[derive(Debug)]
 pub struct TextWidget<C: PixelColor> {
     text: String,
