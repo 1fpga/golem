@@ -1,6 +1,5 @@
 use core::ffi::{c_void, CStr};
 use libc::c_char;
-use libc_print::libc_eprintln;
 
 #[export_name = "charfont"]
 pub static mut CHAR_FONT: [[u8; 8]; 256] = [
@@ -271,7 +270,7 @@ pub unsafe extern "C" fn LoadFont(name: *const c_char) {
 
     let fd = libc::open(name, libc::O_RDONLY);
     if fd < 0 {
-        libc_eprintln!(
+        eprintln!(
             "Failed to open font file: {}",
             name_cstr.to_str().unwrap_or("invalid utf8")
         );
@@ -281,7 +280,7 @@ pub unsafe extern "C" fn LoadFont(name: *const c_char) {
     let mut buffer = [0u8; 2048];
     let size = libc::read(fd, buffer.as_mut_ptr() as *mut c_void, buffer.len());
     if size < 0 {
-        libc_eprintln!(
+        eprintln!(
             "Failed to read font file: {}",
             name_cstr.to_str().unwrap_or("invalid utf8")
         );

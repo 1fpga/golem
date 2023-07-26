@@ -76,6 +76,7 @@ impl PlatformInner for DesktopWindowManager {
 
             app.draw(&mut self.osd);
             app.draw_title(&mut self.title);
+            self.title.invert();
 
             let mut display = SimulatorDisplay::new(self.osd.size());
             self.osd.draw(&mut display).unwrap();

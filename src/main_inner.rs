@@ -4,7 +4,8 @@ use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
 use std::process;
-use tracing::{error, Level};
+use tracing::field::debug;
+use tracing::{debug, error, Level};
 use tracing_subscriber::fmt::Subscriber;
 
 #[derive(Parser, Debug)]
@@ -94,8 +95,9 @@ pub fn main() {
     #[cfg(feature = "platform_de10")]
     unsafe {
         if crate::fpga::is_fpga_ready(1) == 0 {
-            eprintln!("\nGPI[31]==1. FPGA is uninitialized or incompatible core loaded.");
-            eprintln!("Quitting. Bye bye...\n");
+            debug!("GPI[31] == 1");
+            error!("FPGA is uninitialized or incompatible core loaded.");
+            error!("Quitting. Bye bye...\n");
             process::exit(1);
         }
 

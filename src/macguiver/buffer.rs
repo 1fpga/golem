@@ -106,6 +106,23 @@ impl<C: PixelColor> DrawBufferInner<C> {
     }
 }
 
+impl DrawBufferInner<BinaryColor> {
+    pub fn invert(&mut self) {
+        match self {
+            DrawBufferInner::Empty => {}
+            DrawBufferInner::Buffer(pixels, _) => {
+                for pixel in pixels.iter_mut() {
+                    *pixel = pixel.invert();
+                }
+            }
+            DrawBufferInner::BufferRef(parent) => parent.borrow_mut().invert(),
+            DrawBufferInner::SubBuffer(parent, rectangle) => {
+                todo!()
+            }
+        }
+    }
+}
+
 impl<C: PixelColor> DrawTarget for DrawBufferInner<C> {
     type Color = C;
     type Error = Infallible;
@@ -288,6 +305,12 @@ impl<C: PixelColor + From<BinaryColor>> DrawBuffer<C> {
     /// Creates a buffer that's the size of the OSD title in a MiSTer legacy setup.
     pub fn osd_title() -> Self {
         Self::new(Size::new(320, 16))
+    }
+}
+
+impl DrawBuffer<BinaryColor> {
+    pub fn invert(&mut self) {
+        self.inner.borrow_mut().invert();
     }
 }
 

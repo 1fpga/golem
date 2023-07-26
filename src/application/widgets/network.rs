@@ -43,30 +43,36 @@ struct NetworkStatus {
 }
 
 impl NetworkStatus {
-    pub fn update(&self) {
+    pub fn update(&self) -> bool {
+        let mut changed = false;
         let connections = match network_interface::NetworkInterface::show() {
             Ok(connections) => connections,
-            Err(_) => return,
+            Err(_) => return false,
         };
 
         let mut ifaces = connections.into_iter().filter(is_valid);
 
         // Local is any connection that's not `wlan` and has an IP address that's not 169.254.x.x.
-        self.local.store(
-            ifaces.clone().any(|iface| !iface.name.starts_with("wlan")),
-            Ordering::Relaxed,
-        );
+        let has_local = ifaces.clone().any(|iface| !iface.name.starts_with("wlan"));
+        if has_local != self.local.load(Ordering::Relaxed) {
+            changed = true;
+            self.local.store(has_local, Ordering::Relaxed);
+        }
 
-        self.wifi.store(
-            ifaces.any(|iface| iface.name.starts_with("wlan")),
-            Ordering::Relaxed,
-        );
+        let has_wifi = ifaces.any(|iface| iface.name.starts_with("wlan"));
+        if has_wifi != self.wifi.load(Ordering::Relaxed) {
+            changed = true;
+            self.wifi.store(has_wifi, Ordering::Relaxed);
+        }
 
-        // TODO: find a place to ping instead.
-        self.internet.store(
-            std::net::TcpStream::connect("google.com:80").is_ok(),
-            Ordering::Relaxed,
-        );
+        // TODO: find a place to ping instead of opening a TCP connection to Google.
+        let has_internet = std::net::TcpStream::connect("google.com:80").is_ok();
+        if has_internet != self.internet.load(Ordering::Relaxed) {
+            changed = true;
+            self.internet.store(has_internet, Ordering::Relaxed);
+        }
+
+        changed
     }
 }
 
@@ -74,6 +80,7 @@ impl NetworkStatus {
 #[derive(Debug)]
 pub struct NetworkWidget {
     status: Arc<NetworkStatus>,
+    dirty: Arc<AtomicBool>,
     group: HorizontalWidgetGroup<BinaryColor>,
 
     widget_local: Rc<RefCell<IconoirWidget>>,
@@ -86,13 +93,17 @@ pub struct NetworkWidget {
 impl NetworkWidget {
     pub fn new() -> Self {
         let status = Arc::new(NetworkStatus::default());
+        let dirty = Arc::new(AtomicBool::new(true));
         let (quit_send, quit_recv) = std::sync::mpsc::channel();
 
         std::thread::spawn({
             let status = status.clone();
+            let dirty = dirty.clone();
             move || loop {
                 loop {
-                    status.update();
+                    if status.update() {
+                        dirty.store(true, Ordering::Relaxed);
+                    }
 
                     if quit_recv
                         .recv_timeout(std::time::Duration::from_secs(3))
@@ -118,11 +129,25 @@ impl NetworkWidget {
 
         Self {
             status,
+            dirty,
             group,
             widget_local,
             widget_wifi,
             widget_internet,
             quit_send,
+        }
+    }
+
+    fn update_icons(&mut self) {
+        self.group.clear();
+        if self.status.local.load(Ordering::Relaxed) {
+            self.group.append(self.widget_local.clone());
+        }
+        if self.status.wifi.load(Ordering::Relaxed) {
+            self.group.append(self.widget_wifi.clone());
+        }
+        if self.status.internet.load(Ordering::Relaxed) {
+            self.group.append(self.widget_internet.clone());
         }
     }
 }
@@ -141,15 +166,9 @@ impl Widget for NetworkWidget {
     }
 
     fn update(&mut self) {
-        self.group.clear();
-        if self.status.local.load(Ordering::Relaxed) {
-            self.group.append(self.widget_local.clone());
-        }
-        if self.status.wifi.load(Ordering::Relaxed) {
-            self.group.append(self.widget_wifi.clone());
-        }
-        if self.status.internet.load(Ordering::Relaxed) {
-            self.group.append(self.widget_internet.clone());
+        if self.dirty.load(Ordering::Relaxed) {
+            self.dirty.store(false, Ordering::Relaxed);
+            self.update_icons();
         }
     }
 
