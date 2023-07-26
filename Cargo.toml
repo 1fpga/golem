@@ -36,7 +36,6 @@ input = { version = "0.8.2", optional = true }
 input-linux = { version = "0.6", optional = true }
 json5 = "0.4.1"
 libc = { version = "*", default-features = false }
-libudev-sys = "0.1.4"
 merge = { git = "https://github.com/hansl/merge-rs.git", rev = "ef451941cf3faefc8b6514fa2fb9105f823e6d60", features = ["num", "derive"] }
 network-interface = "1.0.1"
 num-traits = "0.2.15"

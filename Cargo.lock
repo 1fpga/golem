@@ -1125,7 +1125,6 @@ dependencies = [
  "input-linux",
  "json5",
  "libc",
- "libudev-sys",
  "merge",
  "network-interface",
  "num-traits",
