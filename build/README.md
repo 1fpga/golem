@@ -16,14 +16,7 @@ First, build the image in this repository:
 docker build -t mister-toolchain build/de10_platform
 ```
 
-First, configure the pkg-config environment variables to point to the correct locations:
-
-```bash
-export PKG_CONFIG_PATH=$PWD/lib/pkgconfig
-export PKG_CONFIG_SYSROOT_DIR=$PWD/lib/sysroot/
-```
-
-And then, set the `platform_de10` feature, disable the default features, and set the target architecture properly:
+Compile Rust with the `platform_de10` feature, disabling the default features, and setting the target architecture properly:
 
 ```bash
 cargo build --lib --target=armv7-unknown-linux-gnueabihf --no-default-features --features=platform_de10 --release
