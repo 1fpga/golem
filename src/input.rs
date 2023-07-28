@@ -6,6 +6,6 @@ extern "C" {
 }
 
 #[cfg(not(feature = "platform_de10"))]
-pub fn input_poll(getchar: c_int) -> c_int {
+pub fn input_poll(_getchar: c_int) -> c_int {
     0
 }

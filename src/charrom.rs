@@ -263,6 +263,38 @@ pub static mut CHAR_FONT: [[u8; 8]; 256] = [
     [0; 8],
 ];
 
+pub fn output_font() {
+    unsafe {
+        // Transpose the font.
+
+        for i in 0..256 {
+            let mut f = [0u8; 8];
+            let px = |x, y| {
+                if CHAR_FONT[i][y as usize] & (1u8 << x) != 0 {
+                    1u8
+                } else {
+                    0u8
+                }
+            };
+
+            for x in 0..8u8 {
+                let y = 0;
+                f[x as usize] = px(x, y)
+                    + (px(x, y + 1) << 1)
+                    + (px(x, y + 2) << 2)
+                    + (px(x, y + 3) << 3)
+                    + (px(x, y + 4) << 4)
+                    + (px(x, y + 5) << 5)
+                    + (px(x, y + 6) << 6)
+                    + (px(x, y + 7) << 7);
+            }
+
+            std::fs::write(format!("font/font{i}.bin"), &f).unwrap();
+        }
+        std::process::exit(0);
+    }
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn LoadFont(name: *const c_char) {
     // This will verify that name is a valid string.

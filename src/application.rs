@@ -3,7 +3,7 @@ use crate::macguiver::application::Application;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::boxed::{BoxedWidget, HorizontalAlignment, VerticalAlignment};
 use crate::macguiver::widgets::text::fps::FpsCounter;
-use crate::macguiver::widgets::text::TextWidget;
+
 use crate::macguiver::widgets::Widget;
 use crate::platform::{PlatformState, WindowManager};
 use embedded_graphics::mono_font::MonoTextStyle;

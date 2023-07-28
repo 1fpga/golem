@@ -51,7 +51,7 @@ DEP	= $(C_SRC:.c=.c.d) $(CPP_SRC:.cpp=.cpp.d)
 
 DFLAGS	= $(INCLUDE) -D_7ZIP_ST -DPACKAGE_VERSION=\"1.3.3\" -DFLAC_API_EXPORTS -DFLAC__HAS_OGG=0 -DHAVE_LROUND -DHAVE_STDINT_H -DHAVE_STDLIB_H -DHAVE_SYS_PARAM_H -DENABLE_64_BIT_WORDS=0 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -DVDATE=\"`date +"%y%m%d"`\"
 CFLAGS	= $(DFLAGS) -Wall -Wextra -Wno-strict-aliasing -Wno-stringop-overflow -Wno-stringop-truncation -Wno-format-truncation -Wno-psabi -Wno-restrict -c -O3
-LFLAGS	= -ludev -linput  -lc -lstdc++ -ldl -lm -lSDL2 -lrt $(IMLIB2_LIB) -Llib/bluetooth -lbluetooth -lpthread -lmtdev -levdev $(RUST_LIB)
+LFLAGS	= -ludev -linput  -lc -lstdc++ -ldl -lm -lSDL3 -lrt $(IMLIB2_LIB) -Llib/bluetooth -lbluetooth -lpthread -lmtdev -levdev $(RUST_LIB)
 
 ifeq ($(PROFILING),1)
 	DFLAGS += -DPROFILING

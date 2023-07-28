@@ -167,8 +167,8 @@ pub unsafe extern "C" fn OsdSetTitle(title: *const c_char, arrow: c_int) {
     TITLE_BUFFER[..center_offset].fill(0);
 
     // Rotate the characters one by one.
-    for i in (0..osd_size).step_by(8) {
-        let mut tmp = [0u8; 8];
+    for _i in (0..osd_size).step_by(8) {
+        let _tmp = [0u8; 8];
         // rotate_char_(TITLE_BUFFER.as_ptr().add(i), tmp.as_mut_ptr());
         // TITLE_BUFFER[i..(8 + i)].copy_from_slice(&tmp[..8]);
     }
@@ -347,9 +347,9 @@ pub unsafe extern "C" fn OsdWriteOffset(
         }
 
         if i == 0 && (n as c_int) < OsdGetSize() {
-            let mut tmp = [0u8; 8];
+            let tmp = [0u8; 8];
             if leftchar != 0 {
-                let mut tmp2 = CHAR_FONT[leftchar as usize];
+                let _tmp2 = CHAR_FONT[leftchar as usize];
                 // rotate_char_(tmp2.as_mut_ptr(), tmp.as_mut_ptr());
                 p = tmp.as_ptr();
             } else {
@@ -607,7 +607,7 @@ pub unsafe extern "C" fn OSD_PrintInfo(
                 x = if calc { 1 } else { 0 };
                 y += 1;
             }
-            c => {
+            _c => {
                 if x < INFO_MAXW && y < INFO_MAXH {
                     // str[y * INFO_MAXW + x] = c;
                 }
@@ -704,12 +704,12 @@ static mut SCROLL_TIMER: [usize; 2] = [0; 2];
 
 #[no_mangle]
 pub unsafe extern "C" fn ScrollText(
-    n: c_char,
+    _n: c_char,
     str: *const c_char,
     off: c_int,
     len: c_int,
     max_len: c_int,
-    invert: u8,
+    _invert: u8,
     idx: c_int,
 ) {
     let idx = idx as usize;

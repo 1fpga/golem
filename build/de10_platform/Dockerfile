@@ -61,9 +61,11 @@ RUN apt-get update && apt-get upgrade -y && \
         less \
         libc-dev \
         libcurl4-openssl-dev \
+        libdrm-dev \
         libelf-dev \
         libevdev-dev \
         libfreetype6-dev \
+        libgbm-dev \
         libgmp3-dev \
         libinput-dev \
         libjsoncpp-dev \
@@ -73,7 +75,6 @@ RUN apt-get update && apt-get upgrade -y && \
         libncurses5-dev \
         libpcap-dev \
         libreadline-dev \
-        libsdl2-dev \
         libssl-dev \
         libtcmalloc-minimal4 \
         libtool \
@@ -117,6 +118,7 @@ RUN mkdir -p "${MISTER_ROOT}" "${MISTER_SD}" && \
 RUN apt-get update && \
     apt-get upgrade -y && \
 	apt-get install -y --no-install-recommends \
+        cmake \
         gettext \
         libglib2.0-dev \
         libltdl-dev \
@@ -130,6 +132,18 @@ RUN apt-get update && \
         shtool \
     && \
 	rm -r /var/lib/apt/lists/*
+
+
+# Build SDL2 from source.
+RUN cd && \
+    git clone https://github.com/libsdl-org/SDL && \
+    cd SDL && \
+    git checkout f2ae00c1ad5194586bacbd7b374422bd1d47c81a && \
+    mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    cmake --build . --config Release --parallel && \
+    cmake --install . --config Release
 
 # TODO: Rust has an issue when building in a 32-bit container from a 64-bit host. Figure out a fix.
 #       The issue prevents us from using GIT as dependencies.

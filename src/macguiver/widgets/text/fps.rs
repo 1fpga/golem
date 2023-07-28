@@ -50,7 +50,7 @@ impl<const C: usize> FpsCounter<C> {
 impl<const C: usize> Widget for FpsCounter<C> {
     type Color = BinaryColor;
 
-    fn size_hint(&self, parent_size: Size) -> Size {
+    fn size_hint(&self, _parent_size: Size) -> Size {
         self.build_text("000 FPS").bounding_box().size
     }
 

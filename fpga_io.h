@@ -27,7 +27,7 @@ int fpga_get_io_type();
 void fpga_core_reset(int reset);
 void fpga_core_write(uint32_t offset, uint32_t value);
 uint32_t fpga_core_read(uint32_t offset);
-int fpga_core_id();
+extern "C" int fpga_core_id();
 extern "C" int is_fpga_ready(int quick);
 
 int fpga_get_fio_size();

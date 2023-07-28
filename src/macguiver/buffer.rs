@@ -116,7 +116,7 @@ impl DrawBufferInner<BinaryColor> {
                 }
             }
             DrawBufferInner::BufferRef(parent) => parent.borrow_mut().invert(),
-            DrawBufferInner::SubBuffer(parent, rectangle) => {
+            DrawBufferInner::SubBuffer(_parent, _rectangle) => {
                 todo!()
             }
         }
@@ -173,7 +173,7 @@ impl<C: PixelColor> Drawable for DrawBufferInner<C> {
                     Pixel(Point::new(x as i32, y as i32), c)
                 }))
             }
-            DrawBufferInner::SubBuffer(parent, rect) => {
+            DrawBufferInner::SubBuffer(_parent, _rect) => {
                 unreachable!("Unimplemented: DrawBufferInner::SubBuffer::draw")
             }
             DrawBufferInner::Empty => Ok(()),

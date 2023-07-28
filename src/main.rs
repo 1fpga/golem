@@ -33,7 +33,8 @@ fn main() {
     main_inner::main();
 }
 
-#[cfg(not(feature = "platform_de10"))]
+#[cfg(feature = "platform_desktop")]
 fn main() {
+    // charrom::output_font();
     main_inner::main();
 }

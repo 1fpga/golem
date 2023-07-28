@@ -578,6 +578,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "evdev"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bed59fcc8cfd6b190814a509018388462d3b203cf6dd10db5c00087e72a83f3"
+dependencies = [
+ "bitvec",
+ "cfg-if",
+ "libc",
+ "nix",
+ "thiserror",
+]
+
+[[package]]
 name = "exr"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -859,49 +872,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "input"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6e74cd82cedcd66db78742a8337bdc48f188c4d2c12742cbc5cd85113f0b059"
-dependencies = [
- "bitflags",
- "input-sys",
- "io-lifetimes",
- "libc",
- "log",
- "udev",
-]
-
-[[package]]
-name = "input-linux"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f403224ea808abe6182696e3a36d9875c0e942ba7c99239f9ef545b96e35606"
-dependencies = [
- "input-linux-sys",
- "nix",
-]
-
-[[package]]
-name = "input-linux-sys"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a687a25a4973027df9153753a5589f97fe1e958f694a34eea5606ae65299ab8"
-dependencies = [
- "libc",
- "nix",
-]
-
-[[package]]
-name = "input-sys"
-version = "1.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05f6c2a17e8aba7217660e32863af87b0febad811d4b8620ef76b386603fddc2"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "io-lifetimes"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -987,16 +957,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f92be4933c13fd498862a9e02a3055f8a8d9c039ce33db97306fd5a6caa7f29b"
 
 [[package]]
-name = "libudev-sys"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c8469b4a23b962c1396b9b451dda50ef5b283e8dd309d69033475fa9b334324"
-dependencies = [
- "libc",
- "pkg-config",
-]
-
-[[package]]
 name = "linux-raw-sys"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1032,9 +992,9 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memoffset"
-version = "0.7.1"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5de893c32cde5f383baa4c04c5d6dbdd735cfd4a794b0debdb2bb1b421da5ff4"
+checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg",
 ]
@@ -1119,16 +1079,15 @@ dependencies = [
  "embedded-iconoir",
  "embedded-layout",
  "embedded-menu",
+ "evdev",
  "hex",
  "image 0.24.6",
- "input",
- "input-linux",
  "json5",
  "libc",
  "merge",
  "network-interface",
  "num-traits",
- "sdl2",
+ "sdl3",
  "serde",
  "serde-hex",
  "serde_json",
@@ -1166,16 +1125,15 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.26.2"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfdda3d196821d6af13126e40375cdf7da646a96114af134d5f417a9a1dc8e1a"
+checksum = "8f3790c00a0150112de0f4cd161e3d7fc4b2d8a5542ffc35f099a2562aecb35c"
 dependencies = [
  "bitflags",
+ "cc",
  "cfg-if",
  "libc",
- "memoffset 0.7.1",
- "pin-utils",
- "static_assertions",
+ "memoffset 0.6.5",
 ]
 
 [[package]]
@@ -1378,18 +1336,6 @@ name = "pin-project-lite"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e0a7ae3ac2f1173085d398531c705756c94a4c56843785df85a60c1a0afac116"
-
-[[package]]
-name = "pin-utils"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
-
-[[package]]
-name = "pkg-config"
-version = "0.3.27"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 
 [[package]]
 name = "png"
@@ -1643,6 +1589,29 @@ name = "sdl2-sys"
 version = "0.35.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3586be2cf6c0a8099a79a12b4084357aa9b3e0b0d7980e3b67aaf7a9d55f9f0"
+dependencies = [
+ "cfg-if",
+ "libc",
+ "version-compare",
+]
+
+[[package]]
+name = "sdl3"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "defaf67374b4335d1e92544781ad38ecb7f6386a978eb7ab9e7adf92551c9172"
+dependencies = [
+ "bitflags",
+ "lazy_static",
+ "libc",
+ "sdl3-sys",
+]
+
+[[package]]
+name = "sdl3-sys"
+version = "0.0.5+sdl3-dev-2023-06-04"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db37ff748dc3b771dce9b737e2ae71e99e595881f798611375f222e5caf6c4f6"
 dependencies = [
  "cfg-if",
  "libc",
@@ -2038,17 +2007,6 @@ name = "ucd-trie"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e79c4d996edb816c91e4308506774452e55e95c3c9de07b6729e17e15a5ef81"
-
-[[package]]
-name = "udev"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ebdbbd670373442a12fe9ef7aeb53aec4147a5a27a00bbc3ab639f08f48191a"
-dependencies = [
- "libc",
- "libudev-sys",
- "pkg-config",
-]
 
 [[package]]
 name = "unicode-bidi"

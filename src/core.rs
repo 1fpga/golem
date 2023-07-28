@@ -47,8 +47,8 @@ fn find_core_(path: &Path, name: &str) -> Result<Option<PathBuf>, std::io::Error
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Core {
-    pub(super) name: String,
-    pub(super) path: PathBuf,
+    name: String,
+    path: PathBuf,
 }
 
 impl Core {

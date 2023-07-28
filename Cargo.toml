@@ -25,21 +25,20 @@ clap = { version = "4.3.5", features = ["derive"] }
 clap-verbosity-flag = "2.0.1"
 core_affinity = "0.8.0"
 embedded-graphics = "0.8.0"
-embedded-graphics-simulator = { git = "https://github.com/hansl/embedded-graphics-simulator.git", rev = "e33d171d3f38a242e5cb6a85f6dc36b8e689f403", default-features = false, optional = true }
+embedded-graphics-simulator = { git = "https://github.com/hansl/embedded-graphics-simulator.git", rev = "e33d171d3f38a242e5cb6a85f6dc36b8e689f403", features = ["sdl2"] }
 embedded-graphics-transform = "0.1.0"
 embedded-iconoir = { git = "https://github.com/hansl/embedded-iconoir.git", branch = "add-16px", default-features = false, features = ["16px"] }
 embedded-layout = "0.3.1"
 embedded-menu = "0.2.0"
+evdev = { version = "0.12.1", optional = true }
 hex = "0.4.3"
 image = "0.24.6"
-input = { version = "0.8.2", optional = true }
-input-linux = { version = "0.6", optional = true }
 json5 = "0.4.1"
 libc = { version = "*", default-features = false }
 merge = { git = "https://github.com/hansl/merge-rs.git", rev = "ef451941cf3faefc8b6514fa2fb9105f823e6d60", features = ["num", "derive"] }
 network-interface = "1.0.1"
 num-traits = "0.2.15"
-sdl2 = { version = "0.35.2" }
+sdl3 = "0.4.0"
 serde = { version = "1.0.164", features = ["derive"] }
 serde-hex = "0.1.0"
 serde_json = "1.0.64"
@@ -58,6 +57,6 @@ test-generator = "0.3.1"
 [features]
 default = ["platform_desktop"]
 # Support for the DE10-Nano board.
-platform_de10 = ["input", "input-linux"]
+platform_de10 = ["evdev"]
 # Support for a desktop simulator.
-platform_desktop = ["embedded-graphics-simulator/with-sdl"]
+platform_desktop = []

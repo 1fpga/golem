@@ -1,5 +1,7 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::Widget;
+use bitvec::order::Lsb0;
+use bitvec::slice::BitSlice;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Point, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
@@ -24,7 +26,7 @@ impl<C: PixelColor + From<BinaryColor>> ImageWidget<C> {
         Self::new(DrawBuffer::new(Size::zero()))
     }
 
-    fn from_reader<T: Read + Seek>(
+    fn from_image_io_reader<T: Read + Seek>(
         reader: image::io::Reader<BufReader<T>>,
     ) -> Result<Self, String> {
         let img = reader.decode().unwrap();
@@ -49,13 +51,38 @@ impl<C: PixelColor + From<BinaryColor>> ImageWidget<C> {
 
     pub fn from_path(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let img = image::io::Reader::open(path.as_ref())?;
-        Ok(Self::from_reader(img).unwrap())
+        Ok(Self::from_image_io_reader(img).unwrap())
     }
 
     pub fn from_png(data: impl Read + Seek) -> Self {
         let data = BufReader::new(data);
         let decoder = image::io::Reader::with_format(data, ImageFormat::Png);
-        Self::from_reader(decoder).unwrap()
+        Self::from_image_io_reader(decoder).unwrap()
+    }
+}
+
+impl ImageWidget<BinaryColor> {
+    pub fn from_bin(data: impl AsRef<[u8]>, width: u32) -> Result<Self, String> {
+        let data = data.as_ref();
+        let height = data.len() as u32 / width * 8;
+        let size = Size::new(width, height);
+        let mut buffer = DrawBuffer::new(size);
+        let slice = BitSlice::<_, Lsb0>::from_slice(data);
+
+        eprintln!("data: {:?}", hex::encode(data));
+
+        buffer
+            .draw_iter(slice.iter().enumerate().map(|(index, bit)| {
+                Pixel(
+                    Point::new(index as i32 % width as i32, index as i32 / width as i32),
+                    BinaryColor::from(*bit),
+                )
+            }))
+            .unwrap();
+
+        eprintln!("buffer: {:?}", buffer);
+
+        Ok(Self { buffer })
     }
 }
 

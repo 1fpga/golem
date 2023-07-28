@@ -28,7 +28,7 @@ pub trait Widget: Debug {
 
 impl<T> Widget for Rc<RefCell<T>>
 where
-    T: Widget + Debug,
+    T: Widget + Debug + ?Sized,
 {
     type Color = T::Color;
 
@@ -57,7 +57,7 @@ impl<C: PixelColor> Debug for NullWidget<C> {
 impl<C: PixelColor> Widget for NullWidget<C> {
     type Color = C;
 
-    fn size_hint(&self, parent_size: Size) -> Size {
+    fn size_hint(&self, _parent_size: Size) -> Size {
         Size::zero()
     }
 

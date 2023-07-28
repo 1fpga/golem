@@ -4,7 +4,7 @@ use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
 use std::process;
-use tracing::field::debug;
+
 use tracing::{debug, error, Level};
 use tracing_subscriber::fmt::Subscriber;
 
@@ -31,8 +31,6 @@ pub fn main() {
     core_affinity::set_for_current(*core);
 
     unsafe {
-        offload::offload_start();
-
         crate::fpga::fpga_io_init();
     }
 

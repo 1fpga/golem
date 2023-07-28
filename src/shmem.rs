@@ -86,7 +86,7 @@ pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
 }
 
 #[cfg(not(feature = "platform_de10"))]
-pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
+pub unsafe extern "C" fn shmem_map_c(_address: u32, _size: u32) -> *mut u8 {
     std::ptr::null_mut()
 }
 

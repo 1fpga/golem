@@ -1234,8 +1234,14 @@ int user_io_get_width()
 	return fio_size;
 }
 
+extern "C" uint8_t user_io_init_rust(const char *path, const char *xml);
+
 void user_io_init(const char *path, const char *xml)
 {
+    if (user_io_init_rust(path, xml)) return;
+
+    return;
+
 	char *name;
 	static char mainpath[512];
 	core_name[0] = 0;

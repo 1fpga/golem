@@ -1,6 +1,7 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::group::HorizontalWidgetGroup;
 use crate::macguiver::widgets::iconoir::IconoirWidget;
+use crate::macguiver::widgets::image::ImageWidget;
 use crate::macguiver::widgets::Widget;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -28,7 +29,7 @@ pub fn is_valid(iface: &NetworkInterface) -> bool {
                 _ => false,
             }
         }
-        Addr::V6(addr) => {
+        Addr::V6(_addr) => {
             // Impossible to know...
             return true;
         }
@@ -83,9 +84,9 @@ pub struct NetworkWidget {
     dirty: Arc<AtomicBool>,
     group: HorizontalWidgetGroup<BinaryColor>,
 
-    widget_local: Rc<RefCell<IconoirWidget>>,
-    widget_wifi: Rc<RefCell<IconoirWidget>>,
-    widget_internet: Rc<RefCell<IconoirWidget>>,
+    widget_local: Rc<RefCell<dyn Widget<Color = BinaryColor>>>,
+    widget_wifi: Rc<RefCell<dyn Widget<Color = BinaryColor>>>,
+    widget_internet: Rc<RefCell<dyn Widget<Color = BinaryColor>>>,
 
     quit_send: std::sync::mpsc::Sender<()>,
 }
@@ -115,15 +116,15 @@ impl NetworkWidget {
             }
         });
 
-        let widget_local = Rc::new(RefCell::new(IconoirWidget::new::<
-            embedded_iconoir::size16px::connectivity::Network,
-        >()));
-        let widget_wifi = Rc::new(RefCell::new(IconoirWidget::new::<
-            embedded_iconoir::size16px::connectivity::Wifi,
-        >()));
-        let widget_internet = Rc::new(RefCell::new(IconoirWidget::new::<
-            embedded_iconoir::size16px::communication::Globe,
-        >()));
+        let widget_local = Rc::new(RefCell::new(
+            ImageWidget::from_bin(include_bytes!("../../../font/font28.bin"), 8).unwrap(),
+        ));
+        let widget_wifi = Rc::new(RefCell::new(
+            ImageWidget::from_bin(include_bytes!("../../../font/font29.bin"), 8).unwrap(),
+        ));
+        let widget_internet = Rc::new(RefCell::new(
+            ImageWidget::from_bin(include_bytes!("../../../font/font30.bin"), 8).unwrap(),
+        ));
 
         let group = HorizontalWidgetGroup::new().with_spacing(1);
 
