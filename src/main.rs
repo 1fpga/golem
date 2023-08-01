@@ -5,7 +5,6 @@
 pub mod battery;
 pub mod bootcore;
 pub mod charrom;
-pub mod fpga;
 pub mod hardware;
 pub mod input;
 pub mod menu;
@@ -28,13 +27,9 @@ pub mod offload;
 pub mod platform;
 pub mod video;
 
-#[cfg(feature = "platform_de10")]
 fn main() {
-    main_inner::main();
-}
-
-#[cfg(feature = "platform_desktop")]
-fn main() {
-    // charrom::output_font();
-    main_inner::main();
+    if let Err(e) = main_inner::main() {
+        eprintln!("Application error: {}", e);
+        std::process::exit(1);
+    }
 }

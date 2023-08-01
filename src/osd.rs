@@ -1,5 +1,6 @@
-use crate::charrom::CHAR_FONT;
-use crate::{charrom, hardware, spi, user_io};
+#![cfg(feature = "platform_de10")]
+use crate::spi;
+use crate::user_io;
 use std::ffi::{c_char, c_int, c_uchar, c_ulong, CStr, CString};
 
 // time delay after which file/dir name starts to scroll
@@ -65,9 +66,6 @@ impl From<c_int> for OsdArrow {
 static mut OSD_SIZE: usize = 0;
 static mut ARROW: OsdArrow = OsdArrow::None;
 
-#[export_name = "titlebuffer"]
-pub static mut TITLE_BUFFER: [u8; 256] = [0; 256];
-
 #[no_mangle]
 pub extern "C" fn OsdSetSize(n: c_int) {
     unsafe {
@@ -124,367 +122,56 @@ fn rotate_char_(i: *const c_char, o: *mut c_char) {
 /// Update the title, and optionally arrows on the last line (the exit line)
 /// of the OSD.
 #[no_mangle]
-pub unsafe extern "C" fn OsdSetTitle(title: *const c_char, arrow: c_int) {
-    let title_cstr = unsafe { CStr::from_ptr(title) };
-    let title_str = title_cstr.to_str().unwrap();
-    OsdSetArrow(arrow);
-
-    // Reset the title buffer.
-    TITLE_BUFFER.fill(0);
-
-    // Remove spaces up to 5 pixels apart, making a variable-width font.
-    let mut zeroes = 0;
-    let mut outp = 0;
-
-    let osd_size = OsdGetSize() as usize * 8;
-    let buffer_len = unsafe { TITLE_BUFFER.len() };
-    for c in title_str.chars() {
-        if outp >= osd_size - 8 {
-            break;
-        }
-
-        for j in 0..8 {
-            let nc = charrom::CHAR_FONT[c as usize][j];
-            if nc != 0 {
-                zeroes = 0;
-                TITLE_BUFFER[outp] = nc;
-                outp += 1;
-            } else if zeroes == 0 || (c == ' ' && zeroes < 5) {
-                TITLE_BUFFER[outp] = 0;
-                zeroes += 1;
-                outp += 1;
-            }
-
-            if outp > buffer_len {
-                break;
-            }
-        }
-    }
-
-    // Center the title.
-    let center_offset = (osd_size - 1 - outp) / 2;
-    TITLE_BUFFER.copy_within(0..outp, center_offset);
-    TITLE_BUFFER[..center_offset].fill(0);
-
-    // Rotate the characters one by one.
-    for _i in (0..osd_size).step_by(8) {
-        let _tmp = [0u8; 8];
-        // rotate_char_(TITLE_BUFFER.as_ptr().add(i), tmp.as_mut_ptr());
-        // TITLE_BUFFER[i..(8 + i)].copy_from_slice(&tmp[..8]);
-    }
-}
-
-static mut STAR_FRAME_BUFFER: [u8; 16 * 256] = [0; 16 * 256];
-pub static mut OSD_BUFFER: [u8; 256 * 32] = [0; 256 * 32];
-static mut OSD_BUFFER_POS: usize = 0;
-pub static mut OSD_SET: c_int = 0;
+pub unsafe extern "C" fn OsdSetTitle(_title: *const c_char, _arrow: c_int) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn OsdWrite(
-    n: u8,
-    s: *const c_char,
-    invert: c_uchar,
-    stipple: c_uchar,
-    usebg: c_char,
-    maxinv: c_int,
-    mininv: c_int,
+    _n: u8,
+    _s: *const c_char,
+    _invert: c_uchar,
+    _stipple: c_uchar,
+    _usebg: c_char,
+    _maxinv: c_int,
+    _mininv: c_int,
 ) {
-    OsdWriteOffset(n, s, invert, stipple, 0, 0, usebg, maxinv, mininv);
 }
 
-fn osd_start_(line: u8) {
-    let line = line & 0x1F;
-    unsafe {
-        OSD_SET |= 1 << line;
-        OSD_BUFFER_POS = (line as usize) * 256;
-    }
-}
+fn osd_start_(_line: u8) {}
 
-unsafe fn draw_title_(mut p: *const u8) {
-    // left white border
-    OSD_BUFFER[OSD_BUFFER_POS] = 0xFF;
-    OSD_BUFFER_POS += 1;
-    OSD_BUFFER[OSD_BUFFER_POS] = 0xFF;
-    OSD_BUFFER_POS += 1;
-    OSD_BUFFER[OSD_BUFFER_POS] = 0xFF;
-    OSD_BUFFER_POS += 1;
-
-    for _ in 0..8 {
-        // Double the size of the characters for the title.
-        OSD_BUFFER[OSD_BUFFER_POS] = 255 ^ *p;
-        OSD_BUFFER[OSD_BUFFER_POS + 1] = 255 ^ *p;
-        OSD_BUFFER_POS += 2;
-        p = p.add(1);
-    }
-
-    // right white border
-    OSD_BUFFER[OSD_BUFFER_POS] = 0xff;
-    OSD_BUFFER_POS += 1;
-
-    // blue gap
-    OSD_BUFFER[OSD_BUFFER_POS] = 0;
-    OSD_BUFFER_POS += 1;
-    OSD_BUFFER[OSD_BUFFER_POS] = 0;
-    OSD_BUFFER_POS += 1;
-}
+unsafe fn draw_title_(_p: *const u8) {}
 
 // write a null-terminated string <s> to the OSD buffer starting at line <n>
 unsafe fn print_line_(
-    line: u8,
-    mut hdr: *const c_char,
-    mut text: *const c_char,
-    mut width: c_ulong,
-    offset: c_ulong,
-    invert: u8,
+    _line: u8,
+    _hdr: *const c_char,
+    _text: *const c_char,
+    _width: c_ulong,
+    _offset: c_ulong,
+    _invert: u8,
 ) {
-    // line : OSD line number (0-7)
-    // text : pointer to null-terminated string
-    // start : start position (in pixels)
-    // width : printed text length in pixels
-    // offset : scroll offset in pixels counting from the start of the string (0-7)
-    // invert : invertion flag
-
-    let invert: u8 = if invert != 0 { 0xFF } else { 0x00 };
-    // select buffer and line to write to
-    osd_start_(line);
-    draw_title_(
-        TITLE_BUFFER
-            .as_ptr()
-            .add((OsdGetSize() as usize - 1 - line as usize) * 8),
-    );
-
-    while *hdr != 0 {
-        width -= 8;
-        let mut p = CHAR_FONT[*hdr as usize].as_ptr();
-        hdr = hdr.add(1);
-        for _ in 0..8 {
-            OSD_BUFFER[OSD_BUFFER_POS] = invert ^ *p;
-            p = p.add(1);
-            OSD_BUFFER_POS += 1;
-        }
-    }
-
-    if offset != 0 {
-        width -= 8 - offset;
-        let mut p = CHAR_FONT[*text as usize].as_ptr().add(offset as usize);
-        text = text.add(1);
-        for _ in offset..8 {
-            OSD_BUFFER[OSD_BUFFER_POS] = invert ^ *p;
-            p = p.add(1);
-            OSD_BUFFER_POS += 1;
-        }
-    }
-
-    while width > 8 {
-        let mut p = CHAR_FONT[*text as usize].as_ptr();
-        text = text.add(1);
-        for _ in 0..8 {
-            OSD_BUFFER[OSD_BUFFER_POS] = invert ^ *p;
-            p = p.add(1);
-            OSD_BUFFER_POS += 1;
-        }
-        width -= 8;
-    }
-    if width > 0 {
-        let mut p = CHAR_FONT[*text as usize].as_ptr();
-        for _ in 0..width {
-            OSD_BUFFER[OSD_BUFFER_POS] = invert ^ *p;
-            p = p.add(1);
-            OSD_BUFFER_POS += 1;
-        }
-    }
 }
 
 /// Write a null-terminated string <s> to the OSD buffer starting at line <n>.
 #[no_mangle]
 pub unsafe extern "C" fn OsdWriteOffset(
-    mut n: u8,
-    mut s: *const c_char,
-    invert: c_uchar,
-    mut stipple: c_uchar,
-    offset: c_char,
-    mut leftchar: c_char,
-    usebg: c_char,
-    maxinv: c_int,
-    mininv: c_int,
+    _n: u8,
+    _s: *const c_char,
+    _invert: c_uchar,
+    _stipple: c_uchar,
+    _offset: c_char,
+    _leftchar: c_char,
+    _usebg: c_char,
+    _maxinv: c_int,
+    _mininv: c_int,
 ) {
-    let invert = invert != 0;
-
-    let mut i = 0;
-    let mut p: *const c_uchar;
-
-    let mut stipple_mask: u8 = 0xFF;
-    let mut line_limit = OSD_LINE_LENGTH;
-    let arrow = ARROW;
-    let mut arrow_mask = arrow;
-
-    if n as c_int == OsdGetSize() - 1 && arrow.is_right() {
-        line_limit -= 22;
-    }
-
-    if n != 0 && (n as c_int) < OsdGetSize() - 1 {
-        leftchar = 0;
-    }
-
-    if stipple != 0 {
-        stipple_mask = 0x55;
-        stipple = 0xff;
-    } else {
-        stipple = 0;
-    }
-
-    osd_start_(n);
-    let mut xormask = 0u8;
-    let mut xorchar = 0u8;
-
-    // Send all characters in string to OSD.
-    loop {
-        if invert && ((i / 8) >= mininv) {
-            xormask = 0xFF;
-        }
-        if invert && ((i / 8) >= maxinv) {
-            xormask = 0;
-        }
-
-        if i == 0 && (n as c_int) < OsdGetSize() {
-            let tmp = [0u8; 8];
-            if leftchar != 0 {
-                let _tmp2 = CHAR_FONT[leftchar as usize];
-                // rotate_char_(tmp2.as_mut_ptr(), tmp.as_mut_ptr());
-                p = tmp.as_ptr();
-            } else {
-                p = TITLE_BUFFER
-                    .as_ptr()
-                    .add(((OsdGetSize() - 1 - (n as i32)) * 8) as usize);
-            }
-
-            draw_title_(p);
-            i += 22; // Twenty two of what?
-        } else if n as c_int == OsdGetSize() - 1 && arrow_mask.is_left() {
-            for _ in 0..3 {
-                OSD_BUFFER[OSD_BUFFER_POS] = xormask;
-                OSD_BUFFER_POS += 1;
-            }
-            p = CHAR_FONT[0x10].as_ptr();
-            for _ in 0..8 {
-                OSD_BUFFER[OSD_BUFFER_POS] = (*p << offset) ^ xormask;
-                OSD_BUFFER_POS += 1;
-                p = p.add(1);
-            }
-            p = CHAR_FONT[0x14].as_ptr();
-            for _ in 0..8 {
-                OSD_BUFFER[OSD_BUFFER_POS] = (*p << offset) ^ xormask;
-                OSD_BUFFER_POS += 1;
-                p = p.add(1);
-            }
-            for _ in 0..5 {
-                OSD_BUFFER[OSD_BUFFER_POS] = xormask;
-                OSD_BUFFER_POS += 1;
-            }
-
-            i += 24;
-            arrow_mask = arrow_mask.without_left();
-            for _ in 0..3 {
-                if *s == 0 {
-                    break;
-                }
-                s = s.add(1);
-            }
-        } else {
-            let b = *s;
-            s = s.add(1);
-            if b == 0 {
-                break;
-            }
-
-            if b == 0x0B {
-                stipple_mask ^= 0xAA;
-                stipple ^= 0xFF;
-            } else if b == 0x0C {
-                xorchar ^= 0xFF;
-            } else if b == 0x0D || b == 0x0A {
-                // cariage return / linefeed, go to next line increment line counter.
-                n += 1;
-                if n as usize >= line_limit {
-                    n = 0;
-                }
-                osd_start_(n);
-            } else if (i as usize) < (line_limit - 8) {
-                // Normal character.
-                p = CHAR_FONT[b as usize].as_ptr();
-                for c in 0..8 {
-                    let bg = if usebg != 0 {
-                        STAR_FRAME_BUFFER[(n as usize) * 256 + (i as usize) + c - 22]
-                    } else {
-                        0
-                    };
-                    OSD_BUFFER[OSD_BUFFER_POS] =
-                        (((*p << offset) & stipple_mask) ^ xorchar ^ xormask) | bg;
-                    OSD_BUFFER_POS += 1;
-                    p = p.add(1);
-                    stipple_mask ^= stipple;
-                }
-                i += 8;
-            }
-        }
-    }
-
-    for i in (i as usize)..line_limit {
-        let bg = if usebg != 0 {
-            STAR_FRAME_BUFFER[(n as usize) * 256 + i - 22]
-        } else {
-            0
-        };
-
-        OSD_BUFFER[OSD_BUFFER_POS] = xormask | bg;
-        OSD_BUFFER_POS += 1;
-    }
-
-    if n == (OsdGetSize() as u8 - 1) && arrow_mask.is_right() {
-        for _ in 0..3 {
-            OSD_BUFFER[OSD_BUFFER_POS] = xormask;
-            OSD_BUFFER_POS += 1;
-        }
-        p = CHAR_FONT[0x15].as_ptr();
-        for _ in 0..8 {
-            OSD_BUFFER[OSD_BUFFER_POS] = *p ^ xormask;
-            OSD_BUFFER_POS += 1;
-            p = p.add(1);
-        }
-        p = CHAR_FONT[0x11].as_ptr();
-        for _ in 0..8 {
-            OSD_BUFFER[OSD_BUFFER_POS] = *p ^ xormask;
-            OSD_BUFFER_POS += 1;
-            p = p.add(1);
-        }
-        for _ in 0..5 {
-            OSD_BUFFER[OSD_BUFFER_POS] = xormask;
-            OSD_BUFFER_POS += 1;
-        }
-    }
 }
 
 #[no_mangle]
-pub extern "C" fn OsdShiftDown(n: u8) {
-    osd_start_(n);
-
-    unsafe {
-        OSD_BUFFER_POS += 22;
-        for _ in 22..256 {
-            OSD_BUFFER[OSD_BUFFER_POS] <<= 1;
-            OSD_BUFFER_POS += 1;
-        }
-    }
-}
+pub extern "C" fn OsdShiftDown(_n: u8) {}
 
 // clear OSD frame buffer
 #[no_mangle]
-pub extern "C" fn OsdClear() {
-    unsafe {
-        OSD_SET = -1;
-        OSD_BUFFER.fill(0);
-    }
-}
+pub extern "C" fn OsdClear() {}
 
 #[no_mangle]
 pub extern "C" fn OsdEnable(mut mode: u8) {
@@ -543,317 +230,37 @@ pub extern "C" fn OsdMenuCtl(en: c_int) {
 }
 
 #[no_mangle]
-pub extern "C" fn OsdUpdate() {
-    extern "C" {
-        fn mcd_poll();
-        fn neocd_poll();
-        fn pcecd_poll();
-        fn saturn_poll();
-    }
-
-    unsafe {
-        let n = if user_io::is_menu() != 0 {
-            19
-        } else {
-            OsdGetSize()
-        };
-
-        for i in 0..n {
-            if (OSD_SET & (1 << i)) != 0 {
-                spi::spi_osd_cmd_cont(OSD_CMD_WRITE | (i as u8));
-                spi::spi_write(OSD_BUFFER.as_ptr().add((i as usize) * 256), 256, 0);
-                spi::DisableOsd();
-
-                if user_io::is_megacd() != 0 {
-                    mcd_poll();
-                }
-                if user_io::is_pce() != 0 {
-                    pcecd_poll();
-                }
-                if user_io::is_saturn() != 0 {
-                    saturn_poll();
-                }
-                if user_io::is_neogeo_cd() != 0 {
-                    neocd_poll();
-                }
-            }
-        }
-    }
-}
+pub extern "C" fn OsdUpdate() {}
 
 #[no_mangle]
 pub unsafe extern "C" fn OSD_PrintInfo(
-    mut message: *const c_char,
-    width: *mut c_int,
-    height: *mut c_int,
-    frame: c_int,
+    _message: *const c_char,
+    _width: *mut c_int,
+    _height: *mut c_int,
+    _frame: c_int,
 ) {
-    let mut str = [b' '; INFO_MAXH * INFO_MAXW];
-
-    // calc height/width if none provided. Add frame to calculated size.
-    // no frame will be added if width and height are provided.
-    let calc = (*width != 0) || (*height != 0) || (frame == 0);
-
-    let mut maxw = 0;
-    let mut x = if calc { 1 } else { 0 };
-    let mut y = if calc { 1 } else { 0 };
-
-    while *message != 0 {
-        let c = *message;
-        message = message.add(1);
-        match c {
-            0x0D => {}
-            0x0A => {
-                x = if calc { 1 } else { 0 };
-                y += 1;
-            }
-            _c => {
-                if x < INFO_MAXW && y < INFO_MAXH {
-                    // str[y * INFO_MAXW + x] = c;
-                }
-            }
-        }
-        x += 1;
-        if x > maxw {
-            maxw = x;
-        }
-    }
-
-    let w: usize = (if !calc {
-        (*width + 2) as usize
-    } else {
-        maxw + 1
-    })
-    .min(INFO_MAXW);
-    *width = w as c_int;
-
-    let h: usize = (if !calc { (*height + 2) as usize } else { y + 2 }).min(INFO_MAXH);
-    *height = h as c_int;
-
-    if frame != 0 {
-        let frame: u8 = (frame as u8 - 1) * 6;
-        for x in 1..(w - 1) {
-            str[x] = 0x81 + frame;
-            str[((h - 1) * INFO_MAXW) + x] = 0x81 + frame;
-        }
-        for y in 1..(h - 1) {
-            str[y * INFO_MAXW] = 0x83 + frame;
-            str[(y * INFO_MAXW) + (w - 1)] = 0x83 + frame;
-        }
-        str[0] = 0x80 + frame;
-        str[w - 1] = 0x82 + frame;
-        str[(h - 1) * INFO_MAXW] = 0x85 + frame;
-        str[((h - 1) * INFO_MAXW) + w - 1] = 0x84 + frame;
-    }
-
-    for y in 0..h {
-        osd_start_(y as u8);
-
-        for x in 0..w {
-            let mut p = CHAR_FONT[str[(y * INFO_MAXW) + x] as usize].as_ptr();
-            for _ in 0..8 {
-                OSD_BUFFER[OSD_BUFFER_POS] = *p;
-                OSD_BUFFER_POS += 1;
-                p = p.add(1);
-            }
-        }
-    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn OsdDrawLogo(row: c_int) {
-    let logo_data = include_bytes!("../assets/logo_about.dat");
-
-    osd_start_(row as u8);
-
-    let mut bt: u8 = 0;
-    let mut lp = if row >= 10 {
-        std::ptr::null()
-    } else {
-        logo_data.as_ptr().add(row as usize * 227)
-    };
-    let mut bytes = 227;
-    let mut bg = STAR_FRAME_BUFFER.as_ptr().add(row as usize * 256);
-
-    let mut i = 0;
-    while i < OSD_LINE_LENGTH {
-        if i == 0 {
-            draw_title_(
-                TITLE_BUFFER
-                    .as_ptr()
-                    .add((OsdGetSize() - 1 - row) as usize * 8),
-            );
-            i += 22;
-        }
-
-        if lp.is_null() && bytes != 0 {
-            bt = *lp;
-            lp = lp.add(1);
-            bytes -= 1;
-        }
-
-        OSD_BUFFER[OSD_BUFFER_POS] = bt | *bg;
-        bg = bg.add(1);
-        OSD_BUFFER_POS += 1;
-        i += 1;
-    }
-}
-
-static mut SCROLL_OFFSET: [usize; 2] = [0; 2];
-static mut SCROLL_TIMER: [usize; 2] = [0; 2];
+pub unsafe extern "C" fn OsdDrawLogo(_row: c_int) {}
 
 #[no_mangle]
 pub unsafe extern "C" fn ScrollText(
     _n: c_char,
-    str: *const c_char,
-    off: c_int,
-    len: c_int,
-    max_len: c_int,
+    _str: *const c_char,
+    _off: c_int,
+    _len: c_int,
+    _max_len: c_int,
     _invert: u8,
-    idx: c_int,
+    _idx: c_int,
 ) {
-    let idx = idx as usize;
-    let mut len = len as usize;
-    let off = off as usize;
-    let max_len = if max_len != 0 { max_len as usize } else { 30 };
-
-    const BLANKSPACE: usize = 10;
-    let mut hdr = [0u8; 40];
-
-    let mut str = CStr::from_ptr(str).to_bytes_with_nul();
-
-    if str.is_empty() || hardware::CheckTimer(idx as c_ulong) == 0 {
-        return;
-    }
-
-    if off != 0 {
-        hdr[0..off].copy_from_slice(&str[0..off]);
-        str = &str[off..];
-        if len > off {
-            len -= off;
-        }
-    }
-
-    SCROLL_TIMER[idx] = hardware::GetTimer(SCROLL_DELAY2) as usize;
-    SCROLL_OFFSET[idx] += 1;
-
-    let mut s = [b' '; 40];
-
-    // get name length
-    if len == 0 {
-        len = str.len();
-    }
-
-    // scroll name if longer than display size
-    if (off + 2 + len) > max_len {
-        // reset scroll position if it exceeds predefined maximum
-        if SCROLL_OFFSET[idx] >= ((len + BLANKSPACE) << 3) {
-            SCROLL_OFFSET[idx] = 0;
-        }
-        // get new starting character of the name (SCROLL_OFFSET is no longer in 2 pixel unit)
-        let offset = SCROLL_OFFSET[idx] >> 3;
-
-        // remaining number of characters in the name
-        len -= offset;
-        if len > max_len {
-            len = max_len
-        }
-
-        // copy name substring
-        if len > 0 && offset < str.len() {
-            s[0..len].copy_from_slice(&str[offset..offset + len]);
-        }
-
-        // file name substring and blank space is shorter than display line size
-        if len < (max_len - BLANKSPACE) {
-            let overflow = max_len - BLANKSPACE - len;
-            s[len + BLANKSPACE..len + BLANKSPACE + overflow].copy_from_slice(&str[0..overflow]);
-        }
-
-        // print_line_(
-        //     n,
-        //     hdr.as_ptr(),
-        //     s.as_ptr(),
-        //     ((max_len - 1) << 3) as c_ulong,
-        //     (SCROLL_OFFSET[idx] & 0x7) as c_ulong,
-        //     invert,
-        // ); // OSD print function with pixel precision
-    }
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn ScrollReset(idx: c_int) {
-    let idx = idx as usize;
-
-    // set timer to start name scrolling after predefined time delay
-    SCROLL_TIMER[idx] = hardware::GetTimer(SCROLL_DELAY) as usize;
-    // start scrolling from the start
-    SCROLL_OFFSET[idx] = 0;
-}
-
-struct Star {
-    pub pos: (i32, i32),
-    pub dir: (i32, i32),
-}
-
-impl Star {
-    /// Create a star for the about page. They travel left in various small
-    /// deltas.
-    pub fn new_about(maxx: i32, maxy: i32) -> Self {
-        let x = unsafe { libc::rand() % maxx };
-        let y = unsafe { libc::rand() % maxy };
-        let dx = unsafe { libc::rand() % 8 };
-
-        Self {
-            pos: (x << 4, y << 4),
-            dir: (-dx - 3, 0),
-        }
-    }
-
-    pub fn reset_to_right(&mut self, x: i32, maxy: i32) {
-        let y = unsafe { libc::rand() % maxy };
-        let dx = unsafe { libc::rand() % 8 };
-        self.pos = (x << 4, y << 4);
-        self.dir = (-dx - 3, 0);
-    }
-
-    pub fn update(&mut self) {
-        self.pos.0 += self.dir.0;
-        self.pos.1 += self.dir.1;
-    }
-
-    pub fn is_outside(&self, min: (i32, i32), max: (i32, i32)) -> bool {
-        self.pos.0 < min.0 || self.pos.0 > max.0 || self.pos.1 < min.1 || self.pos.1 > max.1
-    }
-}
-
-static mut STARS: Option<Box<[Star]>> = None;
+pub unsafe extern "C" fn ScrollReset(_idx: c_int) {}
 
 #[no_mangle]
-pub unsafe extern "C" fn StarsInit() {
-    libc::srand(libc::time(std::ptr::null_mut()) as u32);
-    let mut stars = Vec::with_capacity(64);
-    for _ in 0..64 {
-        stars.push(Star::new_about(228, 128));
-    }
-    STARS = Some(stars.into_boxed_slice());
-}
+pub unsafe extern "C" fn StarsInit() {}
 
 #[no_mangle]
-pub unsafe extern "C" fn StarsUpdate() {
-    STAR_FRAME_BUFFER.fill(0);
-
-    for star in STARS.as_mut().unwrap().iter_mut() {
-        star.update();
-
-        if star.is_outside((0, 0), (228 << 4, 128 << 4)) {
-            star.reset_to_right(228, 128);
-        }
-
-        let x = star.pos.0 as usize >> 4;
-        let y = star.pos.1 as usize >> 4;
-        // 	framebuffer[y / 8][x] |= (1 << (y & 7));
-        STAR_FRAME_BUFFER[(y / 8) * 256 + x] |= 1 << (y & 7);
-    }
-    OSD_SET -= 1;
-}
+pub unsafe extern "C" fn StarsUpdate() {}

@@ -69,8 +69,6 @@ impl ImageWidget<BinaryColor> {
         let mut buffer = DrawBuffer::new(size);
         let slice = BitSlice::<_, Lsb0>::from_slice(data);
 
-        eprintln!("data: {:?}", hex::encode(data));
-
         buffer
             .draw_iter(slice.iter().enumerate().map(|(index, bit)| {
                 Pixel(
@@ -79,8 +77,6 @@ impl ImageWidget<BinaryColor> {
                 )
             }))
             .unwrap();
-
-        eprintln!("buffer: {:?}", buffer);
 
         Ok(Self { buffer })
     }

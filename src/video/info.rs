@@ -1,9 +1,5 @@
 use crate::video::aspect::AspectRatio;
 use crate::video::resolution::Resolution;
-use std::mem::MaybeUninit;
-
-const UIO_GET_VRES: u16 = 0x23;
-const UIO_GET_FB_PAR: u16 = 0x40;
 
 mod ffi {
     /// C++ structure for the video info, should be byte-compatible with the C version in `video.h`.
@@ -59,7 +55,7 @@ pub struct VideoInfo {
 
 impl VideoInfo {
     /// Update the video info from the FPGA. Returns true if the video info changed.
-    #[cfg(not(test))]
+    #[cfg(feature = "platform_de10")]
     pub fn update(&mut self, force: bool) -> bool {
         use crate::spi;
 
@@ -71,7 +67,7 @@ impl VideoInfo {
         }
 
         unsafe {
-            spi::spi_uio_cmd_cont(UIO_GET_VRES);
+            spi::spi_uio_cmd_cont(spi::UIO_GET_VRES);
         }
 
         let new_res = spi::spi_w(0);
@@ -92,7 +88,7 @@ impl VideoInfo {
             spi::DisableIo();
         }
 
-        let crc = unsafe { spi::spi_uio_cmd_cont(UIO_GET_FB_PAR) };
+        let crc = unsafe { spi::spi_uio_cmd_cont(spi::UIO_GET_FB_PAR) };
         let fb_changed = self.fb_crc != crc;
         if fb_changed || res_changed {
             self.fb_crc = crc;
@@ -133,10 +129,10 @@ impl VideoInfo {
     }
 }
 
-#[cfg(not(test))]
+#[cfg(feature = "platform_de10")]
 #[no_mangle]
 unsafe extern "C" fn get_video_info_rust(force: u8, info: *mut ffi::VideoInfo) -> u8 {
-    static mut GLOBAL_INFO: MaybeUninit<VideoInfo> = std::mem::MaybeUninit::uninit();
+    static mut GLOBAL_INFO: std::mem::MaybeUninit<VideoInfo> = std::mem::MaybeUninit::uninit();
 
     let i = GLOBAL_INFO.assume_init_mut();
 

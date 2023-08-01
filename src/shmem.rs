@@ -1,8 +1,6 @@
 use std::ffi::c_int;
 use std::ops::{Deref, DerefMut};
 
-static mut MEM_FD: Option<c_int> = None;
-
 /// Map a physical memory address to a virtual address. Returns a buffer that has access
 /// to the physical memory.
 ///
@@ -55,6 +53,8 @@ impl Drop for Mapper {
 #[export_name = "shmem_map"]
 #[no_mangle]
 pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
+    static mut MEM_FD: Option<c_int> = None;
+
     if MEM_FD.is_none() {
         // libc expects a CString, so we need to add \0 at the end.
         let fd = libc::open(

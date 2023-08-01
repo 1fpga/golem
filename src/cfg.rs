@@ -1,4 +1,3 @@
-use crate::video::{aspect, resolution};
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DeserializeFromStr, DurationSeconds};
@@ -168,14 +167,14 @@ impl<'de> serde_with::DeserializeAs<'de, Duration> for DurationMinutes {
 
 /// A struct representing the `video=123x456` string for sections in the config.
 #[derive(DeserializeFromStr, Debug, Clone, Hash, Ord, PartialOrd, Eq, PartialEq)]
-pub struct VideoResolutionString(resolution::Resolution);
+pub struct VideoResolutionString(Resolution);
 
 impl FromStr for VideoResolutionString {
     type Err = &'static str;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(s) = s.strip_prefix("video=") {
-            Ok(VideoResolutionString(resolution::Resolution::from_str(s)?))
+            Ok(VideoResolutionString(Resolution::from_str(s)?))
         } else {
             Err("Invalid video section string.")
         }
@@ -758,7 +757,7 @@ impl MisterConfig {
             .get_or_insert("1, 0, 1, 0, 1, 0".to_string());
     }
 
-    pub fn custom_aspect_ratio(&self) -> Vec<aspect::AspectRatio> {
+    pub fn custom_aspect_ratio(&self) -> Vec<AspectRatio> {
         if self.custom_aspect_ratio.is_empty() {
             self.custom_aspect_ratio_1
                 .iter()
@@ -833,9 +832,14 @@ impl Config {
             testing::ROOT.clone().unwrap()
         }
 
-        #[cfg(not(test))]
-        unsafe {
+        #[cfg(feature = "platform_de10")]
+        {
             crate::file_io::root_dir()
+        }
+
+        #[cfg(feature = "platform_desktop")]
+        {
+            std::env::current_dir().unwrap()
         }
     }
 
@@ -1116,20 +1120,21 @@ impl Config {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn rust_load_config() {
-    use crate::file_io::root_dir;
-
-    let root = root_dir();
+    let root = Config::config_root();
 
     let p = root.join("MiSTer.ini");
     let mut config = Config::load(&p).unwrap();
     config.mister.set_defaults();
 
     // Check the altcfg.
-    let alt = crate::user_io::altcfg(-1);
-    if alt != 0 {
-        let p = root.join(format!("MiSTer_{alt}.ini"));
-        if let Ok(alt_config) = Config::load(&p) {
-            config.merge(alt_config);
+    #[cfg(feature = "platform_de10")]
+    {
+        let alt = crate::user_io::altcfg(-1);
+        if alt != 0 {
+            let p = root.join(format!("MiSTer_{alt}.ini"));
+            if let Ok(alt_config) = Config::load(&p) {
+                config.merge(alt_config);
+            }
         }
     }
 

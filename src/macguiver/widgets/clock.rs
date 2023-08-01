@@ -1,56 +1,48 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::text::TextWidget;
 use crate::macguiver::widgets::Widget;
-use chrono::Timelike;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::mono_font::ascii::FONT_6X9;
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 
 #[derive(Debug)]
-pub struct ClockWidget {
-    time: chrono::NaiveTime,
+pub struct DateTimeWidget {
+    date_time: chrono::DateTime<chrono::Local>,
+    time_format: String,
     inner: TextWidget,
 }
 
-impl Default for ClockWidget {
+impl Default for DateTimeWidget {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl ClockWidget {
+impl DateTimeWidget {
     pub fn new() -> Self {
+        let time_format = "%a %d %b %H:%M:%S".to_string();
+        let date_time = chrono::Local::now();
+        let date_time_str = date_time.format(&time_format).to_string();
+
         Self {
-            time: chrono::Local::now().time(),
+            date_time,
+            time_format,
             inner: TextWidget::new(
-                "00:00:00 AM",
+                date_time_str,
                 MonoTextStyle::new(&FONT_6X9, BinaryColor::On),
             ),
         }
     }
 
-    pub fn set_time(&mut self, time: chrono::NaiveTime) {
-        self.time = time;
-
-        let hours = time.hour();
-        let (hours, am_pm) = if hours > 12 {
-            (hours - 12, "PM")
-        } else {
-            (hours, "AM")
-        };
-
-        self.inner.set_text(format!(
-            "{:2}:{:02}:{:02} {}",
-            hours,
-            self.time.minute(),
-            self.time.second(),
-            am_pm
-        ));
+    pub fn set_time(&mut self, date_time: chrono::DateTime<chrono::Local>) {
+        self.date_time = date_time;
+        self.inner
+            .set_text(date_time.format(&self.time_format).to_string());
     }
 }
 
-impl Widget for ClockWidget {
+impl Widget for DateTimeWidget {
     type Color = BinaryColor;
 
     fn size_hint(&self, parent: Size) -> Size {
@@ -58,9 +50,9 @@ impl Widget for ClockWidget {
     }
 
     fn update(&mut self) {
-        let time = chrono::Local::now().time();
-        if time.second() != self.time.second() {
-            self.set_time(time);
+        let date_time = chrono::Local::now();
+        if date_time != self.date_time {
+            self.set_time(date_time);
         }
     }
 

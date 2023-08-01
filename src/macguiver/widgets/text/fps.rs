@@ -51,7 +51,7 @@ impl<const C: usize> Widget for FpsCounter<C> {
     type Color = BinaryColor;
 
     fn size_hint(&self, _parent_size: Size) -> Size {
-        self.build_text("000 FPS").bounding_box().size
+        self.build_text("000 fps").bounding_box().size
     }
 
     fn update(&mut self) {
@@ -60,7 +60,7 @@ impl<const C: usize> Widget for FpsCounter<C> {
 
     fn draw(&self, target: &mut DrawBuffer<Self::Color>) {
         let fps = self.fps();
-        self.build_text(&format!("{:3} FPS", fps))
+        self.build_text(&format!("{:3} fps", fps))
             .draw(target)
             .unwrap();
     }

@@ -1,6 +1,6 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::boxed::{BoxedWidget, HorizontalAlignment, VerticalAlignment};
-use crate::macguiver::widgets::clock::ClockWidget;
+use crate::macguiver::widgets::clock::DateTimeWidget;
 use crate::macguiver::widgets::group::horizontal::HorizontalWidgetGroup;
 use crate::macguiver::widgets::Widget;
 use embedded_graphics::geometry::Size;
@@ -26,7 +26,7 @@ impl Default for Toolbar {
             HorizontalWidgetGroup::default().with_spacing(1),
         ));
         Self {
-            clock: BoxedWidget::new(ClockWidget::default())
+            clock: BoxedWidget::new(DateTimeWidget::default())
                 .aligned(VerticalAlignment::Middle, HorizontalAlignment::Right)
                 .with_margin_tuple((1, 3, 1, 3)),
             left_group: BoxedWidget::new(Rc::clone(&icons))

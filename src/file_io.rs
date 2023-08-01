@@ -1,3 +1,4 @@
+#![cfg(feature = "platform_de10")]
 use std::ffi::{c_char, c_int, OsStr};
 use std::path::PathBuf;
 
@@ -7,9 +8,6 @@ extern "C" {
     pub fn getRootDir() -> *const u8;
     pub fn isXmlName(path: *const c_char) -> c_int; // 1 - MRA, 2 - MGL
 }
-
-#[cfg(not(feature = "platform_de10"))]
-pub fn FindStorage() {}
 
 #[cfg(not(feature = "platform_de10"))]
 pub fn getRootDir() -> *const u8 {

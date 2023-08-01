@@ -10,7 +10,6 @@ use std::rc::Rc;
 enum DrawBufferInner<C> {
     Empty,
     Buffer(Box<[C]>, Size),
-    BufferRef(Rc<RefCell<DrawBufferInner<C>>>),
     SubBuffer(Rc<RefCell<DrawBufferInner<C>>>, Rectangle),
 }
 
@@ -27,10 +26,6 @@ impl<C> Debug for DrawBufferInner<C> {
                 .field("parent", parent)
                 .finish(),
             DrawBufferInner::Empty => f.debug_struct("DrawBuffer::Empty").finish(),
-            DrawBufferInner::BufferRef(parent) => f
-                .debug_struct("DrawBuffer::BufferRef")
-                .field("parent", parent)
-                .finish(),
         }
     }
 }
@@ -41,21 +36,6 @@ impl<C: PixelColor> DrawBufferInner<C> {
             vec![default_color; size.width as usize * size.height as usize].into_boxed_slice(),
             size,
         )
-    }
-
-    pub fn translate(&self, point: Point) -> Point {
-        match self {
-            DrawBufferInner::Buffer(_, _) => point,
-            DrawBufferInner::SubBuffer(parent, rectangle) => {
-                let parent_point = parent.borrow().translate(point);
-                Point::new(
-                    parent_point.x + rectangle.top_left.x,
-                    parent_point.y + rectangle.top_left.y,
-                )
-            }
-            DrawBufferInner::Empty => point,
-            DrawBufferInner::BufferRef(parent) => parent.borrow().translate(point),
-        }
     }
 
     /// Returns the color of the pixel at a point.
@@ -72,7 +52,6 @@ impl<C: PixelColor> DrawBufferInner<C> {
                 parent.borrow().get_pixel(parent_point)
             }
             DrawBufferInner::Empty => unreachable!("Empty buffer has no pixels"),
-            DrawBufferInner::BufferRef(parent) => parent.borrow().get_pixel(point),
         }
     }
 
@@ -90,7 +69,6 @@ impl<C: PixelColor> DrawBufferInner<C> {
                 parent.borrow_mut().set_pixel(parent_point, color);
             }
             DrawBufferInner::Empty => {}
-            DrawBufferInner::BufferRef(parent) => parent.borrow_mut().set_pixel(point, color),
         }
     }
 
@@ -115,7 +93,6 @@ impl DrawBufferInner<BinaryColor> {
                     *pixel = pixel.invert();
                 }
             }
-            DrawBufferInner::BufferRef(parent) => parent.borrow_mut().invert(),
             DrawBufferInner::SubBuffer(_parent, _rectangle) => {
                 todo!()
             }
@@ -148,9 +125,6 @@ impl<C: PixelColor> DrawTarget for DrawBufferInner<C> {
                 }
             }
             DrawBufferInner::Empty => {}
-            DrawBufferInner::BufferRef(parent) => {
-                parent.borrow_mut().draw_iter(pixels)?;
-            }
         }
 
         Ok(())
@@ -177,7 +151,6 @@ impl<C: PixelColor> Drawable for DrawBufferInner<C> {
                 unreachable!("Unimplemented: DrawBufferInner::SubBuffer::draw")
             }
             DrawBufferInner::Empty => Ok(()),
-            DrawBufferInner::BufferRef(parent) => parent.borrow().draw(target),
         }
     }
 }
@@ -188,7 +161,6 @@ impl<C> OriginDimensions for DrawBufferInner<C> {
             DrawBufferInner::Buffer(_, size) => *size,
             DrawBufferInner::SubBuffer(_, rectangle) => rectangle.size,
             DrawBufferInner::Empty => Size::zero(),
-            DrawBufferInner::BufferRef(parent) => parent.borrow().size(),
         }
     }
 }
@@ -234,9 +206,6 @@ where
                 unreachable!("Unsupported.");
             }
             DrawBufferInner::Empty => {}
-            DrawBufferInner::BufferRef(parent) => {
-                bytes.extend_from_slice(parent.borrow().to_bytes(pixel_to_bytes).as_ref())
-            }
         }
 
         bytes

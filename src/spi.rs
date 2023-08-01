@@ -1,7 +1,11 @@
-use crate::fpga;
+#![cfg(feature = "platform_de10")]
+
+use crate::ffi::fpga;
 use std::ffi::c_int;
 
 const SSPI_IO_EN: u32 = 1u32 << 20;
+pub const UIO_GET_VRES: u16 = 0x23;
+pub const UIO_GET_FB_PAR: u16 = 0x40;
 
 extern "C" {
     pub fn spi_osd_cmd(cmd: u8);

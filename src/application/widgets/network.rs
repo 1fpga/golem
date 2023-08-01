@@ -1,6 +1,5 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::widgets::group::HorizontalWidgetGroup;
-use crate::macguiver::widgets::iconoir::IconoirWidget;
 use crate::macguiver::widgets::image::ImageWidget;
 use crate::macguiver::widgets::Widget;
 use embedded_graphics::geometry::Size;
@@ -117,13 +116,16 @@ impl NetworkWidget {
         });
 
         let widget_local = Rc::new(RefCell::new(
-            ImageWidget::from_bin(include_bytes!("../../../font/font28.bin"), 8).unwrap(),
+            ImageWidget::from_bin(include_bytes!("../../../assets/font/network_eth.bin"), 8)
+                .unwrap(),
         ));
         let widget_wifi = Rc::new(RefCell::new(
-            ImageWidget::from_bin(include_bytes!("../../../font/font29.bin"), 8).unwrap(),
+            ImageWidget::from_bin(include_bytes!("../../../assets/font/network_wifi.bin"), 8)
+                .unwrap(),
         ));
         let widget_internet = Rc::new(RefCell::new(
-            ImageWidget::from_bin(include_bytes!("../../../font/font30.bin"), 8).unwrap(),
+            ImageWidget::from_bin(include_bytes!("../../../assets/font/network_globe.bin"), 8)
+                .unwrap(),
         ));
 
         let group = HorizontalWidgetGroup::new().with_spacing(1);

@@ -1,41 +1,35 @@
 use crate::macguiver::application::Application;
 use crate::macguiver::events::keyboard::KeycodeMap;
+use crate::main_inner::Flags;
+use cfg_if::cfg_if;
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 
-mod _static_assertions {
-    // Verify that at most one platform is enabled.
-    #[cfg(not(any(feature = "platform_de10", feature = "platform_desktop", test)))]
-    compile_error!("At least one platform must be enabled.");
-
-    #[cfg(any(
+cfg_if! {
+    if #[cfg(any(
         all(feature = "platform_de10", feature = "platform_desktop"),
         all(feature = "platform_de10", test),
         all(feature = "platform_desktop", test),
-    ))]
-    compile_error!("Only one platform can be enabled at a time.");
+    ))] {
+        compile_error!("Only one platform can be enabled at a time.");
+    } else if #[cfg(feature = "platform_desktop")] {
+        mod desktop;
+        pub use desktop::PlatformWindowManager;
+    } else if #[cfg(feature = "platform_de10")] {
+        mod de10;
+        pub use de10::PlatformWindowManager;
+    } else if #[cfg(test)] {
+        mod null;
+        pub use null::PlatformWindowManager;
+    } else {
+        compile_error!("At least one platform must be enabled.");
+    }
 }
 
-#[cfg(feature = "platform_de10")]
-mod de10;
-
-#[cfg(feature = "platform_de10")]
-use de10 as platform_impl;
-
-#[cfg(feature = "platform_desktop")]
-mod desktop;
-
-#[cfg(feature = "platform_desktop")]
-use desktop as platform_impl;
-
-#[cfg(test)]
-mod null;
-
-#[cfg(test)]
-use null as platform_impl;
+pub type Event = sdl3::event::Event;
 
 #[derive(Default)]
 pub struct PlatformState {
-    pub(self) keys: KeycodeMap,
+    keys: KeycodeMap,
 }
 
 impl PlatformState {
@@ -47,7 +41,7 @@ impl PlatformState {
 trait PlatformInner {
     type Color: PixelColor;
 
-    fn run(&mut self, application: &mut impl Application<Color = BinaryColor>);
+    fn run(&mut self, application: &mut impl Application<Color = BinaryColor>, flags: Flags);
 }
 
 /// The [WindowManager] structure is responsible for managing and holding the state
@@ -62,15 +56,16 @@ trait PlatformInner {
 /// by the MisterApplication itself.
 #[derive(Default)]
 pub struct WindowManager {
-    inner: platform_impl::PlatformWindowManager,
+    inner: self::PlatformWindowManager,
 }
 
 impl WindowManager {
     pub fn run(
         &mut self,
         application: &mut impl Application<Color = BinaryColor>,
+        flags: Flags,
     ) -> Result<(), String> {
-        self.inner.run(application);
+        self.inner.run(application, flags);
         Ok(())
 
         // OsdSetSize(19);
