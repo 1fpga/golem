@@ -1,3 +1,12 @@
+//! The platform module provides a platform-agnostic interface for interacting with the host
+//! platform. This includes things like the window manager, keyboard, mouse, etc.
+//!
+//! The platform module is designed to be used by the `Application` struct, and should not be used
+//! directly by the user. An Application will define the common logic for the MiSTer application
+//! itself, and the Platform defined here will be responsible to send it to the host platform,
+//! which is either Desktop, DE10Nano, null (for testing) or others.
+//!
+//! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
 use crate::macguiver::application::Application;
 use crate::macguiver::events::keyboard::KeycodeMap;
 use crate::main_inner::Flags;

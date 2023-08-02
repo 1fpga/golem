@@ -1,8 +1,7 @@
 //! Cyclone V SoC FPGA Structures.
 //! Derived from https://www.intel.com/content/www/us/en/programmable/hps/cyclone-v/index_frames.html
 use crate::shmem::Mapper;
-use std::ptr::{addr_of_mut, NonNull};
-use volatile::{VolatilePtr, VolatileRef};
+use std::ptr::{addr_of, addr_of_mut, read_volatile, write_volatile};
 
 /// Absolute addresses for the SoC FPGA.
 mod addresses {
@@ -38,18 +37,6 @@ impl Default for SocFpga {
 }
 
 impl SocFpga {
-    fn fpga_manager_mut_ptr(&mut self) -> NonNull<FpgaManager> {
-        unsafe {
-            NonNull::new(
-                (self
-                    .memory
-                    .as_mut_ptr()
-                    .add(offsets::SOCFPGA_FPGAMGRREGS_OFFSET)) as *mut FpgaManager,
-            )
-            .unwrap()
-        }
-    }
-
     pub fn fpga_manager_mut(&mut self) -> &mut FpgaManager {
         unsafe {
             &mut *((self
@@ -74,72 +61,81 @@ impl SocFpga {
 /// with a new image stored in the flash memory.
 ///
 /// This structure must be aligned exactly with the hardware registers.
+/// Accessor methods should be used to access the registers with volatile
+/// calls to prevent the compiler from optimizing away the reads and writes.
 ///
 /// See https://www.intel.com/content/www/us/en/programmable/hps/cyclone-v/sfo1410067808053.html#sfo1410067808053
 #[repr(C)]
 pub struct FpgaManager {
     // FPGA Manager Module
     /// Status Register
-    pub stat: u32, // 0x00
+    stat: u32, // 0x00
     /// Control Register
-    pub ctrl: u32,
+    ctrl: u32,
     /// Data Clock Count Register
-    pub dclkcnt: u32,
+    dclkcnt: u32,
     /// Data Clock Status Register
-    pub dclkstat: u32,
+    dclkstat: u32,
     /// General Purpose Output Register
-    pub gpo: u32,
+    gpo: u32,
     /// General Purpose Input Register (RO)
-    pub gpi: u32,
+    gpi: u32,
     /// Miscellaneous Input Register (RO)
-    pub misci: u32,
+    misci: u32,
 
     // Padding
     _pad_0x1c_0x82c: [u32; 517],
 
     // Configuration Monitor (MON) Registers
     /// GPIO Interrupt Enable Register
-    pub gpio_inten: u32,
+    gpio_inten: u32,
     /// GPIO Interrupt Mask Register
-    pub gpio_intmask: u32,
+    gpio_intmask: u32,
     /// GPIO Interrupt Type Level Register
-    pub gpio_inttype_level: u32,
+    gpio_inttype_level: u32,
     /// GPIO Interrupt Polarity Register
-    pub gpio_int_polarity: u32,
+    gpio_int_polarity: u32,
     /// GPIO Interrupt Status Register
-    pub gpio_intstatus: u32,
+    gpio_intstatus: u32,
     /// GPIO Raw Interrupt Status Register
-    pub gpio_raw_intstatus: u32,
+    gpio_raw_intstatus: u32,
 
     // Padding
     _pad_0x848: u32,
 
     /// GPIO Port A Clear Interrupt Register
-    pub gpio_porta_eoi: u32,
+    gpio_porta_eoi: u32,
     /// GPIO Port A External Port Register
-    pub gpio_ext_porta: u32,
+    gpio_ext_porta: u32,
 
     // Padding
     _pad_0x854_0x85c: [u32; 3],
 
     /// GPIO Level Synchronization Register
-    pub gpio_ls_sync: u32,
+    gpio_ls_sync: u32,
 
     // Padding
     _pad_0x864_0x868: [u32; 2],
 
     /// GPIO Version ID Code Register
-    pub gpio_ver_id_code: u32,
+    gpio_ver_id_code: u32,
     /// GPIO Configuration Register 2
-    pub gpio_config_reg2: u32,
+    gpio_config_reg2: u32,
     /// GPIO Configuration Register 1
-    pub gpio_config_reg1: u32,
+    gpio_config_reg1: u32,
 }
 
 impl FpgaManager {
     pub fn set_gpo(&mut self, value: u32) {
         unsafe {
-            addr_of_mut!(self.gpo).write_volatile(value);
+            write_volatile(addr_of_mut!(self.gpo), value);
         }
+    }
+    pub fn gpo(&self) -> u32 {
+        unsafe { read_volatile(addr_of!(self.gpo)) }
+    }
+
+    pub fn gpi(&self) -> u32 {
+        unsafe { read_volatile(addr_of!(self.gpi)) }
     }
 }

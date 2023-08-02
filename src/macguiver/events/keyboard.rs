@@ -2,6 +2,7 @@ use sdl3::keyboard::{KeyboardState, Keycode as SdlKeycode, Scancode};
 use std::fmt;
 use std::iter::FromIterator;
 
+/// Internal Keycodes used by MacGUIver.
 #[derive(
     Copy,
     Clone,

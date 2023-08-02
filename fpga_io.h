@@ -7,7 +7,7 @@
 #define BUTTON_OSD  1
 #define BUTTON_USR  2
 
-extern "C" int fpga_io_init();
+//extern "C" int fpga_io_init();
 
 extern "C" void fpga_spi_en(uint32_t mask, uint32_t en);
 extern "C" uint16_t fpga_spi(uint16_t word);
@@ -30,12 +30,12 @@ uint32_t fpga_core_read(uint32_t offset);
 extern "C" int fpga_core_id();
 extern "C" int is_fpga_ready(int quick);
 
-int fpga_get_fio_size();
-int fpga_get_io_version();
+extern "C" int fpga_get_fio_size();
+extern "C" int fpga_get_io_version();
 
 extern "C" int fpga_load_rbf(const char *name, const char *cfg = 0, const char *xml = 0);
 
-void reboot(int cold);
+extern "C" void reboot(int cold);
 void app_restart(const char *path, const char *xml = 0);
 char *getappname();
 

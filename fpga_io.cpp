@@ -97,7 +97,7 @@ static int fpgamgr_get_mode(void)
 }
 
 /* Check whether FPGA is ready to be accessed */
-static int fpgamgr_test_fpga_ready(void)
+extern "C" int fpgamgr_test_fpga_ready(void)
 {
 	/* Check for init done signal */
 	if (!is_fpgamgr_initdone_high())
@@ -526,37 +526,6 @@ uint32_t fpga_core_read(uint32_t offset)
 	return 0;
 }
 
-int fpga_io_init()
-{
-	map_base = (uint32_t*)shmem_map(FPGA_REG_BASE, FPGA_REG_SIZE);
-	if (!map_base) return -1;
-
-	fpga_gpo_write(0);
-	return 0;
-}
-
-int fpga_core_id()
-{
-	uint32_t gpo = (fpga_gpo_read() & 0x7FFFFFFF);
-	fpga_gpo_write(gpo);
-	uint32_t coretype = fpga_gpi_read();
-	gpo |= 0x80000000;
-	fpga_gpo_write(gpo);
-
-	if ((coretype >> 8) != 0x5CA623) return -1;
-	return coretype & 0xFF;
-}
-
-int fpga_get_fio_size()
-{
-	return (fpga_gpi_read() >> 16) & 1;
-}
-
-int fpga_get_io_version()
-{
-	return (fpga_gpi_read() >> 18) & 3;
-}
-
 void fpga_set_led(uint32_t on)
 {
 	uint32_t gpo = fpga_gpo_read();
@@ -650,20 +619,6 @@ void fpga_spi_en(uint32_t mask, uint32_t en)
 {
 	uint32_t gpo = fpga_gpo_read() | 0x80000000;
 	fpga_gpo_write(en ? gpo | mask : gpo & ~mask);
-}
-
-void fpga_wait_to_reset()
-{
-	printf("FPGA is not ready. JTAG uploading?\n");
-	printf("Waiting for FPGA to be ready...\n");
-
-	fpga_core_reset(1);
-
-	while (!is_fpga_ready(0))
-	{
-		sleep(1);
-	}
-	reboot(0);
 }
 
 uint16_t fpga_spi(uint16_t word)

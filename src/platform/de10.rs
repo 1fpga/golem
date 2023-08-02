@@ -1,21 +1,14 @@
 use crate::ffi::fpga;
 use crate::macguiver::application::Application;
-use crate::macguiver::platform::sdl::{
-    BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform, Window,
-};
-use crate::macguiver::platform::{Platform, PlatformWindow};
+use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform};
+use crate::macguiver::platform::Platform;
 use crate::platform::{PlatformInner, PlatformState};
 use crate::{menu, osd, spi};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 mod buffer;
-
-use libc::{O_RDONLY, O_RDWR, O_WRONLY};
-use std::fs::{File, OpenOptions};
-use std::os::unix::{fs::OpenOptionsExt, io::OwnedFd};
-use std::path::Path;
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
@@ -60,14 +53,23 @@ impl PlatformInner for De10Platform {
         let osd = &mut self.osd;
         let title = &mut self.title;
 
-        unsafe {
-            if fpga::Fpga::init().is_err() {
+        let mut fpga = unsafe {
+            fpga::Fpga::init().unwrap_or_else(|| {
                 debug!("GPI[31] == 1");
                 error!("FPGA is uninitialized or incompatible core loaded.");
                 error!("Quitting. Bye bye...\n");
                 std::process::exit(1);
-            }
+            })
+        };
 
+        unsafe {
+            fpga.wait_for_ready();
+
+            info!("Core type: {:?}", fpga.core_type());
+            info!("Core interface: {:?}", fpga.core_interface_type());
+            info!("Core version: {:?}", fpga.core_io_version());
+
+            osd::OsdEnable(0);
             crate::file_io::FindStorage();
             let (core, xml) = (
                 std::ffi::CString::new(flags.core).unwrap(),
@@ -81,9 +83,6 @@ impl PlatformInner for De10Platform {
             );
 
             osd::OsdSetSize(19);
-            while fpga::is_fpga_ready(1) == 0 {
-                fpga::fpga_wait_to_reset();
-            }
         }
 
         self.platform.event_loop(|state| unsafe {
