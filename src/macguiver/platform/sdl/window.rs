@@ -49,6 +49,6 @@ where
         let sdl_window = &mut self.inner;
 
         framebuffer.update(display);
-        sdl_window.update(&framebuffer);
+        sdl_window.update(framebuffer);
     }
 }

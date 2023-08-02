@@ -1076,7 +1076,7 @@ impl Config {
         let player_controller = m.player_controller();
         for (i, pc) in player_controller.iter().enumerate().take(6) {
             for (j, p) in pc.iter().enumerate() {
-                copy_string(&mut dest.player_controller[i][j], &p);
+                copy_string(&mut dest.player_controller[i][j], p);
             }
         }
         dest.rumble = m.rumble.unwrap_or_default() as u8;
@@ -1123,7 +1123,7 @@ pub extern "C" fn rust_load_config() {
     let root = Config::config_root();
 
     let p = root.join("MiSTer.ini");
-    let mut config = Config::load(&p).unwrap();
+    let mut config = Config::load(p).unwrap();
     config.mister.set_defaults();
 
     // Check the altcfg.

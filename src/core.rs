@@ -27,7 +27,7 @@ fn find_core_(path: &Path, name: &str) -> Result<Option<PathBuf>, std::io::Error
 
         if path.is_dir() {
             let file_name = path.file_name().and_then(OsStr::to_str);
-            if file_name == None || !file_name.unwrap().starts_with('_') {
+            if file_name.is_none() || !file_name.unwrap().starts_with('_') {
                 continue;
             }
             if let Some(core) = find_core_(&path, name)? {
@@ -70,7 +70,7 @@ impl Core {
         core_root_dir: impl AsRef<Path>,
     ) -> Result<Option<Self>, std::io::Error> {
         let name = name.as_ref();
-        let path = find_core_(core_root_dir.as_ref(), name.as_ref())?;
+        let path = find_core_(core_root_dir.as_ref(), name)?;
 
         if let Some(path) = path {
             // Override name with core_name_of, to make sure we remove the version number if any.
@@ -86,7 +86,7 @@ impl Core {
         core_root_dir: impl AsRef<Path>,
     ) -> Result<Option<Self>, std::io::Error> {
         let name = name.as_ref();
-        let path = find_core_(core_root_dir.as_ref(), name.as_ref())?;
+        let path = find_core_(core_root_dir.as_ref(), name)?;
 
         if let Some(path) = path {
             // Check that the exact name is the same.

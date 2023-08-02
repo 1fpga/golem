@@ -289,7 +289,7 @@ pub fn output_font() {
                     + (px(x, y + 7) << 7);
             }
 
-            std::fs::write(format!("font/font{i}.bin"), &f).unwrap();
+            std::fs::write(format!("font/font{i}.bin"), f).unwrap();
         }
         std::process::exit(0);
     }

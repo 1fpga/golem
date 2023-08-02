@@ -30,7 +30,7 @@ pub fn is_valid(iface: &NetworkInterface) -> bool {
         }
         Addr::V6(_addr) => {
             // Impossible to know...
-            return true;
+            true
         }
     })
 }

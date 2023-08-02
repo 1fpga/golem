@@ -43,7 +43,7 @@ impl<const C: usize> FpsCounter<C> {
     }
 
     fn build_text<'a>(&self, text: &'a str) -> Text<'a, MonoTextStyle<'static, BinaryColor>> {
-        Text::with_baseline(&text, Point::new(0, 0), self.style, Baseline::Top)
+        Text::with_baseline(text, Point::new(0, 0), self.style, Baseline::Top)
     }
 }
 
