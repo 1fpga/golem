@@ -950,6 +950,7 @@ version = "0.1.0"
 dependencies = [
  "alkahest",
  "bitvec",
+ "byteorder",
  "cfg-if",
  "chrono",
  "clap",
@@ -981,6 +982,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "validator",
+ "volatile",
 ]
 
 [[package]]
@@ -1906,6 +1908,12 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "volatile"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9eaac9f9d9b7ae00cdd43e21b15e58ccacd903e6d29131d7536765a61969d25e"
 
 [[package]]
 name = "wasi"

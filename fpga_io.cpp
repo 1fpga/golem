@@ -34,7 +34,8 @@ static struct socfpga_fpga_manager   *fpgamgr_regs = (socfpga_fpga_manager *)SOC
 static struct socfpga_system_manager *sysmgr_regs  = (socfpga_system_manager *)SOCFPGA_SYSMGR_ADDRESS;
 static struct nic301_registers       *nic301_regs  = (nic301_registers *)SOCFPGA_L3REGS_ADDRESS;
 
-static uint32_t *map_base;
+extern "C" uint32_t *map_base;
+uint32_t *map_base = NULL;
 
 #define writel(val, reg) *MAP_ADDR(reg) = val
 #define readl(reg) *MAP_ADDR(reg)

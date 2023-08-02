@@ -28,6 +28,7 @@ host
 *.user
 .vs
 MiSTer
+MiSTer_rust
 
 # Rust stuff
 target/

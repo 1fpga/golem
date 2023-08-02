@@ -8,6 +8,7 @@ use crate::platform::{PlatformInner, PlatformState};
 use crate::{menu, osd, spi};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
+use tracing::{debug, error};
 
 mod buffer;
 
@@ -59,8 +60,27 @@ impl PlatformInner for De10Platform {
         let osd = &mut self.osd;
         let title = &mut self.title;
 
-        osd::OsdSetSize(19);
         unsafe {
+            if fpga::Fpga::init().is_err() {
+                debug!("GPI[31] == 1");
+                error!("FPGA is uninitialized or incompatible core loaded.");
+                error!("Quitting. Bye bye...\n");
+                std::process::exit(1);
+            }
+
+            crate::file_io::FindStorage();
+            let (core, xml) = (
+                std::ffi::CString::new(flags.core).unwrap(),
+                flags.xml.map(|str| std::ffi::CString::new(str).unwrap()),
+            );
+
+            crate::user_io::user_io_init(
+                core.as_bytes_with_nul().as_ptr(),
+                xml.map(|str| str.as_bytes_with_nul().as_ptr())
+                    .unwrap_or(std::ptr::null()),
+            );
+
+            osd::OsdSetSize(19);
             while fpga::is_fpga_ready(1) == 0 {
                 fpga::fpga_wait_to_reset();
             }
@@ -82,8 +102,12 @@ impl PlatformInner for De10Platform {
             title.inner.invert();
 
             // Send everything to the scaler.
-            for line in osd.line_iter().chain(title.line_iter()) {
-                let line_buffer = osd.get_binary_line_array(line);
+            for (line, buffer) in title
+                .line_iter()
+                .map(|line| (line, &title))
+                .chain(osd.line_iter().map(|line| (line, &osd)))
+            {
+                let line_buffer = buffer.get_binary_line_array(line);
                 spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
                 spi::spi_write(line_buffer.as_ptr(), 256, 0);
                 spi::DisableOsd();

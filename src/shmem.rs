@@ -1,5 +1,7 @@
 use std::ffi::c_int;
+use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
+use tracing::error;
 
 /// Map a physical memory address to a virtual address. Returns a buffer that has access
 /// to the physical memory.
@@ -17,13 +19,35 @@ pub fn unmap(map: &'static [u8]) -> bool {
     unsafe { shmem_unmap_c(map.as_ptr(), map.len() as u32) != 0 }
 }
 
-pub struct Mapper(&'static mut [u8]);
+#[derive(Eq, PartialEq)]
+pub struct Mapper(&'static mut [u8], (usize, usize));
+
+impl Debug for Mapper {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Mapper")
+            .field(&format_args!(
+                "0x{:X}..0x{:X} ({} bytes) mapped to {:p}",
+                self.1 .0,
+                self.1 .1,
+                self.1 .1 - self.1 .0,
+                self.0
+            ))
+            .finish()
+    }
+}
 
 impl Mapper {
     pub fn new(address: usize, size: usize) -> Self {
         let ptr = unsafe { shmem_map_c(address as u32, size as u32) };
 
-        Self(unsafe { std::slice::from_raw_parts_mut(ptr, size) })
+        Self(
+            unsafe { std::slice::from_raw_parts_mut(ptr, size) },
+            (address, address + size),
+        )
+    }
+
+    pub unsafe fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.0.as_mut_ptr()
     }
 }
 
@@ -62,7 +86,7 @@ pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
             libc::O_RDWR | libc::O_SYNC | libc::O_CLOEXEC,
         );
         if fd == -1 {
-            println!("Error: Unable to open /dev/mem");
+            error!("Error: Unable to open /dev/mem");
             return std::ptr::null_mut();
         }
         MEM_FD = Some(fd);
@@ -78,7 +102,7 @@ pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
         address as libc::off_t,
     );
     if res == libc::MAP_FAILED {
-        println!("Error: Unable to mmap ({address:?}, {size})!");
+        error!("Error: Unable to mmap ({address:X}, {size} bytes)!");
         return std::ptr::null_mut();
     }
 
