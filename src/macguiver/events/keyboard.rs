@@ -361,11 +361,11 @@ impl<const N: usize> KeycodeMap<N> {
     }
 
     pub fn is_down(&self, key: Keycode) -> bool {
-        !self.is_up(key)
+        self.codes.contains(&key)
     }
 
     pub fn is_up(&self, key: Keycode) -> bool {
-        self.codes.contains(&key)
+        !self.is_up(key)
     }
 
     pub fn clear(&mut self) {

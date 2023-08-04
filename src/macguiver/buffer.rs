@@ -111,9 +111,10 @@ impl<C: PixelColor> DrawTarget for DrawBufferInner<C> {
         match self {
             DrawBufferInner::Buffer(buffer, size) => {
                 for Pixel(point, color) in pixels.into_iter() {
-                    let (x, y) = <(u32, u32)>::try_from(point).unwrap();
-                    if x < size.width && y < size.height {
-                        buffer[(x + y * size.width) as usize] = color;
+                    if let Ok((x, y)) = <(u32, u32)>::try_from(point) {
+                        if x < size.width && y < size.height {
+                            buffer[(x + y * size.width) as usize] = color;
+                        }
                     }
                 }
             }
@@ -212,7 +213,7 @@ where
     }
 }
 
-/// A buffer that can be drawn to in EmbeddedDisplay. Most widgets will draw
+/// A buffer that can be drawn to in EmbeddedDisplay. Most views will draw
 /// directly to this.
 #[derive(Debug)]
 pub struct DrawBuffer<C> {

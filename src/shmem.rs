@@ -1,3 +1,5 @@
+#![cfg(feature = "platform_de10")]
+
 use std::ffi::c_int;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
@@ -73,7 +75,6 @@ impl Drop for Mapper {
     }
 }
 
-#[cfg(feature = "platform_de10")]
 #[export_name = "shmem_map"]
 #[no_mangle]
 pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
@@ -107,11 +108,6 @@ pub unsafe extern "C" fn shmem_map_c(address: u32, size: u32) -> *mut u8 {
     }
 
     res as *mut u8
-}
-
-#[cfg(not(feature = "platform_de10"))]
-pub unsafe extern "C" fn shmem_map_c(_address: u32, _size: u32) -> *mut u8 {
-    std::ptr::null_mut()
 }
 
 #[export_name = "shmem_unmap"]

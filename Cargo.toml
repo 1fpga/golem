@@ -15,7 +15,7 @@ path = "src/main.rs"
 lto = true
 panic = "abort"
 overflow-checks = false
-strip = "debuginfo"
+#strip = "debuginfo"
 
 [dependencies]
 alkahest = "0.3.0"

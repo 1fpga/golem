@@ -1,13 +1,12 @@
 use crate::application::widgets::keyboard::KeyboardTesterWidget;
 use crate::macguiver::application::Application;
 use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::widgets::boxed::{BoxedWidget, HorizontalAlignment, VerticalAlignment};
-use crate::macguiver::widgets::text::fps::FpsCounter;
 use embedded_graphics::geometry::{Point, Size};
+use embedded_graphics::image::{Image, ImageDrawable, ImageRaw};
 use embedded_graphics::Drawable;
 
-use crate::macguiver::widgets::image::ImageWidget;
-use crate::macguiver::widgets::Widget;
+use crate::macguiver::events::keyboard::Keycode;
+use crate::macguiver::views::Widget;
 use crate::main_inner::Flags;
 use crate::platform::{PlatformState, WindowManager};
 use embedded_graphics::mono_font::MonoTextStyle;
@@ -18,10 +17,165 @@ use embedded_graphics::text::Text;
 mod toolbar;
 mod widgets;
 
-#[derive(Debug)]
+pub trait ApplicationView {
+    type NextView: ApplicationView;
+
+    fn new() -> Self;
+    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
+        Ok(None)
+    }
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>);
+}
+
+pub struct KeyboardTesterView {
+    widget: KeyboardTesterWidget,
+}
+
+impl ApplicationView for KeyboardTesterView {
+    type NextView = TopLevelView;
+
+    fn new() -> Self {
+        Self {
+            widget: KeyboardTesterWidget::new(),
+        }
+    }
+
+    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelView>, String> {
+        self.widget.set_state(*state.keys());
+        if state.keys().is_down(Keycode::Tab) {
+            Ok(Some(TopLevelView::icon()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+        self.widget.draw(target).unwrap();
+    }
+}
+
+pub struct IconView;
+
+impl ApplicationView for IconView {
+    type NextView = TopLevelView;
+
+    fn new() -> Self {
+        Self {}
+    }
+
+    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
+        if state.keys().is_down(Keycode::Tab) {
+            Ok(Some(TopLevelView::keyboard_tester()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+        let font_images = [
+            include_bytes!("../assets/icons/arrow_down.raw"),
+            include_bytes!("../assets/icons/arrow_left.raw"),
+            include_bytes!("../assets/icons/arrow_right.raw"),
+            include_bytes!("../assets/icons/arrow_right_mini.raw"),
+            include_bytes!("../assets/icons/arrow_up.raw"),
+            include_bytes!("../assets/icons/atari_left.raw"),
+            include_bytes!("../assets/icons/atari_right.raw"),
+            include_bytes!("../assets/icons/battery_charging.raw"),
+            include_bytes!("../assets/icons/battery_empty.raw"),
+            include_bytes!("../assets/icons/battery_full.raw"),
+            include_bytes!("../assets/icons/battery_half.raw"),
+            include_bytes!("../assets/icons/bluetooth.raw"),
+            include_bytes!("../assets/icons/box_empty.raw"),
+            include_bytes!("../assets/icons/box_fill1.raw"),
+            include_bytes!("../assets/icons/box_fill2.raw"),
+            include_bytes!("../assets/icons/box_fill3.raw"),
+            include_bytes!("../assets/icons/box_fill4.raw"),
+            include_bytes!("../assets/icons/box_top.raw"),
+            include_bytes!("../assets/icons/burger_menu_2.raw"),
+            include_bytes!("../assets/icons/burger_menu_3.raw"),
+            include_bytes!("../assets/icons/burger_menu_4.raw"),
+            include_bytes!("../assets/icons/checkbox_empty.raw"),
+            include_bytes!("../assets/icons/checkbox_full.raw"),
+            include_bytes!("../assets/icons/checkbox_mark.raw"),
+            include_bytes!("../assets/icons/dot_middle.raw"),
+            include_bytes!("../assets/icons/lock_locked.raw"),
+            include_bytes!("../assets/icons/lock_unlocked.raw"),
+            include_bytes!("../assets/icons/mem_32.raw"),
+            include_bytes!("../assets/icons/mem_64.raw"),
+            include_bytes!("../assets/icons/mem_128.raw"),
+            include_bytes!("../assets/icons/mem_none.raw"),
+            include_bytes!("../assets/icons/network_eth.raw"),
+            include_bytes!("../assets/icons/network_globe.raw"),
+            include_bytes!("../assets/icons/network_wifi.raw"),
+            include_bytes!("../assets/icons/null.raw"),
+            include_bytes!("../assets/icons/speaker_empty.raw"),
+            include_bytes!("../assets/icons/speaker_full.raw"),
+        ];
+
+        for (i, bin) in font_images.iter().enumerate() {
+            let i = i as i32;
+            Image::new(
+                &ImageRaw::<BinaryColor>::new(*bin, 8),
+                Point::new(12 + (i % 16) * 10, 12 + (i / 16) * 10),
+            )
+            .draw(target)
+            .unwrap();
+        }
+
+        Text::new(
+            "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nA\nB\nC\nD\nE\nF",
+            Point::new(2, 19),
+            MonoTextStyle::new(
+                &embedded_graphics::mono_font::ascii::FONT_6X10,
+                BinaryColor::On,
+            ),
+        )
+        .draw(target)
+        .unwrap();
+    }
+}
+
+/// Top-level Views for the MiSTer application.
+pub enum TopLevelView {
+    KeyboardTester(KeyboardTesterView),
+    IconView(IconView),
+}
+
+impl TopLevelView {
+    pub fn keyboard_tester() -> Self {
+        Self::KeyboardTester(KeyboardTesterView::new())
+    }
+
+    pub fn icon() -> Self {
+        Self::IconView(IconView::new())
+    }
+}
+
+impl ApplicationView for TopLevelView {
+    type NextView = TopLevelView;
+
+    fn new() -> Self {
+        Self::KeyboardTester(KeyboardTesterView::new())
+    }
+
+    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
+        match self {
+            TopLevelView::KeyboardTester(inner) => inner.update(state),
+            TopLevelView::IconView(inner) => inner.update(state),
+        }
+    }
+
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+        match self {
+            TopLevelView::KeyboardTester(inner) => inner.draw(target),
+            TopLevelView::IconView(inner) => inner.draw(target),
+        }
+    }
+}
+
 pub struct MiSTer {
     toolbar: toolbar::Toolbar,
-    keyboard_tester: KeyboardTesterWidget,
+    view: TopLevelView,
 }
 
 impl MiSTer {
@@ -39,24 +193,20 @@ impl Application for MiSTer {
         Self: Sized,
     {
         let mut toolbar = toolbar::Toolbar::default();
-        toolbar.append(
-            BoxedWidget::new(FpsCounter::<200>::new(MonoTextStyle::new(
-                &embedded_graphics::mono_font::ascii::FONT_6X9,
-                BinaryColor::On,
-            )))
-            .aligned(VerticalAlignment::Middle, HorizontalAlignment::Left),
-        );
-        toolbar.append(widgets::network::NetworkWidget::new());
 
         Self {
             toolbar,
-            keyboard_tester: KeyboardTesterWidget::new(),
+            view: TopLevelView::new(),
         }
     }
 
     fn update(&mut self, state: &PlatformState) {
-        self.keyboard_tester.set_state(*state.keys());
         self.toolbar.update();
+        match self.view.update(state) {
+            Ok(Some(next_view)) => self.view = next_view,
+            Ok(None) => {}
+            Err(e) => panic!("{}", e),
+        }
     }
 
     fn draw_title(&self, target: &mut DrawBuffer<BinaryColor>) {
@@ -64,74 +214,6 @@ impl Application for MiSTer {
     }
 
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
-        self.keyboard_tester.draw(target);
-
-        let font_images = [
-            include_bytes!("../assets/font/arrow_down.bin"),
-            include_bytes!("../assets/font/arrow_left.bin"),
-            include_bytes!("../assets/font/arrow_right.bin"),
-            include_bytes!("../assets/font/arrow_right_mini.bin"),
-            include_bytes!("../assets/font/arrow_up.bin"),
-            include_bytes!("../assets/font/atari_left.bin"),
-            include_bytes!("../assets/font/atari_right.bin"),
-            include_bytes!("../assets/font/battery_charging.bin"),
-            include_bytes!("../assets/font/battery_empty.bin"),
-            include_bytes!("../assets/font/battery_full.bin"),
-            include_bytes!("../assets/font/battery_half.bin"),
-            include_bytes!("../assets/font/bluetooth.bin"),
-            include_bytes!("../assets/font/box_empty.bin"),
-            include_bytes!("../assets/font/box_fill1.bin"),
-            include_bytes!("../assets/font/box_fill2.bin"),
-            include_bytes!("../assets/font/box_fill3.bin"),
-            include_bytes!("../assets/font/box_fill4.bin"),
-            include_bytes!("../assets/font/box_top.bin"),
-            include_bytes!("../assets/font/burger_menu_2.bin"),
-            include_bytes!("../assets/font/burger_menu_3.bin"),
-            include_bytes!("../assets/font/burger_menu_4.bin"),
-            include_bytes!("../assets/font/checkbox_empty.bin"),
-            include_bytes!("../assets/font/checkbox_full.bin"),
-            include_bytes!("../assets/font/checkbox_mark.bin"),
-            include_bytes!("../assets/font/dot_middle.bin"),
-            include_bytes!("../assets/font/lock_locked.bin"),
-            include_bytes!("../assets/font/lock_unlocked.bin"),
-            include_bytes!("../assets/font/mem_32.bin"),
-            include_bytes!("../assets/font/mem_64.bin"),
-            include_bytes!("../assets/font/mem_128.bin"),
-            include_bytes!("../assets/font/mem_none.bin"),
-            include_bytes!("../assets/font/network_eth.bin"),
-            include_bytes!("../assets/font/network_globe.bin"),
-            include_bytes!("../assets/font/network_wifi.bin"),
-            include_bytes!("../assets/font/null.bin"),
-            include_bytes!("../assets/font/speaker_empty.bin"),
-            include_bytes!("../assets/font/speaker_full.bin"),
-        ];
-
-        for (i, bin) in font_images.iter().enumerate() {
-            let i = i as i32;
-            let image = ImageWidget::from_bin(bin, 8).unwrap();
-
-            image.draw(&mut target.sub_buffer(Rectangle::new(
-                Point::new(12 + (i % 16) * 10, 12 + (i / 16) * 10),
-                Size::new(8, 8),
-            )));
-        }
-
-        Text::new(
-            "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nA\nB\nC\nD\nE\nF",
-            Point::new(2, 19),
-            MonoTextStyle::new(
-                &embedded_graphics::mono_font::ascii::FONT_6X10,
-                BinaryColor::On,
-            ),
-        )
-        .draw(target)
-        .unwrap();
-
-        ImageWidget::from_bin(include_bytes!("../assets/font/speaker_empty.bin"), 8)
-            .unwrap()
-            .draw(&mut target.sub_buffer(Rectangle::new(Point::new(200, 16), Size::new(8, 8))));
-        ImageWidget::from_bin(include_bytes!("../assets/font/speaker_full.bin"), 8)
-            .unwrap()
-            .draw(&mut target.sub_buffer(Rectangle::new(Point::new(200, 30), Size::new(8, 8))));
+        self.view.draw(target);
     }
 }

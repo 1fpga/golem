@@ -1,62 +1,82 @@
+use crate::application::widgets::network::{NetworkWidget, NetworkWidgetView};
 use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::widgets::boxed::{BoxedWidget, HorizontalAlignment, VerticalAlignment};
-use crate::macguiver::widgets::clock::DateTimeWidget;
-use crate::macguiver::widgets::group::horizontal::HorizontalWidgetGroup;
-use crate::macguiver::widgets::Widget;
-use embedded_graphics::geometry::Size;
+use crate::macguiver::views::clock::DateTimeWidget;
+use crate::macguiver::views::fps::FpsCounter;
+use crate::macguiver::views::Widget;
+use embedded_graphics::geometry::{Dimensions, Point};
+use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
-use std::cell::RefCell;
-use std::fmt::Debug;
-use std::rc::Rc;
+use embedded_graphics::primitives::Rectangle;
+use embedded_graphics::Drawable;
+use embedded_layout::align::{horizontal, vertical, Align};
+use embedded_layout::layout::linear::{spacing, LinearLayout};
+use embedded_layout::object_chain::Chain;
+use embedded_layout::View;
 
 /// The toolbar for Mister, showing up in the title OSD bar.
 ///
 /// This includes on the left a series of icons that can be updated individually, and
 /// on the right a clock.
-#[derive(Debug)]
 pub struct Toolbar {
-    icons: Rc<RefCell<HorizontalWidgetGroup<BinaryColor>>>,
-    left_group: BoxedWidget<BinaryColor>,
-    clock: BoxedWidget<BinaryColor>,
+    clock: DateTimeWidget,
+    fps: FpsCounter,
+    network: NetworkWidget,
+    show_fps: bool,
 }
 
 impl Default for Toolbar {
     fn default() -> Self {
-        let icons = Rc::new(RefCell::new(
-            HorizontalWidgetGroup::default().with_spacing(1),
-        ));
         Self {
-            clock: BoxedWidget::new(DateTimeWidget::default())
-                .aligned(VerticalAlignment::Middle, HorizontalAlignment::Right)
-                .with_margin_tuple((1, 3, 1, 3)),
-            left_group: BoxedWidget::new(Rc::clone(&icons))
-                .aligned(VerticalAlignment::Middle, HorizontalAlignment::Left)
-                .with_margin_tuple((0, 3, 0, 3)),
-            icons,
+            clock: DateTimeWidget::default(),
+            fps: FpsCounter::new(MonoTextStyle::new(
+                &embedded_graphics::mono_font::ascii::FONT_6X9,
+                BinaryColor::On,
+            )),
+            network: NetworkWidget::new(),
+            show_fps: true,
         }
     }
 }
 
-impl Toolbar {
-    pub fn append(&mut self, widget: impl Widget<Color = BinaryColor> + 'static) {
-        self.icons.borrow_mut().append(widget);
+impl View for Toolbar {
+    fn translate_impl(&mut self, by: Point) {
+        todo!()
+    }
+
+    fn bounds(&self) -> Rectangle {
+        todo!()
     }
 }
 
 impl Widget for Toolbar {
     type Color = BinaryColor;
 
-    fn size_hint(&self, parent_size: Size) -> Size {
-        parent_size
-    }
-
     fn update(&mut self) {
-        self.left_group.update();
-        self.clock.update();
+        // self.left_group.update();
+        // self.clock.update();
+        self.fps.update();
+        self.network.update();
     }
 
     fn draw(&self, target: &mut DrawBuffer<Self::Color>) {
-        self.left_group.draw(target);
-        self.clock.draw(target);
+        let mut bound = target.bounding_box();
+        // Move things off border.
+        bound.top_left += Point::new(2, 0);
+        bound.size.width -= 4;
+
+        LinearLayout::horizontal(
+            Chain::new(self.fps.clone()).append(NetworkWidgetView::from_network(&self.network)),
+        )
+        .with_spacing(spacing::FixedMargin(2))
+        .arrange()
+        .align_to(&bound, horizontal::Left, vertical::Center)
+        .draw(target)
+        .unwrap();
+
+        self.clock
+            .clone()
+            .align_to(&bound, horizontal::Right, vertical::Center)
+            .draw(target)
+            .unwrap();
     }
 }
