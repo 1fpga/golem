@@ -1,29 +1,29 @@
 use crate::application::widgets::keyboard::KeyboardTesterWidget;
-use crate::macguiver::application::Application;
+use crate::macguiver::application::{Application, UpdateResult};
 use crate::macguiver::buffer::DrawBuffer;
-use embedded_graphics::geometry::{Point, Size};
-use embedded_graphics::image::{Image, ImageDrawable, ImageRaw};
+use embedded_graphics::geometry::Point;
+use embedded_graphics::image::{Image, ImageRaw};
 use embedded_graphics::Drawable;
 
+use crate::application::toolbar::Toolbar;
 use crate::macguiver::events::keyboard::Keycode;
 use crate::macguiver::views::Widget;
 use crate::main_inner::Flags;
 use crate::platform::{PlatformState, WindowManager};
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::text::Text;
+use embedded_menu::items::{NavigationItem, Select};
+use embedded_menu::Menu;
 
 mod toolbar;
 mod widgets;
 
-pub trait ApplicationView {
-    type NextView: ApplicationView;
+pub trait Panel {
+    type NextView: Panel;
 
     fn new() -> Self;
-    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
-        Ok(None)
-    }
+    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String>;
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>);
 }
 
@@ -31,7 +31,7 @@ pub struct KeyboardTesterView {
     widget: KeyboardTesterWidget,
 }
 
-impl ApplicationView for KeyboardTesterView {
+impl Panel for KeyboardTesterView {
     type NextView = TopLevelView;
 
     fn new() -> Self {
@@ -42,7 +42,7 @@ impl ApplicationView for KeyboardTesterView {
 
     fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelView>, String> {
         self.widget.set_state(*state.keys());
-        if state.keys().is_down(Keycode::Tab) {
+        if state.pressed().contains(Keycode::Tab) {
             Ok(Some(TopLevelView::icon()))
         } else {
             Ok(None)
@@ -56,7 +56,7 @@ impl ApplicationView for KeyboardTesterView {
 
 pub struct IconView;
 
-impl ApplicationView for IconView {
+impl Panel for IconView {
     type NextView = TopLevelView;
 
     fn new() -> Self {
@@ -64,7 +64,7 @@ impl ApplicationView for IconView {
     }
 
     fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
-        if state.keys().is_down(Keycode::Tab) {
+        if state.pressed().contains(Keycode::Tab) {
             Ok(Some(TopLevelView::keyboard_tester()))
         } else {
             Ok(None)
@@ -135,10 +135,42 @@ impl ApplicationView for IconView {
     }
 }
 
+pub struct MainMenu {}
+
+impl Panel for MainMenu {
+    type NextView = TopLevelView;
+
+    fn new() -> Self {
+        Self {}
+    }
+
+    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
+        let mut menu = Menu::new("Menu")
+            .add_item(
+                NavigationItem::new("Foo", ())
+                    .with_marker(">")
+                    .with_detail_text(
+                        "Lorem ipsum dolor sit amet, in per offendit assueverit adversarium, no sed clita adipisci nominati.",
+                    ),
+            )
+            .add_item(Select::new("Check this", false).with_detail_text("Description"))
+            .add_item(Select::new("Check this", false).with_detail_text("Description"))
+            .add_item(Select::new("Check this", false).with_detail_text("Description"))
+            .build();
+
+        Ok(Some(TopLevelView::icon()))
+    }
+
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+        // Do nothing, we already took control of the display.
+    }
+}
+
 /// Top-level Views for the MiSTer application.
 pub enum TopLevelView {
     KeyboardTester(KeyboardTesterView),
     IconView(IconView),
+    MainMenu(MainMenu),
 }
 
 impl TopLevelView {
@@ -151,7 +183,7 @@ impl TopLevelView {
     }
 }
 
-impl ApplicationView for TopLevelView {
+impl Panel for TopLevelView {
     type NextView = TopLevelView;
 
     fn new() -> Self {
@@ -162,6 +194,7 @@ impl ApplicationView for TopLevelView {
         match self {
             TopLevelView::KeyboardTester(inner) => inner.update(state),
             TopLevelView::IconView(inner) => inner.update(state),
+            TopLevelView::MainMenu(inner) => inner.update(state),
         }
     }
 
@@ -169,6 +202,7 @@ impl ApplicationView for TopLevelView {
         match self {
             TopLevelView::KeyboardTester(inner) => inner.draw(target),
             TopLevelView::IconView(inner) => inner.draw(target),
+            TopLevelView::MainMenu(inner) => inner.draw(target),
         }
     }
 }
@@ -192,28 +226,28 @@ impl Application for MiSTer {
     where
         Self: Sized,
     {
-        let mut toolbar = toolbar::Toolbar::default();
-
         Self {
-            toolbar,
+            toolbar: Toolbar::default(),
             view: TopLevelView::new(),
         }
     }
 
-    fn update(&mut self, state: &PlatformState) {
-        self.toolbar.update();
+    fn update(&mut self, state: &PlatformState) -> UpdateResult {
+        let should_redraw_toolbar = self.toolbar.update();
         match self.view.update(state) {
             Ok(Some(next_view)) => self.view = next_view,
             Ok(None) => {}
             Err(e) => panic!("{}", e),
-        }
+        };
+
+        UpdateResult::Redraw(should_redraw_toolbar, true)
     }
 
     fn draw_title(&self, target: &mut DrawBuffer<BinaryColor>) {
         self.toolbar.draw(target);
     }
 
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+    fn draw_main(&self, target: &mut DrawBuffer<BinaryColor>) {
         self.view.draw(target);
     }
 }

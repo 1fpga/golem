@@ -3,6 +3,7 @@ use crate::macguiver::platform::Platform;
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::{PixelColor, Size};
+use sdl3::event::Event;
 use sdl3::EventPump;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -36,12 +37,12 @@ impl SdlInitState {
 }
 
 pub struct SdlState {
-    event_pump: Rc<RefCell<EventPump>>,
+    events: Vec<Event>,
 }
 
 impl SdlState {
-    pub fn events(&self, event_fn: impl FnMut(sdl3::event::Event)) {
-        self.event_pump.borrow_mut().poll_iter().for_each(event_fn);
+    pub fn events(&self) -> impl Iterator<Item = Event> + '_ {
+        self.events.iter().cloned()
     }
 }
 
@@ -89,7 +90,7 @@ where
         Window::new(self, title, size)
     }
 
-    fn event_loop(&mut self, mut update_fn: impl FnMut(&Self::State) -> bool) {
+    fn event_loop(&mut self, mut loop_fn: impl FnMut(&Self::State) -> bool) {
         if !self.has_windows {
             self.base_window = Some(self.window("", Size::new(1, 1)));
         }
@@ -98,12 +99,11 @@ where
 
         'main: loop {
             event_pump.borrow_mut().pump_events();
-
             let state = SdlState {
-                event_pump: event_pump.clone(),
+                events: event_pump.borrow_mut().poll_iter().collect(),
             };
 
-            if update_fn(&state) {
+            if loop_fn(&state) {
                 break 'main;
             }
         }

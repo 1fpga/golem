@@ -12,7 +12,9 @@ pub mod fps;
 pub trait Widget: View {
     type Color: PixelColor;
 
-    fn update(&mut self) {}
+    fn update(&mut self) -> bool {
+        false
+    }
 
     fn draw(&self, target: &mut DrawBuffer<Self::Color>);
 }
@@ -39,7 +41,9 @@ impl<C: PixelColor> View for NullWidget<C> {
 impl<C: PixelColor> Widget for NullWidget<C> {
     type Color = C;
 
-    fn update(&mut self) {}
+    fn update(&mut self) -> bool {
+        false
+    }
 
     fn draw(&self, _target: &mut DrawBuffer<Self::Color>) {}
 }

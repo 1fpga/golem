@@ -1,7 +1,7 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::views::Widget;
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::{Dimensions, OriginDimensions, Point, Size};
+use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::primitives::Rectangle;
@@ -14,6 +14,7 @@ use std::time::Instant;
 
 #[derive(Debug, Clone)]
 pub struct FpsCounter<const N: usize = 200> {
+    last_fps: usize,
     bounds: Rectangle,
     ticks: VecDeque<Instant>,
     style: MonoTextStyle<'static, BinaryColor>,
@@ -22,6 +23,7 @@ pub struct FpsCounter<const N: usize = 200> {
 impl<const C: usize> FpsCounter<C> {
     pub fn new(style: MonoTextStyle<'static, BinaryColor>) -> Self {
         Self {
+            last_fps: 0,
             bounds: Text::with_baseline("000 fps", Point::zero(), style, Baseline::Top)
                 .bounding_box(),
             ticks: VecDeque::with_capacity(C),
@@ -29,11 +31,12 @@ impl<const C: usize> FpsCounter<C> {
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> usize {
         if self.ticks.len() == C {
             self.ticks.pop_front();
         }
         self.ticks.push_back(Instant::now());
+        self.fps()
     }
 
     pub fn fps(&self) -> usize {
@@ -45,13 +48,6 @@ impl<const C: usize> FpsCounter<C> {
             .take_while(|tick| now.duration_since(**tick).as_secs().is_zero())
             .count();
 
-        static mut I: u32 = 0;
-        unsafe {
-            I += 1;
-            if I % 100 == 0 {
-                eprintln!("fps: {fps}");
-            }
-        }
         fps
     }
 }
@@ -78,8 +74,14 @@ impl<const N: usize> Transform for FpsCounter<N> {
 impl<const C: usize> Widget for FpsCounter<C> {
     type Color = BinaryColor;
 
-    fn update(&mut self) {
-        self.tick();
+    fn update(&mut self) -> bool {
+        let fps = self.tick();
+        if fps != self.last_fps {
+            self.last_fps = fps;
+            true
+        } else {
+            false
+        }
     }
 
     fn draw(&self, target: &mut DrawBuffer<Self::Color>) {

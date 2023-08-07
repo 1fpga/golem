@@ -5,6 +5,7 @@
 pub mod battery;
 pub mod bootcore;
 pub mod charrom;
+pub mod ffi;
 pub mod hardware;
 pub mod input;
 pub mod menu;

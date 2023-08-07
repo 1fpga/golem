@@ -12,6 +12,8 @@ use crate::macguiver::events::keyboard::KeycodeMap;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
+use sdl3::event::Event;
+use tracing::debug;
 
 cfg_if! {
     if #[cfg(any(
@@ -34,16 +36,109 @@ cfg_if! {
     }
 }
 
-pub type Event = sdl3::event::Event;
+mod sizes {
+    use embedded_graphics::geometry::Size;
+
+    /// The size of the title bar.
+    pub const TITLE: Size = Size::new(256, 15);
+
+    /// The size of the main OSD display. We never resize it to be smaller,
+    /// instead reusing the size for other information.
+    pub const MAIN: Size = Size::new(256, 16 * 8);
+}
 
 #[derive(Default)]
 pub struct PlatformState {
     keys: KeycodeMap,
+    pressed: KeycodeMap,
+    should_quit: bool,
 }
 
 impl PlatformState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn reset(&mut self) {
+        self.pressed.clear();
+        self.should_quit = false;
+    }
+
     pub fn keys(&self) -> &KeycodeMap {
         &self.keys
+    }
+
+    pub fn pressed(&self) -> &KeycodeMap {
+        &self.pressed
+    }
+
+    pub fn should_quit(&self) -> bool {
+        self.should_quit
+    }
+
+    pub fn handle_event(&mut self, event: Event) {
+        debug!("event: {:?}", event);
+        match event {
+            Event::Quit { .. } => {
+                self.should_quit = true;
+            }
+            Event::KeyDown {
+                keycode: Some(code),
+                ..
+            } => {
+                self.keys.insert(code.into());
+                self.pressed.insert(code.into());
+            }
+            Event::KeyUp {
+                keycode: Some(code),
+                ..
+            } => {
+                self.keys.remove(code.into());
+            }
+            Event::TextEditing { .. } => {}
+            Event::TextInput { .. } => {}
+            Event::MouseMotion { .. } => {}
+            Event::MouseButtonDown { .. } => {}
+            Event::MouseButtonUp { .. } => {}
+            Event::MouseWheel { .. } => {}
+            Event::JoyAxisMotion { .. } => {}
+            Event::JoyHatMotion { .. } => {}
+            Event::JoyButtonDown { .. } => {}
+            Event::JoyButtonUp { .. } => {}
+            Event::JoyDeviceAdded { .. } => {}
+            Event::JoyDeviceRemoved { .. } => {}
+            Event::ControllerAxisMotion { .. } => {}
+            Event::ControllerButtonDown { .. } => {}
+            Event::ControllerButtonUp { .. } => {}
+            Event::ControllerDeviceAdded { .. } => {}
+            Event::ControllerDeviceRemoved { .. } => {}
+            Event::ControllerDeviceRemapped { .. } => {}
+            Event::ControllerTouchpadDown { .. } => {}
+            Event::ControllerTouchpadMotion { .. } => {}
+            Event::ControllerTouchpadUp { .. } => {}
+            #[cfg(feature = "sdl2/hidapi")]
+            Event::ControllerSensorUpdated { .. } => {}
+            Event::FingerDown { .. } => {}
+            Event::FingerUp { .. } => {}
+            Event::FingerMotion { .. } => {}
+            Event::DollarRecord { .. } => {}
+            Event::MultiGesture { .. } => {}
+            Event::ClipboardUpdate { .. } => {}
+            Event::DropFile { .. } => {}
+            Event::DropText { .. } => {}
+            Event::DropBegin { .. } => {}
+            Event::DropComplete { .. } => {}
+            Event::AudioDeviceAdded { .. } => {}
+            Event::AudioDeviceRemoved { .. } => {}
+            Event::RenderTargetsReset { .. } => {}
+            Event::RenderDeviceReset { .. } => {}
+            Event::User { .. } => {}
+            Event::Unknown { .. } => {}
+            Event::DisplayOrientation { .. } => {}
+            Event::DisplayConnected { .. } => {}
+            Event::DisplayDisconnected { .. } => {}
+            _ => {}
+        }
     }
 }
 
@@ -65,7 +160,7 @@ trait PlatformInner {
 /// by the MisterApplication itself.
 #[derive(Default)]
 pub struct WindowManager {
-    inner: self::PlatformWindowManager,
+    inner: PlatformWindowManager,
 }
 
 impl WindowManager {
@@ -76,89 +171,5 @@ impl WindowManager {
     ) -> Result<(), String> {
         self.inner.run(application, flags);
         Ok(())
-
-        // OsdSetSize(19);
-        //
-        // unsafe {
-        //     while fpga::is_fpga_ready(1) == 0 {
-        //         fpga::fpga_wait_to_reset();
-        //     }
-        //
-        //     loop {
-        //         // Polling coroutine.
-        //         user_io::user_io_poll();
-        //         input::input_poll(0);
-        //
-        //         // UI coroutine.
-        //         menu::HandleUI();
-        //
-        //         #[cfg(feature = "de10")]
-        //         {
-        //             use crate::osd;
-        //
-        //             let n = if user_io::is_menu() != 0 {
-        //                 19
-        //             } else {
-        //                 osd::OsdGetSize()
-        //             };
-        //
-        //             for line in self.osd.line_iter() {
-        //                 let line_buffer = self.osd.get_binary_line_array(line);
-        //                 spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
-        //                 spi::spi_write(line_buffer.as_ptr(), 256, 0);
-        //                 spi::DisableOsd();
-        //             }
-        //             for line in self.title.line_iter() {
-        //                 let line_buffer = self.title.get_binary_line_array(line);
-        //                 spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
-        //                 spi::spi_write(line_buffer.as_ptr(), 256, 0);
-        //                 spi::DisableOsd();
-        //             }
-        //
-        //             extern "C" {
-        //                 fn mcd_poll();
-        //                 fn neocd_poll();
-        //                 fn pcecd_poll();
-        //                 fn saturn_poll();
-        //             }
-        //
-        //             if user_io::is_megacd() != 0 {
-        //                 mcd_poll();
-        //             }
-        //             if user_io::is_pce() != 0 {
-        //                 pcecd_poll();
-        //             }
-        //             if user_io::is_saturn() != 0 {
-        //                 saturn_poll();
-        //             }
-        //             if user_io::is_neogeo_cd() != 0 {
-        //                 neocd_poll();
-        //             }
-        //         }
-        //
-        //         #[cfg(not(feature = "de10"))]
-        //         {
-        //             // self.window_osd.update(&self.osd.inner);
-        //             // self.window_title.update(&self.title.inner);
-        //             //
-        //             // if self
-        //             //     .window_osd
-        //             //     .events()
-        //             //     .any(|e| e == embedded_graphics_simulator::SimulatorEvent::Quit)
-        //             // {
-        //             //     break;
-        //             // }
-        //             // if self
-        //             //     .window_title
-        //             //     .events()
-        //             //     .any(|e| e == embedded_graphics_simulator::SimulatorEvent::Quit)
-        //             // {
-        //             //     break;
-        //             // }
-        //             // std::thread::sleep(std::time::Duration::from_millis(1));
-        //         }
-        //     }
-        // }
-        // Ok(())
     }
 }

@@ -1,8 +1,8 @@
 use crate::ffi::fpga;
-use crate::macguiver::application::Application;
+use crate::macguiver::application::{Application, UpdateResult};
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform};
 use crate::macguiver::platform::Platform;
-use crate::platform::{PlatformInner, PlatformState};
+use crate::platform::{sizes, PlatformInner, PlatformState};
 use crate::{menu, osd, spi};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -16,9 +16,6 @@ const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
 struct Interface;
 
 pub struct De10Platform {
-    pub osd: buffer::OsdDisplayView,
-    pub title: buffer::OsdDisplayView,
-
     pub platform: SdlPlatform<BinaryColor>,
 }
 
@@ -28,31 +25,77 @@ impl Default for De10Platform {
             std::env::set_var(SDL_VIDEO_DRIVER_VARNAME, SDL_VIDEO_DRIVER_DEFAULT);
         }
 
-        let osd = buffer::OsdDisplayView::main();
-        let title = buffer::OsdDisplayView::title();
-
         let platform = SdlPlatform::init(SdlInitState::default());
 
-        Self {
-            osd,
-            title,
-            platform,
-        }
+        Self { platform }
     }
 }
+//
+// impl De10Platform {
+//     pub fn event_loop<DrawFn>(&mut self, update: impl Fn(&mut PlatformState) -> bool, draw: DrawFn)
+//     where
+//         Target: DrawTarget<BinaryColor>,
+//         DrawFn: FnMut(&mut Target),
+//     {
+//         let mut platform_state: PlatformState = PlatformState::default();
+//         let osd = &mut self.osd;
+//         let title = &mut self.title;
+//
+//         self.platform.event_loop(|state| unsafe {
+//             crate::user_io::user_io_poll();
+//             crate::input::input_poll(0);
+//             menu::HandleUI();
+//
+//             // Clear the buffers.
+//             osd.clear(BinaryColor::Off).unwrap();
+//             title.clear(BinaryColor::Off).unwrap();
+//
+//             let mut should_return = handler(&platform_state, osd);
+//
+//             // Send everything to the scaler.
+//             for (line, buffer) in title
+//                 .line_iter()
+//                 .map(|line| (line, &title))
+//                 .chain(osd.line_iter().map(|line| (line, &osd)))
+//             {
+//                 let line_buffer = buffer.get_binary_line_array(line);
+//                 spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
+//                 spi::spi_write(line_buffer.as_ptr(), 256, 0);
+//                 spi::DisableOsd();
+//             }
+//
+//             state.events(|ev| {
+//                 eprintln!("sdl: {ev:?}");
+//                 match ev {
+//                     sdl3::event::Event::Quit { .. } => should_return = true,
+//                     sdl3::event::Event::KeyDown {
+//                         keycode: Some(keycode),
+//                         ..
+//                     } => {
+//                         platform_state.keys.down(keycode.into());
+//                     }
+//                     sdl3::event::Event::KeyUp {
+//                         keycode: Some(keycode),
+//                         ..
+//                     } => {
+//                         platform_state.keys.up(keycode.into());
+//                     }
+//                     _ => {}
+//                 }
+//             });
+//
+//             // Sleep a little.
+//             std::thread::sleep(std::time::Duration::from_millis(10));
+//
+//             should_return
+//         });
+//     }
+// }
 
 impl PlatformInner for De10Platform {
     type Color = BinaryColor;
 
-    fn run(
-        &mut self,
-        app: &mut impl Application<Color = Self::Color>,
-        flags: crate::main_inner::Flags,
-    ) {
-        let mut platform_state: PlatformState = PlatformState::default();
-        let osd = &mut self.osd;
-        let title = &mut self.title;
-
+    fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, flags: Flags) {
         let mut fpga = unsafe {
             fpga::Fpga::init().unwrap_or_else(|| {
                 debug!("GPI[31] == 1");
@@ -85,57 +128,46 @@ impl PlatformInner for De10Platform {
             osd::OsdSetSize(19);
         }
 
-        self.platform.event_loop(|state| unsafe {
-            crate::user_io::user_io_poll();
-            crate::input::input_poll(0);
-            menu::HandleUI();
+        let mut platform_state: PlatformState = PlatformState::new();
+        let mut title_display = buffer::OsdDisplayView::title();
+        let mut osd_display = buffer::OsdDisplayView::main();
 
-            app.update(&platform_state);
+        self.platform.event_loop(|state| {
+            let mut title_buffer = &mut title_display.inner;
+            let mut osd_buffer = &mut osd_display.inner;
 
-            // Clear the buffers.
-            osd.clear(BinaryColor::Off).unwrap();
-            title.clear(BinaryColor::Off).unwrap();
+            platform_state.reset();
 
-            app.draw(&mut osd.inner);
-            app.draw_title(&mut title.inner);
-            title.inner.invert();
-
-            // Send everything to the scaler.
-            for (line, buffer) in title
-                .line_iter()
-                .map(|line| (line, &title))
-                .chain(osd.line_iter().map(|line| (line, &osd)))
-            {
-                let line_buffer = buffer.get_binary_line_array(line);
-                spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
-                spi::spi_write(line_buffer.as_ptr(), 256, 0);
-                spi::DisableOsd();
-            }
-
-            let mut should_return = false;
-            state.events(|ev| {
-                eprintln!("sdl: {ev:?}");
-                match ev {
-                    sdl3::event::Event::Quit { .. } => should_return = true,
-                    sdl3::event::Event::KeyDown {
-                        keycode: Some(keycode),
-                        ..
-                    } => {
-                        platform_state.keys.down(keycode.into());
-                    }
-                    sdl3::event::Event::KeyUp {
-                        keycode: Some(keycode),
-                        ..
-                    } => {
-                        platform_state.keys.up(keycode.into());
-                    }
-                    _ => {}
-                }
+            state.events().for_each(|event| {
+                platform_state.handle_event(event);
             });
 
-            should_return
+            match app.update(&platform_state) {
+                UpdateResult::Redraw(title, main) => {
+                    if title {
+                        title_buffer.clear(BinaryColor::Off).unwrap();
+                        app.draw_title(&mut title_buffer);
+                        title_buffer.invert();
+                        title_display.send();
+                    }
+                    if main {
+                        osd_buffer.clear(BinaryColor::Off).unwrap();
+                        app.draw_main(&mut osd_buffer);
+                        osd_display.send();
+                    }
+                }
+                UpdateResult::NoRedraw => {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                UpdateResult::Quit => return true,
+            }
+
+            platform_state.should_quit()
         });
     }
 }
 
+use crate::macguiver::buffer::DrawBuffer;
+use crate::main_inner::Flags;
+use crate::platform::de10::buffer::OsdDisplayView;
 pub use De10Platform as PlatformWindowManager;

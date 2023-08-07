@@ -335,12 +335,12 @@ impl ToString for KeycodeMap {
 }
 
 impl<const N: usize> KeycodeMap<N> {
-    pub fn down(&mut self, key: Keycode) {
-        if self.codes.contains(&key) {
-            return;
-        }
-
+    pub fn insert(&mut self, key: Keycode) {
         for i in 0..N {
+            if self.codes[i] == key {
+                return;
+            }
+
             if self.codes[i] == Keycode::None {
                 self.codes[i] = key;
                 break;
@@ -348,7 +348,7 @@ impl<const N: usize> KeycodeMap<N> {
         }
     }
 
-    pub fn up(&mut self, key: Keycode) {
+    pub fn remove(&mut self, key: Keycode) {
         'root: for i in 0..N {
             if self.codes[i] == key {
                 for j in i..(N - 1) {
@@ -360,12 +360,8 @@ impl<const N: usize> KeycodeMap<N> {
         }
     }
 
-    pub fn is_down(&self, key: Keycode) -> bool {
+    pub fn contains(&self, key: Keycode) -> bool {
         self.codes.contains(&key)
-    }
-
-    pub fn is_up(&self, key: Keycode) -> bool {
-        !self.is_up(key)
     }
 
     pub fn clear(&mut self) {
@@ -411,7 +407,7 @@ impl From<KeyboardState<'_>> for KeycodeMap {
 impl FromIterator<Keycode> for KeycodeMap {
     fn from_iter<T: IntoIterator<Item = Keycode>>(iter: T) -> Self {
         let mut s = KeycodeMap::default();
-        iter.into_iter().for_each(|kc| s.down(kc));
+        iter.into_iter().for_each(|kc| s.insert(kc));
         s
     }
 }
@@ -420,17 +416,24 @@ impl FromIterator<Keycode> for KeycodeMap {
 fn keymap() {
     let mut map = KeycodeMap::default();
 
-    map.down(Keycode::A);
-    map.down(Keycode::A);
-    map.down(Keycode::A);
-    map.down(Keycode::A);
-    map.up(Keycode::A);
-    map.down(Keycode::A);
-    map.up(Keycode::A);
-    map.down(Keycode::A);
-    map.up(Keycode::A);
-    map.down(Keycode::A);
-    map.up(Keycode::A);
+    map.insert(Keycode::A);
+    map.insert(Keycode::A);
+    map.insert(Keycode::B);
+    map.insert(Keycode::C);
+    map.insert(Keycode::A);
+    map.insert(Keycode::A);
+    map.remove(Keycode::A);
+    map.insert(Keycode::A);
+    map.remove(Keycode::A);
+    map.insert(Keycode::A);
+    map.remove(Keycode::A);
+    map.remove(Keycode::C);
+    map.insert(Keycode::A);
+    map.remove(Keycode::A);
+    map.remove(Keycode::A);
+    map.remove(Keycode::B);
+    map.remove(Keycode::C);
+    map.remove(Keycode::B);
 
     assert_eq!(map.codes, [Keycode::None; 8]);
 }

@@ -1,4 +1,5 @@
 use crate::macguiver::buffer::DrawBuffer;
+use crate::{osd, spi};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::Rectangle;
@@ -42,6 +43,18 @@ pub struct OsdDisplayView {
 impl OsdDisplayView {
     pub fn line_iter(&self) -> impl Iterator<Item = u32> {
         self.top_line..self.top_line + self.lines
+    }
+
+    pub fn send(&self) {
+        // Send everything to the scaler.
+        for line in self.line_iter() {
+            unsafe {
+                let line_buffer = self.get_binary_line_array(line);
+                spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
+                spi::spi_write(line_buffer.as_ptr(), 256, 0);
+                spi::DisableOsd();
+            }
+        }
     }
 }
 

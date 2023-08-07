@@ -1,5 +1,6 @@
+use chrono::Timelike;
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::{Dimensions, OriginDimensions, Point, Size};
+use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::mono_font::ascii::FONT_6X9;
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -44,10 +45,13 @@ impl DateTimeWidget {
         self.text = self.date_time.format(&self.time_format).to_string();
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
         let date_time = chrono::Local::now();
-        if date_time != self.date_time {
+        if date_time.second() != self.date_time.second() {
             self.set_time(date_time);
+            true
+        } else {
+            false
         }
     }
 }

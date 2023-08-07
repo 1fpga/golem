@@ -6,15 +6,6 @@ use embedded_graphics::pixelcolor::PixelColor;
 
 pub mod sdl;
 
-pub trait Application {
-    type Color: PixelColor;
-    type State;
-
-    fn init(state: Self::State, platform: &impl Platform) -> Self;
-    fn redraw(&self);
-    fn update(&mut self);
-}
-
 pub trait PlatformWindow {
     type Color: PixelColor;
 
@@ -36,5 +27,5 @@ pub trait Platform {
 
     /// Start an event loop. These can be nested. Every loop is an update event.
     /// It includes a list of current events.
-    fn event_loop(&mut self, update: impl FnMut(&Self::State) -> bool);
+    fn event_loop(&mut self, loop_fn: impl FnMut(&Self::State) -> bool);
 }

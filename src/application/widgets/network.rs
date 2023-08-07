@@ -209,7 +209,7 @@ impl NetworkWidget {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> bool {
         if self.dirty.load(Ordering::Relaxed) {
             if let Ok(status) = self.status.read() {
                 self.show_local = status.local;
@@ -217,8 +217,10 @@ impl NetworkWidget {
                 self.show_internet = status.internet;
 
                 self.dirty.store(false, Ordering::Relaxed);
+                return true;
             }
         }
+        false
     }
 }
 

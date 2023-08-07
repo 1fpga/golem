@@ -215,7 +215,7 @@ where
 
 /// A buffer that can be drawn to in EmbeddedDisplay. Most views will draw
 /// directly to this.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DrawBuffer<C> {
     inner: Rc<RefCell<DrawBufferInner<C>>>,
 }

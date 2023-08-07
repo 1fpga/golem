@@ -51,11 +51,14 @@ impl View for Toolbar {
 impl Widget for Toolbar {
     type Color = BinaryColor;
 
-    fn update(&mut self) {
-        // self.left_group.update();
-        // self.clock.update();
-        self.fps.update();
-        self.network.update();
+    fn update(&mut self) -> bool {
+        [
+            self.clock.update(),
+            self.fps.update(),
+            self.network.update(),
+        ]
+        .iter()
+        .any(|x| *x)
     }
 
     fn draw(&self, target: &mut DrawBuffer<Self::Color>) {
