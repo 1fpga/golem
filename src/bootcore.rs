@@ -1,4 +1,4 @@
-use crate::cfg;
+use crate::config;
 use libc::c_char;
 use std::ffi::CStr;
 use tracing::info;
@@ -15,19 +15,19 @@ pub unsafe extern "C" fn bootcore_init(path: *const u8) {
     info!("bootcore_init: path = {path:?}");
 
     // TODO: figure out why this is needed, and why is this here.
-    let timeout = cfg::cfg_bootcore_timeout() * 10;
-    cfg::cfg_set_bootcore_timeout(timeout);
-    btimeout = cfg::cfg_bootcore_timeout();
+    let timeout = config::cfg_bootcore_timeout() * 10;
+    config::cfg_set_bootcore_timeout(timeout);
+    btimeout = config::cfg_bootcore_timeout();
 
     info!("bootcore_init: timeout = {timeout}");
 
-    let bootcore = cfg::Config::bootcore();
+    let bootcore = config::Config::bootcore();
     info!("bootcore = {bootcore:?}");
 
     if bootcore.is_last_core() {
         let bootcore_str = match bootcore {
-            cfg::BootCoreConfig::LastCore => "lastcore",
-            cfg::BootCoreConfig::ExactLastCore => "lastexactcore",
+            config::BootCoreConfig::LastCore => "lastcore",
+            config::BootCoreConfig::ExactLastCore => "lastexactcore",
             _ => unreachable!(),
         };
         bootcoretype[..bootcore_str.len()].copy_from_slice(bootcore_str.as_bytes());
@@ -50,5 +50,5 @@ pub unsafe extern "C" fn bootcore_init(path: *const u8) {
     //     }
     // }
     //
-    // cfg::cfg_set_bootcore("\0".as_ptr())
+    // config::cfg_set_bootcore("\0".as_ptr())
 }

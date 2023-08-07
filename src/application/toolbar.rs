@@ -39,7 +39,7 @@ impl Default for Toolbar {
 }
 
 impl View for Toolbar {
-    fn translate_impl(&mut self, by: Point) {
+    fn translate_impl(&mut self, _by: Point) {
         todo!()
     }
 

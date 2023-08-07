@@ -20,7 +20,7 @@ pub mod user_io;
 mod application;
 mod main_inner;
 
-pub mod cfg;
+pub mod config;
 pub mod core;
 pub mod file_io;
 pub mod macguiver;

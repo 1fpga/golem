@@ -59,10 +59,10 @@ pub extern "C" fn altcfg(alt: c_int) -> u16 {
         println!("** altcfg({alt})");
     } else if (par[0] == 0x34) && (par[1] == 0x99) && (par[2] == 0xBA) {
         let res = par[3];
-        println!("** altcfg: got cfg {res}");
+        println!("** altcfg: got config {res}");
         return res as u16;
     } else {
-        println!("** altcfg: no cfg");
+        println!("** altcfg: no config");
     }
 
     0

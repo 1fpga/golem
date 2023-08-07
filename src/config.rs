@@ -829,7 +829,7 @@ impl Config {
     fn root() -> PathBuf {
         #[cfg(test)]
         unsafe {
-            testing::ROOT.clone().unwrap()
+            return testing::ROOT.clone().unwrap();
         }
 
         #[cfg(feature = "platform_de10")]
@@ -1163,7 +1163,7 @@ fn works_with_empty_file() {
 
 #[cfg(test)]
 mod examples {
-    use crate::cfg::*;
+    use crate::config::*;
 
     #[test_generator::test_resources("tests/assets/config/*.ini")]
     fn works_with_example(p: &str) {

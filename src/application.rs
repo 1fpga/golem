@@ -144,8 +144,8 @@ impl Panel for MainMenu {
         Self {}
     }
 
-    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
-        let mut menu = Menu::new("Menu")
+    fn update(&mut self, _state: &PlatformState) -> Result<Option<Self::NextView>, String> {
+        let _menu = Menu::new("Menu")
             .add_item(
                 NavigationItem::new("Foo", ())
                     .with_marker(">")
@@ -161,7 +161,7 @@ impl Panel for MainMenu {
         Ok(Some(TopLevelView::icon()))
     }
 
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+    fn draw(&self, _target: &mut DrawBuffer<BinaryColor>) {
         // Do nothing, we already took control of the display.
     }
 }

@@ -1,4 +1,4 @@
-use crate::cfg;
+use crate::config;
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
@@ -115,20 +115,20 @@ impl Core {
     }
 }
 
-impl From<cfg::BootCoreConfig> for Option<Core> {
-    fn from(value: cfg::BootCoreConfig) -> Self {
+impl From<config::BootCoreConfig> for Option<Core> {
+    fn from(value: config::BootCoreConfig) -> Self {
         match value {
-            cfg::BootCoreConfig::None => None,
-            cfg::BootCoreConfig::LastCore => {
-                let last_core_name = cfg::Config::last_core_data()?;
-                Some(Core::from_name(last_core_name, cfg::Config::cores_root()).ok()??)
+            config::BootCoreConfig::None => None,
+            config::BootCoreConfig::LastCore => {
+                let last_core_name = config::Config::last_core_data()?;
+                Some(Core::from_name(last_core_name, config::Config::cores_root()).ok()??)
             }
-            cfg::BootCoreConfig::ExactLastCore => {
-                let last_core_name = cfg::Config::last_core_data()?;
-                Some(Core::from_exact_name(last_core_name, cfg::Config::cores_root()).ok()??)
+            config::BootCoreConfig::ExactLastCore => {
+                let last_core_name = config::Config::last_core_data()?;
+                Some(Core::from_exact_name(last_core_name, config::Config::cores_root()).ok()??)
             }
-            cfg::BootCoreConfig::CoreName(name) => {
-                Some(Core::from_name(name, cfg::Config::cores_root()).ok()??)
+            config::BootCoreConfig::CoreName(name) => {
+                Some(Core::from_name(name, config::Config::cores_root()).ok()??)
             }
         }
     }
@@ -215,7 +215,7 @@ fn from_name_works() {
 fn from_bootcore_config() {
     let root_dir = tempdir::TempDir::new("mister").unwrap();
     let root = root_dir.path();
-    cfg::testing::set_config_root(root);
+    config::testing::set_config_root(root);
 
     // Create a structure like this:
     //   mister/
@@ -242,7 +242,7 @@ fn from_bootcore_config() {
     std::fs::write(root.join("_Other/Other_12345678.rbf"), "").unwrap();
     std::fs::write(root.join("_Other/_Again/Bar_12345678.rbf"), "").unwrap();
 
-    let x: Option<Core> = Option::<Core>::from(cfg::BootCoreConfig::LastCore);
+    let x: Option<Core> = Option::<Core>::from(config::BootCoreConfig::LastCore);
     let core = x.unwrap();
     assert_eq!(core.name, "Core");
     assert_eq!(core.path, root.join("_Cores/Core_12345678.rbf"));

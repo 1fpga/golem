@@ -171,7 +171,7 @@ impl NetworkWidget {
         let (quit_send, quit_recv) = std::sync::mpsc::channel();
 
         std::thread::spawn({
-            let mut status = status.clone();
+            let status = status.clone();
             let dirty = dirty.clone();
             move || loop {
                 loop {

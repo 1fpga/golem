@@ -24,7 +24,7 @@ cfg_if! {
     }
 }
 
-pub mod cfg;
+pub mod config;
 pub mod core;
 pub mod ffi;
 pub mod file_io;
