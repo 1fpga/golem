@@ -1,21 +1,19 @@
+use crate::application::toolbar::Toolbar;
 use crate::application::widgets::keyboard::KeyboardTesterWidget;
 use crate::macguiver::application::{Application, UpdateResult};
 use crate::macguiver::buffer::DrawBuffer;
-use embedded_graphics::geometry::Point;
-use embedded_graphics::image::{Image, ImageRaw};
-use embedded_graphics::Drawable;
-
-use crate::application::toolbar::Toolbar;
 use crate::macguiver::events::keyboard::Keycode;
 use crate::macguiver::views::Widget;
 use crate::main_inner::Flags;
 use crate::platform::{PlatformState, WindowManager};
+use embedded_graphics::geometry::Point;
+use embedded_graphics::image::{Image, ImageRaw};
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::text::Text;
-use embedded_menu::items::{NavigationItem, Select};
-use embedded_menu::Menu;
+use embedded_graphics::Drawable;
 
+mod menu;
 mod toolbar;
 mod widgets;
 
@@ -43,7 +41,7 @@ impl Panel for KeyboardTesterView {
     fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelView>, String> {
         self.widget.set_state(*state.keys());
         if state.pressed().contains(Keycode::Tab) {
-            Ok(Some(TopLevelView::icon()))
+            Ok(Some(TopLevelView::menu()))
         } else {
             Ok(None)
         }
@@ -135,42 +133,11 @@ impl Panel for IconView {
     }
 }
 
-pub struct MainMenu {}
-
-impl Panel for MainMenu {
-    type NextView = TopLevelView;
-
-    fn new() -> Self {
-        Self {}
-    }
-
-    fn update(&mut self, _state: &PlatformState) -> Result<Option<Self::NextView>, String> {
-        let _menu = Menu::new("Menu")
-            .add_item(
-                NavigationItem::new("Foo", ())
-                    .with_marker(">")
-                    .with_detail_text(
-                        "Lorem ipsum dolor sit amet, in per offendit assueverit adversarium, no sed clita adipisci nominati.",
-                    ),
-            )
-            .add_item(Select::new("Check this", false).with_detail_text("Description"))
-            .add_item(Select::new("Check this", false).with_detail_text("Description"))
-            .add_item(Select::new("Check this", false).with_detail_text("Description"))
-            .build();
-
-        Ok(Some(TopLevelView::icon()))
-    }
-
-    fn draw(&self, _target: &mut DrawBuffer<BinaryColor>) {
-        // Do nothing, we already took control of the display.
-    }
-}
-
 /// Top-level Views for the MiSTer application.
 pub enum TopLevelView {
     KeyboardTester(KeyboardTesterView),
     IconView(IconView),
-    MainMenu(MainMenu),
+    MainMenu(menu::MainMenu),
 }
 
 impl TopLevelView {
@@ -180,6 +147,10 @@ impl TopLevelView {
 
     pub fn icon() -> Self {
         Self::IconView(IconView::new())
+    }
+
+    pub fn menu() -> Self {
+        Self::MainMenu(menu::MainMenu::new())
     }
 }
 

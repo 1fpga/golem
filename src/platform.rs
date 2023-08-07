@@ -11,6 +11,7 @@ use crate::macguiver::application::Application;
 use crate::macguiver::events::keyboard::KeycodeMap;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
+use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 use sdl3::event::Event;
 use tracing::debug;
@@ -51,15 +52,20 @@ mod sizes {
 pub struct PlatformState {
     keys: KeycodeMap,
     pressed: KeycodeMap,
+
     should_quit: bool,
+    target_size: Size,
 }
 
 impl PlatformState {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn new(target_size: Size) -> Self {
+        Self {
+            target_size,
+            ..Default::default()
+        }
     }
 
-    pub fn reset(&mut self) {
+    pub fn new_frame(&mut self) {
         self.pressed.clear();
         self.should_quit = false;
     }
@@ -139,6 +145,12 @@ impl PlatformState {
             Event::DisplayDisconnected { .. } => {}
             _ => {}
         }
+    }
+}
+
+impl OriginDimensions for PlatformState {
+    fn size(&self) -> Size {
+        self.target_size
     }
 }
 

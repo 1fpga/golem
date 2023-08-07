@@ -5,6 +5,7 @@ use crate::macguiver::platform::Platform;
 use crate::platform::{sizes, PlatformInner, PlatformState};
 use crate::{menu, osd, spi};
 use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::geometry::Dimensions;
 use embedded_graphics::pixelcolor::BinaryColor;
 use tracing::{debug, error, info};
 
@@ -128,15 +129,15 @@ impl PlatformInner for De10Platform {
             osd::OsdSetSize(19);
         }
 
-        let mut platform_state: PlatformState = PlatformState::new();
         let mut title_display = buffer::OsdDisplayView::title();
         let mut osd_display = buffer::OsdDisplayView::main();
+        let mut platform_state: PlatformState = PlatformState::new(osd_display.bounding_box().size);
 
         self.platform.event_loop(|state| {
             let mut title_buffer = &mut title_display.inner;
             let mut osd_buffer = &mut osd_display.inner;
 
-            platform_state.reset();
+            platform_state.new_frame();
 
             state.events().for_each(|event| {
                 platform_state.handle_event(event);

@@ -34,12 +34,12 @@ impl PlatformInner for DesktopWindowManager {
         let mut window_title = self.platform.window("Title", sizes::TITLE);
         let mut window_osd = self.platform.window("Title", sizes::MAIN);
 
-        let mut platform_state: PlatformState = PlatformState::new();
+        let mut platform_state: PlatformState = PlatformState::new(sizes::MAIN);
 
         self.platform.event_loop(|state| {
             let mut title_buffer = DrawBuffer::new(sizes::TITLE);
             let mut osd = DrawBuffer::new(sizes::MAIN);
-            platform_state.reset();
+            platform_state.new_frame();
 
             state.events().for_each(|event| {
                 platform_state.handle_event(event);
