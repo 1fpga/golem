@@ -3,6 +3,11 @@ name = "mister"
 version = "0.1.0"
 edition = "2018"
 
+[workspace]
+members = [
+    "database",
+]
+
 [lib]
 crate-type = [ "staticlib" ] # to generate a `lib<package_name>.a`
 path = "src/lib.rs"
@@ -15,7 +20,7 @@ path = "src/main.rs"
 lto = true
 panic = "abort"
 overflow-checks = false
-#strip = "debuginfo"
+strip = "debuginfo"
 
 [dependencies]
 alkahest = "0.3.0"
@@ -27,7 +32,6 @@ clap = { version = "4.3.5", features = ["derive"] }
 clap-verbosity-flag = "2.0.1"
 crossbeam-channel = "0.5.8"
 core_affinity = "0.8.0"
-diesel = { version = "2.1.0", features = ["sqlite"] }
 dirs = "5.0.1"
 dotenvy = "0.15.7"
 embedded-graphics = "0.8.0"

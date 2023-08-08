@@ -1,5 +1,6 @@
 use crate::application::toolbar::Toolbar;
 use crate::application::widgets::keyboard::KeyboardTesterWidget;
+use crate::data::settings;
 use crate::data::settings::Settings;
 use crate::macguiver::application::{Application, UpdateResult};
 use crate::macguiver::buffer::DrawBuffer;
@@ -10,7 +11,7 @@ use embedded_graphics::Drawable;
 use sdl3::event::Event;
 
 mod icons;
-mod menu;
+pub mod menu;
 mod toolbar;
 mod widgets;
 
@@ -71,9 +72,9 @@ impl Panel for KeyboardTesterView {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TopLevelViewType {
-    KeyboardTester,
-    IconView,
     MainMenu,
+    Settings,
+    KeyboardTester,
 }
 
 /// Top-level Views for the MiSTer application.
@@ -90,8 +91,10 @@ impl TopLevelView {
                 TopLevelViewType::KeyboardTester => {
                     Box::new(KeyboardTesterView::new(&self.settings))
                 }
-                TopLevelViewType::IconView => Box::new(icons::IconView::new(&self.settings)),
                 TopLevelViewType::MainMenu => Box::new(menu::MainMenu::new(&self.settings)),
+                TopLevelViewType::Settings => {
+                    Box::new(settings::SettingsPanel::new(&self.settings))
+                }
             };
             self.ty = ty;
         }

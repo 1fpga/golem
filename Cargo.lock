@@ -473,6 +473,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
+
+[[package]]
 name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1034,7 +1040,6 @@ dependencies = [
  "clap-verbosity-flag",
  "core_affinity",
  "crossbeam-channel",
- "diesel",
  "dirs",
  "dotenvy",
  "embedded-graphics",
@@ -1063,6 +1068,14 @@ dependencies = [
  "tracing-subscriber",
  "validator",
  "volatile",
+]
+
+[[package]]
+name = "mister-db"
+version = "0.1.0"
+dependencies = [
+ "diesel",
+ "dotenv",
 ]
 
 [[package]]

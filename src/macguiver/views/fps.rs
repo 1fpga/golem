@@ -86,6 +86,11 @@ impl<const C: usize> FpsCounter<C> {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.ticks.clear();
+        self.last_fps = 0;
+    }
+
     pub fn tick(&mut self) -> usize {
         if self.ticks.len() == C {
             self.ticks.pop_front();

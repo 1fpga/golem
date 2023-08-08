@@ -1,4 +1,14 @@
+use crate::application::{Panel, TopLevelViewType};
+use crate::macguiver::buffer::DrawBuffer;
+use crate::platform::PlatformState;
+use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::Drawable;
+use embedded_menu::interaction::InteractionType;
+use embedded_menu::selection_indicator::style::animated_triangle::AnimatedTriangle;
+use embedded_menu::{Menu, MenuStyle};
 use merge::Merge;
+use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::fmt::{Debug, Formatter};
@@ -9,8 +19,21 @@ fn show_fps_default_() -> bool {
     false
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Merge)]
-struct InnerSettings {
+#[derive(Copy, Clone)]
+pub enum NavEvents {
+    Back,
+}
+
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, Merge, Menu)]
+#[menu(
+    title = "Settings",
+    navigation(events = NavEvents, marker = ">"),
+    items = [
+        data(label = "Show FPS", field = show_fps),
+        navigation(label = "Back", details = "Exits the demo", event = NavEvents::Back)
+    ]
+)]
+pub struct InnerSettings {
     #[serde(default = "show_fps_default_")]
     #[merge(strategy = merge::overwrite)]
     show_fps: bool,
@@ -19,6 +42,121 @@ struct InnerSettings {
 impl Default for InnerSettings {
     fn default() -> Self {
         Self { show_fps: true }
+    }
+}
+
+impl InnerSettings {
+    pub fn overwrite(&mut self, other: &InnerSettings) -> bool {
+        let mut dirty = false;
+
+        if self.show_fps != other.show_fps {
+            self.show_fps = other.show_fps;
+            dirty = true;
+        }
+
+        dirty
+    }
+}
+
+type BoxedUpdateFn = Box<dyn FnMut(&PlatformState) -> Result<Option<NavEvents>, String>>;
+type BoxedDrawFn = Box<dyn Fn(&mut DrawBuffer<BinaryColor>)>;
+
+pub struct SettingsPanel {
+    settings: Settings,
+
+    // Function to update the menu.
+    update: BoxedUpdateFn,
+
+    // Function to draw the menu.
+    draw: BoxedDrawFn,
+}
+
+impl Panel for SettingsPanel {
+    fn new(settings: &Settings) -> Self {
+        let settings = settings.clone();
+        let menu = settings.inner.borrow().create_menu_with_style(
+            MenuStyle::new(BinaryColor::On)
+                .with_details_delay(250)
+                .with_animated_selection_indicator(10)
+                .with_selection_indicator(AnimatedTriangle::new(200)),
+        );
+
+        let menu = Rc::new(RefCell::new(menu));
+        let (update, draw) = {
+            let menu_update = menu.clone();
+            let menu_draw = menu.clone();
+            let settings = settings.clone();
+
+            let update = move |state: &PlatformState| {
+                let mut menu = menu_update.borrow_mut();
+                menu.update(state);
+
+                let mut result = Ok(None);
+                for ev in state.events() {
+                    if let Event::KeyDown {
+                        keycode: Some(code),
+                        ..
+                    } = ev
+                    {
+                        match code {
+                            Keycode::Escape => {
+                                result = Ok(Some(NavEvents::Back));
+                            }
+                            Keycode::Return => {
+                                result = Ok(menu.interact(InteractionType::Select));
+                            }
+                            Keycode::Up => {
+                                result = Ok(menu.interact(InteractionType::Previous));
+                            }
+                            Keycode::Down => {
+                                result = Ok(menu.interact(InteractionType::Next));
+                            }
+                            Keycode::Right => {
+                                for _ in 0..9 {
+                                    menu.interact(InteractionType::Next);
+                                }
+                                result = Ok(menu.interact(InteractionType::Next));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+
+                settings.inner.borrow_mut().overwrite(&menu.data());
+
+                result
+            };
+
+            let draw = move |target: &mut DrawBuffer<BinaryColor>| {
+                let menu = menu_draw.borrow();
+                menu.draw(target).unwrap();
+            };
+
+            (update, draw)
+        };
+
+        Self {
+            settings,
+            update: Box::new(update),
+            draw: Box::new(draw),
+        }
+    }
+
+    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
+        let action = (self.update)(state)?;
+        if let Some(action) = action {
+            match action {
+                NavEvents::Back => Ok(Some(TopLevelViewType::MainMenu)),
+            }
+        } else {
+            self.settings.update_send.send(()).unwrap();
+
+            Ok(None)
+        }
+    }
+
+    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
+        (self.draw)(target)
     }
 }
 
@@ -100,6 +238,12 @@ impl Settings {
             update_send,
             update_recv,
         })
+    }
+
+    pub fn overwrite(&mut self, other: &Settings) {
+        if self.inner.borrow_mut().overwrite(&other.inner.borrow()) {
+            let _ = self.update_send.send(());
+        }
     }
 
     pub fn on_update(&self) -> crossbeam_channel::Receiver<()> {

@@ -1,4 +1,4 @@
-use crate::application::{Panel, TopLevelView, TopLevelViewType};
+use crate::application::{Panel, TopLevelViewType};
 use crate::data::settings::Settings;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::platform::PlatformState;

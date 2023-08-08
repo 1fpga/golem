@@ -1,11 +1,9 @@
 use crate::application::widgets::network::{NetworkWidget, NetworkWidgetView};
 use crate::data::settings::Settings;
-use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::views::clock::DateTimeWidget;
 use crate::macguiver::views::fps::{FpsCounter, FpsCounterView};
-use crate::macguiver::views::Widget;
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::{Dimensions, OriginDimensions, Point, Size};
+use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::primitives::Rectangle;
@@ -114,7 +112,7 @@ impl Toolbar {
             self.set_show_fps(self.settings.show_fps());
         }
 
-        let mut should_redraw = false;
+        let mut should_redraw;
 
         should_redraw = self.clock.update() || self.network.update();
         if let Some(ref mut fps) = self.fps {

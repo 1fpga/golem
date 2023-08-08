@@ -1,5 +1,4 @@
 use crate::application;
-use crate::macguiver::application::Application;
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
