@@ -1,4 +1,4 @@
-use crate::macguiver::events::keyboard::KeycodeMap;
+use crate::macguiver::events::keyboard::{Keycode, KeycodeMap};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Point, Size};
 use embedded_graphics::mono_font::MonoTextStyle;
@@ -22,8 +22,12 @@ impl KeyboardTesterWidget {
         }
     }
 
-    pub fn set_state(&mut self, state: KeycodeMap) {
-        self.state = state;
+    pub fn insert(&mut self, key: Keycode) {
+        self.state.insert(key);
+    }
+
+    pub fn remove(&mut self, key: Keycode) {
+        self.state.remove(key);
     }
 }
 

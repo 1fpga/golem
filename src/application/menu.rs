@@ -1,17 +1,31 @@
-use crate::application::{Panel, TopLevelView};
+use crate::application::{Panel, TopLevelView, TopLevelViewType};
+use crate::data::settings::Settings;
+use crate::macguiver::application::Application;
 use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::events::keyboard::Keycode;
 use crate::platform::PlatformState;
-use embedded_graphics::mono_font::ascii::FONT_6X10;
+use embedded_graphics::mono_font::ascii::{FONT_6X10, FONT_8X13};
 use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::Drawable;
 use embedded_menu::interaction::InteractionType;
 use embedded_menu::items::NavigationItem;
+use embedded_menu::selection_indicator::style::border::Border;
 use embedded_menu::selection_indicator::style::triangle::Triangle;
-use embedded_menu::{Menu, MenuStyle};
+use embedded_menu::{DisplayScrollbar, Menu, MenuStyle};
+use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-type BoxedUpdateFn = Box<dyn FnMut(&PlatformState) -> Result<Option<TopLevelView>, String>>;
+mod style;
+
+#[derive(Debug, Clone, Copy)]
+pub enum MenuAction {
+    Back,
+    Settings,
+    StartRom,
+}
+
+type BoxedUpdateFn = Box<dyn FnMut(&PlatformState) -> Result<Option<MenuAction>, String>>;
 type BoxedDrawFn = Box<dyn Fn(&mut DrawBuffer<BinaryColor>)>;
 
 pub struct MainMenu {
@@ -23,19 +37,19 @@ pub struct MainMenu {
 }
 
 impl Panel for MainMenu {
-    type NextView = TopLevelView;
-
-    fn new() -> Self {
+    fn new(_settings: &Settings) -> Self {
         let menu = Menu::with_style(
-            "Menu",
+            "Main Menu",
             MenuStyle::new(BinaryColor::On)
                 .with_animated_selection_indicator(5)
                 .with_selection_indicator(Triangle)
+                .with_scrollbar_style(DisplayScrollbar::Auto)
+                .with_title_font(&FONT_8X13)
                 .with_font(&FONT_6X10),
         )
         .add_item(
             NavigationItem::new("Settings...", MenuAction::Settings)
-                .with_marker(">")
+                .with_marker(">>")
                 .with_detail_text("Lorem ipsum dolor sit amet, in per ."),
         )
         .add_item(
@@ -55,20 +69,37 @@ impl Panel for MainMenu {
                 let mut menu = menu_update.borrow_mut();
                 menu.update(state);
 
-                if state.pressed().contains(Keycode::Escape) {
-                    return Ok(Some(MenuAction::Back));
-                }
-                if state.pressed().contains(Keycode::Return) {
-                    return Ok(menu.interact(InteractionType::Select));
-                }
-                if state.pressed().contains(Keycode::Up) {
-                    return Ok(menu.interact(InteractionType::Previous));
-                }
-                if state.pressed().contains(Keycode::Down) {
-                    return Ok(menu.interact(InteractionType::Next));
+                for ev in state.events() {
+                    if let Event::KeyDown {
+                        keycode: Some(code),
+                        ..
+                    } = ev
+                    {
+                        match code {
+                            Keycode::Escape => {
+                                return Ok(Some(MenuAction::Back));
+                            }
+                            Keycode::Return => {
+                                return Ok(menu.interact(InteractionType::Select));
+                            }
+                            Keycode::Up => {
+                                return Ok(menu.interact(InteractionType::Previous));
+                            }
+                            Keycode::Down => {
+                                return Ok(menu.interact(InteractionType::Next));
+                            }
+                            Keycode::Right => {
+                                for _ in 0..9 {
+                                    menu.interact(InteractionType::Next);
+                                }
+                                return Ok(menu.interact(InteractionType::Next));
+                            }
+                            _ => {}
+                        }
+                    }
                 }
 
-                Ok(None)
+                return Ok(None);
             };
 
             let draw = move |target: &mut DrawBuffer<BinaryColor>| {
@@ -85,13 +116,13 @@ impl Panel for MainMenu {
         }
     }
 
-    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
+    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
         let action = (self.update)(state)?;
         if let Some(action) = action {
             match action {
-                MenuAction::Back => Ok(Some(TopLevelView::menu())),
-                MenuAction::Settings => Ok(Some(TopLevelView::icon())),
-                MenuAction::StartRom => Ok(Some(TopLevelView::keyboard_tester())),
+                MenuAction::Back => Ok(Some(TopLevelViewType::MainMenu)),
+                MenuAction::Settings => Ok(Some(TopLevelViewType::IconView)),
+                MenuAction::StartRom => Ok(Some(TopLevelViewType::KeyboardTester)),
             }
         } else {
             Ok(None)

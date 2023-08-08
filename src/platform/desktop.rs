@@ -33,17 +33,12 @@ impl PlatformInner for DesktopWindowManager {
     fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, _flags: Flags) {
         let mut window_title = self.platform.window("Title", sizes::TITLE);
         let mut window_osd = self.platform.window("Title", sizes::MAIN);
-
-        let mut platform_state: PlatformState = PlatformState::new(sizes::MAIN);
+        let mut title_buffer = DrawBuffer::new(sizes::TITLE);
+        let mut osd = DrawBuffer::new(sizes::MAIN);
 
         self.platform.event_loop(|state| {
-            let mut title_buffer = DrawBuffer::new(sizes::TITLE);
-            let mut osd = DrawBuffer::new(sizes::MAIN);
-            platform_state.new_frame();
-
-            state.events().for_each(|event| {
-                platform_state.handle_event(event);
-            });
+            let mut platform_state: PlatformState =
+                PlatformState::new(sizes::MAIN, state.events().collect());
 
             match app.update(&platform_state) {
                 UpdateResult::Redraw(title, main) => {

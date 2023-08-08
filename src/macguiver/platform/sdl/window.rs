@@ -4,7 +4,6 @@ use crate::macguiver::platform::PlatformWindow;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::{PixelColor, Rgb888};
-use std::time::Instant;
 
 mod sdl_window;
 use crate::macguiver::platform::sdl::SdlPlatform;
@@ -13,7 +12,6 @@ use sdl_window::SdlWindow;
 pub struct Window<C: PixelColor> {
     framebuffer: OutputImage<Rgb888>,
     inner: SdlWindow,
-    frame_start: Instant,
 
     phantom: std::marker::PhantomData<C>,
 }
@@ -30,7 +28,6 @@ impl<C: PixelColor + From<Rgb888> + Into<Rgb888>> Window<C> {
         Self {
             framebuffer,
             inner,
-            frame_start: Instant::now(),
             phantom: std::marker::PhantomData,
         }
     }

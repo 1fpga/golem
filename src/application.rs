@@ -1,27 +1,24 @@
 use crate::application::toolbar::Toolbar;
 use crate::application::widgets::keyboard::KeyboardTesterWidget;
+use crate::data::settings::Settings;
 use crate::macguiver::application::{Application, UpdateResult};
 use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::events::keyboard::Keycode;
-use crate::macguiver::views::Widget;
 use crate::main_inner::Flags;
 use crate::platform::{PlatformState, WindowManager};
-use embedded_graphics::geometry::Point;
-use embedded_graphics::image::{Image, ImageRaw};
-use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::text::Text;
 use embedded_graphics::Drawable;
+use sdl3::event::Event;
 
+mod icons;
 mod menu;
 mod toolbar;
 mod widgets;
 
 pub trait Panel {
-    type NextView: Panel;
-
-    fn new() -> Self;
-    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String>;
+    fn new(settings: &Settings) -> Self
+    where
+        Self: Sized;
+    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String>;
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>);
 }
 
@@ -30,18 +27,38 @@ pub struct KeyboardTesterView {
 }
 
 impl Panel for KeyboardTesterView {
-    type NextView = TopLevelView;
-
-    fn new() -> Self {
+    fn new(_settings: &Settings) -> Self {
         Self {
             widget: KeyboardTesterWidget::new(),
         }
     }
 
-    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelView>, String> {
-        self.widget.set_state(*state.keys());
-        if state.pressed().contains(Keycode::Tab) {
-            Ok(Some(TopLevelView::menu()))
+    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
+        let mut should_next = false;
+
+        for event in state.events() {
+            match event {
+                Event::KeyDown {
+                    keycode: Some(keycode),
+                    ..
+                } => {
+                    if *keycode == sdl3::keyboard::Keycode::Tab {
+                        should_next = true;
+                    }
+                    self.widget.insert((*keycode).into());
+                }
+                Event::KeyUp {
+                    keycode: Some(keycode),
+                    ..
+                } => {
+                    self.widget.remove((*keycode).into());
+                }
+                _ => {}
+            }
+        }
+
+        if should_next {
+            Ok(Some(TopLevelViewType::MainMenu))
         } else {
             Ok(None)
         }
@@ -52,138 +69,70 @@ impl Panel for KeyboardTesterView {
     }
 }
 
-pub struct IconView;
-
-impl Panel for IconView {
-    type NextView = TopLevelView;
-
-    fn new() -> Self {
-        Self {}
-    }
-
-    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
-        if state.pressed().contains(Keycode::Tab) {
-            Ok(Some(TopLevelView::keyboard_tester()))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
-        let font_images = [
-            include_bytes!("../assets/icons/arrow_down.raw"),
-            include_bytes!("../assets/icons/arrow_left.raw"),
-            include_bytes!("../assets/icons/arrow_right.raw"),
-            include_bytes!("../assets/icons/arrow_right_mini.raw"),
-            include_bytes!("../assets/icons/arrow_up.raw"),
-            include_bytes!("../assets/icons/atari_left.raw"),
-            include_bytes!("../assets/icons/atari_right.raw"),
-            include_bytes!("../assets/icons/battery_charging.raw"),
-            include_bytes!("../assets/icons/battery_empty.raw"),
-            include_bytes!("../assets/icons/battery_full.raw"),
-            include_bytes!("../assets/icons/battery_half.raw"),
-            include_bytes!("../assets/icons/bluetooth.raw"),
-            include_bytes!("../assets/icons/box_empty.raw"),
-            include_bytes!("../assets/icons/box_fill1.raw"),
-            include_bytes!("../assets/icons/box_fill2.raw"),
-            include_bytes!("../assets/icons/box_fill3.raw"),
-            include_bytes!("../assets/icons/box_fill4.raw"),
-            include_bytes!("../assets/icons/box_top.raw"),
-            include_bytes!("../assets/icons/burger_menu_2.raw"),
-            include_bytes!("../assets/icons/burger_menu_3.raw"),
-            include_bytes!("../assets/icons/burger_menu_4.raw"),
-            include_bytes!("../assets/icons/checkbox_empty.raw"),
-            include_bytes!("../assets/icons/checkbox_full.raw"),
-            include_bytes!("../assets/icons/checkbox_mark.raw"),
-            include_bytes!("../assets/icons/dot_middle.raw"),
-            include_bytes!("../assets/icons/lock_locked.raw"),
-            include_bytes!("../assets/icons/lock_unlocked.raw"),
-            include_bytes!("../assets/icons/mem_32.raw"),
-            include_bytes!("../assets/icons/mem_64.raw"),
-            include_bytes!("../assets/icons/mem_128.raw"),
-            include_bytes!("../assets/icons/mem_none.raw"),
-            include_bytes!("../assets/icons/network_eth.raw"),
-            include_bytes!("../assets/icons/network_globe.raw"),
-            include_bytes!("../assets/icons/network_wifi.raw"),
-            include_bytes!("../assets/icons/null.raw"),
-            include_bytes!("../assets/icons/speaker_empty.raw"),
-            include_bytes!("../assets/icons/speaker_full.raw"),
-        ];
-
-        for (i, bin) in font_images.iter().enumerate() {
-            let i = i as i32;
-            Image::new(
-                &ImageRaw::<BinaryColor>::new(*bin, 8),
-                Point::new(12 + (i % 16) * 10, 12 + (i / 16) * 10),
-            )
-            .draw(target)
-            .unwrap();
-        }
-
-        Text::new(
-            "0\n1\n2\n3\n4\n5\n6\n7\n8\n9\nA\nB\nC\nD\nE\nF",
-            Point::new(2, 19),
-            MonoTextStyle::new(
-                &embedded_graphics::mono_font::ascii::FONT_6X10,
-                BinaryColor::On,
-            ),
-        )
-        .draw(target)
-        .unwrap();
-    }
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum TopLevelViewType {
+    KeyboardTester,
+    IconView,
+    MainMenu,
 }
 
 /// Top-level Views for the MiSTer application.
-pub enum TopLevelView {
-    KeyboardTester(KeyboardTesterView),
-    IconView(IconView),
-    MainMenu(menu::MainMenu),
+pub struct TopLevelView {
+    ty: TopLevelViewType,
+    panel: Box<dyn Panel>,
+    settings: Settings,
 }
 
 impl TopLevelView {
-    pub fn keyboard_tester() -> Self {
-        Self::KeyboardTester(KeyboardTesterView::new())
-    }
-
-    pub fn icon() -> Self {
-        Self::IconView(IconView::new())
-    }
-
-    pub fn menu() -> Self {
-        Self::MainMenu(menu::MainMenu::new())
+    pub fn next(&mut self, ty: TopLevelViewType) {
+        if self.ty != ty {
+            self.panel = match ty {
+                TopLevelViewType::KeyboardTester => {
+                    Box::new(KeyboardTesterView::new(&self.settings))
+                }
+                TopLevelViewType::IconView => Box::new(icons::IconView::new(&self.settings)),
+                TopLevelViewType::MainMenu => Box::new(menu::MainMenu::new(&self.settings)),
+            };
+            self.ty = ty;
+        }
     }
 }
 
 impl Panel for TopLevelView {
-    type NextView = TopLevelView;
-
-    fn new() -> Self {
-        Self::KeyboardTester(KeyboardTesterView::new())
+    fn new(settings: &Settings) -> Self {
+        Self {
+            ty: TopLevelViewType::MainMenu,
+            panel: Box::new(menu::MainMenu::new(settings)),
+            settings: settings.clone(),
+        }
     }
 
-    fn update(&mut self, state: &PlatformState) -> Result<Option<Self::NextView>, String> {
-        match self {
-            TopLevelView::KeyboardTester(inner) => inner.update(state),
-            TopLevelView::IconView(inner) => inner.update(state),
-            TopLevelView::MainMenu(inner) => inner.update(state),
-        }
+    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
+        self.panel.update(state)
     }
 
     fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
-        match self {
-            TopLevelView::KeyboardTester(inner) => inner.draw(target),
-            TopLevelView::IconView(inner) => inner.draw(target),
-            TopLevelView::MainMenu(inner) => inner.draw(target),
-        }
+        self.panel.draw(target);
     }
 }
 
 pub struct MiSTer {
-    toolbar: toolbar::Toolbar,
+    toolbar: Toolbar,
+    settings: Settings,
     view: TopLevelView,
 }
 
 impl MiSTer {
+    pub fn new() -> Self {
+        let settings = Settings::new();
+
+        Self {
+            toolbar: Toolbar::new(&settings),
+            view: TopLevelView::new(&settings),
+            settings,
+        }
+    }
+
     pub fn run(&mut self, flags: Flags) -> Result<(), String> {
         let mut window_manager = WindowManager::default();
         window_manager.run(self, flags)
@@ -193,20 +142,20 @@ impl MiSTer {
 impl Application for MiSTer {
     type Color = BinaryColor;
 
-    fn new() -> Self
-    where
-        Self: Sized,
-    {
-        Self {
-            toolbar: Toolbar::default(),
-            view: TopLevelView::new(),
-        }
+    fn settings(&self) -> &Settings {
+        &self.settings
     }
 
     fn update(&mut self, state: &PlatformState) -> UpdateResult {
+        if state.events().any(|ev| matches!(ev, Event::Quit { .. })) {
+            return UpdateResult::Quit;
+        }
+
         let should_redraw_toolbar = self.toolbar.update();
         match self.view.update(state) {
-            Ok(Some(next_view)) => self.view = next_view,
+            Ok(Some(next_view)) => {
+                self.view.next(next_view);
+            }
             Ok(None) => {}
             Err(e) => panic!("{}", e),
         };
@@ -215,7 +164,7 @@ impl Application for MiSTer {
     }
 
     fn draw_title(&self, target: &mut DrawBuffer<BinaryColor>) {
-        self.toolbar.draw(target);
+        self.toolbar.draw(target).unwrap();
     }
 
     fn draw_main(&self, target: &mut DrawBuffer<BinaryColor>) {

@@ -18,6 +18,7 @@ pub mod support;
 pub mod user_io;
 
 mod application;
+mod data;
 mod main_inner;
 
 pub mod config;

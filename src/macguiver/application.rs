@@ -1,4 +1,5 @@
 use super::buffer::DrawBuffer;
+use crate::data::settings::Settings;
 use crate::platform::PlatformState;
 use embedded_graphics::pixelcolor::PixelColor;
 
@@ -11,9 +12,7 @@ pub enum UpdateResult {
 pub trait Application {
     type Color: PixelColor;
 
-    fn new() -> Self
-    where
-        Self: Sized;
+    fn settings(&self) -> &Settings;
 
     fn update(&mut self, state: &PlatformState) -> UpdateResult;
 

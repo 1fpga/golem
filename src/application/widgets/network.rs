@@ -1,6 +1,6 @@
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Dimensions, Point, Size};
-use embedded_graphics::image::{Image, ImageDrawable, ImageRaw};
+use embedded_graphics::image::{Image, ImageRaw};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::Transform;
 use embedded_graphics::primitives::Rectangle;

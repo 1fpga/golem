@@ -8,13 +8,12 @@
 //!
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
 use crate::macguiver::application::Application;
-use crate::macguiver::events::keyboard::KeycodeMap;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 use sdl3::event::Event;
-use tracing::debug;
+use tracing::trace;
 
 cfg_if! {
     if #[cfg(any(
@@ -50,101 +49,33 @@ mod sizes {
 
 #[derive(Default)]
 pub struct PlatformState {
-    keys: KeycodeMap,
-    pressed: KeycodeMap,
-
+    events: Vec<Event>,
     should_quit: bool,
     target_size: Size,
 }
 
 impl PlatformState {
-    pub fn new(target_size: Size) -> Self {
+    pub fn new(target_size: Size, events: Vec<Event>) -> Self {
         Self {
             target_size,
+            events,
             ..Default::default()
         }
     }
 
     pub fn new_frame(&mut self) {
-        self.pressed.clear();
         self.should_quit = false;
     }
 
-    pub fn keys(&self) -> &KeycodeMap {
-        &self.keys
-    }
-
-    pub fn pressed(&self) -> &KeycodeMap {
-        &self.pressed
-    }
-
-    pub fn should_quit(&self) -> bool {
+    pub fn should_quit(&mut self) -> bool {
         self.should_quit
     }
 
-    pub fn handle_event(&mut self, event: Event) {
-        debug!("event: {:?}", event);
-        match event {
-            Event::Quit { .. } => {
-                self.should_quit = true;
-            }
-            Event::KeyDown {
-                keycode: Some(code),
-                ..
-            } => {
-                self.keys.insert(code.into());
-                self.pressed.insert(code.into());
-            }
-            Event::KeyUp {
-                keycode: Some(code),
-                ..
-            } => {
-                self.keys.remove(code.into());
-            }
-            Event::TextEditing { .. } => {}
-            Event::TextInput { .. } => {}
-            Event::MouseMotion { .. } => {}
-            Event::MouseButtonDown { .. } => {}
-            Event::MouseButtonUp { .. } => {}
-            Event::MouseWheel { .. } => {}
-            Event::JoyAxisMotion { .. } => {}
-            Event::JoyHatMotion { .. } => {}
-            Event::JoyButtonDown { .. } => {}
-            Event::JoyButtonUp { .. } => {}
-            Event::JoyDeviceAdded { .. } => {}
-            Event::JoyDeviceRemoved { .. } => {}
-            Event::ControllerAxisMotion { .. } => {}
-            Event::ControllerButtonDown { .. } => {}
-            Event::ControllerButtonUp { .. } => {}
-            Event::ControllerDeviceAdded { .. } => {}
-            Event::ControllerDeviceRemoved { .. } => {}
-            Event::ControllerDeviceRemapped { .. } => {}
-            Event::ControllerTouchpadDown { .. } => {}
-            Event::ControllerTouchpadMotion { .. } => {}
-            Event::ControllerTouchpadUp { .. } => {}
-            #[cfg(feature = "sdl2/hidapi")]
-            Event::ControllerSensorUpdated { .. } => {}
-            Event::FingerDown { .. } => {}
-            Event::FingerUp { .. } => {}
-            Event::FingerMotion { .. } => {}
-            Event::DollarRecord { .. } => {}
-            Event::MultiGesture { .. } => {}
-            Event::ClipboardUpdate { .. } => {}
-            Event::DropFile { .. } => {}
-            Event::DropText { .. } => {}
-            Event::DropBegin { .. } => {}
-            Event::DropComplete { .. } => {}
-            Event::AudioDeviceAdded { .. } => {}
-            Event::AudioDeviceRemoved { .. } => {}
-            Event::RenderTargetsReset { .. } => {}
-            Event::RenderDeviceReset { .. } => {}
-            Event::User { .. } => {}
-            Event::Unknown { .. } => {}
-            Event::DisplayOrientation { .. } => {}
-            Event::DisplayConnected { .. } => {}
-            Event::DisplayDisconnected { .. } => {}
-            _ => {}
-        }
+    pub fn events(&self) -> impl Iterator<Item = &'_ Event> + '_ {
+        self.events.iter().map(|ev| {
+            trace!("Event: {:?}", ev);
+            ev
+        })
     }
 }
 
