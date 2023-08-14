@@ -4,7 +4,7 @@ use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
 use crate::platform::de10::buffer::OsdDisplayView;
-use crate::platform::{PlatformInner, PlatformState};
+use crate::platform::{MiSTerPlatform, PlatformState};
 use crate::{osd, spi};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Dimensions;
@@ -95,7 +95,7 @@ impl Default for De10Platform {
 //     }
 // }
 
-impl PlatformInner for De10Platform {
+impl MiSTerPlatform for De10Platform {
     type Color = BinaryColor;
 
     fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, flags: Flags) {

@@ -1,0 +1,13 @@
+-- Your SQL goes here
+
+CREATE TABLE cores (
+    id INTEGER PRIMARY KEY NOT NULL,
+    name VARCHAR NOT NULL,
+    user_name VARCHAR,
+    path VARCHAR NOT NULL,
+    author VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    extensions VARCHAR
+);

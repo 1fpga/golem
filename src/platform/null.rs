@@ -1,11 +1,11 @@
 use crate::macguiver::application::Application;
-use crate::platform::PlatformInner;
+use crate::platform::MiSTerPlatform;
 use embedded_graphics::pixelcolor::BinaryColor;
 
 #[derive(Default)]
 pub struct NullWindowManager {}
 
-impl PlatformInner for NullWindowManager {
+impl MiSTerPlatform for NullWindowManager {
     type Color = BinaryColor;
 
     fn run(&mut self, _app: &mut impl Application<Color = Self::Color>) {

@@ -1,144 +1,68 @@
+use crate::application::panels::input_tester::input_tester;
 use crate::application::toolbar::Toolbar;
-use crate::application::widgets::keyboard::KeyboardTesterWidget;
-use crate::data::settings;
 use crate::data::settings::Settings;
-use crate::macguiver::application::{Application, UpdateResult};
+use crate::macguiver::application::{Application, EventLoopState};
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
-use crate::platform::{PlatformState, WindowManager};
+use crate::platform::{MiSTerPlatform, WindowManager};
+use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
+use std::sync::{Arc, RwLock};
 
-mod icons;
-pub mod menu;
+// mod icons;
+// pub mod menu;
+
+mod panels;
 mod toolbar;
 mod widgets;
 
-pub trait Panel {
-    fn new(settings: &Settings) -> Self
-    where
-        Self: Sized;
-    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String>;
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>);
-}
-
-pub struct KeyboardTesterView {
-    widget: KeyboardTesterWidget,
-}
-
-impl Panel for KeyboardTesterView {
-    fn new(_settings: &Settings) -> Self {
-        Self {
-            widget: KeyboardTesterWidget::new(),
-        }
-    }
-
-    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
-        let mut should_next = false;
-
-        for event in state.events() {
-            match event {
-                Event::KeyDown {
-                    keycode: Some(keycode),
-                    ..
-                } => {
-                    if *keycode == sdl3::keyboard::Keycode::Tab {
-                        should_next = true;
-                    }
-                    self.widget.insert((*keycode).into());
-                }
-                Event::KeyUp {
-                    keycode: Some(keycode),
-                    ..
-                } => {
-                    self.widget.remove((*keycode).into());
-                }
-                _ => {}
-            }
-        }
-
-        if should_next {
-            Ok(Some(TopLevelViewType::MainMenu))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
-        self.widget.draw(target).unwrap();
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TopLevelViewType {
-    MainMenu,
-    Settings,
+    // MainMenu,
+    // Settings,
     KeyboardTester,
+    Quit,
 }
 
-/// Top-level Views for the MiSTer application.
-pub struct TopLevelView {
-    ty: TopLevelViewType,
-    panel: Box<dyn Panel>,
-    settings: Settings,
-}
-
-impl TopLevelView {
-    pub fn next(&mut self, ty: TopLevelViewType) {
-        if self.ty != ty {
-            self.panel = match ty {
-                TopLevelViewType::KeyboardTester => {
-                    Box::new(KeyboardTesterView::new(&self.settings))
-                }
-                TopLevelViewType::MainMenu => Box::new(menu::MainMenu::new(&self.settings)),
-                TopLevelViewType::Settings => {
-                    Box::new(settings::SettingsPanel::new(&self.settings))
-                }
-            };
-            self.ty = ty;
+impl TopLevelViewType {
+    pub fn function(&self) -> Option<fn(&mut MiSTer) -> TopLevelViewType> {
+        match self {
+            TopLevelViewType::KeyboardTester => Some(panels::input_tester::input_tester),
+            TopLevelViewType::Quit => None,
         }
-    }
-}
-
-impl Panel for TopLevelView {
-    fn new(settings: &Settings) -> Self {
-        Self {
-            ty: TopLevelViewType::MainMenu,
-            panel: Box::new(menu::MainMenu::new(settings)),
-            settings: settings.clone(),
-        }
-    }
-
-    fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
-        self.panel.update(state)
-    }
-
-    fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
-        self.panel.draw(target);
     }
 }
 
 pub struct MiSTer {
     toolbar: Toolbar,
     settings: Settings,
-    view: TopLevelView,
+    database: Arc<RwLock<mister_db::Connection>>,
+    view: TopLevelViewType,
+
+    pub platform: WindowManager,
+    main_buffer: DrawBuffer<BinaryColor>,
+    toolbar_buffer: DrawBuffer<BinaryColor>,
 }
 
 impl MiSTer {
-    pub fn new() -> Self {
+    pub fn new(platform: WindowManager) -> Self {
         let settings = Settings::new();
+        let database = mister_db::establish_connection();
+        let database = Arc::new(RwLock::new(database));
+        let toolbar_size = platform.toolbar_dimensions();
+        let main_size = platform.main_dimensions();
 
         Self {
-            toolbar: Toolbar::new(&settings),
-            view: TopLevelView::new(&settings),
+            toolbar: Toolbar::new(&settings, database.clone()),
+            view: TopLevelViewType::KeyboardTester,
+            database,
             settings,
+            platform,
+            main_buffer: DrawBuffer::new(main_size),
+            toolbar_buffer: DrawBuffer::new(toolbar_size),
         }
-    }
-
-    pub fn run(&mut self, flags: Flags) -> Result<(), String> {
-        let mut window_manager = WindowManager::default();
-        window_manager.run(self, flags)
     }
 }
 
@@ -149,28 +73,45 @@ impl Application for MiSTer {
         &self.settings
     }
 
-    fn update(&mut self, state: &PlatformState) -> UpdateResult {
-        if state.events().any(|ev| matches!(ev, Event::Quit { .. })) {
-            return UpdateResult::Quit;
-        }
-
-        let should_redraw_toolbar = self.toolbar.update();
-        match self.view.update(state) {
-            Ok(Some(next_view)) => {
-                self.view.next(next_view);
+    fn run(&mut self, _flags: Flags) {
+        self.event_loop(|app, state| match app.view {
+            TopLevelViewType::KeyboardTester => {
+                app.view = input_tester(app);
+                None
             }
-            Ok(None) => {}
-            Err(e) => panic!("{}", e),
-        };
-
-        UpdateResult::Redraw(should_redraw_toolbar, true)
+            TopLevelViewType::Quit => Some(TopLevelViewType::Quit),
+        });
     }
 
-    fn draw_title(&self, target: &mut DrawBuffer<BinaryColor>) {
-        self.toolbar.draw(target).unwrap();
+    fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color> {
+        &mut self.main_buffer
     }
 
-    fn draw_main(&self, target: &mut DrawBuffer<BinaryColor>) {
-        self.view.draw(target);
+    fn event_loop(
+        &mut self,
+        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<TopLevelViewType>,
+    ) -> TopLevelViewType {
+        loop {
+            let events = self.platform.events();
+            for event in events.iter() {
+                if let Event::Quit { .. } = event {
+                    return TopLevelViewType::Quit;
+                }
+            }
+
+            let mut state = EventLoopState::new(events);
+
+            if let Some(r) = loop_fn(self, &mut state) {
+                break r;
+            }
+
+            if self.toolbar.update() {
+                self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
+                self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
+            }
+
+            self.platform.update_main(&self.main_buffer);
+            self.platform.update_toolbar(&self.toolbar_buffer);
+        }
     }
 }

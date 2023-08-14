@@ -3,6 +3,8 @@ use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
 
+use crate::macguiver::application::Application;
+use crate::platform::WindowManager;
 use tracing::Level;
 use tracing_subscriber::fmt::Subscriber;
 
@@ -63,9 +65,10 @@ pub fn main() -> Result<(), String> {
     // won't work. We set the current directory to be in the MiSTer
     // executable.
     // TODO: fix relative paths everywhere.
-    std::env::set_current_dir(std::env::current_exe().unwrap().parent().unwrap()).unwrap();
+    // std::env::set_current_dir(std::env::current_exe().unwrap().parent().unwrap()).unwrap();
 
     // Create the application and run it.
-    let mut app = application::MiSTer::new();
-    app.run(opts)
+    let mut app = application::MiSTer::new(WindowManager::default());
+    app.run(opts);
+    Ok(())
 }

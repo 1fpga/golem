@@ -1,66 +1,60 @@
-use crate::macguiver::application::{Application, UpdateResult};
+use crate::macguiver::application::Application;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{
-    BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform,
+    BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform, Window,
 };
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
-use crate::platform::{sizes, PlatformInner, PlatformState};
+use crate::platform::{sizes, MiSTerPlatform, PlatformState};
+use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::DrawTarget;
+use sdl3::event::Event;
 pub use DesktopWindowManager as PlatformWindowManager;
 
 pub struct DesktopWindowManager {
     platform: SdlPlatform<BinaryColor>,
+    window_title: Window<BinaryColor>,
+    window_main: Window<BinaryColor>,
 }
 
 impl Default for DesktopWindowManager {
     fn default() -> Self {
-        let platform = SdlPlatform::init(SdlInitState::new(
+        let mut platform = SdlPlatform::init(SdlInitState::new(
             OutputSettingsBuilder::new()
                 .scale(3)
                 .theme(BinaryColorTheme::LcdBlue)
                 .build(),
         ));
+        let mut window_title = platform.window("Title", sizes::TITLE);
+        let mut window_main = platform.window("Title", sizes::MAIN);
 
-        Self { platform }
+        Self {
+            platform,
+            window_title,
+            window_main,
+        }
     }
 }
 
-impl PlatformInner for DesktopWindowManager {
+impl MiSTerPlatform for DesktopWindowManager {
     type Color = BinaryColor;
 
-    fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, _flags: Flags) {
-        let mut window_title = self.platform.window("Title", sizes::TITLE);
-        let mut window_osd = self.platform.window("Title", sizes::MAIN);
-        let mut title_buffer = DrawBuffer::new(sizes::TITLE);
-        let mut osd = DrawBuffer::new(sizes::MAIN);
+    fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {
+        self.window_title.update(buffer);
+    }
+    fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
+        self.window_main.update(buffer);
+    }
 
-        self.platform.event_loop(|state| {
-            let mut platform_state: PlatformState =
-                PlatformState::new(sizes::MAIN, state.events().collect());
+    fn toolbar_dimensions(&self) -> Size {
+        sizes::TITLE
+    }
+    fn main_dimensions(&self) -> Size {
+        sizes::MAIN
+    }
 
-            match app.update(&platform_state) {
-                UpdateResult::Redraw(title, main) => {
-                    if title {
-                        title_buffer.clear(BinaryColor::Off).unwrap();
-                        app.draw_title(&mut title_buffer);
-                        title_buffer.invert();
-                        window_title.update(&title_buffer);
-                    }
-                    if main {
-                        osd.clear(BinaryColor::Off).unwrap();
-                        app.draw_main(&mut osd);
-                        window_osd.update(&osd);
-                    }
-                }
-                UpdateResult::NoRedraw => {
-                    std::thread::sleep(std::time::Duration::from_millis(10));
-                }
-                UpdateResult::Quit => return true,
-            }
-
-            platform_state.should_quit()
-        });
+    fn events(&mut self) -> Vec<Event> {
+        self.platform.events()
     }
 }

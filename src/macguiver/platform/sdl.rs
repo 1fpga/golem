@@ -60,6 +60,10 @@ impl<C: PixelColor> SdlPlatform<C> {
     fn with<R>(&mut self, function: impl FnOnce(&mut sdl3::Sdl) -> R) -> R {
         SDL_CONTEXT.with(|ctx| function(&mut ctx.borrow_mut()))
     }
+
+    pub fn events(&mut self) -> Vec<Event> {
+        self.event_pump.borrow_mut().poll_iter().collect()
+    }
 }
 
 impl<C> Platform for SdlPlatform<C>

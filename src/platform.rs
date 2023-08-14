@@ -8,6 +8,7 @@
 //!
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
 use crate::macguiver::application::Application;
+use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
@@ -85,10 +86,16 @@ impl OriginDimensions for PlatformState {
     }
 }
 
-trait PlatformInner {
+pub trait MiSTerPlatform {
     type Color: PixelColor;
 
-    fn run(&mut self, application: &mut impl Application<Color = BinaryColor>, flags: Flags);
+    fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>);
+    fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>);
+
+    fn toolbar_dimensions(&self) -> Size;
+    fn main_dimensions(&self) -> Size;
+
+    fn events(&mut self) -> Vec<Event>;
 }
 
 /// The [WindowManager] structure is responsible for managing and holding the state
@@ -106,13 +113,26 @@ pub struct WindowManager {
     inner: PlatformWindowManager,
 }
 
-impl WindowManager {
-    pub fn run(
-        &mut self,
-        application: &mut impl Application<Color = BinaryColor>,
-        flags: Flags,
-    ) -> Result<(), String> {
-        self.inner.run(application, flags);
-        Ok(())
+impl WindowManager {}
+
+impl MiSTerPlatform for WindowManager {
+    type Color = BinaryColor;
+
+    fn update_toolbar(&mut self, buffer: &DrawBuffer<BinaryColor>) {
+        self.inner.update_toolbar(buffer);
+    }
+    fn update_main(&mut self, buffer: &DrawBuffer<BinaryColor>) {
+        self.inner.update_main(buffer);
+    }
+
+    fn toolbar_dimensions(&self) -> Size {
+        self.inner.toolbar_dimensions()
+    }
+    fn main_dimensions(&self) -> Size {
+        self.inner.main_dimensions()
+    }
+
+    fn events(&mut self) -> Vec<Event> {
+        self.inner.events()
     }
 }

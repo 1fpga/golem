@@ -148,7 +148,7 @@ pub enum ConfigError {
     IniError(#[from] ini::Error),
 
     #[error("Could not read JSON file: {0}")]
-    JsonError(#[from] serde_json::Error),
+    JsonError(#[from] json5::Error),
 }
 
 /// A helper function to read minutes into durations from the config.
@@ -936,7 +936,7 @@ impl Config {
     pub fn from_json<R: io::Read>(mut content: R) -> Result<Self, ConfigError> {
         let mut c = String::new();
         content.read_to_string(&mut c)?;
-        Ok(serde_json::from_str(&c)?)
+        Ok(json5::from_str(&c)?)
     }
 
     pub fn load(path: impl AsRef<Path>) -> Result<Self, ConfigError> {

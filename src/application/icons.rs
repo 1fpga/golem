@@ -9,11 +9,12 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::text::Text;
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
+use std::sync::{Arc, RwLock};
 
 pub struct IconView;
 
 impl Panel for IconView {
-    fn new(_settings: &Settings) -> Self
+    fn new(_settings: &Settings, _database: Arc<RwLock<mister_db::Connection>>) -> Self
     where
         Self: Sized,
     {

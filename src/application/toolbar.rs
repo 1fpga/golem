@@ -12,6 +12,7 @@ use embedded_graphics::Drawable;
 use embedded_layout::align::{horizontal, vertical, Align};
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::Views;
+use std::sync::{Arc, RwLock};
 
 enum ToolbarItem {
     Fps(FpsCounterView),
@@ -78,7 +79,7 @@ pub struct Toolbar {
 }
 
 impl Toolbar {
-    pub fn new(settings: &Settings) -> Self {
+    pub fn new(settings: &Settings, database: Arc<RwLock<mister_db::Connection>>) -> Self {
         Self {
             clock: DateTimeWidget::default(),
             fps: if settings.show_fps() {
