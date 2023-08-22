@@ -108,14 +108,14 @@ impl Toolbar {
     }
 
     pub fn update(&mut self) -> bool {
+        let mut should_redraw = self.clock.update() || self.network.update();
+
         // Check for settings changes.
         if self.on_settings_update.try_recv().is_ok() {
             self.set_show_fps(self.settings.show_fps());
+            should_redraw = true;
         }
 
-        let mut should_redraw;
-
-        should_redraw = self.clock.update() || self.network.update();
         if let Some(ref mut fps) = self.fps {
             should_redraw = should_redraw || fps.update();
         }

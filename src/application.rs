@@ -1,5 +1,6 @@
 use crate::application::menu::main_menu;
 use crate::application::panels::input_tester::input_tester;
+use crate::application::panels::settings::settings_panel;
 use crate::application::toolbar::Toolbar;
 use crate::data::settings::Settings;
 use crate::macguiver::application::{Application, EventLoopState};
@@ -36,7 +37,7 @@ impl TopLevelViewType {
             TopLevelViewType::InputTester => Some(input_tester),
             TopLevelViewType::MainMenu => Some(main_menu),
             TopLevelViewType::About => None,
-            TopLevelViewType::Settings => None,
+            TopLevelViewType::Settings => Some(settings_panel),
             TopLevelViewType::Quit => None,
         }
     }

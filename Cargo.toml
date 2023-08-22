@@ -37,6 +37,7 @@ embedded-layout = "0.3.1"
 embedded-menu = { git = "https://github.com/hansl/embedded-menu.git", branch = "invert-selection" }
 hex = "0.4.3"
 json5 = "0.4.1"
+json5format = "0.2.6"
 libc = { version = "*", default-features = false }
 merge = { git = "https://github.com/hansl/merge-rs.git", rev = "ef451941cf3faefc8b6514fa2fb9105f823e6d60", features = ["num", "derive"] }
 mister-db = { path = "./mister-db" }
@@ -65,3 +66,4 @@ default = ["platform_desktop"]
 platform_de10 = []
 # Support for a desktop simulator.
 platform_desktop = []
+

@@ -693,6 +693,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "json5format"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2894a72f82fa9f20e628bf4329cd0fb8e9fd5e87cc35944665a42b25bae9902"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -782,6 +792,7 @@ dependencies = [
  "embedded-menu",
  "hex",
  "json5",
+ "json5format",
  "libc",
  "merge",
  "mister-db",
