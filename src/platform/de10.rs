@@ -1,14 +1,15 @@
 use crate::ffi::fpga;
-use crate::macguiver::application::{Application, UpdateResult};
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
+use crate::osd;
 use crate::platform::de10::buffer::OsdDisplayView;
-use crate::platform::{MiSTerPlatform, PlatformState};
-use crate::{osd, spi};
+use crate::platform::{sizes, MiSTerPlatform};
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::Dimensions;
+use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::Drawable;
+use sdl3::event::Event;
 use tracing::{debug, error, info};
 
 mod buffer;
@@ -16,10 +17,10 @@ mod buffer;
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
 
-struct Interface;
-
 pub struct De10Platform {
     pub platform: SdlPlatform<BinaryColor>,
+    title_display: OsdDisplayView,
+    main_display: OsdDisplayView,
 }
 
 impl Default for De10Platform {
@@ -30,10 +31,17 @@ impl Default for De10Platform {
 
         let platform = SdlPlatform::init(SdlInitState::default());
 
-        Self { platform }
+        let title_display = OsdDisplayView::title();
+        let main_display = OsdDisplayView::main();
+
+        Self {
+            platform,
+            title_display,
+            main_display,
+        }
     }
 }
-//
+
 // impl De10Platform {
 //     pub fn event_loop<DrawFn>(&mut self, update: impl Fn(&mut PlatformState) -> bool, draw: DrawFn)
 //     where
@@ -98,15 +106,13 @@ impl Default for De10Platform {
 impl MiSTerPlatform for De10Platform {
     type Color = BinaryColor;
 
-    fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, flags: Flags) {
-        let mut fpga = unsafe {
-            fpga::Fpga::init().unwrap_or_else(|| {
-                debug!("GPI[31] == 1");
-                error!("FPGA is uninitialized or incompatible core loaded.");
-                error!("Quitting. Bye bye...\n");
-                std::process::exit(1);
-            })
-        };
+    fn init(&mut self, flags: &Flags) {
+        let mut fpga = fpga::Fpga::init().unwrap_or_else(|| {
+            debug!("GPI[31] == 1");
+            error!("FPGA is uninitialized or incompatible core loaded.");
+            error!("Quitting. Bye bye...\n");
+            std::process::exit(1);
+        });
 
         unsafe {
             fpga.wait_for_ready();
@@ -118,8 +124,11 @@ impl MiSTerPlatform for De10Platform {
             osd::OsdEnable(0);
             crate::file_io::FindStorage();
             let (core, xml) = (
-                std::ffi::CString::new(flags.core).unwrap(),
-                flags.xml.map(|str| std::ffi::CString::new(str).unwrap()),
+                std::ffi::CString::new(flags.core.clone()).unwrap(),
+                flags
+                    .xml
+                    .clone()
+                    .map(|str| std::ffi::CString::new(str).unwrap()),
             );
 
             crate::user_io::user_io_init(
@@ -130,40 +139,59 @@ impl MiSTerPlatform for De10Platform {
 
             osd::OsdSetSize(19);
         }
-
-        let mut title_display = OsdDisplayView::title();
-        let mut osd_display = OsdDisplayView::main();
-
-        self.platform.event_loop(|state| {
-            let mut platform_state: PlatformState =
-                PlatformState::new(osd_display.bounding_box().size, state.events().collect());
-
-            let mut title_buffer = &mut title_display.inner;
-            let mut osd_buffer = &mut osd_display.inner;
-
-            match app.update(&platform_state) {
-                UpdateResult::Redraw(title, main) => {
-                    if title {
-                        title_buffer.clear(BinaryColor::Off).unwrap();
-                        app.draw_title(&mut title_buffer);
-                        title_buffer.invert();
-                        title_display.send();
-                    }
-                    if main {
-                        osd_buffer.clear(BinaryColor::Off).unwrap();
-                        app.draw_main(&mut osd_buffer);
-                        osd_display.send();
-                    }
-                }
-                UpdateResult::NoRedraw => {
-                    std::thread::sleep(std::time::Duration::from_millis(10));
-                }
-                UpdateResult::Quit => return true,
-            }
-
-            platform_state.should_quit()
-        });
     }
+
+    fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {
+        buffer.draw(&mut self.title_display.inner).unwrap();
+        self.title_display.inner.invert();
+        self.title_display.send();
+    }
+    fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
+        self.main_display.inner.clear(BinaryColor::Off).unwrap();
+        buffer.draw(&mut self.main_display.inner).unwrap();
+        self.main_display.send();
+    }
+
+    fn toolbar_dimensions(&self) -> Size {
+        sizes::TITLE
+    }
+    fn main_dimensions(&self) -> Size {
+        sizes::MAIN
+    }
+
+    fn events(&mut self) -> Vec<Event> {
+        self.platform.events()
+    }
+    //
+    // fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, flags: Flags) {
+    //     self.platform.event_loop(|state| {
+    //         let mut title_buffer = &mut title_display.inner;
+    //         let mut osd_buffer = &mut osd_display.inner;
+    //
+    //         match app.update(&platform_state) {
+    //             UpdateResult::Redraw(title, main) => {
+    //                 if title {
+    //                     title_buffer.clear(BinaryColor::Off).unwrap();
+    //                     app.draw_title(&mut title_buffer);
+    //                     title_buffer.invert();
+    //                     title_display.send();
+    //                 }
+    //                 if main {
+    //                     osd_buffer.clear(BinaryColor::Off).unwrap();
+    //                     app.draw_main(&mut osd_buffer);
+    //                     osd_display.send();
+    //                 }
+    //             }
+    //             UpdateResult::NoRedraw => {
+    //                 std::thread::sleep(std::time::Duration::from_millis(10));
+    //             }
+    //             UpdateResult::Quit => return true,
+    //         }
+    //
+    //         platform_state.should_quit()
+    //     });
+    // }
 }
 
+use crate::macguiver::buffer::DrawBuffer;
 pub use De10Platform as PlatformWindowManager;

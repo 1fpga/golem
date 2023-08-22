@@ -1,5 +1,5 @@
 use crate::macguiver::platform::sdl::theme::BinaryColorTheme;
-use embedded_graphics::geometry::{Point, Size};
+use embedded_graphics::geometry::Size;
 
 /// Output settings.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -19,18 +19,6 @@ impl OutputSettings {
         let output_height = height * self.scale + height.saturating_sub(1) * self.pixel_spacing;
 
         Size::new(output_width, output_height)
-    }
-}
-
-impl OutputSettings {
-    /// Translates a output coordinate to the corresponding display coordinate.
-    pub(crate) const fn output_to_display(&self, output_point: Point) -> Point {
-        let pitch = self.pixel_pitch() as i32;
-        Point::new(output_point.x / pitch, output_point.y / pitch)
-    }
-
-    pub(crate) const fn pixel_pitch(&self) -> u32 {
-        self.scale + self.pixel_spacing
     }
 }
 

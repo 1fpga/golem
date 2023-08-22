@@ -10,28 +10,50 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
 /// Check that an address is valid (not 169.254.0.0/16) and is local.
-pub fn is_valid(iface: &NetworkInterface) -> bool {
-    iface.addr.iter().all(|addr| match addr {
-        Addr::V4(addr) => {
-            match addr.ip.octets() {
-                // 169.254.x.x
-                [169, 254, _, _] => false,
-                // Loopback
-                [127, _, _, _] => false,
-                // Class A
-                [10, _, _, _] => true,
-                // Class B
-                [172, x, _, _] if (16u8..=31).contains(&x) => true,
-                // Class C
-                [192, 168, _, _] => true,
-                _ => false,
+fn is_valid(iface: &NetworkInterface) -> bool {
+    // Check that there is at least one IP address.
+    !iface.addr.is_empty()
+        && iface.addr.iter().any(|addr| match addr {
+            Addr::V4(addr) => {
+                match addr.ip.octets() {
+                    // 169.254.x.x
+                    [169, 254, _, _] => false,
+                    // Loopback
+                    [127, _, _, _] => false,
+                    _ => true,
+                }
+            }
+            Addr::V6(_addr) => {
+                // Impossible to know, but we filter those out for the moment...
+                false
+            }
+        })
+}
+
+fn is_local(iface: &NetworkInterface) -> bool {
+    iface.addr.iter().any(|addr| {
+        match addr {
+            Addr::V4(addr) => {
+                match addr.ip.octets() {
+                    // Class A
+                    [10, _, _, _] => true,
+                    // Class B
+                    [172, x, _, _] if (16u8..=31).contains(&x) => true,
+                    // Class C
+                    [192, 168, _, _] => true,
+                    _ => false,
+                }
+            }
+            Addr::V6(_addr) => {
+                // Impossible to know, but we filter those out for the moment...
+                false
             }
         }
-        Addr::V6(_addr) => {
-            // Impossible to know...
-            true
-        }
     })
+}
+
+pub fn is_wifi(iface: &NetworkInterface) -> bool {
+    iface.name.starts_with("wlan")
 }
 
 #[derive(Debug, Default)]
@@ -52,13 +74,15 @@ impl NetworkStatus {
         let mut ifaces = connections.into_iter().filter(is_valid);
 
         // Local is any connection that's not `wlan` and has an IP address that's not 169.254.x.x.
-        let has_local = ifaces.clone().any(|iface| !iface.name.starts_with("wlan"));
+        let has_local = ifaces
+            .clone()
+            .any(|iface| is_local(&iface) && !is_wifi(&iface));
         if has_local != self.local {
             changed = true;
             self.local = has_local;
         }
 
-        let has_wifi = ifaces.any(|iface| iface.name.starts_with("wlan"));
+        let has_wifi = ifaces.any(|iface| is_wifi(&iface));
         if has_wifi != self.wifi {
             changed = true;
             self.wifi = has_wifi;
@@ -87,17 +111,17 @@ impl NetworkWidgetView {
         let mut i = 0;
 
         if widget.show_local {
-            icons[i] = widget.icon_local.clone();
+            icons[i] = widget.icon_local;
             i += 1;
         }
 
         if widget.show_wifi {
-            icons[i] = widget.icon_wifi.clone();
+            icons[i] = widget.icon_wifi;
             i += 1;
         }
 
         if widget.show_internet {
-            icons[i] = widget.icon_internet.clone();
+            icons[i] = widget.icon_internet;
         }
 
         Self {
@@ -182,7 +206,7 @@ impl NetworkWidget {
                     }
 
                     if quit_recv
-                        .recv_timeout(std::time::Duration::from_secs(3))
+                        .recv_timeout(std::time::Duration::from_secs(5))
                         .is_ok()
                     {
                         break;

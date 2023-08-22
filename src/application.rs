@@ -1,3 +1,4 @@
+use crate::application::menu::main_menu;
 use crate::application::panels::input_tester::input_tester;
 use crate::application::toolbar::Toolbar;
 use crate::data::settings::Settings;
@@ -8,28 +9,34 @@ use crate::platform::{MiSTerPlatform, WindowManager};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
+use mister_db::Connection;
 use sdl3::event::Event;
 use std::sync::{Arc, RwLock};
 
 // mod icons;
-// pub mod menu;
+pub mod menu;
 
 mod panels;
 mod toolbar;
 mod widgets;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub enum TopLevelViewType {
-    // MainMenu,
-    // Settings,
-    KeyboardTester,
+    #[default]
+    MainMenu,
+    Settings,
+    InputTester,
+    About,
     Quit,
 }
 
 impl TopLevelViewType {
     pub fn function(&self) -> Option<fn(&mut MiSTer) -> TopLevelViewType> {
         match self {
-            TopLevelViewType::KeyboardTester => Some(panels::input_tester::input_tester),
+            TopLevelViewType::InputTester => Some(input_tester),
+            TopLevelViewType::MainMenu => Some(main_menu),
+            TopLevelViewType::About => None,
+            TopLevelViewType::Settings => None,
             TopLevelViewType::Quit => None,
         }
     }
@@ -38,7 +45,7 @@ impl TopLevelViewType {
 pub struct MiSTer {
     toolbar: Toolbar,
     settings: Settings,
-    database: Arc<RwLock<mister_db::Connection>>,
+    database: Arc<RwLock<Connection>>,
     view: TopLevelViewType,
 
     pub platform: WindowManager,
@@ -56,7 +63,7 @@ impl MiSTer {
 
         Self {
             toolbar: Toolbar::new(&settings, database.clone()),
-            view: TopLevelViewType::KeyboardTester,
+            view: TopLevelViewType::default(),
             database,
             settings,
             platform,
@@ -73,18 +80,24 @@ impl Application for MiSTer {
         &self.settings
     }
 
-    fn run(&mut self, _flags: Flags) {
-        self.event_loop(|app, state| match app.view {
-            TopLevelViewType::KeyboardTester => {
-                app.view = input_tester(app);
+    fn run(&mut self, flags: Flags) {
+        self.platform.init(&flags);
+
+        self.event_loop(|app, _state| match app.view.function() {
+            None => Some(TopLevelViewType::Quit),
+            Some(f) => {
+                app.view = f(app);
                 None
             }
-            TopLevelViewType::Quit => Some(TopLevelViewType::Quit),
         });
     }
 
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color> {
         &mut self.main_buffer
+    }
+
+    fn database(&self) -> Arc<RwLock<Connection>> {
+        self.database.clone()
     }
 
     fn event_loop(
@@ -105,13 +118,12 @@ impl Application for MiSTer {
                 break r;
             }
 
+            self.platform.update_main(&self.main_buffer);
             if self.toolbar.update() {
                 self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
                 self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
+                self.platform.update_toolbar(&self.toolbar_buffer);
             }
-
-            self.platform.update_main(&self.main_buffer);
-            self.platform.update_toolbar(&self.toolbar_buffer);
         }
     }
 }

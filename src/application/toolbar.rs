@@ -79,7 +79,7 @@ pub struct Toolbar {
 }
 
 impl Toolbar {
-    pub fn new(settings: &Settings, database: Arc<RwLock<mister_db::Connection>>) -> Self {
+    pub fn new(settings: &Settings, _database: Arc<RwLock<mister_db::Connection>>) -> Self {
         Self {
             clock: DateTimeWidget::default(),
             fps: if settings.show_fps() {

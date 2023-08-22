@@ -10,7 +10,7 @@ use sdl3::keyboard::Keycode;
 pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) -> TopLevelViewType {
     let mut widget = KeyboardTesterWidget::new();
 
-    app.event_loop(|app, mut state| {
+    app.event_loop(|app, state| {
         let buffer = app.main_buffer();
         buffer.clear(BinaryColor::Off).unwrap();
         widget.draw(buffer).unwrap();
@@ -22,7 +22,7 @@ pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) -> TopLevel
                     ..
                 } => match code {
                     Keycode::Escape => {
-                        return Some(TopLevelViewType::Quit);
+                        return Some(TopLevelViewType::MainMenu);
                     }
                     _ => {
                         widget.insert(code.into());

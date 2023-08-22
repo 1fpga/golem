@@ -2,9 +2,9 @@ use crate::application::TopLevelViewType;
 use crate::data::settings::Settings;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
-use crate::platform::{MiSTerPlatform, PlatformState};
 use embedded_graphics::pixelcolor::PixelColor;
 use sdl3::event::Event;
+use std::sync::{Arc, RwLock};
 
 pub struct EventLoopState {
     events: Vec<Event>,
@@ -27,6 +27,8 @@ pub trait Application {
     fn run(&mut self, flags: Flags);
 
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color>;
+
+    fn database(&self) -> Arc<RwLock<mister_db::Connection>>;
 
     fn event_loop(
         &mut self,

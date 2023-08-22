@@ -7,7 +7,6 @@
 //! which is either Desktop, DE10Nano, null (for testing) or others.
 //!
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
-use crate::macguiver::application::Application;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
@@ -89,6 +88,8 @@ impl OriginDimensions for PlatformState {
 pub trait MiSTerPlatform {
     type Color: PixelColor;
 
+    fn init(&mut self, flags: &Flags);
+
     fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>);
     fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>);
 
@@ -117,6 +118,10 @@ impl WindowManager {}
 
 impl MiSTerPlatform for WindowManager {
     type Color = BinaryColor;
+
+    fn init(&mut self, flags: &Flags) {
+        self.inner.init(flags);
+    }
 
     fn update_toolbar(&mut self, buffer: &DrawBuffer<BinaryColor>) {
         self.inner.update_toolbar(buffer);

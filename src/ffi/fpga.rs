@@ -187,7 +187,7 @@ impl Fpga {
     #[inline]
     pub(super) fn wait_to_reset(&mut self) {
         let mut soc = self.soc.borrow_mut();
-        let mut manager = soc.fpga_manager_mut();
+        let manager = soc.fpga_manager_mut();
 
         debug!("FPGA is not ready. JTAG uploading?");
         info!("Waiting for FPGA to be ready...");

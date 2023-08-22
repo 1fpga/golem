@@ -59,15 +59,15 @@ impl OsdDisplayView {
 }
 
 impl OsdDisplayView {
-    fn with_offset(mut self, offset_y: usize) -> Self {
+    fn with_offset(self, offset_y: usize) -> Self {
         Self { offset_y, ..self }
     }
 
-    fn with_top_line(mut self, top_line: u32) -> Self {
+    fn with_top_line(self, top_line: u32) -> Self {
         Self { top_line, ..self }
     }
 
-    fn with_lines(mut self, lines: u32) -> Self {
+    fn with_lines(self, lines: u32) -> Self {
         Self { lines, ..self }
     }
 
@@ -84,16 +84,6 @@ impl OsdDisplayView {
             lines: size.height / 8,
             top_line: 0,
         }
-    }
-
-    /// Returns the color of the pixel at a point.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `point` is outside the display.
-    #[inline]
-    pub fn get_pixel(&self, point: Point) -> BinaryColor {
-        self.inner.get_pixel(point)
     }
 }
 
@@ -141,26 +131,6 @@ impl OsdDisplayView {
                 + (px(x, y + 7) << 7);
         }
         line_buffer
-    }
-}
-
-impl OsdDisplayView {
-    /// Converts the display content to big endian raw data.
-    #[inline]
-    pub fn to_be_bytes(&self) -> Vec<u8> {
-        self.inner.to_be_bytes()
-    }
-
-    /// Converts the display content to little endian raw data.
-    #[inline]
-    pub fn to_le_bytes(&self) -> Vec<u8> {
-        self.inner.to_le_bytes()
-    }
-
-    /// Converts the display content to native endian raw data.
-    #[inline]
-    pub fn to_ne_bytes(&self) -> Vec<u8> {
-        self.inner.to_ne_bytes()
     }
 }
 

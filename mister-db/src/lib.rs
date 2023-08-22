@@ -11,7 +11,5 @@ pub fn establish_connection() -> Connection {
     dotenv().ok();
 
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    eprintln!("{database_url}");
-    eprintln!("{}", std::env::current_dir().unwrap().display());
     diesel::Connection::establish(&database_url).expect("Error connecting to {database_url}")
 }

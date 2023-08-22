@@ -1,14 +1,12 @@
-use crate::macguiver::application::Application;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{
     BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform, Window,
 };
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
-use crate::platform::{sizes, MiSTerPlatform, PlatformState};
+use crate::platform::{sizes, MiSTerPlatform};
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::prelude::DrawTarget;
 use sdl3::event::Event;
 pub use DesktopWindowManager as PlatformWindowManager;
 
@@ -26,8 +24,8 @@ impl Default for DesktopWindowManager {
                 .theme(BinaryColorTheme::LcdBlue)
                 .build(),
         ));
-        let mut window_title = platform.window("Title", sizes::TITLE);
-        let mut window_main = platform.window("Title", sizes::MAIN);
+        let window_title = platform.window("Title", sizes::TITLE);
+        let window_main = platform.window("Title", sizes::MAIN);
 
         Self {
             platform,
@@ -39,6 +37,8 @@ impl Default for DesktopWindowManager {
 
 impl MiSTerPlatform for DesktopWindowManager {
     type Color = BinaryColor;
+
+    fn init(&mut self, _: &Flags) {}
 
     fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {
         self.window_title.update(buffer);
