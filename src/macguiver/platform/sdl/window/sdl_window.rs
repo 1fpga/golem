@@ -4,6 +4,7 @@ use embedded_graphics::{
     pixelcolor::Rgb888,
     prelude::{PixelColor, Size},
 };
+use sdl3::rect::Point;
 use sdl3::{
     pixels::PixelFormatEnum,
     render::{Canvas, Texture, TextureCreator},
@@ -11,7 +12,7 @@ use sdl3::{
 };
 
 pub struct SdlWindow {
-    window: Canvas<sdl3::video::Window>,
+    canvas: Canvas<sdl3::video::Window>,
     window_texture: SdlWindowTexture,
     size: Size,
 }
@@ -46,7 +47,7 @@ impl SdlWindow {
         .build();
 
         Self {
-            window: canvas,
+            canvas,
             window_texture,
             size,
         }
@@ -61,10 +62,28 @@ impl SdlWindow {
                 .unwrap();
         });
 
-        self.window
+        self.canvas
             .copy(self.window_texture.borrow_texture(), None, None)
             .unwrap();
-        self.window.present();
+        self.canvas.present();
+    }
+
+    pub fn size(&self) -> Size {
+        self.canvas.window().size().into()
+    }
+
+    pub fn set_position(&mut self, pos: Point) {
+        self.canvas
+            .window_mut()
+            .set_position(pos.x.into(), pos.y.into());
+    }
+
+    pub fn position(&self) -> Point {
+        self.canvas.window().position().into()
+    }
+
+    pub fn focus(&mut self) {
+        self.canvas.window_mut().raise();
     }
 }
 

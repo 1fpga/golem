@@ -1,12 +1,13 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::output::OutputImage;
+use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::macguiver::platform::PlatformWindow;
-use embedded_graphics::geometry::Size;
+use embedded_graphics::geometry::{Point, Size};
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::{PixelColor, Rgb888};
+use sdl3::rect::Point as SdlPoint;
 
 mod sdl_window;
-use crate::macguiver::platform::sdl::SdlPlatform;
 use sdl_window::SdlWindow;
 
 pub struct Window<C: PixelColor> {
@@ -14,6 +15,25 @@ pub struct Window<C: PixelColor> {
     inner: SdlWindow,
 
     phantom: std::marker::PhantomData<C>,
+}
+
+impl<C: PixelColor> Window<C> {
+    pub fn size(&self) -> Size {
+        self.inner.size()
+    }
+
+    pub fn position(&self) -> Point {
+        let pt = self.inner.position();
+        Point::new(pt.x, pt.y)
+    }
+
+    pub fn set_position(&mut self, pos: Point) {
+        self.inner.set_position(SdlPoint::new(pos.x, pos.y));
+    }
+
+    pub fn focus(&mut self) {
+        self.inner.focus();
+    }
 }
 
 impl<C: PixelColor + From<Rgb888> + Into<Rgb888>> Window<C> {

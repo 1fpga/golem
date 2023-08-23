@@ -74,12 +74,13 @@ pub struct Toolbar {
     network: NetworkWidget,
     clock: DateTimeWidget,
 
-    settings: Settings,
-    on_settings_update: crossbeam_channel::Receiver<()>,
+    settings: Arc<Settings>,
+    on_settings_update: bus::BusReader<()>,
 }
 
 impl Toolbar {
-    pub fn new(settings: &Settings, _database: Arc<RwLock<mister_db::Connection>>) -> Self {
+    pub fn new(settings: Arc<Settings>, _database: Arc<RwLock<mister_db::Connection>>) -> Self {
+        let on_settings_update = settings.on_update();
         Self {
             clock: DateTimeWidget::default(),
             fps: if settings.show_fps() {
@@ -91,8 +92,8 @@ impl Toolbar {
                 None
             },
             network: NetworkWidget::new(),
-            settings: settings.clone(),
-            on_settings_update: settings.on_update(),
+            settings,
+            on_settings_update,
         }
     }
 

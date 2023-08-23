@@ -81,32 +81,8 @@ impl Panel for CoreMenu {
                 menu.update(state);
 
                 for ev in state.events() {
-                    if let Event::KeyDown {
-                        keycode: Some(code),
-                        ..
-                    } = ev
-                    {
-                        match code {
-                            Keycode::Escape => {
-                                return Ok(Some(MenuAction::Back));
-                            }
-                            Keycode::Return => {
-                                return Ok(menu.interact(InteractionType::Select));
-                            }
-                            Keycode::Up => {
-                                return Ok(menu.interact(InteractionType::Previous));
-                            }
-                            Keycode::Down => {
-                                return Ok(menu.interact(InteractionType::Next));
-                            }
-                            Keycode::Right => {
-                                for _ in 0..9 {
-                                    menu.interact(InteractionType::Next);
-                                }
-                                return Ok(menu.interact(InteractionType::Next));
-                            }
-                            _ => {}
-                        }
+                    if let Some(panel) = menu.interact(ev) {
+                        return Some(panel);
                     }
                 }
 

@@ -23,6 +23,7 @@ overflow-checks = false
 strip = "debuginfo"
 
 [dependencies]
+bus = "2.4.0"
 byteorder = "1.4.3"
 cfg-if = "1.0.0"
 chrono = "0.4.26"
@@ -30,11 +31,12 @@ clap = { version = "4.3.5", features = ["derive"] }
 clap-verbosity-flag = "2.0.1"
 crossbeam-channel = "0.5.8"
 core_affinity = "0.8.0"
+debounce = "0.2.2"
 dirs = "5.0.1"
 dotenvy = "0.15.7"
 embedded-graphics = "0.8.0"
 embedded-layout = "0.3.1"
-embedded-menu = { git = "https://github.com/hansl/embedded-menu.git", branch = "invert-selection" }
+embedded-menu = { git = "https://github.com/hansl/embedded-menu.git", branch = "custom-interaction" }
 hex = "0.4.3"
 json5 = "0.4.1"
 json5format = "0.2.6"

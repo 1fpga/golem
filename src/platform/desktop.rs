@@ -5,7 +5,7 @@ use crate::macguiver::platform::sdl::{
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
 use crate::platform::{sizes, MiSTerPlatform};
-use embedded_graphics::geometry::Size;
+use embedded_graphics::geometry::{Point, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 pub use DesktopWindowManager as PlatformWindowManager;
@@ -24,8 +24,15 @@ impl Default for DesktopWindowManager {
                 .theme(BinaryColorTheme::LcdBlue)
                 .build(),
         ));
-        let window_title = platform.window("Title", sizes::TITLE);
-        let window_main = platform.window("Title", sizes::MAIN);
+        let mut window_title = platform.window("Title", sizes::TITLE);
+        let mut window_main = platform.window("Title", sizes::MAIN);
+
+        // Move the title above the window and make sure both are visible.
+        let mut pos = window_main.position();
+        pos.y -= sizes::TITLE.height as i32 + 128;
+        window_title.set_position(pos);
+        window_title.focus();
+        window_main.focus();
 
         Self {
             platform,

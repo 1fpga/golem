@@ -4,13 +4,10 @@ use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
-use embedded_menu::interaction::InteractionType;
 use embedded_menu::items::NavigationItem;
 use embedded_menu::Menu;
 use mister_db::diesel::{QueryDsl, RunQueryDsl};
 use mister_db::schema::cores::dsl::cores;
-use sdl3::event::Event;
-use sdl3::keyboard::Keycode;
 use std::ops::DerefMut;
 
 pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) -> TopLevelViewType {
@@ -41,26 +38,8 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) -> TopLevelVie
         menu.draw(buffer).unwrap();
 
         for ev in state.events() {
-            if let Event::KeyDown {
-                keycode: Some(code),
-                ..
-            } = ev
-            {
-                match code {
-                    Keycode::Escape => {
-                        return Some(TopLevelViewType::InputTester);
-                    }
-                    Keycode::Return => {
-                        return menu.interact(InteractionType::Select);
-                    }
-                    Keycode::Up => {
-                        menu.interact(InteractionType::Previous);
-                    }
-                    Keycode::Down => {
-                        menu.interact(InteractionType::Next);
-                    }
-                    _ => {}
-                }
+            if let Some(panel) = menu.interact(ev) {
+                return Some(panel);
             }
         }
 

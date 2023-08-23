@@ -45,7 +45,7 @@ impl TopLevelViewType {
 
 pub struct MiSTer {
     toolbar: Toolbar,
-    settings: Settings,
+    settings: Arc<Settings>,
     database: Arc<RwLock<Connection>>,
     view: TopLevelViewType,
 
@@ -56,14 +56,14 @@ pub struct MiSTer {
 
 impl MiSTer {
     pub fn new(platform: WindowManager) -> Self {
-        let settings = Settings::new();
+        let settings = Arc::new(Settings::new());
         let database = mister_db::establish_connection();
         let database = Arc::new(RwLock::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let main_size = platform.main_dimensions();
 
         Self {
-            toolbar: Toolbar::new(&settings, database.clone()),
+            toolbar: Toolbar::new(settings.clone(), database.clone()),
             view: TopLevelViewType::default(),
             database,
             settings,
