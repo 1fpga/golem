@@ -7,7 +7,10 @@ use embedded_menu::Menu;
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
+use std::collections::hash_map::{DefaultHasher, RandomState};
+use std::collections::HashMap;
 use std::env;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -46,12 +49,17 @@ fn show_fps_default_() -> bool {
     false
 }
 
-#[derive(Debug, Copy, Clone, Serialize, Deserialize, Merge, Menu)]
+fn invert_toolbar_() -> bool {
+    true
+}
+
+#[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
 #[menu(
     title = "Settings",
     navigation(events = TopLevelViewType, marker = ">"),
     items = [
         data(label = "Show FPS", field = show_fps),
+        data(label = "Invert toolbar colors", field = invert_toolbar),
         navigation(label = "Back", event = TopLevelViewType::MainMenu)
     ]
 )]
@@ -59,24 +67,33 @@ pub struct InnerSettings {
     #[serde(default = "show_fps_default_")]
     #[merge(strategy = merge::overwrite)]
     show_fps: bool,
+
+    #[serde(default = "invert_toolbar_")]
+    #[merge(strategy = merge::overwrite)]
+    invert_toolbar: bool,
 }
 
 impl Default for InnerSettings {
     fn default() -> Self {
-        Self { show_fps: true }
+        Self {
+            show_fps: true,
+            invert_toolbar: true,
+        }
     }
 }
 
 impl InnerSettings {
-    pub(super) fn overwrite(&mut self, other: &InnerSettings) -> bool {
-        let mut dirty = false;
+    /// Merge this with another settings object, returning true if any changes were made.
+    pub(super) fn merge_check(&mut self, other: InnerSettings) -> bool {
+        let mut hasher = DefaultHasher::default();
+        self.hash(&mut hasher);
+        let old = hasher.finish();
 
-        if self.show_fps != other.show_fps {
-            self.show_fps = other.show_fps;
-            dirty = true;
-        }
+        self.merge(other);
 
-        dirty
+        let mut hasher = DefaultHasher::default();
+        self.hash(&mut hasher);
+        old != hasher.finish()
     }
 
     pub(super) fn save(&self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
@@ -183,8 +200,8 @@ impl Settings {
             .create_menu_with_style(menu_style())
     }
 
-    pub fn update(&self, other: &InnerSettings) {
-        if self.inner.write().unwrap().overwrite(other) {
+    pub fn update(&self, other: InnerSettings) {
+        if self.inner.write().unwrap().merge_check(other) {
             self.update.borrow_mut().broadcast(());
         }
     }
@@ -211,7 +228,13 @@ impl Settings {
         self.update.borrow_mut().add_rx()
     }
 
+    #[inline]
     pub fn show_fps(&self) -> bool {
         self.inner.read().unwrap().show_fps
+    }
+
+    #[inline]
+    pub fn invert_toolbar(&self) -> bool {
+        self.inner.read().unwrap().invert_toolbar
     }
 }

@@ -3,10 +3,10 @@ use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
 use crate::osd;
-use crate::platform::de10::buffer::OsdDisplayView;
+use crate::platform::de10::buffer::OsdDisplay;
 use crate::platform::{sizes, MiSTerPlatform};
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::Size;
+use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
@@ -19,9 +19,11 @@ const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
 
 pub struct De10Platform {
     pub platform: SdlPlatform<BinaryColor>,
-    title_display: OsdDisplayView,
-    main_display: OsdDisplayView,
+    title_display: OsdDisplay,
+    main_display: OsdDisplay,
     window: Window<BinaryColor>,
+
+    toolbar_buffer: DrawBuffer<BinaryColor>,
 }
 
 impl Default for De10Platform {
@@ -32,8 +34,10 @@ impl Default for De10Platform {
 
         let mut platform = SdlPlatform::init(SdlInitState::default());
 
-        let title_display = OsdDisplayView::title();
-        let main_display = OsdDisplayView::main();
+        let title_display = OsdDisplay::title();
+        let main_display = OsdDisplay::main();
+
+        let toolbar_buffer = DrawBuffer::new(title_display.size());
 
         // Need at least 1 window to get events.
         let window = platform.window("Title", Size::new(1, 1));
@@ -43,6 +47,7 @@ impl Default for De10Platform {
             title_display,
             main_display,
             window,
+            toolbar_buffer,
         }
     }
 }
@@ -76,8 +81,8 @@ impl MiSTerPlatform for De10Platform {
             );
 
             crate::user_io::user_io_init(
-                core.as_bytes_with_nul().as_ptr(),
-                xml.map(|str| str.as_bytes_with_nul().as_ptr())
+                core.as_bytes_with_nul().as_ptr() as *const _,
+                xml.map(|str| str.as_bytes_with_nul().as_ptr() as *const _)
                     .unwrap_or(std::ptr::null()),
             );
 
@@ -86,14 +91,12 @@ impl MiSTerPlatform for De10Platform {
     }
 
     fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {
-        buffer.draw(&mut self.title_display.inner).unwrap();
-        self.title_display.inner.invert();
-        self.title_display.send();
+        self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
+        buffer.draw(&mut self.toolbar_buffer).unwrap();
+        self.title_display.send(&self.toolbar_buffer);
     }
     fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
-        self.main_display.inner.clear(BinaryColor::Off).unwrap();
-        buffer.draw(&mut self.main_display.inner).unwrap();
-        self.main_display.send();
+        self.main_display.send(buffer);
     }
 
     fn toolbar_dimensions(&self) -> Size {
@@ -109,40 +112,11 @@ impl MiSTerPlatform for De10Platform {
 
     fn end_loop(&mut self) {
         unsafe {
-            // crate::user_io::user_io_poll();
-            // crate::input::input_poll(0);
-            // crate::menu::HandleUI();
+            crate::user_io::user_io_poll();
+            crate::input::input_poll(0);
+            crate::menu::HandleUI();
         }
     }
-
-    // fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, flags: Flags) {
-    //     self.platform.event_loop(|state| {
-    //         let mut title_buffer = &mut title_display.inner;
-    //         let mut osd_buffer = &mut osd_display.inner;
-    //
-    //         match app.update(&platform_state) {
-    //             UpdateResult::Redraw(title, main) => {
-    //                 if title {
-    //                     title_buffer.clear(BinaryColor::Off).unwrap();
-    //                     app.draw_title(&mut title_buffer);
-    //                     title_buffer.invert();
-    //                     title_display.send();
-    //                 }
-    //                 if main {
-    //                     osd_buffer.clear(BinaryColor::Off).unwrap();
-    //                     app.draw_main(&mut osd_buffer);
-    //                     osd_display.send();
-    //                 }
-    //             }
-    //             UpdateResult::NoRedraw => {
-    //                 std::thread::sleep(std::time::Duration::from_millis(10));
-    //             }
-    //             UpdateResult::Quit => return true,
-    //         }
-    //
-    //         platform_state.should_quit()
-    //     });
-    // }
 }
 
 use crate::macguiver::buffer::DrawBuffer;

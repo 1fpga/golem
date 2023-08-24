@@ -21,11 +21,9 @@ mod sizes {
 /// crate, except for how the index of a pixel is calculated, because of how we
 /// transfer the data to the core.
 #[derive(Debug)]
-pub struct OsdDisplayView {
-    /// The inner framebuffer. Even in case where we run on the embedded
-    /// platform itself, we use the SimulatorDisplay as a framebuffer (and
-    /// disable the SDL portion).
-    pub inner: DrawBuffer<BinaryColor>,
+pub struct OsdDisplay {
+    /// The size of the display, in pixels.
+    size: Size,
 
     /// An offset of the display in the framebuffer. This is only used
     /// on embedded platforms for the title bar. The title bar is the
@@ -40,16 +38,16 @@ pub struct OsdDisplayView {
     top_line: u32,
 }
 
-impl OsdDisplayView {
+impl OsdDisplay {
     pub fn line_iter(&self) -> impl Iterator<Item = u32> {
         self.top_line..self.top_line + self.lines
     }
 
-    pub fn send(&self) {
+    pub fn send(&self, buffer: &DrawBuffer<BinaryColor>) {
         // Send everything to the scaler.
         for line in self.line_iter() {
             unsafe {
-                let line_buffer = self.get_binary_line_array(line);
+                let line_buffer = self.get_binary_line_array(buffer, line);
                 spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
                 spi::spi_write(line_buffer.as_ptr(), 256, 0);
                 spi::DisableOsd();
@@ -58,7 +56,7 @@ impl OsdDisplayView {
     }
 }
 
-impl OsdDisplayView {
+impl OsdDisplay {
     fn with_offset(self, offset_y: usize) -> Self {
         Self { offset_y, ..self }
     }
@@ -79,7 +77,7 @@ impl OsdDisplayView {
     /// default color is wanted.
     fn with_default_color_(size: Size, default_color: BinaryColor) -> Self {
         Self {
-            inner: DrawBuffer::with_default_color(size, default_color),
+            size,
             offset_y: 0,
             lines: size.height / 8,
             top_line: 0,
@@ -87,7 +85,7 @@ impl OsdDisplayView {
     }
 }
 
-impl OsdDisplayView {
+impl OsdDisplay {
     /// Creates a title bar display for the MiSTer.
     pub fn title() -> Self {
         Self::with_default_color_(sizes::TITLE, BinaryColor::Off)
@@ -102,18 +100,17 @@ impl OsdDisplayView {
     }
 }
 
-impl OsdDisplayView {
+impl OsdDisplay {
     /// Get a binary line array from the buffer (a single line).
-    pub fn get_binary_line_array(&self, line: u32) -> Vec<u8> {
-        let inner = &self.inner;
-        let height = inner.size().height as i32;
+    pub fn get_binary_line_array(&self, buffer: &DrawBuffer<BinaryColor>, line: u32) -> Vec<u8> {
+        let height = buffer.size().height as i32;
         let y = ((line - self.top_line) * 8) as i32 - self.offset_y as i32;
 
-        let mut line_buffer = vec![0u8; inner.size().width as usize];
+        let mut line_buffer = vec![0u8; buffer.size().width as usize];
         let off = BinaryColor::Off;
 
         let px = |x, y| {
-            if y >= 0 && y < height && inner.get_pixel(Point::new(x, y)) != off {
+            if y >= 0 && y < height && buffer.get_pixel(Point::new(x, y)) != off {
                 1u8
             } else {
                 0u8
@@ -134,20 +131,8 @@ impl OsdDisplayView {
     }
 }
 
-impl Dimensions for OsdDisplayView {
-    fn bounding_box(&self) -> Rectangle {
-        self.inner.bounding_box()
-    }
-}
-
-impl DrawTarget for OsdDisplayView {
-    type Color = BinaryColor;
-    type Error = core::convert::Infallible;
-
-    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
-    where
-        I: IntoIterator<Item = Pixel<Self::Color>>,
-    {
-        self.inner.draw_iter(pixels)
+impl OriginDimensions for OsdDisplay {
+    fn size(&self) -> Size {
+        self.size
     }
 }

@@ -19,7 +19,7 @@ pub fn settings_panel(app: &mut impl Application<Color = BinaryColor>) -> TopLev
             }
         }
 
-        app.settings().update(menu.data());
+        app.settings().update(*menu.data());
 
         None
     })

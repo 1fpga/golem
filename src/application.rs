@@ -127,6 +127,11 @@ impl Application for MiSTer {
             if self.toolbar.update() {
                 self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
                 self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
+
+                if self.settings.invert_toolbar() {
+                    self.toolbar_buffer.invert();
+                }
+
                 self.platform.update_toolbar(&self.toolbar_buffer);
             }
 
