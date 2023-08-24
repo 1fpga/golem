@@ -97,6 +97,9 @@ pub trait MiSTerPlatform {
     fn main_dimensions(&self) -> Size;
 
     fn events(&mut self) -> Vec<Event>;
+
+    fn start_loop(&mut self) {}
+    fn end_loop(&mut self) {}
 }
 
 /// The [WindowManager] structure is responsible for managing and holding the state

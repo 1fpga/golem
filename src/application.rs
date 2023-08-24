@@ -1,4 +1,4 @@
-use crate::application::menu::main_menu;
+use crate::application::menu::{cores_menu_panel, main_menu};
 use crate::application::panels::input_tester::input_tester;
 use crate::application::panels::settings::settings_panel;
 use crate::application::toolbar::Toolbar;
@@ -25,6 +25,7 @@ mod widgets;
 pub enum TopLevelViewType {
     #[default]
     MainMenu,
+    Cores,
     Settings,
     InputTester,
     About,
@@ -34,10 +35,11 @@ pub enum TopLevelViewType {
 impl TopLevelViewType {
     pub fn function(&self) -> Option<fn(&mut MiSTer) -> TopLevelViewType> {
         match self {
-            TopLevelViewType::InputTester => Some(input_tester),
             TopLevelViewType::MainMenu => Some(main_menu),
             TopLevelViewType::About => None,
             TopLevelViewType::Settings => Some(settings_panel),
+            TopLevelViewType::Cores => Some(cores_menu_panel),
+            TopLevelViewType::InputTester => Some(input_tester),
             TopLevelViewType::Quit => None,
         }
     }
@@ -106,6 +108,8 @@ impl Application for MiSTer {
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<TopLevelViewType>,
     ) -> TopLevelViewType {
         loop {
+            self.platform.start_loop();
+
             let events = self.platform.events();
             for event in events.iter() {
                 if let Event::Quit { .. } = event {
@@ -125,6 +129,8 @@ impl Application for MiSTer {
                 self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
                 self.platform.update_toolbar(&self.toolbar_buffer);
             }
+
+            self.platform.end_loop();
         }
     }
 }

@@ -62,7 +62,10 @@ impl<C: PixelColor> SdlPlatform<C> {
     }
 
     pub fn events(&mut self) -> Vec<Event> {
-        self.event_pump.borrow_mut().poll_iter().collect()
+        let mut event_pump = self.event_pump.borrow_mut();
+        event_pump.pump_events();
+
+        event_pump.poll_iter().collect()
     }
 }
 

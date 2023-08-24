@@ -197,7 +197,7 @@ impl Fpga {
         manager.set_gpo(gpo | 0x40000000);
 
         while !self.is_ready() {
-            std::thread::sleep(Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(10));
         }
 
         unsafe {

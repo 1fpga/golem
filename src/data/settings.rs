@@ -27,17 +27,15 @@ fn create_settings_save_thread_(
         }
     });
 
-    std::thread::spawn({
-        move || loop {
-            if update_recv
-                .recv_timeout(std::time::Duration::from_millis(100))
-                .is_ok()
-            {
-                debouncer.put(());
-            }
-            if drop_recv.try_recv().is_ok() {
-                break;
-            }
+    std::thread::spawn(move || loop {
+        if update_recv
+            .recv_timeout(std::time::Duration::from_millis(100))
+            .is_ok()
+        {
+            debouncer.put(());
+        }
+        if drop_recv.try_recv().is_ok() {
+            break;
         }
     });
 

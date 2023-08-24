@@ -75,6 +75,7 @@ RUN apt-get update && apt-get upgrade -y && \
         libncurses5-dev \
         libpcap-dev \
         libreadline-dev \
+        libsqlite3-dev \
         libssl-dev \
         libtcmalloc-minimal4 \
         libtool \

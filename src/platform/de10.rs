@@ -1,5 +1,5 @@
 use crate::ffi::fpga;
-use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform};
+use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
 use crate::osd;
@@ -21,6 +21,7 @@ pub struct De10Platform {
     pub platform: SdlPlatform<BinaryColor>,
     title_display: OsdDisplayView,
     main_display: OsdDisplayView,
+    window: Window<BinaryColor>,
 }
 
 impl Default for De10Platform {
@@ -29,79 +30,22 @@ impl Default for De10Platform {
             std::env::set_var(SDL_VIDEO_DRIVER_VARNAME, SDL_VIDEO_DRIVER_DEFAULT);
         }
 
-        let platform = SdlPlatform::init(SdlInitState::default());
+        let mut platform = SdlPlatform::init(SdlInitState::default());
 
         let title_display = OsdDisplayView::title();
         let main_display = OsdDisplayView::main();
+
+        // Need at least 1 window to get events.
+        let window = platform.window("Title", Size::new(1, 1));
 
         Self {
             platform,
             title_display,
             main_display,
+            window,
         }
     }
 }
-
-// impl De10Platform {
-//     pub fn event_loop<DrawFn>(&mut self, update: impl Fn(&mut PlatformState) -> bool, draw: DrawFn)
-//     where
-//         Target: DrawTarget<BinaryColor>,
-//         DrawFn: FnMut(&mut Target),
-//     {
-//         let mut platform_state: PlatformState = PlatformState::default();
-//         let osd = &mut self.osd;
-//         let title = &mut self.title;
-//
-//         self.platform.event_loop(|state| unsafe {
-//             crate::user_io::user_io_poll();
-//             crate::input::input_poll(0);
-//             menu::HandleUI();
-//
-//             // Clear the buffers.
-//             osd.clear(BinaryColor::Off).unwrap();
-//             title.clear(BinaryColor::Off).unwrap();
-//
-//             let mut should_return = handler(&platform_state, osd);
-//
-//             // Send everything to the scaler.
-//             for (line, buffer) in title
-//                 .line_iter()
-//                 .map(|line| (line, &title))
-//                 .chain(osd.line_iter().map(|line| (line, &osd)))
-//             {
-//                 let line_buffer = buffer.get_binary_line_array(line);
-//                 spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
-//                 spi::spi_write(line_buffer.as_ptr(), 256, 0);
-//                 spi::DisableOsd();
-//             }
-//
-//             state.events(|ev| {
-//                 eprintln!("sdl: {ev:?}");
-//                 match ev {
-//                     sdl3::event::Event::Quit { .. } => should_return = true,
-//                     sdl3::event::Event::KeyDown {
-//                         keycode: Some(keycode),
-//                         ..
-//                     } => {
-//                         platform_state.keys.down(keycode.into());
-//                     }
-//                     sdl3::event::Event::KeyUp {
-//                         keycode: Some(keycode),
-//                         ..
-//                     } => {
-//                         platform_state.keys.up(keycode.into());
-//                     }
-//                     _ => {}
-//                 }
-//             });
-//
-//             // Sleep a little.
-//             std::thread::sleep(std::time::Duration::from_millis(10));
-//
-//             should_return
-//         });
-//     }
-// }
 
 impl MiSTerPlatform for De10Platform {
     type Color = BinaryColor;
@@ -162,7 +106,15 @@ impl MiSTerPlatform for De10Platform {
     fn events(&mut self) -> Vec<Event> {
         self.platform.events()
     }
-    //
+
+    fn end_loop(&mut self) {
+        unsafe {
+            // crate::user_io::user_io_poll();
+            // crate::input::input_poll(0);
+            // crate::menu::HandleUI();
+        }
+    }
+
     // fn run(&mut self, app: &mut impl Application<Color = BinaryColor>, flags: Flags) {
     //     self.platform.event_loop(|state| {
     //         let mut title_buffer = &mut title_display.inner;
