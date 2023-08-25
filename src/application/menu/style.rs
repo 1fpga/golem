@@ -36,7 +36,7 @@ impl<R: MenuReturn + Clone + Copy> InputAdapter for SdlMenuInputAdapter<R> {
 
     fn handle_input(
         &self,
-        state: &mut Self::State,
+        _state: &mut Self::State,
         action: Self::Input,
     ) -> InputResult<Self::Value> {
         match action {

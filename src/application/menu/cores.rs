@@ -77,8 +77,9 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                 Some(MenuAction::ManualLoad) => {
                     let path = select_file_path_menu(
                         app,
+                        "Select Core Manually",
                         std::env::current_dir().unwrap_or("/".into()),
-                        FilesystemMenuOptions::default(),
+                        FilesystemMenuOptions::default().with_allow_back(true),
                     );
                     info!("Loading core from path {:?}", path);
                 }

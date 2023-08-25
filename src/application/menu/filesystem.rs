@@ -1,12 +1,15 @@
 use crate::application::menu::style::{menu_style, MenuReturn};
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::mono_font::ascii;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use embedded_menu::items::NavigationItem;
 use embedded_menu::Menu;
 use regex::Regex;
 use std::path::{Path, PathBuf};
+
+const MAXIMUM_TITLE_PATH_LENGTH: usize = 38;
 
 pub struct FilesystemMenuOptions {
     /// Allow the user to go to the parent of the initial directory.
@@ -31,12 +34,24 @@ pub struct FilesystemMenuOptions {
 impl Default for FilesystemMenuOptions {
     fn default() -> Self {
         Self {
-            allow_back: true,
+            allow_back: false,
             dir_first: true,
             show_hidden: false,
             show_extensions: true,
             sort: true,
             pattern: None,
+        }
+    }
+}
+
+impl FilesystemMenuOptions {
+    pub fn with_allow_back(self, allow_back: bool) -> Self {
+        Self { allow_back, ..self }
+    }
+    pub fn pattern(self, pattern: Regex) -> Self {
+        Self {
+            pattern: Some(pattern),
+            ..self
         }
     }
 }
@@ -64,6 +79,7 @@ enum EventLoopResult {
 
 pub fn select_file_path_menu(
     app: &mut impl Application<Color = BinaryColor>,
+    title: impl AsRef<str>,
     initial: impl AsRef<Path>,
     options: FilesystemMenuOptions,
 ) -> Result<Option<PathBuf>, std::io::Error> {
@@ -127,30 +143,35 @@ pub fn select_file_path_menu(
             })
             .collect::<Vec<_>>();
 
-        let title = path
-            .file_name()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
+        let path_string = path.to_string_lossy().to_string();
+        let split_idx = path_string.len().saturating_sub(MAXIMUM_TITLE_PATH_LENGTH);
+        // Format the title. If path is too long, replace the beginning with "...".
+        let title = format!(
+            "{}\n{}",
+            title.as_ref(),
+            if split_idx == 0 {
+                path_string
+            } else {
+                format!("...{}", &path_string[split_idx..])
+            }
+        );
 
         let mut maybe_dotdot = if path.parent().is_some() {
-            Some(NavigationItem::new("..", MenuAction::UpDir).with_marker(">"))
-        } else {
-            None
-        }
-        .into_iter()
-        .collect::<Vec<_>>();
-        let mut maybe_cancel = if options.allow_back {
-            Some(NavigationItem::new("< Cancel", MenuAction::Back).with_marker("<<"))
+            if options.allow_back || path != initial.as_ref() {
+                Some(NavigationItem::new("..", MenuAction::UpDir).with_marker(">"))
+            } else {
+                None
+            }
         } else {
             None
         }
         .into_iter()
         .collect::<Vec<_>>();
 
-        let mut menu = Menu::with_style(&title, menu_style())
+        let mut menu = Menu::with_style(&title, menu_style().with_title_font(&ascii::FONT_6X9))
             .add_items(maybe_dotdot.as_mut_slice())
             .add_items(entries_items.as_mut_slice())
-            .add_items(maybe_cancel.as_mut_slice())
+            .add_item(NavigationItem::new("< Cancel", MenuAction::Back).with_marker("<<"))
             .build();
 
         let selection: EventLoopResult = app.event_loop(|app, state| {
