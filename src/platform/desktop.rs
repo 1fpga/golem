@@ -5,7 +5,7 @@ use crate::macguiver::platform::sdl::{
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
 use crate::platform::{sizes, MiSTerPlatform};
-use embedded_graphics::geometry::{Point, Size};
+use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 pub use DesktopWindowManager as PlatformWindowManager;

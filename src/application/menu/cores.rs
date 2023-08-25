@@ -1,4 +1,6 @@
+use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style;
+use crate::application::menu::style::MenuReturn;
 use crate::application::TopLevelViewType;
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
@@ -8,11 +10,19 @@ use embedded_menu::items::NavigationItem;
 use embedded_menu::Menu;
 use tracing::{error, info};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub enum MenuAction {
+    #[default]
     Back,
     Refresh,
+    ManualLoad,
     ShowCoreInfo(i32),
+}
+
+impl MenuReturn for MenuAction {
+    fn back() -> Self {
+        MenuAction::Back
+    }
 }
 
 fn build_cores_items_(database: &mut mister_db::Connection) -> Vec<(String, i32)> {
@@ -43,17 +53,15 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
         .collect();
 
     let mut menu = Menu::with_style("_.Cores", style::menu_style())
-        .add_item(NavigationItem::new("Refresh Cores...", MenuAction::Refresh).with_marker(">"))
+        .add_item(
+            NavigationItem::new("Load Core Manually", MenuAction::ManualLoad).with_marker(">"),
+        )
+        .add_item(NavigationItem::new("Refresh Cores", MenuAction::Refresh))
         .add_items(&mut items)
         .add_item(NavigationItem::new("Back", MenuAction::Back).with_marker(">"))
         .build();
 
     app.event_loop(|app, state| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        menu.update(buffer);
-        menu.draw(buffer).unwrap();
-
         for ev in state.events() {
             match menu.interact(ev) {
                 None => {}
@@ -66,8 +74,21 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                 Some(MenuAction::ShowCoreInfo(id)) => {
                     info!("Showing core info for core {}", id);
                 }
+                Some(MenuAction::ManualLoad) => {
+                    let path = select_file_path_menu(
+                        app,
+                        std::env::current_dir().unwrap_or("/".into()),
+                        FilesystemMenuOptions::default(),
+                    );
+                    info!("Loading core from path {:?}", path);
+                }
             }
         }
+
+        let buffer = app.main_buffer();
+        buffer.clear(BinaryColor::Off).unwrap();
+        menu.update(buffer);
+        menu.draw(buffer).unwrap();
 
         None
     })

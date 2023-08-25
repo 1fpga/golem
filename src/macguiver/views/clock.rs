@@ -18,15 +18,9 @@ pub struct DateTimeWidget {
     text: String,
 }
 
-impl Default for DateTimeWidget {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl DateTimeWidget {
-    pub fn new() -> Self {
-        let time_format = "%a %d %b %H:%M:%S".to_string();
+    pub fn new(format: impl Into<String>) -> Self {
+        let time_format = format.into();
         let date_time = chrono::Local::now();
         let text = date_time.format(&time_format).to_string();
         let style = MonoTextStyle::new(&FONT_6X9, BinaryColor::On);
@@ -40,12 +34,29 @@ impl DateTimeWidget {
         }
     }
 
+    pub fn set_time_format(&mut self, time_format: String) -> bool {
+        if time_format == self.time_format {
+            return false;
+        }
+        self.time_format = time_format;
+        self.set_time(self.date_time);
+        let text = self.date_time.format(&self.time_format).to_string();
+        self.bounds =
+            Text::with_baseline(&text, Point::zero(), self.style, Baseline::Top).bounding_box();
+        true
+    }
+
     pub fn set_time(&mut self, date_time: chrono::DateTime<chrono::Local>) {
         self.date_time = date_time;
         self.text = self.date_time.format(&self.time_format).to_string();
     }
 
     pub fn update(&mut self) -> bool {
+        // Skip update if time format is not set.
+        if self.time_format.is_empty() {
+            return false;
+        }
+
         let date_time = chrono::Local::now();
         if date_time.second() != self.date_time.second() {
             self.set_time(date_time);

@@ -1,3 +1,4 @@
+use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{cores_menu_panel, main_menu};
 use crate::application::panels::input_tester::input_tester;
 use crate::application::panels::settings::settings_panel;
@@ -13,6 +14,7 @@ use embedded_graphics::Drawable;
 use mister_db::Connection;
 use sdl3::event::Event;
 use std::sync::{Arc, RwLock};
+use tracing::info;
 
 // mod icons;
 pub mod menu;
@@ -20,6 +22,10 @@ pub mod menu;
 mod panels;
 mod toolbar;
 mod widgets;
+
+mod cores;
+
+pub use cores::CoreManager;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub enum TopLevelViewType {
@@ -30,6 +36,12 @@ pub enum TopLevelViewType {
     InputTester,
     About,
     Quit,
+}
+
+impl MenuReturn for TopLevelViewType {
+    fn back() -> Self {
+        Self::MainMenu
+    }
 }
 
 impl TopLevelViewType {
@@ -51,6 +63,8 @@ pub struct MiSTer {
     database: Arc<RwLock<Connection>>,
     view: TopLevelViewType,
 
+    core_manager: Arc<RwLock<CoreManager>>,
+
     pub platform: WindowManager,
     main_buffer: DrawBuffer<BinaryColor>,
     toolbar_buffer: DrawBuffer<BinaryColor>,
@@ -59,7 +73,7 @@ pub struct MiSTer {
 impl MiSTer {
     pub fn new(platform: WindowManager) -> Self {
         let settings = Arc::new(Settings::new());
-        let database = mister_db::establish_connection();
+        let database = mister_db::establish_connection().expect("Failed to connect to database");
         let database = Arc::new(RwLock::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let main_size = platform.main_dimensions();
@@ -67,6 +81,7 @@ impl MiSTer {
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
             view: TopLevelViewType::default(),
+            core_manager: Arc::new(RwLock::new(CoreManager::new(database.clone()))),
             database,
             settings,
             platform,
@@ -103,17 +118,22 @@ impl Application for MiSTer {
         self.database.clone()
     }
 
-    fn event_loop(
+    fn core_manager(&self) -> Arc<RwLock<CoreManager>> {
+        Arc::clone(&self.core_manager)
+    }
+
+    fn event_loop<R>(
         &mut self,
-        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<TopLevelViewType>,
-    ) -> TopLevelViewType {
+        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
+    ) -> R {
         loop {
             self.platform.start_loop();
 
             let events = self.platform.events();
             for event in events.iter() {
                 if let Event::Quit { .. } = event {
-                    return TopLevelViewType::Quit;
+                    info!("Quit event received. Quitting...");
+                    std::process::exit(0);
                 }
             }
 

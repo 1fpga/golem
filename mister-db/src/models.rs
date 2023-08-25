@@ -18,6 +18,9 @@ pub struct Core {
     /// A list of comma-separated authors of the form "Author Name <email@address>".
     pub author: String,
 
+    /// A home URL.
+    pub home: String,
+
     /// A description of the core.
     pub description: String,
 

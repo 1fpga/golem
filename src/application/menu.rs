@@ -1,4 +1,5 @@
 pub mod cores;
+pub mod filesystem;
 pub mod main;
 pub mod style;
 

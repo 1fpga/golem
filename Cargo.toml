@@ -36,16 +36,17 @@ dirs = "5.0.1"
 dotenvy = "0.15.7"
 embedded-graphics = "0.8.0"
 embedded-layout = "0.3.1"
-embedded-menu = { git = "https://github.com/hansl/embedded-menu.git", branch = "custom-interaction" }
+embedded-menu = "0.4.0"
 hex = "0.4.3"
 json5 = "0.4.1"
 json5format = "0.2.6"
 libc = { version = "*", default-features = false }
-merge = { git = "https://github.com/hansl/merge-rs.git", rev = "ef451941cf3faefc8b6514fa2fb9105f823e6d60", features = ["num", "derive"] }
+merge = { git = "https://github.com/hansl/merge-rs.git", rev = "dcaf63c0ef296e93219a5393a8252302170b5e42", features = ["num", "derive"] }
 mister-db = { path = "./mister-db" }
 network-interface = "1.0.1"
 num-traits = "0.2.15"
 ouroboros = "0.17.0"
+regex = "1.9.3"
 sdl3 = "0.4.0"
 serde = { version = "1.0.164", features = ["derive"] }
 serde-hex = "0.1.0"
@@ -56,7 +57,7 @@ thiserror = "1.0.40"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["tracing-log"] }
 validator = { version = "0.16.1", features = ["derive"] }
-volatile = "0.5.1"
+walkdir = "2.3.3"
 
 [dev-dependencies]
 tempdir = "0.3.7"

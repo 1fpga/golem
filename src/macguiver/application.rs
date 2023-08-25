@@ -1,4 +1,4 @@
-use crate::application::TopLevelViewType;
+use crate::application::CoreManager;
 use crate::data::settings::Settings;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
@@ -29,9 +29,10 @@ pub trait Application {
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color>;
 
     fn database(&self) -> Arc<RwLock<mister_db::Connection>>;
+    fn core_manager(&self) -> Arc<RwLock<CoreManager>>;
 
-    fn event_loop(
+    fn event_loop<R>(
         &mut self,
-        loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<TopLevelViewType>,
-    ) -> TopLevelViewType;
+        loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
+    ) -> R;
 }

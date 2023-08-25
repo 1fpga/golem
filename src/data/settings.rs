@@ -1,14 +1,13 @@
-use crate::application::menu::style::{menu_style, SdlMenuInputAdapter};
+use crate::application::menu::style::{menu_style, MenuReturn, SdlMenuInputAdapter};
 use crate::application::TopLevelViewType;
 use bus::{Bus, BusReader};
 use embedded_menu::selection_indicator::style::Invert;
 use embedded_menu::selection_indicator::AnimatedPosition;
-use embedded_menu::Menu;
+use embedded_menu::{Menu, SelectValue};
 use merge::Merge;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
-use std::collections::hash_map::{DefaultHasher, RandomState};
-use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
@@ -32,7 +31,7 @@ fn create_settings_save_thread_(
 
     std::thread::spawn(move || loop {
         if update_recv
-            .recv_timeout(std::time::Duration::from_millis(100))
+            .recv_timeout(std::time::Duration::from_secs(1))
             .is_ok()
         {
             debouncer.put(());
@@ -53,6 +52,33 @@ fn invert_toolbar_() -> bool {
     true
 }
 
+#[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, SelectValue)]
+pub enum DateTimeFormat {
+    /// The default local format for datetime (respecting Locale).
+    #[default]
+    Default,
+
+    /// Short locale format.
+    Short,
+
+    /// Only show the time.
+    TimeOnly,
+
+    /// Hide the datetime.
+    Hidden,
+}
+
+impl DateTimeFormat {
+    pub fn time_format(&self) -> String {
+        match self {
+            DateTimeFormat::Default => "%c".to_string(),
+            DateTimeFormat::Hidden => "".to_string(),
+            DateTimeFormat::Short => "%x %X".to_string(),
+            DateTimeFormat::TimeOnly => "%X".to_string(),
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
 #[menu(
     title = "Settings",
@@ -60,6 +86,7 @@ fn invert_toolbar_() -> bool {
     items = [
         data(label = "Show FPS", field = show_fps),
         data(label = "Invert toolbar colors", field = invert_toolbar),
+        data(label = "Toolbar date format", field = toolbar_datetime_format),
         navigation(label = "Back", event = TopLevelViewType::MainMenu)
     ]
 )]
@@ -71,14 +98,25 @@ pub struct InnerSettings {
     #[serde(default = "invert_toolbar_")]
     #[merge(strategy = merge::overwrite)]
     invert_toolbar: bool,
+
+    #[serde(default)]
+    #[merge(strategy = merge::overwrite)]
+    toolbar_datetime_format: DateTimeFormat,
 }
 
 impl Default for InnerSettings {
     fn default() -> Self {
         Self {
-            show_fps: true,
+            show_fps: false,
             invert_toolbar: true,
+            toolbar_datetime_format: DateTimeFormat::default(),
         }
+    }
+}
+
+impl MenuReturn for InnerSettingsMenuEvents {
+    fn back() -> Self {
+        Self::NavigationEvent(TopLevelViewType::back())
     }
 }
 
@@ -193,7 +231,13 @@ impl Settings {
             .collect()
     }
 
-    pub fn menu(&self) -> InnerSettingsMenuWrapper<SdlMenuInputAdapter, AnimatedPosition, Invert> {
+    pub fn menu(
+        &self,
+    ) -> InnerSettingsMenuWrapper<
+        SdlMenuInputAdapter<InnerSettingsMenuEvents>,
+        AnimatedPosition,
+        Invert,
+    > {
         self.inner
             .read()
             .unwrap()
@@ -236,5 +280,10 @@ impl Settings {
     #[inline]
     pub fn invert_toolbar(&self) -> bool {
         self.inner.read().unwrap().invert_toolbar
+    }
+
+    #[inline]
+    pub fn toolbar_datetime_format(&self) -> DateTimeFormat {
+        self.inner.read().unwrap().toolbar_datetime_format
     }
 }

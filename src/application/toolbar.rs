@@ -2,7 +2,7 @@ use crate::application::widgets::network::{NetworkWidget, NetworkWidgetView};
 use crate::data::settings::Settings;
 use crate::macguiver::views::clock::DateTimeWidget;
 use crate::macguiver::views::fps::{FpsCounter, FpsCounterView};
-use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
+use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -12,7 +12,6 @@ use embedded_graphics::Drawable;
 use embedded_layout::align::{horizontal, vertical, Align};
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::Views;
-use embedded_menu::adapters::invert::BinaryColorDrawTargetExt;
 use std::sync::{Arc, RwLock};
 
 enum ToolbarItem {
@@ -82,8 +81,10 @@ pub struct Toolbar {
 impl Toolbar {
     pub fn new(settings: Arc<Settings>, _database: Arc<RwLock<mister_db::Connection>>) -> Self {
         let on_settings_update = settings.on_update();
+        let mut clock = DateTimeWidget::new(settings.toolbar_datetime_format().time_format());
+
         Self {
-            clock: DateTimeWidget::default(),
+            clock,
             fps: FpsCounter::new(MonoTextStyle::new(
                 &embedded_graphics::mono_font::ascii::FONT_6X9,
                 BinaryColor::On,
@@ -95,7 +96,11 @@ impl Toolbar {
     }
 
     pub fn update(&mut self) -> bool {
-        let mut should_redraw = self.clock.update() || self.network.update();
+        let mut should_redraw = self.clock.update()
+            || self.network.update()
+            || self
+                .clock
+                .set_time_format(self.settings.toolbar_datetime_format().time_format());
 
         // Check for settings changes.
         if self.on_settings_update.try_recv().is_ok() {

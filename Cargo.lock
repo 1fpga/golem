@@ -370,6 +370,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel_migrations"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6036b3f0120c5961381b570ee20a02432d7e2d27ea60de9578799cf9156914ac"
+dependencies = [
+ "diesel",
+ "migrations_internals",
+ "migrations_macros",
+]
+
+[[package]]
 name = "diesel_table_macro_syntax"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -440,9 +451,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-layout"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d3dc955af9d9011835bbb92ef7de625e493338e3535a51f754bf1ee846282bb"
+checksum = "b08725b7f9021377a7f84f14089b4980a30b06c5e424288b34482f17cf513369"
 dependencies = [
  "embedded-graphics",
  "embedded-layout-macros",
@@ -461,8 +472,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-menu"
-version = "0.3.1"
-source = "git+https://github.com/hansl/embedded-menu.git?branch=custom-interaction#e6f9881acd574719932c2d94c3b11ce1143aabc2"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30ce1d85a9eb7720f72f6686454d0c557f24416273d62c8e92fa74bc601f30c6"
 dependencies = [
  "embedded-graphics",
  "embedded-layout",
@@ -472,8 +484,9 @@ dependencies = [
 
 [[package]]
 name = "embedded-menu-macros"
-version = "0.2.0"
-source = "git+https://github.com/hansl/embedded-menu.git?branch=custom-interaction#e6f9881acd574719932c2d94c3b11ce1143aabc2"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2943c5739d30b8af957757c89c0b46eb15bd417aad25ce9fcadcc8a4761e2f1"
 dependencies = [
  "proc-macro2 1.0.66",
  "quote 1.0.33",
@@ -768,7 +781,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 [[package]]
 name = "merge"
 version = "0.1.1"
-source = "git+https://github.com/hansl/merge-rs.git?rev=ef451941cf3faefc8b6514fa2fb9105f823e6d60#ef451941cf3faefc8b6514fa2fb9105f823e6d60"
+source = "git+https://github.com/hansl/merge-rs.git?rev=dcaf63c0ef296e93219a5393a8252302170b5e42#dcaf63c0ef296e93219a5393a8252302170b5e42"
 dependencies = [
  "merge_derive",
  "num-traits",
@@ -777,7 +790,7 @@ dependencies = [
 [[package]]
 name = "merge_derive"
 version = "0.1.0"
-source = "git+https://github.com/hansl/merge-rs.git?rev=ef451941cf3faefc8b6514fa2fb9105f823e6d60#ef451941cf3faefc8b6514fa2fb9105f823e6d60"
+source = "git+https://github.com/hansl/merge-rs.git?rev=dcaf63c0ef296e93219a5393a8252302170b5e42#dcaf63c0ef296e93219a5393a8252302170b5e42"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.66",
@@ -790,6 +803,27 @@ name = "micromath"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39617bc909d64b068dcffd0e3e31679195b5576d0c83fadc52690268cc2b2b55"
+
+[[package]]
+name = "migrations_internals"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f23f71580015254b020e856feac3df5878c2c7a8812297edd6c0a485ac9dada"
+dependencies = [
+ "serde",
+ "toml",
+]
+
+[[package]]
+name = "migrations_macros"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cce3325ac70e67bbab5bd837a31cae01f1a6db64e0e744a33cb03a543469ef08"
+dependencies = [
+ "migrations_internals",
+ "proc-macro2 1.0.66",
+ "quote 1.0.33",
+]
 
 [[package]]
 name = "mister"
@@ -818,6 +852,7 @@ dependencies = [
  "network-interface",
  "num-traits",
  "ouroboros",
+ "regex",
  "sdl3",
  "serde",
  "serde-hex",
@@ -830,7 +865,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "validator",
- "volatile",
+ "walkdir",
 ]
 
 [[package]]
@@ -839,6 +874,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "diesel",
+ "diesel_migrations",
  "dotenvy",
 ]
 
@@ -1202,6 +1238,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ad4cc8da4ef723ed60bced201181d83791ad433213d8c24efffda1eec85d741"
 
 [[package]]
+name = "same-file"
+version = "1.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93fc1dc3aaa9bfed95e02e6eadabb4baf7e3078b0bd1b4d7b6b0b68378900502"
+dependencies = [
+ "winapi-util",
+]
+
+[[package]]
 name = "sdl3"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1263,6 +1308,15 @@ checksum = "693151e1ac27563d6dbcec9dee9fbd5da8539b20fa14ad3752b2e6d363ace360"
 dependencies = [
  "itoa",
  "ryu",
+ "serde",
+]
+
+[[package]]
+name = "serde_spanned"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96426c9936fd7a0124915f9185ea1d20aa9445cc9821142f0a73bc9207a2e186"
+dependencies = [
  "serde",
 ]
 
@@ -1504,6 +1558,40 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
+name = "toml"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c17e963a819c331dcacd7ab957d80bc2b9a9c1e71c804826d2f283dd65306542"
+dependencies = [
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_edit",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7cda73e2f1397b1262d6dfdcef8aafae14d1de7748d66822d3bfeeb6d03e5e4b"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.19.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8123f27e969974a3dfba720fdb560be359f57b44302d280ba72e76a74480e8a"
+dependencies = [
+ "indexmap 2.0.0",
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "winnow",
+]
+
+[[package]]
 name = "tracing"
 version = "0.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1684,10 +1772,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
-name = "volatile"
-version = "0.5.1"
+name = "walkdir"
+version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9eaac9f9d9b7ae00cdd43e21b15e58ccacd903e6d29131d7536765a61969d25e"
+checksum = "36df944cda56c7d8d8b7496af378e6b16de9284591917d307c9b4d313c44e698"
+dependencies = [
+ "same-file",
+ "winapi-util",
+]
 
 [[package]]
 name = "wasi"
@@ -1772,6 +1864,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
 
 [[package]]
+name = "winapi-util"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70ec6ce85bb158151cae5e5c87f95a8e97d2c0c4b001223f33a334e3ce5de178"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1851,3 +1952,12 @@ name = "windows_x86_64_msvc"
 version = "0.48.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ed94fce61571a4006852b7389a063ab983c02eb1bb37b47f8272ce92d06d9538"
+
+[[package]]
+name = "winnow"
+version = "0.5.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c2e3184b9c4e92ad5167ca73039d0c42476302ab603e2fec4487511f38ccefc"
+dependencies = [
+ "memchr",
+]

@@ -7,6 +7,7 @@ diesel::table! {
         user_name -> Nullable<Text>,
         path -> Text,
         author -> Text,
+        home -> Text,
         description -> Text,
         created_at -> Timestamp,
         updated_at -> Timestamp,
