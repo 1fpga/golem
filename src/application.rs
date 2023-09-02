@@ -77,11 +77,12 @@ impl MiSTer {
         let database = Arc::new(RwLock::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let main_size = platform.main_dimensions();
+        let core_manager = CoreManager::new(database.clone());
 
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
             view: TopLevelViewType::default(),
-            core_manager: Arc::new(RwLock::new(CoreManager::new(database.clone()))),
+            core_manager: Arc::new(RwLock::new(core_manager)),
             database,
             settings,
             platform,
@@ -93,6 +94,7 @@ impl MiSTer {
 
 impl Application for MiSTer {
     type Color = BinaryColor;
+    type Platform = WindowManager;
 
     fn settings(&self) -> &Settings {
         &self.settings
@@ -120,6 +122,14 @@ impl Application for MiSTer {
 
     fn core_manager(&self) -> Arc<RwLock<CoreManager>> {
         Arc::clone(&self.core_manager)
+    }
+
+    fn platform(&self) -> &Self::Platform {
+        &self.platform
+    }
+
+    fn platform_mut(&mut self) -> &mut Self::Platform {
+        &mut self.platform
     }
 
     fn event_loop<R>(

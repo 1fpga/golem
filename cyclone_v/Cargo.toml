@@ -1,0 +1,15 @@
+[package]
+name = "cyclone-v"
+version = "0.1.0"
+edition = "2018"
+authors = ["Hans Larsen <hans.larsen@gmail.com>"]
+
+[dependencies]
+bitfield = "0.14.0"
+byteorder = "1.4.3"
+libc = "0.2.147"
+vm-memory = { version = "0.12.1", features = ["backend-mmap"] }
+
+[features]
+default = ["std"]
+std = []

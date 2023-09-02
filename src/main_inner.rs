@@ -1,12 +1,14 @@
-use crate::application;
 use clap::Parser;
-use clap_verbosity_flag::Level as VerbosityLevel;
-use clap_verbosity_flag::Verbosity;
+use clap_verbosity_flag::{LogLevel, Verbosity};
 
-use crate::macguiver::application::Application;
-use crate::platform::WindowManager;
-use tracing::Level;
-use tracing_subscriber::fmt::Subscriber;
+#[derive(Copy, Clone, Debug, Default)]
+pub struct NoneLevel;
+
+impl LogLevel for NoneLevel {
+    fn default() -> Option<clap_verbosity_flag::Level> {
+        None
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -20,11 +22,19 @@ pub struct Flags {
     pub xml: Option<String>,
 
     #[command(flatten)]
-    pub verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
+    pub verbose: Verbosity<NoneLevel>,
 }
 
+#[cfg(not(test))]
 #[allow(unused)]
 pub fn main() -> Result<(), String> {
+    use crate::application;
+    use crate::macguiver::application::Application;
+    use crate::platform::WindowManager;
+    use clap_verbosity_flag::Level as VerbosityLevel;
+    use tracing::Level;
+    use tracing_subscriber::fmt::Subscriber;
+
     let cores = core_affinity::get_core_ids().unwrap();
     // Always use the second core available, or the first one if there is only one.
     let core = cores.get(1).unwrap_or(cores.get(0).unwrap());
@@ -36,7 +46,7 @@ pub fn main() -> Result<(), String> {
             extern "C" {
                 static version: *const u8;
             }
-            std::ffi::CStr::from_ptr(version.offset(5)).to_string_lossy()
+            std::ffi::CStr::from_ptr(version.offset(5) as *const libc::c_char).to_string_lossy()
         }
 
         #[cfg(not(feature = "platform_de10"))]
@@ -49,12 +59,11 @@ pub fn main() -> Result<(), String> {
     // Initialize tracing.
     let subscriber = Subscriber::builder();
     let subscriber = match opts.verbose.log_level() {
-        None => subscriber,
         Some(VerbosityLevel::Error) => subscriber.with_max_level(Level::ERROR),
         Some(VerbosityLevel::Warn) => subscriber.with_max_level(Level::WARN),
         Some(VerbosityLevel::Info) => subscriber.with_max_level(Level::INFO),
-        Some(VerbosityLevel::Trace) => subscriber.with_max_level(Level::TRACE),
         Some(VerbosityLevel::Debug) => subscriber.with_max_level(Level::DEBUG),
+        None | Some(VerbosityLevel::Trace) => subscriber.with_max_level(Level::TRACE),
     };
     subscriber
         .with_ansi(true)

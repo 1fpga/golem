@@ -55,27 +55,11 @@ static void fpgamgr_set_cd_ratio(unsigned long ratio)
 		(ratio & 0x3) << FPGAMGRREGS_CTRL_CDRATIO_LSB);
 }
 
+extern "C" int fpgamgr_dclkcnt_set_rust(unsigned long);
+
 static int fpgamgr_dclkcnt_set(unsigned long cnt)
 {
-	unsigned long i;
-
-	/* Clear any existing done status */
-	if (readl(&fpgamgr_regs->dclkstat))
-		writel(0x1, &fpgamgr_regs->dclkstat);
-
-	/* Write the dclkcnt */
-	writel(cnt, &fpgamgr_regs->dclkcnt);
-
-	/* Wait till the dclkcnt done */
-	for (i = 0; i < FPGA_TIMEOUT_CNT; i++) {
-		if (!readl(&fpgamgr_regs->dclkstat))
-			continue;
-
-		writel(0x1, &fpgamgr_regs->dclkstat);
-		return 0;
-	}
-
-	return -ETIMEDOUT;
+    return fpgamgr_dclkcnt_set_rust(cnt);
 }
 
 /* Check whether FPGA Init_Done signal is high */
@@ -134,8 +118,10 @@ static int fpgamgr_poll_fpga_ready(void)
 }
 */
 
+extern "C" void hexdump(void *data, uint16_t size, uint16_t offset = 0);
+
 /* Start the FPGA programming by initialize the FPGA Manager */
-static int fpgamgr_program_init(void)
+extern "C" int fpgamgr_program_init(void)
 {
 	unsigned long msel, i;
 
@@ -149,6 +135,7 @@ static int fpgamgr_program_init(void)
 	* If MSEL[3] = 1, cfg width = 32 bit
 	*/
 	if (msel & 0x8) {
+	fprintf(stderr, "C 1\n");
 		setbits_le32(&fpgamgr_regs->ctrl,
 			FPGAMGRREGS_CTRL_CFGWDTH_MASK);
 
@@ -165,6 +152,7 @@ static int fpgamgr_program_init(void)
 
 	}
 	else {	/* MSEL[3] = 0 */
+	fprintf(stderr, "C 2\n");
 		clrbits_le32(&fpgamgr_regs->ctrl,
 			FPGAMGRREGS_CTRL_CFGWDTH_MASK);
 
@@ -179,6 +167,8 @@ static int fpgamgr_program_init(void)
 		else if ((msel & 0x3) == 0x2)
 			fpgamgr_set_cd_ratio(CDRATIO_x4);
 	}
+
+
 
 	/* To enable FPGA Manager configuration */
 	clrbits_le32(&fpgamgr_regs->ctrl, FPGAMGRREGS_CTRL_NCE_MASK);
@@ -227,36 +217,40 @@ static int fpgamgr_program_init(void)
 
 #define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
 
+extern "C" void fpgamgr_program_write_rust(const void *rbf_data, unsigned long rbf_size);
+
 /* Write the RBF data to FPGA Manager */
 static void fpgamgr_program_write(const void *rbf_data, unsigned long rbf_size)
 {
-	uint32_t src = (uint32_t)rbf_data;
-	uint32_t dst = (uint32_t)MAP_ADDR(SOCFPGA_FPGAMGRDATA_ADDRESS);
+//	uint32_t src = (uint32_t)rbf_data;
+//	uint32_t dst = (uint32_t)MAP_ADDR(SOCFPGA_FPGAMGRDATA_ADDRESS);
+//
+//	/* Number of loops for 32-byte long copying. */
+//	uint32_t loops32 = rbf_size / 32;
+//	/* Number of loops for 4-byte long copying + trailing bytes */
+//	uint32_t loops4 = DIV_ROUND_UP(rbf_size % 32, 4);
+//
+//	__asm volatile(
+//		"1:	ldmia %0!,{r0-r7}   \n"
+//		"	stmia %1!,{r0-r7}   \n"
+//		"	sub	  %1, #32       \n"
+//		"	subs  %2, #1        \n"
+//		"	bne   1b            \n"
+//		"	cmp   %3, #0        \n"
+//		"	beq   3f            \n"
+//		"2:	ldr	  %2, [%0], #4  \n"
+//		"	str   %2, [%1]      \n"
+//		"	subs  %3, #1        \n"
+//		"	bne   2b            \n"
+//		"3:	nop                 \n"
+//		: "+r"(src), "+r"(dst), "+r"(loops32), "+r"(loops4) :
+//		: "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "cc");
 
-	/* Number of loops for 32-byte long copying. */
-	uint32_t loops32 = rbf_size / 32;
-	/* Number of loops for 4-byte long copying + trailing bytes */
-	uint32_t loops4 = DIV_ROUND_UP(rbf_size % 32, 4);
-
-	__asm volatile(
-		"1:	ldmia %0!,{r0-r7}   \n"
-		"	stmia %1!,{r0-r7}   \n"
-		"	sub	  %1, #32       \n"
-		"	subs  %2, #1        \n"
-		"	bne   1b            \n"
-		"	cmp   %3, #0        \n"
-		"	beq   3f            \n"
-		"2:	ldr	  %2, [%0], #4  \n"
-		"	str   %2, [%1]      \n"
-		"	subs  %3, #1        \n"
-		"	bne   2b            \n"
-		"3:	nop                 \n"
-		: "+r"(src), "+r"(dst), "+r"(loops32), "+r"(loops4) :
-		: "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7", "cc");
+    fpgamgr_program_write_rust(rbf_data, rbf_size);
 }
 
 /* Ensure the FPGA entering config done */
-static int fpgamgr_program_poll_cd(void)
+extern "C" int fpgamgr_program_poll_cd(void)
 {
 	const uint32_t mask = FPGAMGRREGS_MON_GPIO_EXT_PORTA_NS_MASK |
 		FPGAMGRREGS_MON_GPIO_EXT_PORTA_CD_MASK;

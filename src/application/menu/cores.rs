@@ -45,6 +45,10 @@ fn build_cores_items_(database: &mut mister_db::Connection) -> Vec<(String, i32)
         .collect()
 }
 
+extern "C" {
+    fn fpga_load_rbf(_: *const u8, _: *const u8, _: *const u8) -> i32;
+}
+
 pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopLevelViewType {
     let all_items = build_cores_items_(&mut app.database().write().unwrap());
     let mut items: Vec<NavigationItem<_, _, _, _>> = all_items
@@ -78,10 +82,33 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                     let path = select_file_path_menu(
                         app,
                         "Select Core Manually",
-                        std::env::current_dir().unwrap_or("/".into()),
+                        std::env::current_exe()
+                            .unwrap()
+                            .parent()
+                            .unwrap()
+                            .to_path_buf(),
                         FilesystemMenuOptions::default().with_allow_back(true),
                     );
                     info!("Loading core from path {:?}", path);
+
+                    if let Ok(Some(path)) = path {
+                        let path_str = path.to_string_lossy().to_string();
+                        let c_str_path = std::ffi::CString::new(path_str).unwrap();
+                        unsafe {
+                            fpga_load_rbf(
+                                c_str_path.as_ptr() as *const u8,
+                                std::ptr::null(),
+                                std::ptr::null(),
+                            );
+                        }
+
+                        // app.platform_mut()
+                        //     .core_manager_mut()
+                        //     .load_program(path)
+                        //     .expect("Failed to load core");
+                    } else {
+                        info!("No core selected.");
+                    }
                 }
             }
         }
@@ -94,71 +121,3 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
         None
     })
 }
-
-// impl Panel for CoreMenu {
-//     fn new(_settings: &Settings, database: Arc<RwLock<mister_db::Connection>>) -> Self {
-//         // Build the items
-//         let all_items = build_cores_items_(&mut database.write().unwrap());
-//         let mut items: Vec<NavigationItem<_>> = all_items
-//             .into_iter()
-//             .map(|(name, id)| {
-//                 NavigationItem::new(name, MenuAction::ShowCoreInfo(id)).with_marker(">")
-//             })
-//             .collect();
-//
-//         let menu = Menu::with_style("Cores", style::menu_style())
-//             .add_item(Chain::new(OwnedMenuItems::new(items)))
-//             .add_item(NavigationItem::new("Refresh Cores...", MenuAction::Refresh).with_marker(">"))
-//             .add_item(NavigationItem::new("Back", MenuAction::Back).with_marker(">"))
-//             .build();
-//
-//         let menu = Rc::new(RefCell::new(menu));
-//         let (update, draw) = {
-//             let menu_update = menu.clone();
-//             let menu_draw = menu.clone();
-//
-//             let update = move |state: &PlatformState| {
-//                 let mut menu = menu_update.borrow_mut();
-//                 menu.update(state);
-//
-//                 for ev in state.events() {
-//                     if let Some(panel) = menu.interact(ev) {
-//                         return Some(panel);
-//                     }
-//                 }
-//
-//                 return Ok(None);
-//             };
-//
-//             let draw = move |target: &mut DrawBuffer<BinaryColor>| {
-//                 let menu = menu_draw.borrow();
-//                 menu.draw(target).unwrap();
-//             };
-//
-//             (update, draw)
-//         };
-//
-//         Self {
-//             items: items,
-//             update: Box::new(update),
-//             draw: Box::new(draw),
-//         }
-//     }
-//
-//     fn update(&mut self, state: &PlatformState) -> Result<Option<TopLevelViewType>, String> {
-//         let action = (self.update)(state)?;
-//         if let Some(action) = action {
-//             match action {
-//                 MenuAction::Back => Ok(Some(TopLevelViewType::MainMenu)),
-//                 MenuAction::Refresh => Ok(Some(TopLevelViewType::KeyboardTester)),
-//                 MenuAction::ShowCoreInfo(_i) => Ok(Some(TopLevelViewType::KeyboardTester)),
-//             }
-//         } else {
-//             Ok(None)
-//         }
-//     }
-//
-//     fn draw(&self, target: &mut DrawBuffer<BinaryColor>) {
-//         (self.draw)(target)
-//     }
-// }

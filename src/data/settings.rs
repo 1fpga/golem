@@ -1,5 +1,6 @@
 use crate::application::menu::style::{menu_style, MenuReturn, SdlMenuInputAdapter};
 use crate::application::TopLevelViewType;
+use crate::data::paths;
 use bus::{Bus, BusReader};
 use embedded_menu::selection_indicator::style::Invert;
 use embedded_menu::selection_indicator::AnimatedPosition;
@@ -8,7 +9,6 @@ use merge::Merge;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
-use std::env;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -17,12 +17,13 @@ use tracing::{debug, error};
 
 fn create_settings_save_thread_(
     mut update_recv: BusReader<()>,
-    path: Arc<RwLock<PathBuf>>,
+    _path: Arc<RwLock<PathBuf>>,
     inner: Arc<RwLock<InnerSettings>>,
 ) -> crossbeam_channel::Sender<()> {
     let (drop_send, drop_recv) = crossbeam_channel::bounded(1);
     let debouncer = debounce::thread::EventDebouncer::new(Duration::from_millis(500), move |_| {
-        let path = path.read().unwrap();
+        // let path = path.read().unwrap();
+        let path = paths::settings_path();
         if let Err(e) = inner.read().unwrap().save(path.as_path()) {
             // Still ignore error. Maybe filesystem is readonly?
             error!("Failed to save settings: {}", e);
@@ -137,7 +138,7 @@ impl InnerSettings {
     pub(super) fn save(&self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
         let mut path = path.as_ref().to_path_buf();
         if path.as_os_str().is_empty() {
-            path = env::current_dir()?.join("settings.json5");
+            path = paths::config_root_path().join("settings.json5");
         }
 
         debug!("Saving settings to {path:?}");
@@ -201,36 +202,6 @@ impl Merge for Settings {
 }
 
 impl Settings {
-    pub fn find_settings_paths() -> Vec<PathBuf> {
-        let mut paths = vec![];
-
-        if let Some(mut home) = dirs::home_dir() {
-            home.push(".mister");
-            paths.push(home);
-        }
-        if let Ok(pwd_settings) = env::current_dir() {
-            paths.push(pwd_settings);
-        }
-        if let Some(exec_settings) = dirs::executable_dir() {
-            paths.push(exec_settings);
-        }
-
-        paths
-            .into_iter()
-            .flat_map(|p| {
-                vec![
-                    p.join("MiSTer.json"),
-                    p.join("mister.json"),
-                    p.join("MiSTer.json5"),
-                    p.join("mister.json5"),
-                    p.join("settings.json"),
-                    p.join("settings.json5"),
-                ]
-            })
-            .filter(|p| p.exists())
-            .collect()
-    }
-
     pub fn menu(
         &self,
     ) -> InnerSettingsMenuWrapper<
@@ -254,7 +225,7 @@ impl Settings {
     pub fn new() -> Self {
         let mut settings = Self::default();
 
-        for path in Self::find_settings_paths() {
+        for path in paths::all_settings_paths() {
             settings.load(path).unwrap();
         }
 

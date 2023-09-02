@@ -13,10 +13,14 @@ use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 use sdl3::event::Event;
+use std::path::Path;
 use tracing::trace;
 
 cfg_if! {
-    if #[cfg(any(
+    if #[cfg(test)] {
+        mod null;
+        pub use null::NullPlatform as PlatformWindowManager;
+    } else if #[cfg(any(
         all(feature = "platform_de10", feature = "platform_desktop"),
         all(feature = "platform_de10", test),
         all(feature = "platform_desktop", test),
@@ -24,13 +28,10 @@ cfg_if! {
         compile_error!("Only one platform can be enabled at a time.");
     } else if #[cfg(feature = "platform_desktop")] {
         mod desktop;
-        pub use desktop::PlatformWindowManager;
+        pub use desktop::DesktopWindowManager as PlatformWindowManager;
     } else if #[cfg(feature = "platform_de10")] {
-        mod de10;
-        pub use de10::PlatformWindowManager;
-    } else if #[cfg(test)] {
-        mod null;
-        pub use null::PlatformWindowManager;
+        pub mod de10;
+        pub use de10::De10Platform as PlatformWindowManager;
     } else {
         compile_error!("At least one platform must be enabled.");
     }
@@ -85,8 +86,15 @@ impl OriginDimensions for PlatformState {
     }
 }
 
+pub trait CoreManager {
+    /// Load a core into the FPGA.
+    // TODO: Change the error type to something more usable than string.
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<(), String>;
+}
+
 pub trait MiSTerPlatform {
     type Color: PixelColor;
+    type CoreManager: CoreManager;
 
     fn init(&mut self, flags: &Flags);
 
@@ -100,6 +108,8 @@ pub trait MiSTerPlatform {
 
     fn start_loop(&mut self) {}
     fn end_loop(&mut self) {}
+
+    fn core_manager_mut(&mut self) -> &mut Self::CoreManager;
 }
 
 /// The [WindowManager] structure is responsible for managing and holding the state
@@ -120,7 +130,8 @@ pub struct WindowManager {
 impl WindowManager {}
 
 impl MiSTerPlatform for WindowManager {
-    type Color = BinaryColor;
+    type Color = <PlatformWindowManager as MiSTerPlatform>::Color;
+    type CoreManager = <PlatformWindowManager as MiSTerPlatform>::CoreManager;
 
     fn init(&mut self, flags: &Flags) {
         self.inner.init(flags);
@@ -142,5 +153,9 @@ impl MiSTerPlatform for WindowManager {
 
     fn events(&mut self) -> Vec<Event> {
         self.inner.events()
+    }
+
+    fn core_manager_mut(&mut self) -> &mut Self::CoreManager {
+        self.inner.core_manager_mut()
     }
 }

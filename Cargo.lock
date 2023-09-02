@@ -109,6 +109,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
 
 [[package]]
+name = "bitfield"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d7e60934ceec538daadb9d8432424ed043a904d8e0243f3c6446bce549a46ac"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -293,6 +299,16 @@ checksum = "1bfb12502f3fc46cca1bb51ac28df9d618d813cdc3d2f25b9fe775a34af26bb3"
 dependencies = [
  "generic-array",
  "typenum",
+]
+
+[[package]]
+name = "cyclone-v"
+version = "0.1.0"
+dependencies = [
+ "bitfield",
+ "byteorder",
+ "libc",
+ "vm-memory",
 ]
 
 [[package]]
@@ -829,6 +845,7 @@ dependencies = [
 name = "mister"
 version = "0.1.0"
 dependencies = [
+ "bitfield",
  "bus",
  "byteorder",
  "cfg-if",
@@ -837,6 +854,7 @@ dependencies = [
  "clap-verbosity-flag",
  "core_affinity",
  "crossbeam-channel",
+ "cyclone-v",
  "debounce",
  "dirs",
  "dotenvy",
@@ -850,6 +868,7 @@ dependencies = [
  "merge",
  "mister-db",
  "network-interface",
+ "num-integer",
  "num-traits",
  "ouroboros",
  "regex",
@@ -876,6 +895,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "dotenvy",
+ "tracing",
 ]
 
 [[package]]
@@ -904,6 +924,16 @@ checksum = "77a8165726e8236064dbb45459242600304b42a5ea24ee2948e18e023bf7ba84"
 dependencies = [
  "overload",
  "winapi",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.45"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "225d3389fb3509a24c93f5c29eb6bde2586b98d9f016636dff58d7c6f7569cd9"
+dependencies = [
+ "autocfg",
+ "num-traits",
 ]
 
 [[package]]
@@ -1770,6 +1800,17 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "vm-memory"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dc276f0d00c17b9aeb584da0f1e1c673df0d183cc2539e3636ec8cbc5eae99b"
+dependencies = [
+ "libc",
+ "thiserror",
+ "winapi",
+]
 
 [[package]]
 name = "walkdir"

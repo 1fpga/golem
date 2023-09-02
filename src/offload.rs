@@ -1,6 +1,7 @@
 use core_affinity::CoreId;
 use std::sync::mpsc;
 use std::time::Duration;
+use tracing::{error, info};
 
 /// A worker thread that executes work from a queue. The CPU affinity can be
 /// specified at creation. The worker thread will run until the `quit` method
@@ -66,8 +67,13 @@ pub unsafe extern "C" fn offload_start() {
 
 #[no_mangle]
 pub unsafe extern "C" fn offload_stop() {
-    println!("Waiting for offloaded work to finish...");
-    BASE_WORKER.take().unwrap().quit().join().unwrap();
+    if let Some(worker) = BASE_WORKER.take() {
+        info!("Waiting for offloaded work to finish...");
+        match worker.quit().join() {
+            Err(e) => error!("Failed to join offload worker thread: {:?}", e),
+            Ok(_) => {}
+        }
+    }
 }
 
 #[no_mangle]

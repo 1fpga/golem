@@ -1,10 +1,10 @@
-use crate::ffi::fpga;
+#![cfg(feature = "platform_de10")]
+use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
-use crate::osd;
 use crate::platform::de10::buffer::OsdDisplay;
-use crate::platform::{sizes, MiSTerPlatform};
+use crate::platform::{sizes, CoreManager, MiSTerPlatform};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -12,7 +12,18 @@ use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use tracing::{debug, error, info};
 
+mod battery;
 mod buffer;
+mod core_manager;
+mod fpga;
+mod input;
+mod menu;
+mod osd;
+mod shmem;
+mod smbus;
+pub mod spi;
+mod support;
+pub mod user_io;
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
@@ -21,9 +32,11 @@ pub struct De10Platform {
     pub platform: SdlPlatform<BinaryColor>,
     title_display: OsdDisplay,
     main_display: OsdDisplay,
-    window: Window<BinaryColor>,
+    _window: Window<BinaryColor>,
 
     toolbar_buffer: DrawBuffer<BinaryColor>,
+
+    core_manager: core_manager::CoreManager,
 }
 
 impl Default for De10Platform {
@@ -42,28 +55,42 @@ impl Default for De10Platform {
         // Need at least 1 window to get events.
         let window = platform.window("Title", Size::new(1, 1));
 
+        let fpga = fpga::Fpga::init().unwrap();
+        if !fpga.is_ready() {
+            debug!("GPI[31] == 1");
+            error!("FPGA is uninitialized or incompatible core loaded.");
+            error!("Quitting. Bye bye...\n");
+            std::process::exit(1);
+        }
+
+        let core_manager = core_manager::CoreManager::new(fpga);
+
         Self {
             platform,
             title_display,
             main_display,
-            window,
+            _window: window,
             toolbar_buffer,
+            core_manager,
         }
     }
 }
 
 impl MiSTerPlatform for De10Platform {
     type Color = BinaryColor;
+    type CoreManager = core_manager::CoreManager;
 
     fn init(&mut self, flags: &Flags) {
-        let mut fpga = fpga::Fpga::init().unwrap_or_else(|| {
-            debug!("GPI[31] == 1");
-            error!("FPGA is uninitialized or incompatible core loaded.");
-            error!("Quitting. Bye bye...\n");
-            std::process::exit(1);
-        });
-
         unsafe {
+            self.core_manager.fpga_mut().wait_for_ready();
+
+            if flags.core.is_empty() {
+                self.core_manager
+                    .load_program("/media/fat/menu.rbf")
+                    .unwrap();
+            }
+
+            let fpga = self.core_manager.fpga_mut();
             fpga.wait_for_ready();
 
             info!("Core type: {:?}", fpga.core_type());
@@ -80,7 +107,7 @@ impl MiSTerPlatform for De10Platform {
                     .map(|str| std::ffi::CString::new(str).unwrap()),
             );
 
-            crate::user_io::user_io_init(
+            user_io::user_io_init(
                 core.as_bytes_with_nul().as_ptr() as *const _,
                 xml.map(|str| str.as_bytes_with_nul().as_ptr() as *const _)
                     .unwrap_or(std::ptr::null()),
@@ -112,12 +139,13 @@ impl MiSTerPlatform for De10Platform {
 
     fn end_loop(&mut self) {
         unsafe {
-            crate::user_io::user_io_poll();
-            crate::input::input_poll(0);
-            crate::menu::HandleUI();
+            user_io::user_io_poll();
+            input::input_poll(0);
+            menu::HandleUI();
         }
     }
-}
 
-use crate::macguiver::buffer::DrawBuffer;
-pub use De10Platform as PlatformWindowManager;
+    fn core_manager_mut(&mut self) -> &mut Self::CoreManager {
+        &mut self.core_manager
+    }
+}

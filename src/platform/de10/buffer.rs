@@ -1,8 +1,6 @@
 use crate::macguiver::buffer::DrawBuffer;
-use crate::{osd, spi};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::Rectangle;
 
 mod sizes {
     use embedded_graphics::geometry::Size;
@@ -44,6 +42,8 @@ impl OsdDisplay {
     }
 
     pub fn send(&self, buffer: &DrawBuffer<BinaryColor>) {
+        use super::{osd, spi};
+
         // Send everything to the scaler.
         for line in self.line_iter() {
             unsafe {
@@ -75,7 +75,7 @@ impl OsdDisplay {
     ///
     /// This constructor can be used if `C` doesn't implement `From<BinaryColor>` or another
     /// default color is wanted.
-    fn with_default_color_(size: Size, default_color: BinaryColor) -> Self {
+    fn new(size: Size) -> Self {
         Self {
             size,
             offset_y: 0,
@@ -83,12 +83,10 @@ impl OsdDisplay {
             top_line: 0,
         }
     }
-}
 
-impl OsdDisplay {
     /// Creates a title bar display for the MiSTer.
     pub fn title() -> Self {
-        Self::with_default_color_(sizes::TITLE, BinaryColor::Off)
+        Self::new(sizes::TITLE)
             .with_offset(4)
             .with_top_line(16)
             .with_lines(3)
@@ -96,11 +94,9 @@ impl OsdDisplay {
 
     /// Creates the main view of the OSD.
     pub fn main() -> Self {
-        Self::with_default_color_(sizes::MAIN, BinaryColor::Off)
+        Self::new(sizes::MAIN)
     }
-}
 
-impl OsdDisplay {
     /// Get a binary line array from the buffer (a single line).
     pub fn get_binary_line_array(&self, buffer: &DrawBuffer<BinaryColor>, line: u32) -> Vec<u8> {
         let height = buffer.size().height as i32;

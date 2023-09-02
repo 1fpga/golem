@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DeserializeFromStr, DurationSeconds};
@@ -827,19 +828,18 @@ pub struct Config {
 
 impl Config {
     fn root() -> PathBuf {
-        #[cfg(test)]
-        unsafe {
-            return testing::ROOT.clone().unwrap();
-        }
-
-        #[cfg(feature = "platform_de10")]
-        {
-            crate::file_io::root_dir()
-        }
-
-        #[cfg(feature = "platform_desktop")]
-        {
-            std::env::current_dir().unwrap()
+        cfg_if! {
+            if #[cfg(test)] {
+                unsafe {
+                    return testing::ROOT.clone().unwrap();
+                }
+            } else if #[cfg(feature = "platform_de10")] {
+                crate::file_io::root_dir()
+            } else if #[cfg(feature = "platform_desktop")] {
+                std::env::current_dir().unwrap()
+            } else {
+                compile_error!("No platform feature enabled");
+            }
         }
     }
 
@@ -1129,7 +1129,7 @@ pub extern "C" fn rust_load_config() {
     // Check the altcfg.
     #[cfg(feature = "platform_de10")]
     {
-        let alt = crate::user_io::altcfg(-1);
+        let alt = crate::platform::de10::user_io::altcfg(-1);
         if alt != 0 {
             let p = root.join(format!("MiSTer_{alt}.ini"));
             if let Ok(alt_config) = Config::load(&p) {

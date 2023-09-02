@@ -55,9 +55,9 @@ pub struct VideoInfo {
 
 impl VideoInfo {
     /// Update the video info from the FPGA. Returns true if the video info changed.
-    #[cfg(feature = "platform_de10")]
+    #[cfg(all(not(test), feature = "platform_de10"))]
     pub fn update(&mut self, force: bool) -> bool {
-        use crate::spi;
+        use crate::platform::de10::spi;
 
         fn read_u32() -> u32 {
             spi::spi_w(0) as u32 | ((spi::spi_w(0) as u32) << 16)
@@ -129,7 +129,7 @@ impl VideoInfo {
     }
 }
 
-#[cfg(feature = "platform_de10")]
+#[cfg(all(not(test), feature = "platform_de10"))]
 #[no_mangle]
 unsafe extern "C" fn get_video_info_rust(force: u8, info: *mut ffi::VideoInfo) -> u8 {
     static mut GLOBAL_INFO: std::mem::MaybeUninit<VideoInfo> = std::mem::MaybeUninit::uninit();

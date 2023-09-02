@@ -27,6 +27,9 @@ pub struct FilesystemMenuOptions {
     /// Sort files by name.
     sort: bool,
 
+    /// Select directory.
+    directory: bool,
+
     /// File pattern to show.
     pattern: Option<Regex>,
 }
@@ -39,6 +42,7 @@ impl Default for FilesystemMenuOptions {
             show_hidden: false,
             show_extensions: true,
             sort: true,
+            directory: false,
             pattern: None,
         }
     }
@@ -93,6 +97,12 @@ pub fn select_file_path_menu(
 
                 if !options.show_hidden && name.starts_with('.') {
                     return None;
+                }
+
+                if let Some(pattern) = options.pattern.as_ref() {
+                    if !pattern.is_match(&name) {
+                        return None;
+                    }
                 }
 
                 if path.is_dir() {

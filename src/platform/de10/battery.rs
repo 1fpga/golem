@@ -1,5 +1,5 @@
 //! Display the pi-top battery status.
-use crate::smbus;
+use super::smbus;
 use std::ffi::{c_int, c_short};
 
 static mut I2C_HANDLE: Option<c_int> = None;

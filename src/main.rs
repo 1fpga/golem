@@ -2,20 +2,10 @@
 #![cfg(not(test))]
 
 // TODO: make all these modules test friendly.
-pub mod battery;
 pub mod bootcore;
 pub mod charrom;
-pub mod ffi;
 pub mod hardware;
-pub mod input;
-pub mod menu;
-pub mod osd;
 pub mod scheduler;
-pub mod shmem;
-pub mod smbus;
-pub mod spi;
-pub mod support;
-pub mod user_io;
 
 mod application;
 mod data;

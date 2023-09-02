@@ -81,7 +81,7 @@ pub struct Toolbar {
 impl Toolbar {
     pub fn new(settings: Arc<Settings>, _database: Arc<RwLock<mister_db::Connection>>) -> Self {
         let on_settings_update = settings.on_update();
-        let mut clock = DateTimeWidget::new(settings.toolbar_datetime_format().time_format());
+        let clock = DateTimeWidget::new(settings.toolbar_datetime_format().time_format());
 
         Self {
             clock,

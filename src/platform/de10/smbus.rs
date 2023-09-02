@@ -1,3 +1,4 @@
+#![allow(unused)]
 use std::ffi::c_int;
 
 extern "C" {

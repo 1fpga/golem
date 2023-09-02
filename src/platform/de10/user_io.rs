@@ -1,5 +1,4 @@
-#![cfg(feature = "platform_de10")]
-use crate::shmem;
+use super::shmem;
 use std::ffi::{c_char, c_int, CStr};
 use tracing::debug;
 

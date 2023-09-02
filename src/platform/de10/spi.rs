@@ -1,6 +1,6 @@
 #![cfg(feature = "platform_de10")]
 
-use crate::ffi::fpga;
+use super::fpga;
 use std::ffi::c_int;
 
 const SSPI_IO_EN: u32 = 1u32 << 20;

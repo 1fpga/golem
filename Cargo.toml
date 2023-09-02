@@ -5,6 +5,7 @@ edition = "2018"
 
 [workspace]
 members = [
+    "cyclone_v",
     "mister-db",
 ]
 
@@ -23,6 +24,7 @@ overflow-checks = false
 strip = "debuginfo"
 
 [dependencies]
+bitfield = "0.14.0"
 bus = "2.4.0"
 byteorder = "1.4.3"
 cfg-if = "1.0.0"
@@ -31,6 +33,7 @@ clap = { version = "4.3.5", features = ["derive"] }
 clap-verbosity-flag = "2.0.1"
 crossbeam-channel = "0.5.8"
 core_affinity = "0.8.0"
+cyclone-v = { path = "./cyclone_v", features = ["std"] }
 debounce = "0.2.2"
 dirs = "5.0.1"
 dotenvy = "0.15.7"
@@ -44,6 +47,7 @@ libc = { version = "*", default-features = false }
 merge = { git = "https://github.com/hansl/merge-rs.git", rev = "dcaf63c0ef296e93219a5393a8252302170b5e42", features = ["num", "derive"] }
 mister-db = { path = "./mister-db" }
 network-interface = "1.0.1"
+num-integer = "0.1.45"
 num-traits = "0.2.15"
 ouroboros = "0.17.0"
 regex = "1.9.3"

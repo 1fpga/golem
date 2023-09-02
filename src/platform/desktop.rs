@@ -1,19 +1,30 @@
+#![cfg(feature = "platform_desktop")]
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{
     BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform, Window,
 };
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
-use crate::platform::{sizes, MiSTerPlatform};
+use crate::platform::{sizes, CoreManager, MiSTerPlatform};
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
-pub use DesktopWindowManager as PlatformWindowManager;
+use tracing::info;
+
+pub struct DummyCoreManager;
+
+impl CoreManager for DummyCoreManager {
+    fn load_program(&mut self, _: &[u8]) -> Result<(), String> {
+        info!("DummyCoreManager::load_program");
+        Ok(())
+    }
+}
 
 pub struct DesktopWindowManager {
     platform: SdlPlatform<BinaryColor>,
     window_title: Window<BinaryColor>,
     window_main: Window<BinaryColor>,
+    core_manager: DummyCoreManager,
 }
 
 impl Default for DesktopWindowManager {
@@ -38,12 +49,14 @@ impl Default for DesktopWindowManager {
             platform,
             window_title,
             window_main,
+            core_manager: DummyCoreManager,
         }
     }
 }
 
 impl MiSTerPlatform for DesktopWindowManager {
     type Color = BinaryColor;
+    type CoreManager = DummyCoreManager;
 
     fn init(&mut self, _: &Flags) {}
 
@@ -63,5 +76,8 @@ impl MiSTerPlatform for DesktopWindowManager {
 
     fn events(&mut self) -> Vec<Event> {
         self.platform.events()
+    }
+    fn core_manager_mut(&mut self) -> &mut Self::CoreManager {
+        &mut self.core_manager
     }
 }

@@ -1,3 +1,4 @@
+use cyclone_v::memory::DevMemMemoryMapper;
 use std::cell::RefCell;
 use std::ffi::{c_char, c_int};
 use std::rc::Rc;
@@ -5,9 +6,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use strum::{EnumIter, FromRepr};
 use tracing::{debug, error, info};
-
-mod socfpga;
-use socfpga::SocFpga;
 
 extern "C" {
     pub fn fpga_spi(word: u16) -> u16;
@@ -24,7 +22,7 @@ extern "C" {
 
 mod ffi {
     use super::FPGA_SINGLETON;
-    use std::ffi::c_int;
+    use libc::{c_int, c_ulong};
     use tracing::error;
 
     #[no_mangle]
@@ -71,6 +69,32 @@ mod ffi {
             FPGA_SINGLETON.clone().unwrap().wait_to_reset();
         }
     }
+
+    #[no_mangle]
+    unsafe extern "C" fn fpgamgr_dclkcnt_set_rust(count: c_ulong) -> c_int {
+        FPGA_SINGLETON
+            .clone()
+            .unwrap()
+            .soc_mut()
+            .fpga_manager_mut()
+            .set_dclkcnt(count as u32)
+            .map_or(
+                -3447, // aka -ETIMEOUT
+                |_| 0,
+            )
+    }
+
+    #[no_mangle]
+    unsafe extern "C" fn fpgamgr_program_write_rust(rbf_data: *const u8, rbf_size: c_ulong) {
+        let program = std::slice::from_raw_parts(rbf_data, rbf_size as usize);
+        FPGA_SINGLETON
+            .clone()
+            .unwrap()
+            .soc_mut()
+            .fpga_manager_mut()
+            .write_program(program)
+            .unwrap();
+    }
 }
 
 static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
@@ -110,7 +134,7 @@ pub enum CoreInterfaceType {
 
 #[derive(Debug, Clone)]
 pub struct Fpga {
-    soc: Rc<RefCell<SocFpga>>,
+    soc: Rc<RefCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
 }
 
 impl Fpga {
@@ -122,17 +146,19 @@ impl Fpga {
                 // return Err(());
                 return Some(FPGA_SINGLETON.clone().unwrap());
             }
+
             info!("Initializing FPGA");
-
-            INITIALIZED.store(true, Ordering::Relaxed);
-
-            let mut soc = SocFpga::default();
+            let mut soc = cyclone_v::SocFpga::default();
             let manager = soc.fpga_manager_mut();
             manager.set_gpo(0);
+
             let s = Self {
                 soc: Rc::new(RefCell::new(soc)),
             };
+
             FPGA_SINGLETON = Some(s.clone());
+            INITIALIZED.store(true, Ordering::Relaxed);
+
             Some(s)
         }
     }
@@ -172,6 +198,10 @@ impl Fpga {
         } else {
             Some(version as u8)
         }
+    }
+
+    pub fn soc_mut(&mut self) -> std::cell::RefMut<cyclone_v::SocFpga<DevMemMemoryMapper>> {
+        self.soc.borrow_mut()
     }
 
     #[inline]
