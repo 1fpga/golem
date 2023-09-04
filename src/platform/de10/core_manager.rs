@@ -51,14 +51,15 @@ impl crate::platform::CoreManager for CoreManager {
             &program[start..start + size]
         };
 
-        let mut soc = self.fpga.soc_mut();
-        let fpga_manager = soc.fpga_manager_mut();
+        {
+            let fpga_manager = self.fpga.regs_mut();
 
-        /// Core Reset.
-        let gpo = fpga_manager.gpo() & (!0xC000_0000);
-        fpga_manager.set_gpo(gpo | 0x4000_0000);
+            /// Core Reset.
+            let gpo = fpga_manager.gpo() & (!0xC000_0000);
+            fpga_manager.set_gpo(gpo | 0x4000_0000);
+        }
 
-        fpga_manager.load_rbf(program).unwrap();
+        self.fpga.load_rbf(program).unwrap();
 
         Ok(())
     }
