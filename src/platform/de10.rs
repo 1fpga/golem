@@ -107,6 +107,7 @@ impl MiSTerPlatform for De10Platform {
                     .map(|str| std::ffi::CString::new(str).unwrap()),
             );
 
+            crate::offload::offload_start();
             user_io::user_io_init(
                 core.as_bytes_with_nul().as_ptr() as *const _,
                 xml.map(|str| str.as_bytes_with_nul().as_ptr() as *const _)
@@ -136,6 +137,8 @@ impl MiSTerPlatform for De10Platform {
     fn events(&mut self) -> Vec<Event> {
         self.platform.events()
     }
+
+    fn start_loop(&mut self) {}
 
     fn end_loop(&mut self) {
         unsafe {

@@ -42,7 +42,7 @@ pub extern "C" fn user_io_init_rust(path: *const c_char, xml: *const c_char) -> 
 
     debug!(path, xml);
 
-    return 1;
+    return 0;
 }
 
 #[no_mangle]

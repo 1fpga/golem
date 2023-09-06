@@ -106,8 +106,8 @@ pub trait MiSTerPlatform {
 
     fn events(&mut self) -> Vec<Event>;
 
-    fn start_loop(&mut self) {}
-    fn end_loop(&mut self) {}
+    fn start_loop(&mut self);
+    fn end_loop(&mut self);
 
     fn core_manager_mut(&mut self) -> &mut Self::CoreManager;
 }
@@ -153,6 +153,14 @@ impl MiSTerPlatform for WindowManager {
 
     fn events(&mut self) -> Vec<Event> {
         self.inner.events()
+    }
+
+    fn start_loop(&mut self) {
+        self.inner.start_loop();
+    }
+
+    fn end_loop(&mut self) {
+        self.inner.end_loop();
     }
 
     fn core_manager_mut(&mut self) -> &mut Self::CoreManager {

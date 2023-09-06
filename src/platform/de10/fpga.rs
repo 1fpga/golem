@@ -240,7 +240,7 @@ impl Fpga {
             }
         }
 
-        return self.regs().stat().mode() != StatusRegisterMode::UserMode;
+        return self.regs().stat().mode() == StatusRegisterMode::UserMode;
     }
 
     #[inline]
