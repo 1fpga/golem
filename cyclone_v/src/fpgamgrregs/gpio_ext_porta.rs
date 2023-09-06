@@ -2,7 +2,7 @@ use bitfield::bitfield;
 
 bitfield! {
     /// Reading this register reads the values of the GPIO inputs.
-    pub struct GpioExtPorta(u32);
+    pub struct GpioExtPortA(u32);
     impl Debug;
 
 /// Reading this provides the value of FPGA_POWER_ON
@@ -40,6 +40,4 @@ bitfield! {
 
     /// Reading this provides the value of nSTATUS.
     pub ns, _: 0;
-
-
 }

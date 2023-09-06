@@ -1,6 +1,6 @@
 use super::spi;
 use super::user_io;
-use std::ffi::{c_char, c_int, c_uchar, c_ulong, CStr, CString};
+use std::ffi::{c_char, c_int, c_uchar, CStr, CString};
 
 const DISABLE_KEYBOARD: u8 = 0x02; // disable keyboard while OSD is active
 pub const OSD_INFO: u8 = 0x04; // display info

@@ -1,4 +1,4 @@
-use crate::ctrl;
+use crate::fpgamgrregs::ctrl;
 use bitfield::bitfield;
 use core::fmt;
 

@@ -5,22 +5,6 @@ use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use tracing::error;
 
-/// Map a physical memory address to a virtual address. Returns a buffer that has access
-/// to the physical memory.
-///
-/// Safety: This function is unsafe because it can cause undefined behavior if the given
-/// address is invalid or if the given size is too large. In addition, the caller must
-/// ensure that the returned buffer is not used after it is unmapped. AND the caller
-/// must acknowledge that they're playing with dangerous forces.
-pub fn map(address: usize, size: usize) -> &'static mut [u8] {
-    let ptr = unsafe { shmem_map_c(address as u32, size as u32) };
-    unsafe { std::slice::from_raw_parts_mut(ptr, size) }
-}
-
-pub fn unmap(map: &'static [u8]) -> bool {
-    unsafe { shmem_unmap_c(map.as_ptr(), map.len() as u32) != 0 }
-}
-
 #[derive(Eq, PartialEq)]
 pub struct Mapper(&'static mut [u8], (usize, usize));
 

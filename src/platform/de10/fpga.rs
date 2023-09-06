@@ -1,6 +1,6 @@
-use cyclone_v::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
+use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
+use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
-use cyclone_v::stat::StatusRegisterMode;
 use std::ffi::c_int;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -164,11 +164,11 @@ pub struct Fpga {
 }
 
 impl Fpga {
-    pub fn regs(&self) -> &cyclone_v::FpgaManagerRegs {
+    fn regs(&self) -> &cyclone_v::fpgamgrregs::FpgaManagerRegs {
         self.soc.regs()
     }
 
-    pub fn regs_mut(&mut self) -> &mut cyclone_v::FpgaManagerRegs {
+    fn regs_mut(&mut self) -> &mut cyclone_v::fpgamgrregs::FpgaManagerRegs {
         self.soc.regs_mut()
     }
 
@@ -240,12 +240,22 @@ impl Fpga {
             }
         }
 
-        return self.regs().status().mode() != StatusRegisterMode::UserMode;
+        return self.regs().stat().mode() != StatusRegisterMode::UserMode;
     }
 
     #[inline]
     fn is_ready_quick(&self) -> bool {
         (self.regs().gpi() as i32) >= 0
+    }
+
+    /// Send a reset signal to the core.
+    pub fn core_reset(&mut self) -> Result<(), ()> {
+        let fpga_manager = self.regs_mut();
+
+        // Core Reset.
+        let gpo = fpga_manager.gpo() & (!0xC000_0000);
+        fpga_manager.set_gpo(gpo | 0x4000_0000);
+        Ok(())
     }
 
     #[inline]
@@ -292,6 +302,32 @@ impl Fpga {
         Err(())
     }
 
+    #[inline]
+    pub fn enable_bridge(&mut self) {
+        self.soc
+            .sdr_mut()
+            .update_fpgaportrst(|portrst| portrst.set_portrstn(0x3FFF));
+        self.soc.rstmgr_mut().set_brgmodrst(0);
+
+        let mut remap = cyclone_v::l3regs::remap::Remap(0);
+        remap.set_mpuzero(true);
+        remap.set_hps2fpga(true);
+        remap.set_lwhps2fpga(true);
+        self.soc.l3regs_mut().set_remap(remap);
+    }
+
+    #[inline]
+    pub fn disable_bridge(&mut self) {
+        self.soc.sysmgr_mut().set_fpgaintfgrp_module(0);
+        self.soc
+            .sdr_mut()
+            .update_fpgaportrst(|portrst| portrst.set_portrstn(0));
+        self.soc.rstmgr_mut().set_brgmodrst(7);
+        let mut remap = cyclone_v::l3regs::remap::Remap(0);
+        remap.set_mpuzero(true);
+        self.soc.l3regs_mut().set_remap(remap);
+    }
+
     /// Set the data clock count register. Returns Ok if the register
     /// was properly set, and Err if a timeout occured checking for
     /// the status.
@@ -318,26 +354,23 @@ impl Fpga {
     }
 
     pub fn load_rbf(&mut self, program: &[u8]) -> Result<(), FpgaError> {
+        // self.disable_bridge();
+        //
         self.init_program()?;
         self.write_program(program)?;
+        // self.enable_bridge();
         self.poll_configuration_done()?;
-
-        let init_result = self.poll_init_phase();
-        match init_result {
-            Ok(()) => {}
-            Err(e) => {
-                return Err(e);
-            }
-        }
-
+        self.poll_init_phase()?;
         self.poll_user_mode()?;
+
+        // self.disable_bridge();
 
         Ok(())
     }
 
     #[inline]
     fn init_program(&mut self) -> Result<(), FpgaError> {
-        let msel = self.regs_mut().status().msel();
+        let msel = self.regs_mut().stat().msel();
 
         // Set the cfg width.
         self.regs_mut().update_ctrl(|ctrl| {
@@ -360,7 +393,7 @@ impl Fpga {
         });
 
         // (1) wait until FPGA enter reset phase
-        self.wait_for(|fpga| fpga.regs_mut().status().mode() == StatusRegisterMode::ResetPhase)
+        self.wait_for(|fpga| fpga.regs_mut().stat().mode() == StatusRegisterMode::ResetPhase)
             .map_err(|_| FpgaError::CouldNotReset)?;
 
         // Release FPGA from reset phase.
@@ -368,7 +401,7 @@ impl Fpga {
             .update_ctrl(|ctrl| ctrl.set_nconfigpull(false));
 
         // (2) wait until FPGA enter configuration phase
-        self.wait_for(|fpga| fpga.regs_mut().status().mode() == StatusRegisterMode::ConfigPhase)
+        self.wait_for(|fpga| fpga.regs_mut().stat().mode() == StatusRegisterMode::ConfigPhase)
             .map_err(|_| FpgaError::CouldNotEnterConfigurationPhase)?;
 
         // Clear all interrupts in CB Monitor.
@@ -472,7 +505,7 @@ impl Fpga {
         // (4) wait until FPGA enter init phase
         self.wait_for(|fpga| {
             matches!(
-                fpga.regs_mut().status().mode(),
+                fpga.regs_mut().stat().mode(),
                 StatusRegisterMode::InitPhase | StatusRegisterMode::UserMode
             )
         })
@@ -486,7 +519,7 @@ impl Fpga {
         self.set_dclkcnt(0x5000)?;
 
         // (5) wait until FPGA enter user mode
-        self.wait_for(|fpga| fpga.regs_mut().status().mode() == StatusRegisterMode::UserMode)
+        self.wait_for(|fpga| fpga.regs_mut().stat().mode() == StatusRegisterMode::UserMode)
             .map_err(|_| FpgaError::CouldNotEnterUserMode)?;
 
         // To release FPGA Manager drive over configuration line.

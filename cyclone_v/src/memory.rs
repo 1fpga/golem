@@ -1,8 +1,8 @@
-mod dev_mem;
+pub mod dev_mem;
 #[cfg(feature = "std")]
 pub use dev_mem::*;
 
-mod buffer;
+pub mod buffer;
 #[cfg(feature = "std")]
 pub use buffer::*;
 

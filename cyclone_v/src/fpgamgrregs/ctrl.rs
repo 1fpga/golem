@@ -24,10 +24,7 @@ impl From<u32> for FpgaCtrlEn {
 
 impl From<FpgaCtrlEn> for u32 {
     fn from(f: FpgaCtrlEn) -> Self {
-        match f {
-            FpgaCtrlEn::FpgaConfigurationPins => 0,
-            FpgaCtrlEn::FpgaManager => 1,
-        }
+        f as Self
     }
 }
 
@@ -55,10 +52,7 @@ impl From<u32> for FpgaCtrlNce {
 
 impl From<FpgaCtrlNce> for u32 {
     fn from(f: FpgaCtrlNce) -> Self {
-        match f {
-            FpgaCtrlNce::Enabled => 0,
-            FpgaCtrlNce::Disabled => 1,
-        }
+        f as Self
     }
 }
 
@@ -96,12 +90,7 @@ impl From<u32> for FpgaCtrlCdRatio {
 
 impl From<FpgaCtrlCdRatio> for u32 {
     fn from(f: FpgaCtrlCdRatio) -> Self {
-        match f {
-            FpgaCtrlCdRatio::X1 => 0,
-            FpgaCtrlCdRatio::X2 => 1,
-            FpgaCtrlCdRatio::X4 => 2,
-            FpgaCtrlCdRatio::X8 => 3,
-        }
+        f as Self
     }
 }
 
@@ -130,10 +119,7 @@ impl From<u32> for FpgaCtrlCfgWidth {
 
 impl From<FpgaCtrlCfgWidth> for u32 {
     fn from(f: FpgaCtrlCfgWidth) -> Self {
-        match f {
-            FpgaCtrlCfgWidth::Passive16Bit => 0,
-            FpgaCtrlCfgWidth::Passive32Bit => 1,
-        }
+        f as Self
     }
 }
 

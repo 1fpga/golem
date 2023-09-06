@@ -20,22 +20,8 @@ impl CoreManager {
     }
 }
 
-extern "C" {
-    fn fpga_load_rbf(_: *const u8, _: *const u8, _: *const u8) -> i32;
-}
-
 impl crate::platform::CoreManager for CoreManager {
     fn load_program(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
-        // let path_str = path.as_ref().to_string_lossy().to_string();
-        // let c_str_path = std::ffi::CString::new(path_str).unwrap();
-        // unsafe {
-        //     fpga_load_rbf(
-        //         c_str_path.as_ptr() as *const u8,
-        //         std::ptr::null(),
-        //         std::ptr::null(),
-        //     );
-        // }
-
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
         let program = bytes.as_slice();
 
@@ -51,14 +37,7 @@ impl crate::platform::CoreManager for CoreManager {
             &program[start..start + size]
         };
 
-        {
-            let fpga_manager = self.fpga.regs_mut();
-
-            /// Core Reset.
-            let gpo = fpga_manager.gpo() & (!0xC000_0000);
-            fpga_manager.set_gpo(gpo | 0x4000_0000);
-        }
-
+        self.fpga.core_reset().unwrap();
         self.fpga.load_rbf(program).unwrap();
 
         Ok(())
