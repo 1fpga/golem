@@ -3,6 +3,7 @@ use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::application::TopLevelViewType;
 use crate::macguiver::application::Application;
+use crate::platform::{CoreManager, MiSTerPlatform};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
@@ -43,10 +44,6 @@ fn build_cores_items_(database: &mut mister_db::Connection) -> Vec<(String, i32)
         .iter()
         .map(|core| (core.name.clone(), core.id))
         .collect()
-}
-
-extern "C" {
-    fn fpga_load_rbf(_: *const u8, _: *const u8, _: *const u8) -> i32;
 }
 
 pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopLevelViewType {
@@ -92,20 +89,11 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                     info!("Loading core from path {:?}", path);
 
                     if let Ok(Some(path)) = path {
-                        let path_str = path.to_string_lossy().to_string();
-                        let c_str_path = std::ffi::CString::new(path_str).unwrap();
-                        unsafe {
-                            fpga_load_rbf(
-                                c_str_path.as_ptr() as *const u8,
-                                std::ptr::null(),
-                                std::ptr::null(),
-                            );
-                        }
-
-                        // app.platform_mut()
-                        //     .core_manager_mut()
-                        //     .load_program(path)
-                        //     .expect("Failed to load core");
+                        let core = app
+                            .platform_mut()
+                            .core_manager_mut()
+                            .load_program(path)
+                            .expect("Failed to load core");
                     } else {
                         info!("No core selected.");
                     }

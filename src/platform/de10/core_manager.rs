@@ -1,9 +1,18 @@
 use crate::platform::de10::fpga;
+use crate::platform::de10::fpga::Fpga;
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 
+pub struct FpgaCore;
+
+impl crate::platform::Core for FpgaCore {
+    fn send_key(&mut self, key: u8) {
+        todo!()
+    }
+}
+
 pub struct CoreManager {
-    fpga: fpga::Fpga,
+    fpga: Fpga,
 }
 
 impl CoreManager {
@@ -21,7 +30,9 @@ impl CoreManager {
 }
 
 impl crate::platform::CoreManager for CoreManager {
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<(), String> {
+    type Core = FpgaCore;
+
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<FpgaCore, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
         let program = bytes.as_slice();
 
@@ -37,9 +48,17 @@ impl crate::platform::CoreManager for CoreManager {
             &program[start..start + size]
         };
 
-        self.fpga.core_reset().unwrap();
-        self.fpga.load_rbf(program).unwrap();
+        self.fpga.core_reset().expect("Could not reset the Core.");
+        self.fpga.load_rbf(program).expect("Could not load RBF.");
 
-        Ok(())
+        Ok(FpgaCore)
+    }
+
+    fn show_menu(&mut self) {
+        self.fpga_mut().osd_enable();
+    }
+
+    fn hide_menu(&mut self) {
+        self.fpga_mut().osd_disable();
     }
 }

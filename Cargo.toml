@@ -36,7 +36,6 @@ core_affinity = "0.8.0"
 cyclone-v = { path = "./cyclone_v", features = ["std"] }
 debounce = "0.2.2"
 dirs = "5.0.1"
-dotenvy = "0.15.7"
 embedded-graphics = "0.8.0"
 embedded-layout = "0.3.1"
 embedded-menu = "0.4.0"

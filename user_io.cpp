@@ -1326,7 +1326,6 @@ void user_io_init(const char *path, const char *xml)
 	{
 		bootcore_init(xml ? xml : path);
 	}
-
 	video_init();
 	if (strlen(cfg.font)) LoadFont(cfg.font);
 	load_volume();

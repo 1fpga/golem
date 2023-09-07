@@ -6,6 +6,7 @@ use embedded_menu::selection_indicator::style::Invert;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, SelectValue};
 use merge::Merge;
+use sdl3::keyboard::Keycode;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
@@ -31,10 +32,7 @@ fn create_settings_save_thread_(
     });
 
     std::thread::spawn(move || loop {
-        if update_recv
-            .recv_timeout(std::time::Duration::from_secs(1))
-            .is_ok()
-        {
+        if update_recv.recv_timeout(Duration::from_secs(1)).is_ok() {
             debouncer.put(());
         }
         if drop_recv.try_recv().is_ok() {
@@ -80,14 +78,39 @@ impl DateTimeFormat {
     }
 }
 
+#[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, SelectValue)]
+pub enum MenuKeyBinding {
+    /// The default local format for datetime (respecting Locale).
+    #[default]
+    F12,
+
+    /// Short locale format.
+    F11,
+
+    /// Only show the time.
+    PrtSc,
+}
+
+impl PartialEq<Keycode> for MenuKeyBinding {
+    fn eq(&self, other: &Keycode) -> bool {
+        match (self, other) {
+            (Self::F12, Keycode::F12) => true,
+            (Self::F11, Keycode::F11) => true,
+            (Self::PrtSc, Keycode::PrintScreen) => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
 #[menu(
     title = "Settings",
-    navigation(events = TopLevelViewType, marker = ">"),
+    navigation(events = TopLevelViewType, marker = "<BLUE>"),
     items = [
         data(label = "Show FPS", field = show_fps),
         data(label = "Invert toolbar colors", field = invert_toolbar),
         data(label = "Toolbar date format", field = toolbar_datetime_format),
+        data(label = "Menu Key Binding", field = menu_key_bind),
         navigation(label = "Back", event = TopLevelViewType::MainMenu)
     ]
 )]
@@ -103,6 +126,10 @@ pub struct InnerSettings {
     #[serde(default)]
     #[merge(strategy = merge::overwrite)]
     toolbar_datetime_format: DateTimeFormat,
+
+    #[serde(default)]
+    #[merge(strategy = merge::overwrite)]
+    menu_key_bind: MenuKeyBinding,
 }
 
 impl Default for InnerSettings {
@@ -111,6 +138,7 @@ impl Default for InnerSettings {
             show_fps: false,
             invert_toolbar: true,
             toolbar_datetime_format: DateTimeFormat::default(),
+            menu_key_bind: MenuKeyBinding::F12,
         }
     }
 }
@@ -176,7 +204,7 @@ impl Drop for Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        let mut update = bus::Bus::new(1);
+        let mut update = Bus::new(1);
 
         let inner = Arc::new(RwLock::new(InnerSettings::default()));
         let path = Arc::new(RwLock::new(PathBuf::new()));
@@ -256,5 +284,10 @@ impl Settings {
     #[inline]
     pub fn toolbar_datetime_format(&self) -> DateTimeFormat {
         self.inner.read().unwrap().toolbar_datetime_format
+    }
+
+    #[inline]
+    pub fn menu_key_binding(&self) -> MenuKeyBinding {
+        self.inner.read().unwrap().menu_key_bind
     }
 }

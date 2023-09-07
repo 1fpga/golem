@@ -25,6 +25,7 @@ mod widgets;
 
 mod cores;
 
+use crate::data::paths;
 pub use cores::CoreManager;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -73,7 +74,11 @@ pub struct MiSTer {
 impl MiSTer {
     pub fn new(platform: WindowManager) -> Self {
         let settings = Arc::new(Settings::new());
-        let database = mister_db::establish_connection().expect("Failed to connect to database");
+
+        let database_url = paths::config_root_path().join("golem.sqlite");
+
+        let database = mister_db::establish_connection(&database_url.to_string_lossy())
+            .expect("Failed to connect to database");
         let database = Arc::new(RwLock::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let main_size = platform.main_dimensions();

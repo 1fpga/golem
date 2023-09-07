@@ -1,5 +1,3 @@
-use dotenvy::dotenv;
-
 pub use diesel;
 use diesel::sqlite::Sqlite;
 
@@ -9,11 +7,9 @@ pub mod schema;
 pub use diesel::sqlite::SqliteConnection as Connection;
 
 pub fn establish_connection(
+    database_url: &str,
 ) -> Result<Connection, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    dotenv()?;
-
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let mut conn = diesel::Connection::establish(&database_url)?;
+    let mut conn = diesel::Connection::establish(database_url)?;
 
     run_migrations(&mut conn)?;
     Ok(conn)

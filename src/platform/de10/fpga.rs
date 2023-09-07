@@ -1,16 +1,20 @@
+use crate::platform::de10::osd::{OSD_CMD_DISABLE, OSD_CMD_ENABLE};
+use crate::platform::de10::spi as ffi_spi;
 use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
 use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
+use std::cell::UnsafeCell;
 use std::ffi::c_int;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use strum::{EnumIter, FromRepr};
 use tracing::{debug, error, info};
 
-extern "C" {
-    pub fn fpga_spi(word: u16) -> u16;
-    pub fn fpga_spi_en(mask: u32, en: u32);
+mod framebuffer;
+mod spi;
 
+extern "C" {
     pub fn reboot(cold: c_int);
 }
 
@@ -18,6 +22,7 @@ extern "C" {
 /// TODO: remove these when the fpga code from CPP is gone.
 mod ffi {
     use super::FPGA_SINGLETON;
+    use crate::platform::de10::fpga::spi::SpiFeature;
     use libc::{c_int, c_ulong};
     use tracing::error;
 
@@ -87,6 +92,34 @@ mod ffi {
             .write_program(program)
             .unwrap();
     }
+
+    // #[no_mangle]
+    // unsafe extern "C" fn fpga_spi(word: u16) -> u16 {
+    //     FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
+    // }
+
+    // #[no_mangle]
+    // unsafe extern "C" fn spi_w(word: u16) -> u16 {
+    //     FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
+    // }
+
+    // #[no_mangle]
+    // unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {
+    //     if en != 0 {
+    //         FPGA_SINGLETON.as_mut().unwrap().spi_mut().enable_u32(mask);
+    //     } else {
+    //         FPGA_SINGLETON.as_mut().unwrap().spi_mut().disable_u32(mask);
+    //     }
+    // }
+
+    // #[no_mangle]
+    // unsafe extern "C" fn DisableIO() {
+    //     FPGA_SINGLETON
+    //         .as_mut()
+    //         .unwrap()
+    //         .spi_mut()
+    //         .disable(SpiFeature::IO);
+    // }
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -158,18 +191,50 @@ extern "C" {
     static mut map_base: *mut u8;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Fpga {
-    soc: cyclone_v::SocFpga<DevMemMemoryMapper>,
+    soc: Rc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
+    spi: spi::Spi<DevMemMemoryMapper>,
+}
+
+// OSD specific functions.
+impl Fpga {
+    pub fn osd_enable(&mut self) {
+        unsafe {
+            self.spi_mut().write_b(OSD_CMD_ENABLE);
+            // self.spi_mut()
+            //     .enable(SpiFeature::default().with_osd().with_io().with_fpga());
+            // ffi_spi::spi_osd_cmd(OSD_CMD_ENABLE);
+        }
+    }
+    pub fn osd_disable(&mut self) {
+        unsafe {
+            // self.spi_mut()
+            //     .disable(SpiFeature::default().with_osd().with_io().with_fpga());
+            ffi_spi::spi_osd_cmd(OSD_CMD_DISABLE);
+        }
+    }
 }
 
 impl Fpga {
+    fn new(soc: Rc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>) -> Self {
+        Self {
+            soc: soc.clone(),
+            spi: spi::Spi::new(soc),
+        }
+    }
+
+    #[inline]
+    fn soc_mut(&self) -> &mut cyclone_v::SocFpga<DevMemMemoryMapper> {
+        unsafe { &mut (*self.soc.get()) }
+    }
+
     fn regs(&self) -> &cyclone_v::fpgamgrregs::FpgaManagerRegs {
-        self.soc.regs()
+        self.soc_mut().regs()
     }
 
     fn regs_mut(&mut self) -> &mut cyclone_v::fpgamgrregs::FpgaManagerRegs {
-        self.soc.regs_mut()
+        self.soc_mut().regs_mut()
     }
 
     pub fn init() -> Result<Self, ()> {
@@ -180,20 +245,29 @@ impl Fpga {
             }
 
             info!("Initializing FPGA");
-            let mut soc = cyclone_v::SocFpga::default();
-            // TODO: remove this when the fpga code from CPP is gone.
-            map_base = soc.base() as *mut _;
-            soc.regs_mut().set_gpo(0);
-
-            let s = Self { soc };
 
             let soc = cyclone_v::SocFpga::default();
-            FPGA_SINGLETON = Some(Self { soc });
+            let soc = Rc::new(UnsafeCell::new(soc));
+            let mut fpga = Self::new(soc.clone());
+
+            // TODO: remove this when the fpga code from CPP is gone.
+            map_base = fpga.soc_mut().base_mut();
+            fpga.regs_mut().set_gpo(0);
+
+            FPGA_SINGLETON = Some(fpga.clone());
 
             INITIALIZED.store(true, Ordering::Relaxed);
 
-            Ok(s)
+            Ok(fpga)
         }
+    }
+
+    pub fn spi(&self) -> &spi::Spi<DevMemMemoryMapper> {
+        &self.spi
+    }
+
+    pub fn spi_mut(&mut self) -> &mut spi::Spi<DevMemMemoryMapper> {
+        &mut self.spi
     }
 
     pub fn core_type(&mut self) -> Option<CoreType> {
@@ -304,28 +378,28 @@ impl Fpga {
 
     #[inline]
     pub fn enable_bridge(&mut self) {
-        self.soc
+        self.soc_mut()
             .sdr_mut()
             .update_fpgaportrst(|portrst| portrst.set_portrstn(0x3FFF));
-        self.soc.rstmgr_mut().set_brgmodrst(0);
+        self.soc_mut().rstmgr_mut().set_brgmodrst(0);
 
         let mut remap = cyclone_v::l3regs::remap::Remap(0);
         remap.set_mpuzero(true);
         remap.set_hps2fpga(true);
         remap.set_lwhps2fpga(true);
-        self.soc.l3regs_mut().set_remap(remap);
+        self.soc_mut().l3regs_mut().set_remap(remap);
     }
 
     #[inline]
     pub fn disable_bridge(&mut self) {
-        self.soc.sysmgr_mut().set_fpgaintfgrp_module(0);
-        self.soc
-            .sdr_mut()
+        let soc = self.soc_mut();
+        soc.sysmgr_mut().set_fpgaintfgrp_module(0);
+        soc.sdr_mut()
             .update_fpgaportrst(|portrst| portrst.set_portrstn(0));
-        self.soc.rstmgr_mut().set_brgmodrst(7);
+        soc.rstmgr_mut().set_brgmodrst(7);
         let mut remap = cyclone_v::l3regs::remap::Remap(0);
         remap.set_mpuzero(true);
-        self.soc.l3regs_mut().set_remap(remap);
+        soc.l3regs_mut().set_remap(remap);
     }
 
     /// Set the data clock count register. Returns Ok if the register
@@ -354,16 +428,22 @@ impl Fpga {
     }
 
     pub fn load_rbf(&mut self, program: &[u8]) -> Result<(), FpgaError> {
-        // self.disable_bridge();
-        //
+        self.disable_bridge();
+
+        debug!("Initializing FPGA...");
         self.init_program()?;
+        debug!("Writing program...");
+        let now = Instant::now();
         self.write_program(program)?;
-        // self.enable_bridge();
+        debug!("Program written in {}ms", now.elapsed().as_millis());
+
+        debug!("Configuration and initialization.");
+        self.enable_bridge();
         self.poll_configuration_done()?;
         self.poll_init_phase()?;
         self.poll_user_mode()?;
 
-        // self.disable_bridge();
+        debug!("All done.");
 
         Ok(())
     }
@@ -420,7 +500,7 @@ impl Fpga {
             return Ok(());
         }
 
-        let data = self.soc.data_mut() as *mut u32;
+        let data = self.soc_mut().data_mut() as *mut u32;
 
         // This code is copied from u-boot from [here](
         // https://github.com/u-boot/u-boot/blob/master/drivers/fpga/socfpga.c#L44), converted to
@@ -470,13 +550,13 @@ impl Fpga {
             let (prefix, shorts, suffix) = program.align_to::<u32>();
 
             for v in prefix {
-                write_volatile(data as *mut u8, *v);
+                std::ptr::write_volatile(data as *mut u8, *v);
             }
             for v in shorts {
-                write_volatile(data, *v);
+                std::ptr::write_volatile(data, *v);
             }
             for v in suffix {
-                write_volatile(data as *mut u8, *v);
+                std::ptr::write_volatile(data as *mut u8, *v);
             }
         }
 
@@ -527,13 +607,5 @@ impl Fpga {
             .update_ctrl(|ctrl| ctrl.set_en(FpgaCtrlEn::FpgaConfigurationPins));
 
         Ok(())
-    }
-}
-
-impl Drop for Fpga {
-    fn drop(&mut self) {
-        unsafe {
-            INITIALIZED.store(false, Ordering::Relaxed);
-        }
     }
 }

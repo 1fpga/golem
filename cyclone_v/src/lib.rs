@@ -85,7 +85,7 @@ macro_rules! create_memory_locations {
             )*
         }
 
-        #[derive(Debug)]
+        #[derive(Debug, Copy, Clone)]
         pub struct SocFpga<M: memory::MemoryMapper> {
             pub memory: M,
         }

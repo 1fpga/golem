@@ -86,10 +86,21 @@ impl OriginDimensions for PlatformState {
     }
 }
 
+pub trait Core {
+    fn send_key(&mut self, key: u8);
+}
+
 pub trait CoreManager {
+    type Core: Core;
+
     /// Load a core into the FPGA.
     // TODO: Change the error type to something more usable than string.
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<(), String>;
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
+
+    /// Show the menu (OSD).
+    fn show_menu(&mut self);
+    /// Hide the menu (OSD).
+    fn hide_menu(&mut self);
 }
 
 pub trait MiSTerPlatform {

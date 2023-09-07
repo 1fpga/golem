@@ -3,12 +3,12 @@ use std::env;
 use std::path::PathBuf;
 
 pub fn config_root_path() -> PathBuf {
-    // On DE10-Nano, the executable is in /media/fat/retronomicon
+    // On DE10-Nano, the configurations are in /media/fat/golem
     cfg_if! {
         if #[cfg(feature = "platform_de10")] {
-            let p = PathBuf::from("/media/fat/retronomicon");
+            let p = PathBuf::from("/media/fat/golem");
         } else {
-            let p = dirs::config_dir().unwrap().join("retronomicon");
+            let p = dirs::config_dir().unwrap().join("golem");
         }
     }
 

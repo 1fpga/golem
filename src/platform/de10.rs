@@ -97,7 +97,8 @@ impl MiSTerPlatform for De10Platform {
             info!("Core interface: {:?}", fpga.core_interface_type());
             info!("Core version: {:?}", fpga.core_io_version());
 
-            osd::OsdEnable(0);
+            self.core_manager.hide_menu();
+
             crate::file_io::FindStorage();
             let (core, xml) = (
                 std::ffi::CString::new(flags.core.clone()).unwrap(),
@@ -113,7 +114,6 @@ impl MiSTerPlatform for De10Platform {
                 xml.map(|str| str.as_bytes_with_nul().as_ptr() as *const _)
                     .unwrap_or(std::ptr::null()),
             );
-
             osd::OsdSetSize(19);
         }
     }

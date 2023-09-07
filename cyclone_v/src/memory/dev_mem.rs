@@ -7,7 +7,7 @@ use std::os::unix::fs::OpenOptionsExt;
 /// A memory mapper that maps over the `/dev/mem` physical memory device.
 /// Only available on Linux with `std` feature enabled.
 pub struct DevMemMemoryMapper {
-    region: &'static mut [u8],
+    region: &'static [u8],
     physical: (usize, usize),
 }
 
@@ -44,7 +44,7 @@ impl MemoryMapper for DevMemMemoryMapper {
                 size as libc::size_t,
                 libc::PROT_READ | libc::PROT_WRITE,
                 libc::MAP_SHARED,
-                fd.into(),
+                fd,
                 address as libc::off_t,
             );
 
@@ -64,7 +64,7 @@ impl MemoryMapper for DevMemMemoryMapper {
     }
 
     fn as_mut_ptr<T>(&mut self) -> *mut T {
-        self.region.as_mut_ptr() as *mut T
+        self.region.as_ptr() as *mut T
     }
 }
 
