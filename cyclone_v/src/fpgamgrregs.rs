@@ -34,9 +34,7 @@ crate::declare_volatile_struct! {
         misci: u32,
 
         // Padding
-        #[doc(hidden)]
-        #[allow(non_snake_case)]
-        _pad_0x1c_0x82c: [u32; 517],
+        [padding] _pad_0x1c_0x82c: [u32; 517],
 
         // Configuration Monitor (MON) Registers
         /// GPIO Interrupt Enable Register
@@ -53,9 +51,7 @@ crate::declare_volatile_struct! {
         gpio_raw_intstatus: u32,
 
         // Padding
-        #[doc(hidden)]
-        #[allow(non_snake_case)]
-        _pad_0x848: u32,
+        [padding] _pad_0x848: u32,
 
         /// GPIO Port A Clear Interrupt Register
         gpio_porta_eoi: u32,
@@ -63,16 +59,13 @@ crate::declare_volatile_struct! {
         gpio_ext_porta: gpio_ext_porta::GpioExtPortA,
 
         // Padding
-        #[doc(hidden)]
-        #[allow(non_snake_case)]
-        _pad_0x854_0x85c: [u32; 3],
+        [padding] _pad_0x854_0x85c: [u32; 3],
 
         /// GPIO Level Synchronization Register
         gpio_ls_sync: u32,
 
         // Padding
-        #[allow(non_snake_case)]
-        _pad_0x864_0x868: [u32; 2],
+        [padding] _pad_0x864_0x868: [u32; 2],
 
         /// GPIO Version ID Code Register
         gpio_ver_id_code: u32,
