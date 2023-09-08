@@ -93,10 +93,10 @@ mod ffi {
             .unwrap();
     }
 
-    // #[no_mangle]
-    // unsafe extern "C" fn fpga_spi(word: u16) -> u16 {
-    //     FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
-    // }
+    #[no_mangle]
+    unsafe extern "C" fn fpga_spi(word: u16) -> u16 {
+        FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
+    }
 
     // #[no_mangle]
     // unsafe extern "C" fn spi_w(word: u16) -> u16 {

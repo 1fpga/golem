@@ -615,41 +615,6 @@ void fpga_spi_en(uint32_t mask, uint32_t en)
 	fpga_gpo_write(en ? gpo | mask : gpo & ~mask);
 }
 
-uint16_t fpga_spi(uint16_t word)
-{
-	uint32_t gpo = (fpga_gpo_read() & ~(0xFFFF | SSPI_STROBE)) | word;
-
-	fpga_gpo_write(gpo);
-	fpga_gpo_write(gpo | SSPI_STROBE);
-
-	int gpi;
-	do
-	{
-		gpi = fpga_gpi_read();
-		if (gpi < 0)
-		{
-			printf("GPI[31]==1. FPGA is uninitialized?\n");
-			fpga_wait_to_reset();
-			return 0;
-		}
-	} while (!(gpi & SSPI_ACK));
-
-	fpga_gpo_write(gpo);
-
-	do
-	{
-		gpi = fpga_gpi_read();
-		if (gpi < 0)
-		{
-			printf("GPI[31]==1. FPGA is uninitialized?\n");
-			fpga_wait_to_reset();
-			return 0;
-		}
-	} while (gpi & SSPI_ACK);
-
-	return (uint16_t)gpi;
-}
-
 uint16_t fpga_spi_fast(uint16_t word)
 {
 	uint32_t gpo = (fpga_gpo_read() & ~(0xFFFF | SSPI_STROBE)) | word;

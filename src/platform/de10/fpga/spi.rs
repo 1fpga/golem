@@ -142,14 +142,16 @@ impl<M: MemoryMapper> Spi<M> {
 
     /// Send a 16-bit word to the core. Returns the 16-bit word received from the core.
     #[inline]
-    pub fn write(&mut self, word: u16) -> u16 {
+    pub fn write(&mut self, word: impl Into<u16>) -> u16 {
         let regs = self.soc_mut().regs_mut();
-        // Remove the strobe bit and set the data bits.
-        let gpo = (regs.gpo() & !(0xFFFF | SSPI_STROBE)) | (word as u32);
 
-        // Wait for the ACK bit to be unset to give time to the core to get started.
+        // Remove the strobe bit and set the data bits.
+        let gpo = (regs.gpo() & !(0xFFFF | SSPI_STROBE)) | (word.into() as u32);
+
         regs.set_gpo(gpo);
         regs.set_gpo(gpo | SSPI_STROBE);
+
+        // Wait for the ACK bit to be unset to give time to the core to get some work.
         loop {
             let gpi = regs.gpi();
             if gpi & SSPI_ACK != 0 {
@@ -157,7 +159,8 @@ impl<M: MemoryMapper> Spi<M> {
             }
         }
 
-        // Send the actual data, then wait for the core to get done.
+        // Send the actual data without the strobe, then wait for the core to get done.
+        regs.set_gpo(gpo);
         loop {
             let gpi = regs.gpi();
             if gpi & SSPI_ACK == 0 {
@@ -168,6 +171,6 @@ impl<M: MemoryMapper> Spi<M> {
 
     #[inline]
     pub fn write_b(&mut self, byte: u8) -> u8 {
-        self.write(byte as u16) as u8
+        self.write(byte) as u8
     }
 }
