@@ -22,7 +22,6 @@ extern "C" {
 /// TODO: remove these when the fpga code from CPP is gone.
 mod ffi {
     use super::FPGA_SINGLETON;
-    use crate::platform::de10::fpga::spi::SpiFeature;
     use libc::{c_int, c_ulong};
     use tracing::error;
 
@@ -103,14 +102,14 @@ mod ffi {
     //     FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
     // }
 
-    // #[no_mangle]
-    // unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {
-    //     if en != 0 {
-    //         FPGA_SINGLETON.as_mut().unwrap().spi_mut().enable_u32(mask);
-    //     } else {
-    //         FPGA_SINGLETON.as_mut().unwrap().spi_mut().disable_u32(mask);
-    //     }
-    // }
+    #[no_mangle]
+    unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {
+        if en != 0 {
+            FPGA_SINGLETON.as_mut().unwrap().spi_mut().enable_u32(mask);
+        } else {
+            FPGA_SINGLETON.as_mut().unwrap().spi_mut().disable_u32(mask);
+        }
+    }
 
     // #[no_mangle]
     // unsafe extern "C" fn DisableIO() {

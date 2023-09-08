@@ -506,7 +506,7 @@ void inline fpga_gpo_write(uint32_t value)
 }
 
 #define fpga_gpo_writeN(value) writel((value), (void*)(SOCFPGA_MGR_ADDRESS + 0x10))
-#define fpga_gpo_read() gpo_copy //readl((void*)(SOCFPGA_MGR_ADDRESS + 0x10))
+#define fpga_gpo_read() /**/gpo_copy //*/readl((void*)(SOCFPGA_MGR_ADDRESS + 0x10))
 #define fpga_gpi_read() (int)readl((void*)(SOCFPGA_MGR_ADDRESS + 0x14))
 
 void fpga_core_write(uint32_t offset, uint32_t value)
@@ -608,12 +608,6 @@ int is_fpga_ready(int quick)
 
 #define SSPI_STROBE  (1<<17)
 #define SSPI_ACK     SSPI_STROBE
-
-void fpga_spi_en(uint32_t mask, uint32_t en)
-{
-	uint32_t gpo = fpga_gpo_read() | 0x80000000;
-	fpga_gpo_write(en ? gpo | mask : gpo & ~mask);
-}
 
 uint16_t fpga_spi_fast(uint16_t word)
 {

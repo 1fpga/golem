@@ -1,4 +1,3 @@
-use bitfield::bitfield;
 use cyclone_v::memory::MemoryMapper;
 use cyclone_v::SocFpga;
 use std::cell::UnsafeCell;
@@ -50,6 +49,7 @@ impl SpiFeature {
     pub const FPGA: Self = Self(0).with_fpga();
     pub const OSD: Self = Self(0).with_osd();
     pub const IO: Self = Self(0).with_io();
+    pub const ALL: Self = Self(0).with_fpga().with_osd().with_io();
 
     pub const fn fpga(&self) -> bool {
         self.0 & (1 << 18) != 0
@@ -117,8 +117,8 @@ impl<M: MemoryMapper> Spi<M> {
     pub fn enable_u32(&mut self, mask: u32) {
         let mut regs = self.soc_mut().regs_mut();
 
-        let gpo = regs.gpo() | 0x8000_0000;
-        regs.set_gpo(gpo | (mask as u32));
+        let gpo = (regs.gpo() & SpiFeature::ALL.0) | 0x8000_0000;
+        regs.set_gpo(gpo | mask);
     }
 
     // TODO: remove this.
@@ -126,8 +126,8 @@ impl<M: MemoryMapper> Spi<M> {
     pub fn disable_u32(&mut self, mask: u32) {
         let mut regs = self.soc_mut().regs_mut();
 
-        let gpo = regs.gpo() | 0x8000_0000;
-        regs.set_gpo(gpo & !(mask as u32));
+        let gpo: u32 = (regs.gpo() & SpiFeature::ALL.0) | 0x8000_0000;
+        regs.set_gpo(gpo & !mask);
     }
 
     #[inline]
