@@ -28,7 +28,7 @@ cfg_if! {
         compile_error!("Only one platform can be enabled at a time.");
     } else if #[cfg(feature = "platform_desktop")] {
         mod desktop;
-        pub use desktop::DesktopWindowManager as PlatformWindowManager;
+        pub use desktop::DesktopPlatform as PlatformWindowManager;
     } else if #[cfg(feature = "platform_de10")] {
         pub mod de10;
         pub use de10::De10Platform as PlatformWindowManager;

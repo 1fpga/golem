@@ -1,33 +1,49 @@
 #![cfg(feature = "platform_desktop")]
+
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{
     BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform, Window,
 };
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
-use crate::platform::{sizes, CoreManager, MiSTerPlatform};
+use crate::platform::{sizes, Core, CoreManager, MiSTerPlatform};
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
+use std::path::Path;
 use tracing::info;
+
+pub struct DummyCore;
+
+impl Core for DummyCore {
+    fn send_key(&mut self, key: u8) {
+        info!("DummyCore::send_key({})", key);
+    }
+}
 
 pub struct DummyCoreManager;
 
 impl CoreManager for DummyCoreManager {
-    fn load_program(&mut self, _: &[u8]) -> Result<(), String> {
-        info!("DummyCoreManager::load_program");
-        Ok(())
+    type Core = DummyCore;
+
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
+        info!("DummyCoreManager::load_program({:?})", path.as_ref());
+        Ok(DummyCore)
     }
+
+    fn show_menu(&mut self) {}
+
+    fn hide_menu(&mut self) {}
 }
 
-pub struct DesktopWindowManager {
+pub struct DesktopPlatform {
     platform: SdlPlatform<BinaryColor>,
     window_title: Window<BinaryColor>,
     window_main: Window<BinaryColor>,
     core_manager: DummyCoreManager,
 }
 
-impl Default for DesktopWindowManager {
+impl Default for DesktopPlatform {
     fn default() -> Self {
         let mut platform = SdlPlatform::init(SdlInitState::new(
             OutputSettingsBuilder::new()
@@ -54,7 +70,7 @@ impl Default for DesktopWindowManager {
     }
 }
 
-impl MiSTerPlatform for DesktopWindowManager {
+impl MiSTerPlatform for DesktopPlatform {
     type Color = BinaryColor;
     type CoreManager = DummyCoreManager;
 
@@ -77,6 +93,11 @@ impl MiSTerPlatform for DesktopWindowManager {
     fn events(&mut self) -> Vec<Event> {
         self.platform.events()
     }
+
+    fn start_loop(&mut self) {}
+
+    fn end_loop(&mut self) {}
+
     fn core_manager_mut(&mut self) -> &mut Self::CoreManager {
         &mut self.core_manager
     }

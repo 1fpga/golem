@@ -3201,7 +3201,6 @@ static Imlib_Image load_bg()
 	{
 		static char bgdir[128];
 		static char label[64];
-		fprintf(stderr, "-- 1\n");
 		int alt = altcfg();
 
 		const char* cfg_name = cfg_get_name(alt);

@@ -119,6 +119,16 @@ mod ffi {
     //         .spi_mut()
     //         .disable(SpiFeature::IO);
     // }
+
+    #[no_mangle]
+    unsafe extern "C" fn fpga_spi_fast_block_write(data: *const u16, len: u32) {
+        let data = std::slice::from_raw_parts(data, len as usize);
+        FPGA_SINGLETON
+            .as_mut()
+            .unwrap()
+            .spi_mut()
+            .write_block_16(data);
+    }
 }
 
 #[derive(Debug, Copy, Clone)]

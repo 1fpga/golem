@@ -618,20 +618,21 @@ uint16_t fpga_spi_fast(uint16_t word)
 	return (uint16_t)fpga_gpi_read();
 }
 
-void fpga_spi_fast_block_write(const uint16_t *buf, uint32_t length)
-{
-	uint32_t gpoH = (fpga_gpo_read() & ~(0xFFFF | SSPI_STROBE));
-	uint32_t gpo = gpoH;
-
-	// should be optimized for speed by compiler automatically
-	while (length--)
-	{
-		gpo = gpoH | *buf++;
-		fpga_gpo_writeN(gpo);
-		fpga_gpo_writeN(gpo | SSPI_STROBE);
-	}
-	fpga_gpo_write(gpo);
-}
+//
+//void fpga_spi_fast_block_write(const uint16_t *buf, uint32_t length)
+//{
+//	uint32_t gpoH = (fpga_gpo_read() & ~(0xFFFF | SSPI_STROBE));
+//	uint32_t gpo = gpoH;
+//
+//	// should be optimized for speed by compiler automatically
+//	while (length--)
+//	{
+//		gpo = gpoH | *buf++;
+//		fpga_gpo_writeN(gpo);
+//		fpga_gpo_writeN(gpo | SSPI_STROBE);
+//	}
+//	fpga_gpo_write(gpo);
+//}
 
 void fpga_spi_fast_block_read(uint16_t *buf, uint32_t length)
 {

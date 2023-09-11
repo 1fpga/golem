@@ -173,4 +173,43 @@ impl<M: MemoryMapper> Spi<M> {
     pub fn write_b(&mut self, byte: u8) -> u8 {
         self.write(byte) as u8
     }
+
+    #[inline]
+    pub fn write_block_16(&mut self, buffer: &[u16]) {
+        let regs = self.soc_mut().regs_mut();
+        let gpoH = regs.gpo() & !(0xFFFF | SSPI_STROBE);
+        let mut gpo = gpoH;
+
+        buffer.iter().for_each(|b| {
+            gpo = gpoH | (*b as u32);
+            regs.set_gpo(gpo);
+            regs.set_gpo(gpo | SSPI_STROBE);
+        });
+        regs.set_gpo(gpo);
+    }
+}
+
+impl<M: MemoryMapper> std::io::Write for Spi<M> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
+        let regs = self.soc_mut().regs_mut();
+        let gpoH = (regs.gpo() & !(0xFFFF | SSPI_STROBE)) | 0x8000_0000;
+        let mut gpo = gpoH;
+
+        buf.iter().for_each(|b| {
+            gpo = gpoH | (*b as u32);
+            regs.set_gpo(gpo);
+            regs.set_gpo(gpo | SSPI_STROBE);
+        });
+        regs.set_gpo(gpo);
+
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
 }

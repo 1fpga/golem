@@ -93,19 +93,19 @@ pub enum MenuKeyBinding {
 
 impl PartialEq<Keycode> for MenuKeyBinding {
     fn eq(&self, other: &Keycode) -> bool {
-        match (self, other) {
-            (Self::F12, Keycode::F12) => true,
-            (Self::F11, Keycode::F11) => true,
-            (Self::PrtSc, Keycode::PrintScreen) => true,
-            _ => false,
-        }
+        matches!(
+            (self, other),
+            (Self::F12, Keycode::F12)
+                | (Self::F11, Keycode::F11)
+                | (Self::PrtSc, Keycode::PrintScreen)
+        )
     }
 }
 
 #[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
 #[menu(
     title = "Settings",
-    navigation(events = TopLevelViewType, marker = "<BLUE>"),
+    navigation(events = TopLevelViewType, marker = ""),
     items = [
         data(label = "Show FPS", field = show_fps),
         data(label = "Invert toolbar colors", field = invert_toolbar),
