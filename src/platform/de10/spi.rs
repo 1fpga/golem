@@ -24,7 +24,7 @@ pub fn spi_w(word: u16) -> u16 {
     unsafe { fpga_spi(word) }
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn DisableIo() {
-    fpga_spi_en(SSPI_IO_EN, 0);
-}
+// #[no_mangle]
+// pub unsafe extern "C" fn DisableIO() {
+//     fpga_spi_en(SSPI_IO_EN, 0);
+// }

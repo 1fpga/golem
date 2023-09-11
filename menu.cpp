@@ -3930,7 +3930,7 @@ void HandleUI(void)
 		while (m < 10) OsdDrawLogo(m++);
 		OsdWrite(m++, "     www.MiSTerFPGA.org", 0, 0, 1);
 		OsdWrite(m++, "", 0, 0, 1);
-		sprintf(s, "       MiSTer v%s", version + 5);
+		sprintf(s, "       MiSTer v0-0-0");
 		OsdWrite(m++, s, 0, 0, 1);
 
 		s[0] = 0;
@@ -6087,13 +6087,13 @@ void HandleUI(void)
 		menumask = 0x7F;
 
 		OsdWrite(m++);
-		sprintf(s, "       MiSTer v%s", version + 5);
+		sprintf(s, "       MiSTer v0-0-0");
 		{
 			char str[8] = {};
 			FILE *f = fopen("/MiSTer.version", "r");
 			if (f)
 			{
-				if (fread(str, 6, 1, f)) sprintf(s, " MiSTer v%s,  OS v%s", version + 5, str);
+				if (fread(str, 6, 1, f)) sprintf(s, " MiSTer v%s,  OS v0-0-0", str);
 				fclose(f);
 			}
 		}

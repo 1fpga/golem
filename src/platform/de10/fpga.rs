@@ -8,7 +8,7 @@ use std::ffi::c_int;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-use strum::{EnumIter, FromRepr};
+use strum::{Display, EnumIter, FromRepr};
 use tracing::{debug, error, info};
 
 mod framebuffer;
@@ -20,7 +20,7 @@ extern "C" {
 
 /// Functions made available to the C code.
 /// TODO: remove these when the fpga code from CPP is gone.
-mod ffi {
+pub mod ffi {
     use super::FPGA_SINGLETON;
     use libc::{c_int, c_ulong};
     use tracing::error;
@@ -111,14 +111,14 @@ mod ffi {
         }
     }
 
-    // #[no_mangle]
-    // unsafe extern "C" fn DisableIO() {
-    //     FPGA_SINGLETON
-    //         .as_mut()
-    //         .unwrap()
-    //         .spi_mut()
-    //         .disable(SpiFeature::IO);
-    // }
+    #[no_mangle]
+    pub unsafe extern "C" fn DisableIO() {
+        FPGA_SINGLETON
+            .as_mut()
+            .unwrap()
+            .spi_mut()
+            .disable(super::spi::SpiFeature::IO);
+    }
 
     #[no_mangle]
     unsafe extern "C" fn fpga_spi_fast_block_write(data: *const u16, len: u32) {
@@ -169,7 +169,7 @@ static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 static mut FPGA_SINGLETON: Option<Fpga> = None;
 
 /// FPGA core type.
-#[derive(Debug, Eq, PartialEq, EnumIter, FromRepr)]
+#[derive(Display, Debug, Eq, PartialEq, EnumIter, FromRepr)]
 #[repr(u8)]
 pub enum CoreType {
     /// Core type value should be unlikely to be returned by broken cores.
@@ -185,8 +185,18 @@ pub enum CoreType {
     CoreTypeGenericDualSdram = 0xA8,
 }
 
+impl CoreType {
+    pub fn is_dual_sdram(&self) -> bool {
+        *self == CoreType::CoreTypeGenericDualSdram
+    }
+
+    pub fn is_generic(&self) -> bool {
+        *self == CoreType::CoreTypeGeneric || *self == CoreType::CoreTypeGenericDualSdram
+    }
+}
+
 /// The interface type of the core.
-#[derive(Debug, Eq, PartialEq, EnumIter, FromRepr)]
+#[derive(Display, Debug, Eq, PartialEq, EnumIter, FromRepr)]
 #[repr(u8)]
 pub enum CoreInterfaceType {
     /// 8-bit SPI bus.
@@ -208,12 +218,19 @@ pub struct Fpga {
 
 // OSD specific functions.
 impl Fpga {
+    // pub fn osd_enable(&mut self) {
+    //     self.spi_mut().write_b(OSD_CMD_ENABLE);
+    // }
+    // pub fn osd_disable(&mut self) {
+    //     self.spi_mut().write_b(OSD_CMD_DISABLE);
+    // }
+
     pub fn osd_enable(&mut self) {
         unsafe {
-            self.spi_mut().write_b(OSD_CMD_ENABLE);
+            // self.spi_mut().write_b(OSD_CMD_ENABLE);
             // self.spi_mut()
             //     .enable(SpiFeature::default().with_osd().with_io().with_fpga());
-            // ffi_spi::spi_osd_cmd(OSD_CMD_ENABLE);
+            ffi_spi::spi_osd_cmd(OSD_CMD_ENABLE);
         }
     }
     pub fn osd_disable(&mut self) {
@@ -516,7 +533,7 @@ impl Fpga {
         // Rust. The original code is licensed under the GPL-2.0+.
         //
         // In our case, we also changed the registers used for the load/store as LLVM reserves
-        // the r6 register for internal use (stack frames, etc). We could not compile it while
+        // the r6 register for internal use (stack frames, etc.). We could not compile it while
         // using r6.
         //
         // This requires the ARM architecture to be enabled.

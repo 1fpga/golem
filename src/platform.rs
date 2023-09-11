@@ -91,11 +91,13 @@ pub trait Core {
 }
 
 pub trait CoreManager {
-    type Core: Core;
+    type Core<'a>: Core
+    where
+        Self: 'a;
 
     /// Load a core into the FPGA.
     // TODO: Change the error type to something more usable than string.
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core<'_>, String>;
 
     /// Show the menu (OSD).
     fn show_menu(&mut self);

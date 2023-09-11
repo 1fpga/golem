@@ -1,11 +1,35 @@
-use crate::platform::de10::fpga;
-use crate::platform::de10::fpga::Fpga;
+use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga};
 use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
+use tracing::info;
 
-pub struct FpgaCore;
+pub struct FpgaCore<'a> {
+    fpga: &'a mut Fpga,
+    core_type: CoreType,
+    spi_type: CoreInterfaceType,
+    io_version: u8,
+}
 
-impl crate::platform::Core for FpgaCore {
+impl<'a> FpgaCore<'a> {
+    fn new(fpga: &'a mut Fpga) -> Result<Self, &'static str> {
+        let core_type = fpga.core_type().ok_or("Could not get core type.")?;
+        let spi_type = fpga
+            .core_interface_type()
+            .ok_or("Could not get SPI type.")?;
+        let io_version = fpga.core_io_version().ok_or("Could not get IO version.")?;
+
+        info!(?core_type, ?spi_type, io_version, "Core loaded:");
+
+        Ok(FpgaCore {
+            fpga,
+            core_type,
+            spi_type,
+            io_version,
+        })
+    }
+}
+
+impl<'a> crate::platform::Core for FpgaCore<'a> {
     fn send_key(&mut self, key: u8) {
         todo!()
     }
@@ -16,23 +40,23 @@ pub struct CoreManager {
 }
 
 impl CoreManager {
-    pub fn new(fpga: fpga::Fpga) -> Self {
+    pub fn new(fpga: Fpga) -> Self {
         Self { fpga }
     }
 
-    pub fn fpga(&self) -> &fpga::Fpga {
+    pub fn fpga(&self) -> &Fpga {
         &self.fpga
     }
 
-    pub fn fpga_mut(&mut self) -> &mut fpga::Fpga {
+    pub fn fpga_mut(&mut self) -> &mut Fpga {
         &mut self.fpga
     }
 }
 
 impl crate::platform::CoreManager for CoreManager {
-    type Core = FpgaCore;
+    type Core<'a> = FpgaCore<'a>;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<FpgaCore, String> {
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<FpgaCore<'_>, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
         let program = bytes.as_slice();
 
@@ -48,10 +72,18 @@ impl crate::platform::CoreManager for CoreManager {
             &program[start..start + size]
         };
 
-        self.fpga.core_reset().expect("Could not reset the Core.");
-        self.fpga.load_rbf(program).expect("Could not load RBF.");
+        self.fpga.core_reset().expect("Could not reset the Core");
+        self.fpga.load_rbf(program).expect("Could not load RBF");
 
-        Ok(FpgaCore)
+        let core = FpgaCore::new(&mut self.fpga).expect("Could not create a Core");
+        // unsafe {
+        //     crate::platform::de10::user_io::user_io_init(
+        //         "\0".as_ptr() as *const _,
+        //         std::ptr::null(),
+        //     );
+        // }
+
+        Ok(core)
     }
 
     fn show_menu(&mut self) {

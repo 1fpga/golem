@@ -47,11 +47,6 @@ void EnableIO()
 	fpga_spi_en(SSPI_IO_EN, 1);
 }
 
-void DisableIO()
-{
-	fpga_spi_en(SSPI_IO_EN, 0);
-}
-
 uint16_t spi_w(uint16_t word)
 {
 	return fpga_spi(word);

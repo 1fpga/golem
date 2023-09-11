@@ -110,7 +110,7 @@ create_memory_locations! {
     regs(FPGAMGRREGS):  fpgamgrregs::FpgaManagerRegs    => 0xFF706000 .. 0xFF706FFF;
 
     /// The FPGA Manager data.
-    data(FPGAMGRDATA):  u8 [pointer    ]                => 0xFFB90000 .. 0xFFB90003;
+    data(FPGAMGRDATA):  u8 [pointer]                    => 0xFFB90000 .. 0xFFB90003;
 
     /// The SDRAM Controller.
     sdr(SDR):           sdr::SdramCtrl                  => 0xFFC20000 .. 0xFFC2FFFF;

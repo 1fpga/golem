@@ -40,18 +40,7 @@ pub fn main() -> Result<(), String> {
     let core = cores.get(1).unwrap_or(cores.get(0).unwrap());
     core_affinity::set_for_current(*core);
 
-    let v = {
-        #[cfg(feature = "platform_de10")]
-        unsafe {
-            extern "C" {
-                static version: *const u8;
-            }
-            std::ffi::CStr::from_ptr(version.offset(5) as *const libc::c_char).to_string_lossy()
-        }
-
-        #[cfg(not(feature = "platform_de10"))]
-        "Desktop".to_string()
-    };
+    let v = format!("{}-{}", env!("CARGO_PKG_VERSION"), env!("VERGEN_GIT_SHA"));
     println!(include_str!("../assets/header.txt"), v = v);
 
     let opts = Flags::parse();

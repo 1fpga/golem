@@ -26,7 +26,7 @@ struct VideoInfo
     bool rotated;
 };
 
-void  video_init();
+extern "C" void  video_init();
 
 int   video_get_scaler_flt(int type);
 void  video_set_scaler_flt(int type, int n);

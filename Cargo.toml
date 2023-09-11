@@ -2,6 +2,7 @@
 name = "mister"
 version = "0.1.0"
 edition = "2018"
+build = "build.rs"
 
 [workspace]
 members = [
@@ -61,6 +62,9 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["tracing-log"] }
 validator = { version = "0.16.1", features = ["derive"] }
 walkdir = "2.3.3"
+
+[build-dependencies]
+vergen = { version = "8.2.4", features = ["build", "git", "gitoxide"] }
 
 [dev-dependencies]
 tempdir = "0.3.7"

@@ -85,7 +85,7 @@ impl VideoInfo {
         }
 
         unsafe {
-            spi::DisableIo();
+            crate::platform::de10::fpga::ffi::DisableIO();
         }
 
         let crc = unsafe { spi::spi_uio_cmd_cont(spi::UIO_GET_FB_PAR) };

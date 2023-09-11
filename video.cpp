@@ -2402,8 +2402,11 @@ void video_cfg_reset()
 	setShadowMask();
 }
 
+static int done = 0;
+
 void video_init()
 {
+fprintf(stderr, "video_init\n");
 	yc_parse(yc_modes, sizeof(yc_modes) / sizeof(yc_modes[0]));
 
 	fb_init();

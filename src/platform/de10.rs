@@ -10,12 +10,12 @@ use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 mod battery;
 mod buffer;
 mod core_manager;
-mod fpga;
+pub mod fpga;
 mod input;
 mod menu;
 mod osd;
@@ -84,36 +84,18 @@ impl MiSTerPlatform for De10Platform {
         unsafe {
             self.core_manager.fpga_mut().wait_for_ready();
 
-            if flags.core.is_empty() {
-                self.core_manager
-                    .load_program("/media/fat/menu.rbf")
-                    .unwrap();
-            }
+            crate::offload::offload_start();
+            self.core_manager
+                .load_program("/media/fat/menu.rbf")
+                .unwrap();
 
             let fpga = self.core_manager.fpga_mut();
             fpga.wait_for_ready();
 
-            info!("Core type: {:?}", fpga.core_type());
-            info!("Core interface: {:?}", fpga.core_interface_type());
-            info!("Core version: {:?}", fpga.core_io_version());
-
             self.core_manager.hide_menu();
 
             crate::file_io::FindStorage();
-            let (core, xml) = (
-                std::ffi::CString::new(flags.core.clone()).unwrap(),
-                flags
-                    .xml
-                    .clone()
-                    .map(|str| std::ffi::CString::new(str).unwrap()),
-            );
-
-            crate::offload::offload_start();
-            user_io::user_io_init(
-                core.as_bytes_with_nul().as_ptr() as *const _,
-                xml.map(|str| str.as_bytes_with_nul().as_ptr() as *const _)
-                    .unwrap_or(std::ptr::null()),
-            );
+            user_io::user_io_init("\0".as_ptr() as *const _, std::ptr::null());
             osd::OsdSetSize(19);
         }
     }
