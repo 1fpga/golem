@@ -1,5 +1,6 @@
 use clap::Parser;
 use clap_verbosity_flag::{LogLevel, Verbosity};
+use tracing::debug;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct NoneLevel;
@@ -22,7 +23,7 @@ pub struct Flags {
     pub xml: Option<String>,
 
     #[command(flatten)]
-    pub verbose: Verbosity<NoneLevel>,
+    pub verbose: Verbosity,
 }
 
 #[cfg(not(test))]
@@ -40,10 +41,16 @@ pub fn main() -> Result<(), String> {
     let core = cores.get(1).unwrap_or(cores.get(0).unwrap());
     core_affinity::set_for_current(*core);
 
-    let v = format!("{}-{}", env!("CARGO_PKG_VERSION"), env!("VERGEN_GIT_SHA"));
+    let v = format!(
+        "{}-{}",
+        env!("CARGO_PKG_VERSION"),
+        &env!("VERGEN_GIT_SHA")[..8]
+    );
     println!(include_str!("../assets/header.txt"), v = v);
 
     let opts = Flags::parse();
+
+    debug!(?opts);
 
     // Initialize tracing.
     let subscriber = Subscriber::builder();

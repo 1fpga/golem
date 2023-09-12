@@ -80,23 +80,13 @@ impl MiSTerPlatform for De10Platform {
     type Color = BinaryColor;
     type CoreManager = core_manager::CoreManager;
 
-    fn init(&mut self, flags: &Flags) {
+    fn init(&mut self, _flags: &Flags) {
         unsafe {
-            self.core_manager.fpga_mut().wait_for_ready();
-
             crate::offload::offload_start();
             self.core_manager
                 .load_program("/media/fat/menu.rbf")
+                // .load_program("/media/fat/_Other/Chess_20221106.rbf")
                 .unwrap();
-
-            let fpga = self.core_manager.fpga_mut();
-            fpga.wait_for_ready();
-
-            self.core_manager.hide_menu();
-
-            crate::file_io::FindStorage();
-            user_io::user_io_init("\0".as_ptr() as *const _, std::ptr::null());
-            osd::OsdSetSize(19);
         }
     }
 
@@ -126,7 +116,7 @@ impl MiSTerPlatform for De10Platform {
         unsafe {
             user_io::user_io_poll();
             input::input_poll(0);
-            menu::HandleUI();
+            // menu::HandleUI();
         }
     }
 

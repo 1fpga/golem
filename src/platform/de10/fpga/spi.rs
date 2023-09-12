@@ -115,7 +115,7 @@ impl<M: MemoryMapper> Spi<M> {
     // TODO: remove this.
     #[inline]
     pub fn enable_u32(&mut self, mask: u32) {
-        let mut regs = self.soc_mut().regs_mut();
+        let regs = self.soc_mut().regs_mut();
 
         let gpo = (regs.gpo() & SpiFeature::ALL.0) | 0x8000_0000;
         regs.set_gpo(gpo | mask);
@@ -124,7 +124,7 @@ impl<M: MemoryMapper> Spi<M> {
     // TODO: remove this.
     #[inline]
     pub fn disable_u32(&mut self, mask: u32) {
-        let mut regs = self.soc_mut().regs_mut();
+        let regs = self.soc_mut().regs_mut();
 
         let gpo: u32 = (regs.gpo() & SpiFeature::ALL.0) | 0x8000_0000;
         regs.set_gpo(gpo & !mask);
@@ -146,7 +146,7 @@ impl<M: MemoryMapper> Spi<M> {
         let regs = self.soc_mut().regs_mut();
 
         // Remove the strobe bit and set the data bits.
-        let gpo = (regs.gpo() & !(0xFFFF | SSPI_STROBE)) | (word.into() as u32);
+        let gpo = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | (word.into() as u32);
 
         regs.set_gpo(gpo);
         regs.set_gpo(gpo | SSPI_STROBE);
@@ -177,7 +177,7 @@ impl<M: MemoryMapper> Spi<M> {
     #[inline]
     pub fn write_block_16(&mut self, buffer: &[u16]) {
         let regs = self.soc_mut().regs_mut();
-        let gpo_h = regs.gpo() & !(0xFFFF | SSPI_STROBE);
+        let gpo_h = regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE);
         let mut gpo = gpo_h;
 
         buffer.iter().for_each(|b| {
@@ -196,7 +196,7 @@ impl<M: MemoryMapper> std::io::Write for Spi<M> {
         }
 
         let regs = self.soc_mut().regs_mut();
-        let gpo_h = (regs.gpo() & !(0xFFFF | SSPI_STROBE)) | 0x8000_0000;
+        let gpo_h = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | 0x8000_0000;
         let mut gpo = gpo_h;
 
         buf.iter().for_each(|b| {

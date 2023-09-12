@@ -574,6 +574,7 @@ char *getappname()
 
 void app_restart(const char *path, const char *xml)
 {
+fprintf(stderr, "!!!!! app_restart(%s, %s)\n", path, xml);
 	sync();
 	fpga_core_reset(1);
 
@@ -592,6 +593,7 @@ void app_restart(const char *path, const char *xml)
 
 void fpga_core_reset(int reset)
 {
+fprintf(stderr, "!!!!! fpga_core_reset(%d)\n", reset);
 	uint32_t gpo = fpga_gpo_read() & ~0xC0000000;
 	fpga_gpo_write(reset ? gpo | 0x40000000 : gpo | 0x80000000);
 }

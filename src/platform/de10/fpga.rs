@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 use strum::{Display, EnumIter, FromRepr};
 use tracing::{debug, error, info};
 
+mod config_string;
 mod framebuffer;
 mod spi;
 
@@ -218,13 +219,6 @@ pub struct Fpga {
 
 // OSD specific functions.
 impl Fpga {
-    // pub fn osd_enable(&mut self) {
-    //     self.spi_mut().write_b(OSD_CMD_ENABLE);
-    // }
-    // pub fn osd_disable(&mut self) {
-    //     self.spi_mut().write_b(OSD_CMD_DISABLE);
-    // }
-
     pub fn osd_enable(&mut self) {
         unsafe {
             // self.spi_mut().write_b(OSD_CMD_ENABLE);

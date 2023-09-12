@@ -78,7 +78,8 @@ void spi_osd_cmd_cont(uint8_t cmd)
 
 void spi_osd_cmd(uint8_t cmd)
 {
-	spi_osd_cmd_cont(cmd);
+	EnableOsd();
+	spi_b(cmd);
 	DisableOsd();
 }
 

@@ -185,8 +185,9 @@ char is_arcade()
 static int is_menu_type = 0;
 char is_menu()
 {
-	if (!is_menu_type) is_menu_type = strcasecmp(orig_name, "MENU") ? 2 : 1;
-	return (is_menu_type == 1);
+return 1;
+//	if (!is_menu_type) is_menu_type = strcasecmp(orig_name, "MENU") ? 2 : 1;
+//	return (is_menu_type == 1);
 }
 
 static int is_x86_type = 0;
@@ -337,7 +338,7 @@ char has_menu()
 
 void user_io_read_core_name()
 {
-	is_menu_type = 0;
+	is_menu_type = 1;
 	is_x86_type  = 0;
 	is_no_type   = 0;
 	is_snes_type = 0;
