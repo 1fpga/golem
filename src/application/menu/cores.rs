@@ -53,7 +53,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
         .map(|(name, id)| NavigationItem::new(name, MenuAction::ShowCoreInfo(id)).with_marker(">"))
         .collect();
 
-    let mut menu = Menu::with_style("_.Cores", style::menu_style())
+    let mut menu = Menu::with_style(" Cores", style::menu_style())
         .add_item(
             NavigationItem::new("Load Core Manually", MenuAction::ManualLoad).with_marker(">"),
         )
@@ -89,6 +89,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                     info!("Loading core from path {:?}", path);
 
                     if let Ok(Some(path)) = path {
+                        app.hide_toolbar();
                         let core = app
                             .platform_mut()
                             .core_manager_mut()

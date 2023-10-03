@@ -92,7 +92,9 @@ void spi_osd_cmd8_cont(uint8_t cmd, uint8_t parm)
 
 void spi_osd_cmd8(uint8_t cmd, uint8_t parm)
 {
-	spi_osd_cmd8_cont(cmd, parm);
+	EnableOsd();
+	spi_b(cmd);
+	spi_b(parm);
 	DisableOsd();
 }
 

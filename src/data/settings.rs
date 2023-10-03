@@ -104,7 +104,7 @@ impl PartialEq<Keycode> for MenuKeyBinding {
 
 #[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
 #[menu(
-    title = "Settings",
+    title = " Settings",
     navigation(events = TopLevelViewType, marker = ""),
     items = [
         data(label = "Show FPS", field = show_fps),

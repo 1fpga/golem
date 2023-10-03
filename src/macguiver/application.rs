@@ -35,6 +35,9 @@ pub trait Application {
     fn platform(&self) -> &Self::Platform;
     fn platform_mut(&mut self) -> &mut Self::Platform;
 
+    fn hide_toolbar(&mut self);
+    fn show_toolbar(&mut self);
+
     fn event_loop<R>(
         &mut self,
         loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,

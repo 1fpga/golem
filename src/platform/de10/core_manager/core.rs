@@ -18,6 +18,7 @@ impl FpgaCore {
             .core_interface_type()
             .ok_or("Could not get SPI type.")?;
         let io_version = fpga.core_io_version().ok_or("Could not get IO version.")?;
+        let config = config_string::Config::new(&mut fpga);
 
         info!(?core_type, ?spi_type, io_version, "Core loaded:");
 
@@ -26,6 +27,7 @@ impl FpgaCore {
             core_type,
             spi_type,
             io_version,
+            config,
         })
     }
 }

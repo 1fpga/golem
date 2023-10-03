@@ -11,7 +11,6 @@ use std::time::{Duration, Instant};
 use strum::{Display, EnumIter, FromRepr};
 use tracing::{debug, error, info};
 
-mod config_string;
 mod framebuffer;
 mod spi;
 

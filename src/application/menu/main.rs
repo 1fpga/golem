@@ -17,7 +17,7 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) -> TopLevelVie
         .unwrap();
     let core_title = format!("Cores ({ncores})");
 
-    let mut menu = Menu::with_style("_", style::menu_style())
+    let mut menu = Menu::with_style(" ", style::menu_style())
         .add_item(NavigationItem::new(&core_title, TopLevelViewType::Cores).with_marker(">"))
         .add_item(NavigationItem::new("ROMs", TopLevelViewType::MainMenu).with_marker(">"))
         .add_item(NavigationItem::new(

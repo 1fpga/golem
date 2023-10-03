@@ -64,6 +64,8 @@ pub struct MiSTer {
     database: Arc<RwLock<Connection>>,
     view: TopLevelViewType,
 
+    render_toolbar: bool,
+
     core_manager: Arc<RwLock<CoreManager>>,
 
     pub platform: WindowManager,
@@ -87,6 +89,7 @@ impl MiSTer {
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
             view: TopLevelViewType::default(),
+            render_toolbar: true,
             core_manager: Arc::new(RwLock::new(core_manager)),
             database,
             settings,
@@ -137,6 +140,14 @@ impl Application for MiSTer {
         &mut self.platform
     }
 
+    fn hide_toolbar(&mut self) {
+        self.render_toolbar = false;
+    }
+
+    fn show_toolbar(&mut self) {
+        self.render_toolbar = true;
+    }
+
     fn event_loop<R>(
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
@@ -159,7 +170,7 @@ impl Application for MiSTer {
             }
 
             self.platform.update_main(&self.main_buffer);
-            if self.toolbar.update() {
+            if self.render_toolbar && self.toolbar.update() {
                 self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
                 self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
 

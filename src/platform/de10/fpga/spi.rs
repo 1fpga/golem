@@ -13,6 +13,15 @@ const SSPI_STROBE: u32 = 1 << 17;
 /// This signal is received to indicate that the data was read.
 const SSPI_ACK: u32 = 1 << 17;
 
+/// Feature for FPGA.
+const SSPI_FPGA_FEATURE: u32 = 1 << 18;
+
+/// Feature for OSD.
+const SSPI_OSD_FEATURE: u32 = 1 << 19;
+
+/// Feature for IO.
+const SSPI_IO_FEATURE: u32 = 1 << 20;
+
 /// Features to enable on the SPI bus.
 #[derive(Default, Clone, Copy, PartialEq)]
 pub struct SpiFeature(u32);
@@ -52,39 +61,39 @@ impl SpiFeature {
     pub const ALL: Self = Self(0).with_fpga().with_osd().with_io();
 
     pub const fn fpga(&self) -> bool {
-        self.0 & (1 << 18) != 0
+        self.0 & SSPI_FPGA_FEATURE != 0
     }
 
     pub const fn osd(&self) -> bool {
-        self.0 & (1 << 19) != 0
+        self.0 & SSPI_OSD_FEATURE != 0
     }
 
     pub const fn io(&self) -> bool {
-        self.0 & (1 << 20) != 0
+        self.0 & SSPI_IO_FEATURE != 0
     }
 
     pub fn set_fpga(&mut self, value: bool) {
-        self.0 = self.0 & !(1 << 18) | ((value as u32) << 18);
+        self.0 = self.0 & !SSPI_FPGA_FEATURE | ((value as u32) << 18);
     }
 
     pub fn set_osd(&mut self, value: bool) {
-        self.0 = self.0 & !(1 << 19) | ((value as u32) << 19);
+        self.0 = self.0 & !SSPI_OSD_FEATURE | ((value as u32) << 19);
     }
 
     pub fn set_io(&mut self, value: bool) {
-        self.0 = self.0 & !(1 << 20) | ((value as u32) << 20);
+        self.0 = self.0 & !SSPI_IO_FEATURE | ((value as u32) << 20);
     }
 
     pub const fn with_fpga(mut self) -> Self {
-        self.0 = self.0 | (1 << 18);
+        self.0 = self.0 | SSPI_FPGA_FEATURE;
         self
     }
     pub const fn with_osd(mut self) -> Self {
-        self.0 = self.0 | (1 << 19);
+        self.0 = self.0 | SSPI_OSD_FEATURE;
         self
     }
     pub const fn with_io(mut self) -> Self {
-        self.0 = self.0 | (1 << 20);
+        self.0 = self.0 | SSPI_IO_FEATURE;
         self
     }
 }
