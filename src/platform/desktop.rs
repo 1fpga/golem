@@ -24,9 +24,9 @@ impl Core for DummyCore {
 pub struct DummyCoreManager;
 
 impl CoreManager for DummyCoreManager {
-    type Core<'a> = DummyCore;
+    type Core = DummyCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core<'_>, String> {
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
         info!("DummyCoreManager::load_program({:?})", path.as_ref());
         Ok(DummyCore)
     }
@@ -92,6 +92,10 @@ impl MiSTerPlatform for DesktopPlatform {
 
     fn events(&mut self) -> Vec<Event> {
         self.platform.events()
+    }
+
+    fn sdl(&mut self) -> &mut SdlPlatform<Self::Color> {
+        &mut self.platform
     }
 
     fn start_loop(&mut self) {}

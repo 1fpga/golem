@@ -8,6 +8,7 @@
 //!
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
 use crate::macguiver::buffer::DrawBuffer;
+use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
@@ -88,16 +89,18 @@ impl OriginDimensions for PlatformState {
 
 pub trait Core {
     fn send_key(&mut self, key: u8);
+
+    fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8);
+
+    fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8);
 }
 
 pub trait CoreManager {
-    type Core<'a>: Core
-    where
-        Self: 'a;
+    type Core: Core;
 
     /// Load a core into the FPGA.
     // TODO: Change the error type to something more usable than string.
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core<'_>, String>;
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
 
     /// Show the menu (OSD).
     fn show_menu(&mut self);
@@ -118,6 +121,8 @@ pub trait MiSTerPlatform {
     fn main_dimensions(&self) -> Size;
 
     fn events(&mut self) -> Vec<Event>;
+
+    fn sdl(&mut self) -> &mut SdlPlatform<Self::Color>;
 
     fn start_loop(&mut self);
     fn end_loop(&mut self);
@@ -166,6 +171,10 @@ impl MiSTerPlatform for WindowManager {
 
     fn events(&mut self) -> Vec<Event> {
         self.inner.events()
+    }
+
+    fn sdl(&mut self) -> &mut SdlPlatform<Self::Color> {
+        self.inner.sdl()
     }
 
     fn start_loop(&mut self) {

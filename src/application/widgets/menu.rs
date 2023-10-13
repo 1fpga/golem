@@ -1,0 +1,102 @@
+use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
+use embedded_graphics::geometry::{Point, Size};
+use embedded_graphics::pixelcolor::{BinaryColor, PixelColor, Rgb888};
+use embedded_graphics::primitives::Rectangle;
+use embedded_graphics::Drawable;
+use embedded_layout::view_group::ViewGroup;
+use embedded_layout::View;
+use embedded_menu::collection::MenuItemCollection;
+use embedded_menu::interaction::{InputAdapter, InputAdapterSource};
+use embedded_menu::selection_indicator::style::IndicatorStyle;
+use embedded_menu::selection_indicator::SelectionIndicatorController;
+use embedded_menu::Menu;
+
+pub struct SizedMenu<T, IT, VG, R, C, P, S>
+where
+    T: AsRef<str>,
+    IT: InputAdapterSource<R>,
+    C: PixelColor,
+    P: SelectionIndicatorController,
+    S: IndicatorStyle,
+{
+    rectangle: Rectangle,
+    menu: Menu<T, IT, VG, R, C, P, S>,
+}
+
+impl<T, IT, VG, R, C, P, S> SizedMenu<T, IT, VG, R, C, P, S>
+where
+    T: AsRef<str>,
+    IT: InputAdapterSource<R>,
+    C: PixelColor,
+    P: SelectionIndicatorController,
+    S: IndicatorStyle,
+{
+    pub fn new(size: Size, menu: Menu<T, IT, VG, R, C, P, S>) -> Self {
+        Self {
+            rectangle: Rectangle::new(Point::zero(), size),
+            menu,
+        }
+    }
+}
+
+impl<T, IT, VG, R, C, P, S> SizedMenu<T, IT, VG, R, C, P, S>
+where
+    T: AsRef<str>,
+    IT: InputAdapterSource<R>,
+    VG: ViewGroup + MenuItemCollection<R>,
+    C: PixelColor + From<Rgb888>,
+    P: SelectionIndicatorController,
+    S: IndicatorStyle,
+{
+    pub fn interact(&mut self, input: <IT::InputAdapter as InputAdapter>::Input) -> Option<R>
+    where
+        R: std::fmt::Debug,
+    {
+        self.menu.interact(input)
+    }
+
+    pub fn update<D>(&mut self, display: &mut D)
+    where
+        D: DrawTarget<Color = C>,
+    {
+        let mut sub = display.cropped(&self.rectangle);
+        self.menu.update(display);
+    }
+}
+
+impl<T, IT, VG, R, C, P, S> View for SizedMenu<T, IT, VG, R, C, P, S>
+where
+    T: AsRef<str>,
+    IT: InputAdapterSource<R>,
+    C: PixelColor,
+    P: SelectionIndicatorController,
+    S: IndicatorStyle,
+{
+    fn translate_impl(&mut self, by: Point) {
+        self.rectangle.top_left += by;
+    }
+
+    fn bounds(&self) -> Rectangle {
+        self.rectangle
+    }
+}
+
+impl<T, IT, VG, R, P, S> Drawable for SizedMenu<T, IT, VG, R, BinaryColor, P, S>
+where
+    T: AsRef<str>,
+    IT: InputAdapterSource<R>,
+    VG: ViewGroup + MenuItemCollection<R>,
+    P: SelectionIndicatorController,
+    S: IndicatorStyle,
+{
+    type Color = BinaryColor;
+    type Output = ();
+
+    fn draw<D>(&self, display: &mut D) -> Result<Self::Output, D::Error>
+    where
+        D: DrawTarget<Color = Self::Color>,
+    {
+        let mut sub = display.cropped(&self.rectangle);
+        self.menu.draw(&mut sub)
+    }
+}

@@ -1,4 +1,4 @@
-#syntax = docker/dockerfile:experimental
+# syntax = docker/dockerfile:experimental
 ################################################################################
 ## Project       : MiSTer FPGA
 ## Module        : Native ARMv7 C/C++ Toolchain for MiSTer HPS
@@ -99,10 +99,7 @@ RUN apt-get update && apt-get upgrade -y && \
         unzip \
         wget \
         xz-utils \
-        zlib1g-dev \
-    && \
-        apt autoremove -y && \
-        rm -r /var/lib/apt/lists/*
+        zlib1g-dev
 
 # Set System Locales
 RUN echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && locale-gen
@@ -149,9 +146,13 @@ RUN cd && \
 # TODO: Rust has an issue when building in a 32-bit container from a 64-bit host. Figure out a fix.
 #       The issue prevents us from using GIT as dependencies.
 # Install rustup and the Rust toolchain
-#RUN cd && \
-#    curl https://sh.rustup.rs -sSf > install.sh && \
-#    sh install.sh -y
+RUN cd && \
+    curl https://sh.rustup.rs -sSf > install.sh && \
+    sh install.sh -y
+ENV PATH="$HOME/.cargo/bin:$PATH"
+RUN echo "[net] \n\
+          git-fetch-with-cli = true" >> "$HOME/.cargo/config"
+#ENV CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse
 
 # Set Volume and Workdir
 VOLUME /mister
@@ -177,5 +178,6 @@ LABEL   org.label-schema.schema-version="1.0" \
         org.label-schema.build-date=$BUILD_DATE \
         org.label-schema.vcs-ref=$VCS_REF \
         org.label-schema.version=$BUILD_VERSION
+
 
 CMD ["/bin/bash"]

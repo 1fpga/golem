@@ -4,13 +4,11 @@ diesel::table! {
     cores (id) {
         id -> Integer,
         name -> Text,
-        user_name -> Nullable<Text>,
+        version -> Text,
         path -> Text,
         author -> Text,
-        home -> Text,
         description -> Text,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-        extensions -> Text,
+        released_at -> Timestamp,
+        downloaded_at -> Timestamp,
     }
 }

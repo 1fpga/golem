@@ -26,6 +26,7 @@ pub trait Application {
     type Platform: MiSTerPlatform;
 
     fn settings(&self) -> &Settings;
+
     fn run(&mut self, flags: Flags);
 
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color>;

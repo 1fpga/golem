@@ -7,6 +7,7 @@ use sdl3::event::Event;
 use sdl3::EventPump;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::debug;
 
 pub mod settings;
 pub mod theme;
@@ -47,7 +48,10 @@ impl SdlState {
 }
 
 pub struct SdlPlatform<C: PixelColor> {
-    event_pump: Rc<RefCell<EventPump>>,
+    pub event_pump: Rc<RefCell<EventPump>>,
+    pub joystick: Rc<RefCell<sdl3::JoystickSubsystem>>,
+    pub gamepad: Rc<RefCell<sdl3::GamepadSubsystem>>,
+
     has_windows: bool,
     base_window: Option<Window<C>>,
 
@@ -64,7 +68,6 @@ impl<C: PixelColor> SdlPlatform<C> {
     pub fn events(&mut self) -> Vec<Event> {
         let mut event_pump = self.event_pump.borrow_mut();
         event_pump.pump_events();
-
         event_pump.poll_iter().collect()
     }
 }
@@ -81,11 +84,21 @@ where
     type Event = sdl3::event::Event;
 
     fn init(init_state: SdlInitState) -> Self {
-        let event_pump = SDL_CONTEXT.with(|context| context.borrow().event_pump().unwrap());
+        let (joystick, gamepad, event_pump) = SDL_CONTEXT.with(|context| {
+            let ctx = context.borrow();
+            // Initialize subsystems.
+            let joystick = ctx.joystick().unwrap();
+            joystick.set_joystick_events_enabled(true);
+            let gamepad = ctx.game_controller().unwrap();
+            let event_pump = ctx.event_pump().unwrap();
+            (joystick, gamepad, event_pump)
+        });
 
         Self {
             init_state,
             event_pump: Rc::new(RefCell::new(event_pump)),
+            joystick: Rc::new(RefCell::new(joystick)),
+            gamepad: Rc::new(RefCell::new(gamepad)),
             has_windows: false,
             base_window: None,
             phantom: std::marker::PhantomData,
@@ -96,23 +109,38 @@ where
         self.has_windows = true;
         Window::new(self, title, size)
     }
-
-    fn event_loop(&mut self, mut loop_fn: impl FnMut(&Self::State) -> bool) {
-        if !self.has_windows {
-            self.base_window = Some(self.window("", Size::new(1, 1)));
-        }
-
-        let event_pump = self.event_pump.clone();
-
-        'main: loop {
-            event_pump.borrow_mut().pump_events();
-            let state = SdlState {
-                events: event_pump.borrow_mut().poll_iter().collect(),
-            };
-
-            if loop_fn(&state) {
-                break 'main;
-            }
-        }
-    }
+    //
+    // fn event_loop(&mut self, mut loop_fn: impl FnMut(&Self::State) -> bool) {
+    //     if !self.has_windows {
+    //         self.base_window = Some(self.window("", Size::new(1, 1)));
+    //     }
+    //
+    //     let event_pump = self.event_pump.clone();
+    //
+    //     'main: loop {
+    //         event_pump.borrow_mut().pump_events();
+    //         let events: Vec<Event> = event_pump.borrow_mut().poll_iter().collect();
+    //
+    //         for event in events.iter() {
+    //             match event {
+    //                 Event::JoyDeviceAdded { which, .. } => {
+    //                     let j = self.joystick.borrow_mut().open(*which).unwrap();
+    //                     let name = j.name();
+    //                     let guid = j.instance_id();
+    //                     let has_rumble = j.has_rumble();
+    //                     let has_rumble_triggers = j.has_rumble_triggers();
+    //                     let has_led = j.has_led();
+    //                     debug!(?name, "Joystick {} added", which);
+    //                 }
+    //                 _ => {}
+    //             }
+    //         }
+    //
+    //         let state = SdlState { events };
+    //
+    //         if loop_fn(&state) {
+    //             break 'main;
+    //         }
+    //     }
+    // }
 }

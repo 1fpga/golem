@@ -23,7 +23,7 @@ pub struct Flags {
     pub xml: Option<String>,
 
     #[command(flatten)]
-    pub verbose: Verbosity,
+    pub verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
 }
 
 #[cfg(not(test))]

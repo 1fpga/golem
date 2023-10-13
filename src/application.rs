@@ -13,8 +13,10 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use mister_db::Connection;
 use sdl3::event::Event;
+use sdl3::joystick::Joystick;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
-use tracing::info;
+use tracing::{debug, info};
 
 // mod icons;
 pub mod menu;
@@ -152,14 +154,44 @@ impl Application for MiSTer {
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
     ) -> R {
+        let mut joysticks: HashMap<u32, Joystick> = HashMap::new();
+
         loop {
             self.platform.start_loop();
 
             let events = self.platform.events();
             for event in events.iter() {
-                if let Event::Quit { .. } = event {
-                    info!("Quit event received. Quitting...");
-                    std::process::exit(0);
+                eprintln!("event1: {:?}", event);
+                match event {
+                    Event::Quit { .. } => {
+                        info!("Quit event received. Quitting...");
+                        std::process::exit(0);
+                    }
+                    Event::JoyDeviceAdded { which, .. } => {
+                        let j = self
+                            .platform
+                            .sdl()
+                            .joystick
+                            .borrow_mut()
+                            .open(*which)
+                            .unwrap();
+
+                        let name = j.name();
+                        let guid = j.instance_id();
+                        let has_rumble = j.has_rumble();
+                        let has_rumble_triggers = j.has_rumble_triggers();
+                        let has_led = j.has_led();
+                        debug!(
+                            ?name,
+                            ?guid,
+                            ?has_rumble,
+                            ?has_led,
+                            "Joystick {} added",
+                            which
+                        );
+                        joysticks.insert(*which, j);
+                    }
+                    _ => {}
                 }
             }
 

@@ -85,8 +85,8 @@ impl MiSTerPlatform for De10Platform {
             crate::offload::offload_start();
             self.core_manager
                 .load_program("/media/fat/menu.rbf")
-                // .load_program("/media/fat/_Other/Chess_20221106.rbf")
                 .unwrap();
+            self.core_manager.show_menu();
         }
     }
 
@@ -108,6 +108,10 @@ impl MiSTerPlatform for De10Platform {
 
     fn events(&mut self) -> Vec<Event> {
         self.platform.events()
+    }
+
+    fn sdl(&mut self) -> &mut SdlPlatform<Self::Color> {
+        &mut self.platform
     }
 
     fn start_loop(&mut self) {}

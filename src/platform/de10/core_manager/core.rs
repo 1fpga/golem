@@ -1,6 +1,8 @@
-use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga};
+use crate::platform::de10::core_manager::core::buttons::{ButtonMap, ButtonMapping, MisterButtons};
+use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga, SpiCommands, SpiFeature};
 use tracing::info;
 
+mod buttons;
 mod config_string;
 
 pub struct FpgaCore {
@@ -9,6 +11,9 @@ pub struct FpgaCore {
     spi_type: CoreInterfaceType,
     io_version: u8,
     config: config_string::Config,
+
+    mapping: ButtonMapping,
+    map: ButtonMap,
 }
 
 impl FpgaCore {
@@ -28,12 +33,50 @@ impl FpgaCore {
             spi_type,
             io_version,
             config,
+            mapping: ButtonMapping::sdl(),
+            map: ButtonMap::new(),
         })
     }
 }
 
 impl crate::platform::Core for FpgaCore {
     fn send_key(&mut self, key: u8) {
-        todo!()
+        let spi = self.fpga.spi_mut();
+        spi.command(SpiCommands::UserIoKeyboard);
+        // fpga_spi_en(SSPI_IO_EN, 1);
+        // self.fpga.spi_uio_cmd_cont(UIO_KEYBOARD);
+        spi.write_b(key);
+    }
+
+    fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8) {
+        let mister_button: MisterButtons = self.mapping[button as usize];
+        self.map.down(mister_button);
+        let button_mask = self.map.mask();
+
+        eprintln!("... down {:?} {:08X}", mister_button, button_mask);
+        let spi = self.fpga.spi_mut();
+
+        spi.command(SpiCommands::from_joystick_index(joystick_idx));
+        spi.write(button_mask as u16);
+        if button_mask >> 16 == 0 {
+            spi.write((button_mask >> 16) as u16);
+        }
+        spi.disable(SpiFeature::IO);
+    }
+    fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8) {
+        let mister_button: MisterButtons = self.mapping[button as usize];
+        self.map.up(mister_button);
+        let button_mask = self.map.mask();
+
+        eprintln!("... up {:?} {:08X}", mister_button, button_mask);
+        let spi = self.fpga.spi_mut();
+
+        let joystick = SpiCommands::from_joystick_index(joystick_idx);
+        spi.command(joystick);
+        spi.write((button_mask & 0xFFFF) as u16);
+        if button_mask >> 16 == 0 {
+            spi.write((button_mask >> 16) as u16);
+        }
+        spi.disable(SpiFeature::IO);
     }
 }

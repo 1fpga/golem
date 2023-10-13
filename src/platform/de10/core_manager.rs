@@ -24,7 +24,7 @@ impl CoreManager {
 }
 
 impl crate::platform::CoreManager for CoreManager {
-    type Core<'a> = FpgaCore;
+    type Core = FpgaCore;
 
     fn load_program(&mut self, path: impl AsRef<Path>) -> Result<FpgaCore, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
@@ -60,7 +60,6 @@ impl crate::platform::CoreManager for CoreManager {
         }
 
         crate::platform::de10::osd::OsdSetSize(19);
-        self.show_menu();
 
         Ok(core)
     }

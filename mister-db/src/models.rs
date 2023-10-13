@@ -1,6 +1,7 @@
 use diesel::prelude::*;
+use std::path::Path;
 
-#[derive(Debug, Queryable, Selectable)]
+#[derive(Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = crate::schema::cores)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Core {
@@ -10,7 +11,7 @@ pub struct Core {
     pub name: String,
 
     /// Overwritten name by the user.
-    pub user_name: Option<String>,
+    pub version: String,
 
     /// The path to the core's image.
     pub path: String,
@@ -18,18 +19,50 @@ pub struct Core {
     /// A list of comma-separated authors of the form "Author Name <email@address>".
     pub author: String,
 
-    /// A home URL.
-    pub home: String,
-
     /// A description of the core.
     pub description: String,
 
-    /// A comma-separated list of file extensions that this core supports.
-    pub extensions: String,
-
     /// When this core was added to the database.
-    pub created_at: chrono::NaiveDateTime,
+    pub released_at: chrono::NaiveDateTime,
 
     /// The last time this core was updated.
-    pub updated_at: chrono::NaiveDateTime,
+    pub downloaded_at: chrono::NaiveDateTime,
+}
+
+impl Core {
+    pub fn create(
+        conn: &mut crate::Connection,
+        core: &retronomicon_dto::cores::CoreListItem,
+        release: &retronomicon_dto::cores::releases::CoreReleaseRef,
+        file_path: impl AsRef<Path>,
+    ) -> Result<Self, diesel::result::Error> {
+        use crate::schema::cores;
+        use crate::schema::cores::dsl::*;
+
+        diesel::insert_into(cores::table)
+            .values((
+                name.eq(&core.name),
+                version.eq(&release.version),
+                path.eq(file_path.as_ref().to_str().unwrap()),
+                author.eq(&core.owner_team.slug),
+                description.eq(&""),
+                released_at.eq(
+                    chrono::NaiveDateTime::from_timestamp_opt(release.date_released, 0).unwrap(),
+                ),
+                downloaded_at.eq(chrono::Utc::now().naive_utc()),
+            ))
+            .execute(conn)?;
+
+        cores.order(id.desc()).first(conn)
+    }
+
+    pub fn get(conn: &mut crate::Connection, id: i32) -> Result<Self, diesel::result::Error> {
+        use crate::schema::cores::dsl::*;
+        cores.find(id).first(conn)
+    }
+
+    pub fn list(conn: &mut crate::Connection) -> Result<Vec<Self>, diesel::result::Error> {
+        use crate::schema::cores::dsl::*;
+        cores.load::<Self>(conn)
+    }
 }

@@ -25,7 +25,7 @@ pub trait Platform {
     /// Create a new window.
     fn window(&mut self, title: &str, size: Size) -> Self::Window;
 
-    /// Start an event loop. These can be nested. Every loop is an update event.
-    /// It includes a list of current events.
-    fn event_loop(&mut self, loop_fn: impl FnMut(&Self::State) -> bool);
+    // /// Start an event loop. These can be nested. Every loop is an update event.
+    // /// It includes a list of current events.
+    // fn event_loop(&mut self, loop_fn: impl FnMut(&Self::State) -> bool);
 }

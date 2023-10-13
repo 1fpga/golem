@@ -2,7 +2,6 @@
 
 use std::ffi::c_int;
 
-const SSPI_IO_EN: u32 = 1u32 << 20;
 pub const UIO_GET_VRES: u16 = 0x23;
 pub const UIO_GET_FB_PAR: u16 = 0x40;
 

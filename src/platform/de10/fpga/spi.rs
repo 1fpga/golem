@@ -4,6 +4,52 @@ use std::cell::UnsafeCell;
 use std::fmt::Debug;
 use std::rc::Rc;
 
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum SpiCommands {
+    UserIoJoystick0 = 0x02,
+    UserIoJoystick1 = 0x03,
+    UserIoMouse = 0x04,
+    UserIoKeyboard = 0x05,
+
+    UserIoJoystick2 = 0x10,
+    UserIoJoystick3 = 0x11,
+    UserIoJoystick4 = 0x12,
+    UserIoJoystick5 = 0x13,
+}
+
+impl SpiCommands {
+    #[inline]
+    pub fn from_joystick_index(index: u8) -> Self {
+        match index {
+            0 => Self::UserIoJoystick0,
+            1 => Self::UserIoJoystick1,
+            2 => Self::UserIoJoystick2,
+            3 => Self::UserIoJoystick3,
+            4 => Self::UserIoJoystick4,
+            _ => Self::UserIoJoystick5,
+        }
+    }
+
+    #[inline]
+    pub fn is_user_io(&self) -> bool {
+        matches!(self, Self::UserIoKeyboard)
+    }
+
+    #[inline]
+    fn spi_feature(&self) -> SpiFeature {
+        match self {
+            Self::UserIoKeyboard
+            | Self::UserIoMouse
+            | Self::UserIoJoystick0
+            | Self::UserIoJoystick1
+            | Self::UserIoJoystick2
+            | Self::UserIoJoystick3
+            | Self::UserIoJoystick4
+            | Self::UserIoJoystick5 => SpiFeature::IO,
+        }
+    }
+}
+
 /// SPI is a 16-bit data bus where the lowest 16 bits are the data and the highest 16-bits
 /// are the control bits.
 const SSPI_DATA_MASK: u32 = 0x0000_FFFF;
@@ -147,6 +193,12 @@ impl<M: MemoryMapper> Spi<M> {
     #[inline]
     pub fn disable(&mut self, feature: SpiFeature) {
         self.disable_u32(feature.into());
+    }
+
+    #[inline]
+    pub fn command(&mut self, command: SpiCommands) {
+        self.enable(command.spi_feature());
+        self.write(command as u16);
     }
 
     /// Send a 16-bit word to the core. Returns the 16-bit word received from the core.

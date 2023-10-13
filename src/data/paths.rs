@@ -18,6 +18,21 @@ pub fn config_root_path() -> PathBuf {
     p
 }
 
+pub fn core_root_path() -> PathBuf {
+    let p = config_root_path().join("cores");
+    if !p.exists() {
+        std::fs::create_dir_all(&p).unwrap();
+    }
+    p
+}
+
+pub fn core_root(
+    core: &retronomicon_dto::cores::CoreListItem,
+    release: &retronomicon_dto::cores::releases::CoreReleaseRef,
+) -> PathBuf {
+    core_root_path().join(&core.slug).join(&release.version)
+}
+
 pub fn settings_path() -> PathBuf {
     config_root_path().join("settings.json5")
 }

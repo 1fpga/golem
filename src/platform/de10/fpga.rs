@@ -14,6 +14,8 @@ use tracing::{debug, error, info};
 mod framebuffer;
 mod spi;
 
+pub use spi::*;
+
 extern "C" {
     pub fn reboot(cold: c_int);
 }
