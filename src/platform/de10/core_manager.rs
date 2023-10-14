@@ -3,7 +3,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 
 pub mod core;
-pub use core::FpgaCore;
+pub use core::MisterFpgaCore;
 
 pub struct CoreManager {
     fpga: Fpga,
@@ -24,9 +24,9 @@ impl CoreManager {
 }
 
 impl crate::platform::CoreManager for CoreManager {
-    type Core = FpgaCore;
+    type Core = MisterFpgaCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<FpgaCore, String> {
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<MisterFpgaCore, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
         let program = bytes.as_slice();
 
@@ -43,12 +43,15 @@ impl crate::platform::CoreManager for CoreManager {
         };
 
         self.fpga.wait_for_ready();
-        // self.fpga.core_reset().expect("Could not reset the Core");
-        self.fpga.load_rbf(program).expect("Could not load RBF");
-        self.fpga.core_reset().expect("Could not reset the Core");
+        self.fpga
+            .load_rbf(program)
+            .map_err(|e| format!("Could not load program: {e:?}"))?;
+        self.fpga
+            .core_reset()
+            .map_err(|_| "Could not reset the Core".to_string())?;
 
-        let core = FpgaCore::new(self.fpga.clone()).expect("Could not create a Core");
-        self.fpga.wait_for_ready();
+        let core = MisterFpgaCore::new(self.fpga.clone())
+            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
         self.hide_menu();
 
         unsafe {

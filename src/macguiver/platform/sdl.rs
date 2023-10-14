@@ -109,38 +109,38 @@ where
         self.has_windows = true;
         Window::new(self, title, size)
     }
-    //
-    // fn event_loop(&mut self, mut loop_fn: impl FnMut(&Self::State) -> bool) {
-    //     if !self.has_windows {
-    //         self.base_window = Some(self.window("", Size::new(1, 1)));
-    //     }
-    //
-    //     let event_pump = self.event_pump.clone();
-    //
-    //     'main: loop {
-    //         event_pump.borrow_mut().pump_events();
-    //         let events: Vec<Event> = event_pump.borrow_mut().poll_iter().collect();
-    //
-    //         for event in events.iter() {
-    //             match event {
-    //                 Event::JoyDeviceAdded { which, .. } => {
-    //                     let j = self.joystick.borrow_mut().open(*which).unwrap();
-    //                     let name = j.name();
-    //                     let guid = j.instance_id();
-    //                     let has_rumble = j.has_rumble();
-    //                     let has_rumble_triggers = j.has_rumble_triggers();
-    //                     let has_led = j.has_led();
-    //                     debug!(?name, "Joystick {} added", which);
-    //                 }
-    //                 _ => {}
-    //             }
-    //         }
-    //
-    //         let state = SdlState { events };
-    //
-    //         if loop_fn(&state) {
-    //             break 'main;
-    //         }
-    //     }
-    // }
+
+    fn event_loop(&mut self, mut loop_fn: impl FnMut(&mut Self, &Self::State) -> bool) {
+        if !self.has_windows {
+            self.base_window = Some(self.window("", Size::new(1, 1)));
+        }
+
+        let event_pump = self.event_pump.clone();
+
+        'main: loop {
+            event_pump.borrow_mut().pump_events();
+            let events: Vec<Event> = event_pump.borrow_mut().poll_iter().collect();
+
+            for event in events.iter() {
+                match event {
+                    Event::JoyDeviceAdded { which, .. } => {
+                        let j = self.joystick.borrow_mut().open(*which).unwrap();
+                        let name = j.name();
+                        let guid = j.instance_id();
+                        let has_rumble = j.has_rumble();
+                        let has_rumble_triggers = j.has_rumble_triggers();
+                        let has_led = j.has_led();
+                        debug!(?name, "Joystick {} added", which);
+                    }
+                    _ => {}
+                }
+            }
+
+            let state = SdlState { events };
+
+            if loop_fn(self, &state) {
+                break 'main;
+            }
+        }
+    }
 }

@@ -16,8 +16,23 @@ use tracing::info;
 pub struct DummyCore;
 
 impl Core for DummyCore {
+    fn name(&self) -> &str {
+        "DummyCore"
+    }
+
     fn send_key(&mut self, key: u8) {
         info!("DummyCore::send_key({})", key);
+    }
+
+    fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8) {
+        info!(
+            "DummyCore::sdl_joy_button_down({}, {})",
+            joystick_idx, button
+        );
+    }
+
+    fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8) {
+        info!("DummyCore::sdl_joy_button_up({}, {})", joystick_idx, button);
     }
 }
 

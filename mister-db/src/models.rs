@@ -57,8 +57,7 @@ impl Core {
     }
 
     pub fn get(conn: &mut crate::Connection, id: i32) -> Result<Self, diesel::result::Error> {
-        use crate::schema::cores::dsl::*;
-        cores.find(id).first(conn)
+        crate::schema::cores::table.find(id).first(conn)
     }
 
     pub fn list(conn: &mut crate::Connection) -> Result<Vec<Self>, diesel::result::Error> {

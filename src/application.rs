@@ -14,7 +14,7 @@ use embedded_graphics::Drawable;
 use mister_db::Connection;
 use sdl3::event::Event;
 use sdl3::joystick::Joystick;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use tracing::{debug, info};
 
@@ -28,6 +28,7 @@ mod widgets;
 mod cores;
 
 use crate::data::paths;
+use crate::macguiver::platform::Platform;
 pub use cores::CoreManager;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
@@ -154,14 +155,17 @@ impl Application for MiSTer {
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
     ) -> R {
-        let mut joysticks: HashMap<u32, Joystick> = HashMap::new();
+        // Due to a limitation in Rust language right now, None does not implement Copy
+        // when Option<T> does not. This means we can't use it in an array. So we use a
+        // constant to work around this.
+        const NONE: Option<Joystick> = None;
+        let mut joysticks: [Option<Joystick>; 16] = [NONE; 16];
 
         loop {
             self.platform.start_loop();
 
             let events = self.platform.events();
             for event in events.iter() {
-                eprintln!("event1: {:?}", event);
                 match event {
                     Event::Quit { .. } => {
                         info!("Quit event received. Quitting...");
@@ -175,21 +179,10 @@ impl Application for MiSTer {
                             .borrow_mut()
                             .open(*which)
                             .unwrap();
-
-                        let name = j.name();
-                        let guid = j.instance_id();
-                        let has_rumble = j.has_rumble();
-                        let has_rumble_triggers = j.has_rumble_triggers();
-                        let has_led = j.has_led();
-                        debug!(
-                            ?name,
-                            ?guid,
-                            ?has_rumble,
-                            ?has_led,
-                            "Joystick {} added",
-                            which
-                        );
-                        joysticks.insert(*which, j);
+                        joysticks[*which as usize] = Some(j);
+                    }
+                    Event::JoyDeviceRemoved { which, .. } => {
+                        joysticks[*which as usize] = None;
                     }
                     _ => {}
                 }

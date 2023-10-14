@@ -17,7 +17,6 @@ mod buffer;
 mod core_manager;
 pub mod fpga;
 mod input;
-mod menu;
 mod osd;
 mod shmem;
 mod smbus;

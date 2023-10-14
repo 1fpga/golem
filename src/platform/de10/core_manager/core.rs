@@ -5,7 +5,7 @@ use tracing::info;
 mod buttons;
 mod config_string;
 
-pub struct FpgaCore {
+pub struct MisterFpgaCore {
     fpga: Fpga,
     core_type: CoreType,
     spi_type: CoreInterfaceType,
@@ -16,7 +16,7 @@ pub struct FpgaCore {
     map: ButtonMap,
 }
 
-impl FpgaCore {
+impl MisterFpgaCore {
     pub fn new(mut fpga: Fpga) -> Result<Self, &'static str> {
         let core_type = fpga.core_type().ok_or("Could not get core type.")?;
         let spi_type = fpga
@@ -26,8 +26,9 @@ impl FpgaCore {
         let config = config_string::Config::new(&mut fpga);
 
         info!(?core_type, ?spi_type, io_version, "Core loaded:");
+        fpga.wait_for_ready();
 
-        Ok(FpgaCore {
+        Ok(MisterFpgaCore {
             fpga,
             core_type,
             spi_type,
@@ -39,12 +40,14 @@ impl FpgaCore {
     }
 }
 
-impl crate::platform::Core for FpgaCore {
+impl crate::platform::Core for MisterFpgaCore {
+    fn name(&self) -> &str {
+        todo!()
+    }
+
     fn send_key(&mut self, key: u8) {
         let spi = self.fpga.spi_mut();
         spi.command(SpiCommands::UserIoKeyboard);
-        // fpga_spi_en(SSPI_IO_EN, 1);
-        // self.fpga.spi_uio_cmd_cont(UIO_KEYBOARD);
         spi.write_b(key);
     }
 
@@ -53,7 +56,6 @@ impl crate::platform::Core for FpgaCore {
         self.map.down(mister_button);
         let button_mask = self.map.mask();
 
-        eprintln!("... down {:?} {:08X}", mister_button, button_mask);
         let spi = self.fpga.spi_mut();
 
         spi.command(SpiCommands::from_joystick_index(joystick_idx));
@@ -68,7 +70,6 @@ impl crate::platform::Core for FpgaCore {
         self.map.up(mister_button);
         let button_mask = self.map.mask();
 
-        eprintln!("... up {:?} {:08X}", mister_button, button_mask);
         let spi = self.fpga.spi_mut();
 
         let joystick = SpiCommands::from_joystick_index(joystick_idx);

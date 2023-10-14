@@ -2,6 +2,7 @@ use crate::application::menu::cores::download::cores_download_panel;
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
+use crate::application::panels::alert::show_error;
 use crate::application::panels::core_loop::run_core_loop;
 use crate::application::TopLevelViewType;
 use crate::macguiver::application::Application;
@@ -78,11 +79,18 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                     info!("Loading core from path {:?}", path);
 
                     app.hide_toolbar();
-                    let core = app
-                        .platform_mut()
-                        .core_manager_mut()
-                        .load_program(path)
-                        .expect("Failed to load core");
+                    let manager = app.platform_mut().core_manager_mut();
+
+                    let core = match manager.load_program(path) {
+                        Ok(core) => core,
+                        Err(e) => {
+                            show_error(app, format!("Failed to load core: {}", e));
+                            return Some(TopLevelViewType::Cores);
+                        }
+                    };
+
+                    // if core.name
+                    // core.send_file(app.platform_mut().core_manager_mut(), &core.path);
                     run_core_loop(app, core);
                 }
                 Some(MenuAction::ManualLoad) => {

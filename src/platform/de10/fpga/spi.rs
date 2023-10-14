@@ -6,15 +6,21 @@ use std::rc::Rc;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum SpiCommands {
+    UserIoStatus = 0x00,
+    UserIoButtonSwitch = 0x01,
+
     UserIoJoystick0 = 0x02,
     UserIoJoystick1 = 0x03,
     UserIoMouse = 0x04,
     UserIoKeyboard = 0x05,
+    UserIoKeyboardOsd = 0x06,
 
     UserIoJoystick2 = 0x10,
     UserIoJoystick3 = 0x11,
     UserIoJoystick4 = 0x12,
     UserIoJoystick5 = 0x13,
+
+    UserIoGetString = 0x14,
 }
 
 impl SpiCommands {
@@ -45,7 +51,9 @@ impl SpiCommands {
             | Self::UserIoJoystick2
             | Self::UserIoJoystick3
             | Self::UserIoJoystick4
-            | Self::UserIoJoystick5 => SpiFeature::IO,
+            | Self::UserIoJoystick5
+            | Self::UserIoGetString => SpiFeature::IO,
+            _ => SpiFeature::ALL,
         }
     }
 }
@@ -193,6 +201,24 @@ impl<M: MemoryMapper> Spi<M> {
     #[inline]
     pub fn disable(&mut self, feature: SpiFeature) {
         self.disable_u32(feature.into());
+    }
+
+    /// This method should only be called once per core, ideally when the core boot up.
+    #[inline]
+    pub fn config_string(&mut self) -> String {
+        let mut str_builder = String::with_capacity(10240);
+        self.command(SpiCommands::UserIoGetString);
+
+        loop {
+            let i = self.write_b(0);
+            if i == 0 || i > 127 {
+                break;
+            }
+            str_builder.push(i as char);
+        }
+        self.disable(SpiFeature::IO);
+
+        str_builder
     }
 
     #[inline]

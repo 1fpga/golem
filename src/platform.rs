@@ -88,6 +88,8 @@ impl OriginDimensions for PlatformState {
 }
 
 pub trait Core {
+    fn name(&self) -> &str;
+
     fn send_key(&mut self, key: u8);
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8);
