@@ -81,7 +81,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                     app.hide_toolbar();
                     let manager = app.platform_mut().core_manager_mut();
 
-                    let core = match manager.load_program(path) {
+                    let core = match manager.load_program(std::path::Path::new(&path)) {
                         Ok(core) => core,
                         Err(e) => {
                             show_error(app, format!("Failed to load core: {}", e));
@@ -89,8 +89,6 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                         }
                     };
 
-                    // if core.name
-                    // core.send_file(app.platform_mut().core_manager_mut(), &core.path);
                     run_core_loop(app, core);
                 }
                 Some(MenuAction::ManualLoad) => {
@@ -107,8 +105,9 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopL
                         let core = app
                             .platform_mut()
                             .core_manager_mut()
-                            .load_program(path)
+                            .load_program(&path)
                             .expect("Failed to load core");
+                        run_core_loop(app, core);
                     } else {
                         info!("No core selected.");
                     }

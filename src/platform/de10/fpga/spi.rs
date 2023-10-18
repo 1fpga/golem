@@ -21,6 +21,8 @@ pub enum SpiCommands {
     UserIoJoystick5 = 0x13,
 
     UserIoGetString = 0x14,
+
+    SetStatus32Bits = 0x1e,
 }
 
 impl SpiCommands {
@@ -52,7 +54,8 @@ impl SpiCommands {
             | Self::UserIoJoystick3
             | Self::UserIoJoystick4
             | Self::UserIoJoystick5
-            | Self::UserIoGetString => SpiFeature::IO,
+            | Self::UserIoGetString
+            | Self::SetStatus32Bits => SpiFeature::IO,
             _ => SpiFeature::ALL,
         }
     }
@@ -152,6 +155,74 @@ impl SpiFeature {
     }
 }
 
+pub struct SpiCommand<'a, M: MemoryMapper> {
+    spi: &'a mut Spi<M>,
+    feature: SpiFeature,
+}
+
+impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
+    #[inline]
+    pub fn new(spi: &'a mut Spi<M>, feature: SpiFeature) -> Self {
+        Self { spi, feature }
+    }
+
+    #[inline]
+    pub fn write(mut self, word: impl Into<u16>) -> Self {
+        self.spi.write(word);
+        self
+    }
+
+    #[inline]
+    pub fn write_buffer(mut self, buffer: &[u16]) -> Self {
+        for word in buffer {
+            self.spi.write(*word);
+        }
+        self
+    }
+
+    #[inline]
+    pub fn write_b(mut self, byte: u8) -> Self {
+        self.write(byte)
+    }
+
+    #[inline]
+    pub fn write_store(mut self, word: impl Into<u16>, store: &mut u16) -> Self {
+        *store = self.spi.write(word);
+        self
+    }
+}
+
+impl<'a, M: MemoryMapper> Drop for SpiCommand<'a, M> {
+    fn drop(&mut self) {
+        self.spi.disable(self.feature);
+    }
+}
+
+impl<'a, M: MemoryMapper> std::io::Write for SpiCommand<'a, M> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
+        let regs = self.spi.soc_mut().regs_mut();
+        let gpo_h = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | 0x8000_0000;
+        let mut gpo = gpo_h;
+
+        buf.iter().for_each(|b| {
+            gpo = gpo_h | (*b as u32);
+            regs.set_gpo(gpo);
+            regs.set_gpo(gpo | SSPI_STROBE);
+        });
+        regs.set_gpo(gpo);
+
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 #[derive(Debug)]
 pub struct Spi<M: MemoryMapper> {
     soc: Rc<UnsafeCell<SocFpga<M>>>,
@@ -207,7 +278,7 @@ impl<M: MemoryMapper> Spi<M> {
     #[inline]
     pub fn config_string(&mut self) -> String {
         let mut str_builder = String::with_capacity(10240);
-        self.command(SpiCommands::UserIoGetString);
+        let feature = self.inner_command(SpiCommands::UserIoGetString);
 
         loop {
             let i = self.write_b(0);
@@ -216,15 +287,25 @@ impl<M: MemoryMapper> Spi<M> {
             }
             str_builder.push(i as char);
         }
-        self.disable(SpiFeature::IO);
+        self.disable(feature);
 
         str_builder
     }
 
     #[inline]
-    pub fn command(&mut self, command: SpiCommands) {
-        self.enable(command.spi_feature());
+    fn inner_command(&mut self, command: SpiCommands) -> SpiFeature {
+        let feature = command.spi_feature();
+        self.enable(feature);
         self.write(command as u16);
+        feature
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn command(&mut self, command: SpiCommands) -> SpiCommand<'_, M> {
+        let feature = self.inner_command(command);
+
+        SpiCommand::new(self, feature)
     }
 
     /// Send a 16-bit word to the core. Returns the 16-bit word received from the core.
@@ -263,6 +344,10 @@ impl<M: MemoryMapper> Spi<M> {
 
     #[inline]
     pub fn write_block_16(&mut self, buffer: &[u16]) {
+        if buffer.is_empty() {
+            return;
+        }
+
         let regs = self.soc_mut().regs_mut();
         let gpo_h = regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE);
         let mut gpo = gpo_h;
@@ -273,30 +358,5 @@ impl<M: MemoryMapper> Spi<M> {
             regs.set_gpo(gpo | SSPI_STROBE);
         });
         regs.set_gpo(gpo);
-    }
-}
-
-impl<M: MemoryMapper> std::io::Write for Spi<M> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if buf.is_empty() {
-            return Ok(0);
-        }
-
-        let regs = self.soc_mut().regs_mut();
-        let gpo_h = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | 0x8000_0000;
-        let mut gpo = gpo_h;
-
-        buf.iter().for_each(|b| {
-            gpo = gpo_h | (*b as u32);
-            regs.set_gpo(gpo);
-            regs.set_gpo(gpo | SSPI_STROBE);
-        });
-        regs.set_gpo(gpo);
-
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
     }
 }

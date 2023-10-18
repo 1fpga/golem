@@ -1,3 +1,4 @@
+use crate::schema::games::last_played;
 use diesel::prelude::*;
 use std::path::Path;
 
@@ -9,6 +10,9 @@ pub struct Core {
 
     /// The name of this core.
     pub name: String,
+
+    /// The slug of this core.
+    pub slug: String,
 
     /// Overwritten name by the user.
     pub version: String,
@@ -24,6 +28,12 @@ pub struct Core {
 
     /// When this core was added to the database.
     pub released_at: chrono::NaiveDateTime,
+
+    /// The last time this core was played.
+    pub last_played: Option<chrono::NaiveDateTime>,
+
+    /// Whether this core is a favorite.
+    pub favorite: bool,
 
     /// The last time this core was updated.
     pub downloaded_at: chrono::NaiveDateTime,
@@ -42,6 +52,7 @@ impl Core {
         diesel::insert_into(cores::table)
             .values((
                 name.eq(&core.name),
+                slug.eq(&core.slug),
                 version.eq(&release.version),
                 path.eq(file_path.as_ref().to_str().unwrap()),
                 author.eq(&core.owner_team.slug),
@@ -58,6 +69,19 @@ impl Core {
 
     pub fn get(conn: &mut crate::Connection, id: i32) -> Result<Self, diesel::result::Error> {
         crate::schema::cores::table.find(id).first(conn)
+    }
+
+    pub fn has(
+        conn: &mut crate::Connection,
+        slug: &str,
+        version: &str,
+    ) -> Result<bool, diesel::result::Error> {
+        crate::schema::cores::table
+            .filter(crate::schema::cores::dsl::slug.eq(slug))
+            .filter(crate::schema::cores::dsl::version.eq(version))
+            .count()
+            .get_result::<i64>(conn)
+            .map(|c| c > 0)
     }
 
     pub fn list(conn: &mut crate::Connection) -> Result<Vec<Self>, diesel::result::Error> {

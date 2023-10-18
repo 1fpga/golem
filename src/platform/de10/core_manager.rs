@@ -3,6 +3,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use std::path::Path;
 
 pub mod core;
+use crate::platform::Core;
 pub use core::MisterFpgaCore;
 
 pub struct CoreManager {
@@ -26,7 +27,7 @@ impl CoreManager {
 impl crate::platform::CoreManager for CoreManager {
     type Core = MisterFpgaCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<MisterFpgaCore, String> {
+    fn load_program(&mut self, path: &Path) -> Result<MisterFpgaCore, String> {
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
         let program = bytes.as_slice();
 
@@ -52,6 +53,7 @@ impl crate::platform::CoreManager for CoreManager {
 
         let core = MisterFpgaCore::new(self.fpga.clone())
             .map_err(|e| format!("Could not instantiate Core: {e}"))?;
+
         self.hide_menu();
 
         unsafe {

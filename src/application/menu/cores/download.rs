@@ -10,7 +10,7 @@ use embedded_menu::items::select::SelectValue;
 use embedded_menu::items::{NavigationItem, Select};
 use embedded_menu::Menu;
 use retronomicon_dto::cores::CoreListItem;
-use tracing::info;
+use tracing::{debug, info};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum MenuAction {
@@ -52,9 +52,14 @@ fn list_cores_from_retronomicon(
         .build()
         .unwrap();
 
-    let response = client
-        .get("https://alpha.retronomicon.land/api/v1/cores?platform=mister-fpga")
-        .send()?;
+    let backend = app.settings().retronomicon_backend();
+    let url_base = backend
+        .first()
+        .ok_or(anyhow::Error::msg("No Retronomicon backend"))?;
+
+    let url = url_base.join("cores?platform=mister-fpga")?;
+    debug!(url = url.to_string(), "Download core list");
+    let response = client.get(url).send()?;
 
     Ok(response.json()?)
 }
@@ -70,6 +75,13 @@ fn install_single_core(
     let db_connection = app.database();
     let mut db = db_connection.write().unwrap();
 
+    if mister_db::models::Core::has(&mut db, &core.slug, &core.latest_release.version)? {
+        info!(?core, "Core already installed");
+        return Ok(());
+    }
+
+    info!(?core, "Installing core");
+
     let artifacts: Vec<retronomicon_dto::artifact::CoreReleaseArtifactListItem> = client
         .get(format!(
             "https://alpha.retronomicon.land/api/v1/cores/{}/releases/{}/artifacts",
@@ -78,7 +90,6 @@ fn install_single_core(
         .send()?
         .json()?;
 
-    let root = paths::core_root_path();
     for a in artifacts.iter() {
         let file = client
             .get(format!(
@@ -161,7 +172,7 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
                             cores
                                 .iter()
                                 .enumerate()
-                                .filter(|(i, core)| should_install[*i])
+                                .filter(|(i, _)| should_install[*i])
                                 .map(|(_, core)| core)
                                 .collect(),
                         );

@@ -15,8 +15,9 @@ pub mod config;
 pub mod core;
 pub mod file_io;
 pub mod macguiver;
-pub mod offload;
 pub mod platform;
+pub mod types;
+pub mod utils;
 pub mod video;
 
 fn main() {

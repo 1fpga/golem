@@ -73,10 +73,10 @@ impl ButtonMapping {
     /// Create a default SDL mapping to MisterFPGA buttons, naively.
     pub fn sdl() -> Self {
         [
-            MisterButtons::A,
             MisterButtons::B,
-            MisterButtons::X,
+            MisterButtons::A,
             MisterButtons::Y,
+            MisterButtons::X,
             MisterButtons::Back,
             MisterButtons::Guide,
             MisterButtons::Start,

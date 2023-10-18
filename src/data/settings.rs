@@ -6,6 +6,7 @@ use embedded_menu::selection_indicator::style::Invert;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, SelectValue};
 use merge::Merge;
+use reqwest::Url;
 use sdl3::keyboard::Keycode;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -15,6 +16,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tracing::{debug, error};
+
+fn default_retronomicon_backend_() -> Vec<Url> {
+    vec![Url::parse("https://alpha.retronomicon.land/api/v1/").unwrap()]
+}
 
 fn create_settings_save_thread_(
     mut update_recv: BusReader<()>,
@@ -80,14 +85,12 @@ impl DateTimeFormat {
 
 #[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, SelectValue)]
 pub enum MenuKeyBinding {
-    /// The default local format for datetime (respecting Locale).
+    /// Default Menu Key Binding.
     #[default]
     F12,
 
-    /// Short locale format.
     F11,
 
-    /// Only show the time.
     PrtSc,
 }
 
@@ -289,5 +292,10 @@ impl Settings {
     #[inline]
     pub fn menu_key_binding(&self) -> MenuKeyBinding {
         self.inner.read().unwrap().menu_key_bind
+    }
+
+    #[inline]
+    pub fn retronomicon_backend(&self) -> Vec<Url> {
+        default_retronomicon_backend_()
     }
 }

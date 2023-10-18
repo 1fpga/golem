@@ -2,6 +2,10 @@ use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, MiSTerPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
+use sdl3::keyboard::Keycode;
+use tracing::debug;
+
+pub mod menu;
 
 /// Run the core loop and send events to the core.
 pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
@@ -10,9 +14,10 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
 
     let mut menu_key_binding = settings.menu_key_binding();
 
+    let mut i = 0;
     // Hide the OSD
     app.platform_mut().core_manager_mut().hide_menu();
-    app.event_loop(|app, state| {
+    app.event_loop(move |app, state| {
         for ev in state.events() {
             match ev {
                 Event::KeyDown {
@@ -20,8 +25,12 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
                     ..
                 } => {
                     if menu_key_binding == keycode {
-                        app.platform_mut().core_manager_mut().show_menu();
-                        return Some(());
+                        debug!("Opening core menu");
+                        if menu::core_menu(app, &mut core) {
+                            return Some(());
+                        } else {
+                            continue;
+                        }
                     }
 
                     core.send_key(keycode as u8);

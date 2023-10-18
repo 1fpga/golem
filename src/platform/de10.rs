@@ -1,4 +1,5 @@
 #![cfg(feature = "platform_de10")]
+
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
@@ -10,6 +11,7 @@ use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
+use std::path::Path;
 use tracing::{debug, error};
 
 mod battery;
@@ -17,6 +19,7 @@ mod buffer;
 mod core_manager;
 pub mod fpga;
 mod input;
+mod offload;
 mod osd;
 mod shmem;
 mod smbus;
@@ -81,9 +84,9 @@ impl MiSTerPlatform for De10Platform {
 
     fn init(&mut self, _flags: &Flags) {
         unsafe {
-            crate::offload::offload_start();
+            offload::offload_start();
             self.core_manager
-                .load_program("/media/fat/menu.rbf")
+                .load_program(Path::new("/media/fat/menu.rbf"))
                 .unwrap();
             self.core_manager.show_menu();
         }

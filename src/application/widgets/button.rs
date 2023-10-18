@@ -1,10 +1,8 @@
-use embedded_graphics::geometry::{AnchorPoint, AnchorX};
+use embedded_graphics::geometry::AnchorPoint;
 use embedded_graphics::mono_font::{MonoFont, MonoTextStyle};
-use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
+use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{
-    CornerRadii, PrimitiveStyle, Rectangle, RoundedRectangle, Styled,
-};
+use embedded_graphics::primitives::{CornerRadii, PrimitiveStyle, Rectangle, RoundedRectangle};
 use embedded_graphics::text::renderer::TextRenderer;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_layout::align::{horizontal, vertical, Align};

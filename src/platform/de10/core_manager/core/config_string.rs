@@ -1,34 +1,12 @@
-use crate::platform::de10::fpga::{Fpga, SpiCommands};
-
-/// A component of a Core config string.
-#[derive(Debug, Clone)]
-pub enum ConfigComponent {
-    /// The name of the core.
-    CoreName(String),
-
-    /// UART mode
-    UartMode(String),
-
-    /// Unknown config string. Can still be iterated on.
-    Unknown(String),
-}
-
-#[derive(Debug, Clone)]
-pub struct Config {
-    components: Vec<ConfigComponent>,
-}
+pub use crate::utils::config_string::*;
+use std::str::FromStr;
 
 impl Config {
-    pub fn new(fpga: &mut Fpga) -> Self {
-        let mut components = Vec::new();
-        let cfgstring = fpga.spi_mut().config_string();
+    /// Create a new config from the FPGA.
+    /// This is disabled in Test as this module is still included in the test build.
+    pub fn new(fpga: &mut crate::platform::de10::fpga::Fpga) -> Result<Self, &'static str> {
+        let cfg_string = fpga.spi_mut().config_string();
 
-        eprintln!("cfgstring: {:?}", cfgstring);
-
-        for (i, str) in cfgstring.split(";").enumerate() {
-            eprintln!("str({i}): {:?}", str);
-        }
-
-        Self { components }
+        Self::from_str(&cfg_string)
     }
 }

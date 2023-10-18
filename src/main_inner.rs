@@ -1,6 +1,5 @@
 use clap::Parser;
 use clap_verbosity_flag::{LogLevel, Verbosity};
-use tracing::debug;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct NoneLevel;
@@ -50,7 +49,7 @@ pub fn main() -> Result<(), String> {
 
     let opts = Flags::parse();
 
-    debug!(?opts);
+    tracing::debug!(?opts);
 
     // Initialize tracing.
     let subscriber = Subscriber::builder();

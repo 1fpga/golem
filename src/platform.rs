@@ -10,6 +10,8 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::main_inner::Flags;
+use crate::types::StatusBitMap;
+use crate::utils::config_string::ConfigMenu;
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
@@ -90,6 +92,12 @@ impl OriginDimensions for PlatformState {
 pub trait Core {
     fn name(&self) -> &str;
 
+    fn menu_options(&self) -> &[ConfigMenu];
+
+    fn status_bits(&self) -> StatusBitMap;
+
+    fn set_status_bits(&mut self, bits: StatusBitMap);
+
     fn send_key(&mut self, key: u8);
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8);
@@ -102,7 +110,7 @@ pub trait CoreManager {
 
     /// Load a core into the FPGA.
     // TODO: Change the error type to something more usable than string.
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
+    fn load_program(&mut self, path: &Path) -> Result<Self::Core, String>;
 
     /// Show the menu (OSD).
     fn show_menu(&mut self);

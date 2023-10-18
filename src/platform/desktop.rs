@@ -41,7 +41,7 @@ pub struct DummyCoreManager;
 impl CoreManager for DummyCoreManager {
     type Core = DummyCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
+    fn load_program(&mut self, path: &Path) -> Result<Self::Core, String> {
         info!("DummyCoreManager::load_program({:?})", path.as_ref());
         Ok(DummyCore)
     }

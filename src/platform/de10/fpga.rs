@@ -9,7 +9,7 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 use strum::{Display, EnumIter, FromRepr};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 
 mod framebuffer;
 mod spi;
@@ -449,6 +449,7 @@ impl Fpga {
     }
 
     pub fn load_rbf(&mut self, program: &[u8]) -> Result<(), FpgaError> {
+        let start = Instant::now();
         self.disable_bridge();
 
         debug!("Initializing FPGA...");
@@ -456,7 +457,7 @@ impl Fpga {
         debug!("Writing program...");
         let now = Instant::now();
         self.write_program(program)?;
-        debug!("Program written in {}ms", now.elapsed().as_millis());
+        trace!("Program written in {}ms", now.elapsed().as_millis());
 
         debug!("Configuration and initialization.");
         self.enable_bridge();
@@ -464,7 +465,10 @@ impl Fpga {
         self.poll_init_phase()?;
         self.poll_user_mode()?;
 
-        debug!("All done.");
+        trace!(
+            "Done loading program. In {}ms.",
+            start.elapsed().as_millis()
+        );
 
         Ok(())
     }

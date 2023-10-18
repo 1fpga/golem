@@ -8,15 +8,15 @@ use crate::macguiver::application::{Application, EventLoopState};
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
 use crate::platform::{MiSTerPlatform, WindowManager};
+pub use cores::CoreManager;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use mister_db::Connection;
 use sdl3::event::Event;
 use sdl3::joystick::Joystick;
-use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use tracing::{debug, info};
+use tracing::info;
 
 // mod icons;
 pub mod menu;
@@ -28,8 +28,6 @@ mod widgets;
 mod cores;
 
 use crate::data::paths;
-use crate::macguiver::platform::Platform;
-pub use cores::CoreManager;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub enum TopLevelViewType {

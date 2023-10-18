@@ -59,7 +59,6 @@ where
     where
         D: DrawTarget<Color = C>,
     {
-        let mut sub = display.cropped(&self.rectangle);
         self.menu.update(display);
     }
 }

@@ -9,7 +9,6 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 use thiserror::Error;
-use tracing::debug;
 use validator::Validate;
 
 mod bootcore;
@@ -1124,7 +1123,7 @@ pub extern "C" fn rust_load_config() {
     let root = Config::config_root();
 
     let p = root.join("../MiSTer.ini");
-    debug!("Loading config from {p:?}");
+    tracing::debug!("Loading config from {p:?}");
     let mut config = Config::load(p).unwrap();
     config.mister.set_defaults();
 
