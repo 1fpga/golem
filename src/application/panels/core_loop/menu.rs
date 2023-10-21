@@ -11,8 +11,10 @@ use std::convert::TryFrom;
 
 mod items;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy)]
 pub enum CoreMenuAction {
+    #[default]
+    Nothing,
     ToggleOption(u8, u8, usize),
     Back,
     Quit,
@@ -33,8 +35,10 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
         .iter()
         .filter_map(|o| items::ConfigMenuSelect::try_from((*o).clone()).ok())
         .map(|mut o| {
-            let value = status.get_range(o.bits().clone()) as usize;
-            o.select(value);
+            if let Some(bits) = o.bits() {
+                let value = status.get_range(bits.clone()) as usize;
+                o.select(value);
+            }
             o
         })
         .collect::<Vec<_>>();
@@ -65,6 +69,7 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
                         bits.set_range(from..to, value as u32);
                         core.set_status_bits(bits);
                     }
+                    CoreMenuAction::Nothing => {}
                 }
             }
         }

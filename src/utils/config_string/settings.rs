@@ -19,8 +19,10 @@ pub struct Settings {
 impl Settings {
     fn parse_save_state(s: &str) -> Result<Range<usize>, &'static str> {
         if let Some((base, size)) = s.split_once(':') {
-            let base = base.parse::<usize>().map_err(|_| "Invalid base")?;
-            let size = size.parse::<usize>().map_err(|_| "Invalid size")?;
+            // Strip anything after a comma of size.
+            let size = size.split(',').next().unwrap_or(size);
+            let base = usize::from_str_radix(base, 16).map_err(|_| "Invalid base")?;
+            let size = usize::from_str_radix(size, 16).map_err(|_| "Invalid size")?;
             let end = base.checked_add(size).ok_or("Save state range overflow")?;
 
             if base < 0x2000_0000 || !(0x2000_0000..0x4000_0000).contains(&end) {

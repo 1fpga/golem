@@ -8,9 +8,9 @@ use crate::types::StatusBitMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::ops::{Deref, Range};
+use std::ops::Range;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{debug, info};
 
 pub mod midi;
 pub mod settings;
@@ -19,6 +19,8 @@ pub mod uart;
 static LABELED_SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d*)(\([^)]*\))?").unwrap());
 static LOAD_FILE_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(S)?(\d)?,((?:\w{3})+)(?:,([^,]*))?(?:,([0-9a-fA-F]*))?").unwrap());
+static MOUNT_SD_CARD_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(\d),((?:\w{3})+)(?:,([^,]*))?").unwrap());
 static OPTION_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"([0-9A-V])([0-9A-V])?,([^,]*),(.*)").unwrap());
 
@@ -37,16 +39,16 @@ pub enum ConfigMenu {
     Cheat(Option<String>),
 
     /// Disable the option if the menu mask is set.
-    DisableIf(u32),
+    DisableIf(u32, Box<ConfigMenu>),
 
     /// Disable the option if the menu mask is NOT set.
-    DisableUnless(u32),
+    DisableUnless(u32, Box<ConfigMenu>),
 
     /// Hide the option if the menu mask is set.
-    HideIf(u32),
+    HideIf(u32, Box<ConfigMenu>),
 
     /// Hide the option if the menu mask is NOT set.
-    HideUnless(u32),
+    HideUnless(u32, Box<ConfigMenu>),
 
     /// DIP switch menu option.
     Dip,
@@ -83,10 +85,17 @@ pub enum ConfigMenu {
         address: Option<usize>,
     },
 
+    /// Mount SD card menu option.
+    MountSdCard {
+        slot: u8,
+        extensions: Vec<String>,
+        label: Option<String>,
+    },
+
     /// `O{Index1}[{Index2}],{Name},{Options...}` - Option button that allows you to select
     /// between various choices.
     ///
-    /// - `{Index1}` and `{Index2}` are values from 0-9 and A-V (like Hex but it extends
+    /// - `{Index1}` and `{Index2}` are values from 0-9 and A-V (like Hex, but it extends
     ///   from A-V instead of A-F). This represents all 31 bits. First and second index
     ///   are the range of bits that will be set in the status register.
     /// - `{Name}` is what is shown to describe the option.
@@ -125,6 +134,27 @@ pub enum ConfigMenu {
     SnesButtonDefaultList {
         buttons: Vec<String>,
     },
+
+    /// `P{#},{Title}` - Creates sub-page for options with `{Title}`.
+    /// `P{#}` - Prefix to place the option into specific `{#}` page. This is added
+    ///          before O# but after something like d#. (e.g.
+    ///          "d5P1o2,Vertical Crop,Disabled,216p(5x);", is correct and
+    ///          "P1d5o2,Vertical Crop,Disabled,216p(5x);", is incorrect and the menu
+    ///          options will not work).
+    Page {
+        /// The page number.
+        index: u8,
+
+        /// The label of the page.
+        label: String,
+
+        /// The menu items on the page.
+        items: Vec<ConfigMenu>,
+    },
+
+    /// `I,INFO1,INFO2,...,INFO255` - INFO1-INFO255 lines to display as OSD info (top left
+    /// corner of screen).
+    Info(Vec<String>),
 
     /// `V,{Version String}` - Version string. {Version String} is the version string.
     /// Takes the core name and appends version string for name to display.
@@ -183,6 +213,35 @@ impl ConfigMenu {
             extensions,
             label,
             address,
+        })
+    }
+
+    fn sd_card(s: &str) -> Result<Self, &'static str> {
+        let captures = MOUNT_SD_CARD_RE
+            .captures(s)
+            .ok_or("Invalid SD card string.")?;
+
+        let slot = captures
+            .get(1)
+            .ok_or("Invalid SD card slot")?
+            .as_str()
+            .parse::<u8>()
+            .map_err(|_| "Invalid SD card slot")?;
+        let extensions = captures
+            .get(2)
+            .ok_or("Invalid extension list")?
+            .as_str()
+            .chars()
+            .chunks(3)
+            .into_iter()
+            .map(|chunk| chunk.collect::<String>())
+            .collect::<Vec<_>>();
+        let label = captures.get(3).map(|s| s.as_str().to_string());
+
+        Ok(Self::MountSdCard {
+            slot,
+            extensions,
+            label,
         })
     }
 
@@ -253,21 +312,50 @@ impl ConfigMenu {
             [b'-', rest @ ..] => Ok(ConfigMenu::Empty(Some(to_string(rest)))),
             [b'C', b',', label @ ..] => Ok(ConfigMenu::Cheat(Some(to_string(label)))),
             [b'C'] => Ok(ConfigMenu::Cheat(None)),
+
             [b'D', b'I', b'P'] => Ok(ConfigMenu::Dip),
-            [b'D', rest @ ..] => to_u32(rest).ok_or("Invalid D index").map(Self::DisableIf),
-            [b'd', rest @ ..] => to_u32(rest)
+
+            [b'D', d, rest @ ..] => to_u32(&[*d])
                 .ok_or("Invalid D index")
-                .map(Self::DisableUnless),
+                .map(|d| Self::DisableIf(d, Self::parse_line(to_str(rest), index).unwrap().into())),
+            [b'd', d, rest @ ..] => to_u32(&[*d]).ok_or("Invalid d index").map(|d| {
+                Self::DisableUnless(d, Self::parse_line(to_str(rest), index).unwrap().into())
+            }),
+            [b'H', h, rest @ ..] => to_u32(&[*h])
+                .ok_or("Invalid H index")
+                .map(|h| Self::HideIf(h, Self::parse_line(to_str(rest), index).unwrap().into())),
+            [b'h', h, rest @ ..] => to_u32(&[*h]).ok_or("Invalid h index").map(|h| {
+                Self::HideUnless(h, Self::parse_line(to_str(rest), index).unwrap().into())
+            }),
+
             [b'F', b'C', rest @ ..] => Self::load_file_remember(to_str(rest), index),
             [b'F', rest @ ..] => Self::load_file(to_str(rest), index),
-            [b'H', rest @ ..] => to_u32(rest).ok_or("Invalid H index").map(Self::HideIf),
-            [b'h', rest @ ..] => to_u32(rest).ok_or("Invalid H index").map(Self::HideUnless),
+            [b'S', rest @ ..] => Self::sd_card(to_str(rest)),
+
             [b'O', rest @ ..] => Self::option(to_str(rest), false),
             [b'o', rest @ ..] => Self::option(to_str(rest), true),
             [b'R', rest @ ..] => Self::trigger(to_str(rest), false, true),
             [b'r', rest @ ..] => Self::trigger(to_str(rest), true, true),
             [b'T', rest @ ..] => Self::trigger(to_str(rest), false, false),
             [b't', rest @ ..] => Self::trigger(to_str(rest), true, false),
+
+            [b'I', rest @ ..] => Ok(Self::Info(
+                to_str(rest)
+                    .split(',')
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>(),
+            )),
+
+            [b'P', number, rest @ ..] => {
+                let index = to_u32(&[*number]).ok_or("Invalid page index")?;
+                let label = to_string(rest);
+                Ok(ConfigMenu::Page {
+                    index: index as u8,
+                    label,
+                    items: Vec::new(),
+                })
+            }
+
             [b'J', b'1', b',', buttons @ ..] => Ok(ConfigMenu::JoystickButtons {
                 keyboard: true,
                 buttons: to_str(buttons)
@@ -297,7 +385,11 @@ impl ConfigMenu {
 
             [b'V', b',', rest @ ..] => Ok(Self::Version(to_string(rest))),
 
-            _ => Err("Unknown menu option"),
+            _ => {
+                debug!(?line, "Unknown menu option");
+                eprintln!("line {line:?}");
+                Err("Unknown menu option")
+            }
         }
     }
 }
@@ -378,6 +470,87 @@ impl FromStr for Config {
             menu,
         })
     }
+}
+
+#[test]
+fn config_string_nes() {
+    // Taken from https://github.com/MiSTer-devel/NES_MiSTer/blob/7a645f4/NES.sv#L219
+    let config = Config::from_str("\
+        NES;SS3E000000:200000,UART31250,MIDI;\
+        FS,NESFDSNSF;\
+        H1F2,BIN,Load FDS BIOS;\
+        -;\
+        ONO,System Type,NTSC,PAL,Dendy;\
+        -;\
+        C,Cheats;\
+        H2OK,Cheats Enabled,On,Off;\
+        -;\
+        oI,Autosave,On,Off;\
+        H5D0R6,Load Backup RAM;\
+        H5D0R7,Save Backup RAM;\
+        -;\
+        oC,Savestates to SDCard,On,Off;\
+        oDE,Savestate Slot,1,2,3,4;\
+        d7rA,Save state(Alt+F1-F4);\
+        d7rB,Restore state(F1-F4);\
+        -;\
+        P1,Audio & Video;\
+        P1-;\
+        P1oFH,Palette,Kitrinx,Smooth,Wavebeam,Sony CXA,PC-10 Better,Custom;\
+        H3P1FC3,PAL,Custom Palette;\
+        P1-;\
+        P1OIJ,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];\
+        P1O13,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;\
+        d6P1O5,Vertical Crop,Disabled,216p(5x);\
+        d6P1o36,Crop Offset,0,2,4,8,10,12,-12,-10,-8,-6,-4,-2;\
+        P1o78,Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;\
+        P1-;\
+        P1O4,Hide Overscan,Off,On;\
+        P1ORS,Mask Edges,Off,Left,Both,Auto;\
+        P1OP,Extra Sprites,Off,On;\
+        P1-;\
+        P1OUV,Audio Enable,Both,Internal,Cart Expansion,None;\
+        P2,Input Options;\
+        P2-;\
+        P2O9,Swap Joysticks,No,Yes;\
+        P2OA,Multitap,Disabled,Enabled;\
+        P2oJK,SNAC,Off,Controllers,Zapper,3D Glasses;\
+        P2o02,Periphery,None,Zapper(Mouse),Zapper(Joy1),Zapper(Joy2),Vaus,Vaus(A-Trigger),Powerpad,Family Trainer;\
+        P2oL,Famicom Keyboard,No,Yes;\
+        P2-;\
+        P2OL,Zapper Trigger,Mouse,Joystick;\
+        P2OM,Crosshairs,On,Off;\
+        P3,Miscellaneous;\
+        P3-;\
+        P3OG,Disk Swap,Auto,FDS button;\
+        P3o9,Pause when OSD is open,Off,On;\
+        - ;\
+        R0,Reset;\
+        J1,A,B,Select,Start,FDS,Mic,Zapper/Vaus Btn,PP/Mat 1,PP/Mat 2,PP/Mat 3,PP/Mat 4,PP/Mat 5,PP/Mat 6,PP/Mat 7,PP/Mat 8,PP/Mat 9,PP/Mat 10,PP/Mat 11,PP/Mat 12,Savestates;\
+        jn,A,B,Select,Start,L,,R|P;\
+        jp,B,Y,Select,Start,L,,R|P;\
+        I,\
+        Disk 1A,\
+        Disk 1B,\
+        Disk 2A,\
+        Disk 2B,\
+        Slot=DPAD|Save/Load=Start+DPAD,\
+        Active Slot 1,\
+        Active Slot 2,\
+        Active Slot 3,\
+        Active Slot 4,\
+        Save to state 1,\
+        Restore state 1,\
+        Save to state 2,\
+        Restore state 2,\
+        Save to state 3,\
+        Restore state 3,\
+        Save to state 4,\
+        Restore state 4;\
+        V,v123456"
+    );
+
+    assert!(config.is_ok(), "{:?}", config);
 }
 
 #[test]
@@ -475,7 +648,6 @@ fn config_string_ao486() {
             "P2oFG,Joystick Mode,2 Joysticks,2 Sticks,2 Wheels,4-axes Wheel;",
             "P2oH,Joystick 1,Enabled,Disabled;",
             "P2oI,Joystick 2,Enabled,Disabled;",
-
             "h3P3,MT32-pi;",
             "h3P3-;",
             "h3P3OO,Use MT32-pi,Yes,No;",
@@ -507,7 +679,7 @@ fn config_string_ao486() {
             "V,v123456"].join("").as_str()
     );
 
-    assert!(config.is_ok());
+    assert!(config.is_ok(), "{:?}", config);
 }
 
 #[test]

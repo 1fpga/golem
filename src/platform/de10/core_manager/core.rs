@@ -65,16 +65,23 @@ impl crate::platform::Core for MisterFpgaCore {
     fn set_status_bits(&mut self, bits: StatusBitMap) {
         debug!(?bits, "Setting status bits");
         let bits16 = bits.as_raw_slice();
-        self.fpga
+
+        let command = self
+            .fpga
             .spi_mut()
             .command(SpiCommands::SetStatus32Bits)
             .write_buffer(&bits16[0..4]);
+        if bits.has_extra() {
+            command.write_buffer(&bits16[4..]);
+        }
         self.status = bits;
     }
 
     fn send_key(&mut self, key: u8) {
-        let spi = self.fpga.spi_mut();
-        spi.command(SpiCommands::UserIoKeyboard).write_b(key);
+        self.fpga
+            .spi_mut()
+            .command(SpiCommands::UserIoKeyboard)
+            .write_b(key);
     }
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8) {

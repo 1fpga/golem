@@ -43,6 +43,10 @@ impl StatusBitMap {
         self.0.as_raw_slice()
     }
 
+    pub fn has_extra(&self) -> bool {
+        self.0.as_raw_slice()[4..].iter().any(|x| *x != 0)
+    }
+
     pub fn set(&mut self, idx: usize, value: bool) {
         self.0.set(idx, value);
     }
@@ -53,9 +57,10 @@ impl StatusBitMap {
 
     pub fn get_range(&self, range: impl IntoIterator<Item = u8>) -> u32 {
         let mut result = 0;
-        for i in range.into_iter() {
-            result <<= 1;
-            result |= self.get(i as usize) as u32;
+        let mut iter = range.into_iter().peekable();
+        let start = *iter.peek().unwrap_or(&0);
+        for i in iter {
+            result |= (self.get(i as usize) as u32) << (i - start) as usize;
         }
         result
     }
@@ -124,7 +129,8 @@ fn status_bits() {
     status_bits.set_range(4..8, 0b0101);
 
     status_bits.set_range(32..34, 3);
-    status_bits.set_range(64..67, 131);
+    status_bits.set_range(64..67, 3);
+    status_bits.set_range(96..120, 8);
 
     assert_eq!(
         status_bits.to_string(),
@@ -132,7 +138,10 @@ fn status_bits() {
             "10101010000000000000000000000000",
             "11000000000000000000000000000000",
             "11000000000000000000000000000000",
-            "00000000000000000000000000000000"
+            "00010000000000000000000000000000"
         )
     );
+
+    assert_eq!(status_bits.get_range(32..34), 3);
+    assert_eq!(status_bits.get_range(64..67), 3);
 }

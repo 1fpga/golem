@@ -274,6 +274,7 @@ impl<M: MemoryMapper> Spi<M> {
         self.disable_u32(feature.into());
     }
 
+    /// Gets the config string of the core.
     /// This method should only be called once per core, ideally when the core boot up.
     #[inline]
     pub fn config_string(&mut self) -> String {

@@ -14,11 +14,40 @@ use embedded_menu::{Marker, MenuItem, MenuStyle};
 use std::convert::TryFrom;
 use std::ops::Range;
 
+pub enum ConfigMenuSelectType {
+    Option {
+        bits: Range<u8>,
+        options: Vec<String>,
+        selected: usize,
+    },
+}
+
+impl ConfigMenuSelectType {
+    #[inline]
+    pub fn selected(&self) -> usize {
+        match self {
+            Self::Option { selected, .. } => *selected,
+        }
+    }
+    #[inline]
+    pub fn select(&mut self, index: usize) {
+        match self {
+            Self::Option {
+                selected, options, ..
+            } => *selected = index.min(options.len() - 1),
+        }
+    }
+    #[inline]
+    pub fn bits(&self) -> Option<&Range<u8>> {
+        match self {
+            Self::Option { bits, .. } => Some(bits),
+        }
+    }
+}
+
 pub struct ConfigMenuSelect {
-    bits: Range<u8>,
+    type_: ConfigMenuSelectType,
     label: String,
-    options: Vec<String>,
-    selected: usize,
     line: MenuLine,
 }
 
@@ -32,13 +61,15 @@ impl TryFrom<ConfigMenu> for ConfigMenuSelect {
                 label,
                 choices,
             } => Ok(Self {
-                bits: bits.clone(),
+                type_: ConfigMenuSelectType::Option {
+                    bits: bits.clone(),
+                    options: choices.clone(),
+                    selected: 0,
+                },
                 label: label.clone(),
-                options: choices.clone(),
-                selected: 0,
                 line: MenuLine::empty(),
             }),
-            _ => return Err(()),
+            _ => Err(()),
         }
     }
 }
@@ -57,8 +88,22 @@ impl View for ConfigMenuSelect {
 
 impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
     fn interact(&mut self) -> CoreMenuAction {
-        self.selected = (self.selected + 1) % self.options.len();
-        CoreMenuAction::ToggleOption(self.bits.start, self.bits.end, self.selected)
+        match self {
+            Self {
+                type_:
+                    ConfigMenuSelectType::Option {
+                        selected,
+                        options,
+                        bits,
+                        ..
+                    },
+                ..
+            } => {
+                *selected = (*selected + 1) % options.len();
+                CoreMenuAction::ToggleOption(bits.start, bits.end, *selected)
+            }
+            _ => CoreMenuAction::Nothing,
+        }
     }
 
     fn set_style<C, S, IT, P>(&mut self, style: &MenuStyle<C, S, IT, P, CoreMenuAction>)
@@ -68,12 +113,17 @@ impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
         IT: InputAdapterSource<CoreMenuAction>,
         P: SelectionIndicatorController,
     {
-        if self.options.is_empty() {
-            return;
+        match &self.type_ {
+            ConfigMenuSelectType::Option { options, .. } => {
+                let longest_str = options
+                    .iter()
+                    .max_by_key(|s| s.len())
+                    .map(|s| s.as_str())
+                    .unwrap_or("");
+                self.line = MenuLine::new(longest_str, style);
+            }
+            _ => {}
         }
-
-        let longest_str = self.options.iter().max_by_key(|s| s.len()).unwrap();
-        self.line = MenuLine::new(longest_str, style);
     }
 
     fn title(&self) -> &str {
@@ -85,7 +135,12 @@ impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
     }
 
     fn value(&self) -> &str {
-        self.options[self.selected].as_str()
+        match &self.type_ {
+            ConfigMenuSelectType::Option {
+                options, selected, ..
+            } => options[*selected].as_str(),
+            _ => "",
+        }
     }
 
     fn draw_styled<C, ST, IT, P, DIS>(
@@ -100,23 +155,28 @@ impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
         P: SelectionIndicatorController,
         DIS: DrawTarget<Color = C>,
     {
-        self.line.draw_styled(
-            self.label.as_str(),
-            self.options[self.selected].as_str(),
-            style,
-            display,
-        )
+        self.line
+            .draw_styled(self.label.as_str(), self.value_text(), style, display)
     }
 }
 
 impl ConfigMenuSelect {
+    fn value_text(&self) -> &str {
+        match &self.type_ {
+            ConfigMenuSelectType::Option {
+                options, selected, ..
+            } => options[*selected].as_str(),
+            _ => "",
+        }
+    }
+
     pub fn selected(&self) -> usize {
-        self.selected
+        self.type_.selected()
     }
     pub fn select(&mut self, index: usize) {
-        self.selected = index.min(self.options.len() - 1);
+        self.type_.select(index)
     }
-    pub fn bits(&self) -> &Range<u8> {
-        &self.bits
+    pub fn bits(&self) -> Option<&Range<u8>> {
+        self.type_.bits()
     }
 }

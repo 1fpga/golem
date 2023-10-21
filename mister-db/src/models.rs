@@ -1,4 +1,3 @@
-use crate::schema::games::last_played;
 use diesel::prelude::*;
 use std::path::Path;
 
