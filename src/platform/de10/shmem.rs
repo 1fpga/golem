@@ -31,10 +31,6 @@ impl Mapper {
             (address, address + size),
         )
     }
-
-    pub unsafe fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.0.as_mut_ptr()
-    }
 }
 
 impl Deref for Mapper {

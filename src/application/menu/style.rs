@@ -58,6 +58,23 @@ impl<R: MenuReturn + Clone + Copy> InputAdapter for SdlMenuInputAdapter<R> {
                 Keycode::End => Interaction::Navigation(Navigation::End).into(),
                 _ => InputState::Idle.into(),
             },
+
+            Event::JoyButtonDown { button_idx, .. } => match button_idx {
+                // A
+                0 => Interaction::Action(Action::Select).into(),
+
+                // B
+                1 => Interaction::Action(Action::Return(R::back())).into(),
+
+                // Up
+                11 => Interaction::Navigation(Navigation::Previous).into(),
+
+                // Down
+                12 => Interaction::Navigation(Navigation::Next).into(),
+
+                _ => InputState::Idle.into(),
+            },
+
             _ => InputState::Idle.into(),
         }
     }

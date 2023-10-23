@@ -1,7 +1,4 @@
-use crate::application::menu::style::MenuReturn;
-use crate::application::menu::{cores_menu_panel, main_menu};
-use crate::application::panels::input_tester::input_tester;
-use crate::application::panels::settings::settings_panel;
+use crate::application::menu::main_menu;
 use crate::application::toolbar::Toolbar;
 use crate::data::settings::Settings;
 use crate::macguiver::application::{Application, EventLoopState};
@@ -16,7 +13,7 @@ use mister_db::Connection;
 use sdl3::event::Event;
 use sdl3::joystick::Joystick;
 use std::sync::{Arc, RwLock};
-use tracing::info;
+use tracing::{info, warn};
 
 // mod icons;
 pub mod menu;
@@ -29,43 +26,14 @@ mod cores;
 
 use crate::data::paths;
 
-#[derive(Clone, Copy, Default, Debug, PartialEq)]
-pub enum TopLevelViewType {
-    #[default]
-    MainMenu,
-    Cores,
-    Settings,
-    InputTester,
-    About,
-    Quit,
-}
-
-impl MenuReturn for TopLevelViewType {
-    fn back() -> Self {
-        Self::MainMenu
-    }
-}
-
-impl TopLevelViewType {
-    pub fn function(&self) -> Option<fn(&mut MiSTer) -> TopLevelViewType> {
-        match self {
-            TopLevelViewType::MainMenu => Some(main_menu),
-            TopLevelViewType::About => None,
-            TopLevelViewType::Settings => Some(settings_panel),
-            TopLevelViewType::Cores => Some(cores_menu_panel),
-            TopLevelViewType::InputTester => Some(input_tester),
-            TopLevelViewType::Quit => None,
-        }
-    }
-}
-
 pub struct MiSTer {
     toolbar: Toolbar,
     settings: Arc<Settings>,
     database: Arc<RwLock<Connection>>,
-    view: TopLevelViewType,
 
     render_toolbar: bool,
+
+    joysticks: [Option<Joystick>; 16],
 
     core_manager: Arc<RwLock<CoreManager>>,
 
@@ -87,11 +55,17 @@ impl MiSTer {
         let main_size = platform.main_dimensions();
         let core_manager = CoreManager::new(database.clone());
 
+        // Due to a limitation in Rust language right now, None does not implement Copy
+        // when Option<T> does not. This means we can't use it in an array. So we use a
+        // constant to work around this.
+        const NONE: Option<Joystick> = None;
+        let joysticks = [NONE; 16];
+
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
-            view: TopLevelViewType::default(),
             render_toolbar: true,
             core_manager: Arc::new(RwLock::new(core_manager)),
+            joysticks,
             database,
             settings,
             platform,
@@ -112,13 +86,8 @@ impl Application for MiSTer {
     fn run(&mut self, flags: Flags) {
         self.platform.init(&flags);
 
-        self.event_loop(|app, _state| match app.view.function() {
-            None => Some(TopLevelViewType::Quit),
-            Some(f) => {
-                app.view = f(app);
-                None
-            }
-        });
+        // Run the main menu.
+        main_menu(self);
     }
 
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color> {
@@ -153,12 +122,6 @@ impl Application for MiSTer {
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
     ) -> R {
-        // Due to a limitation in Rust language right now, None does not implement Copy
-        // when Option<T> does not. This means we can't use it in an array. So we use a
-        // constant to work around this.
-        const NONE: Option<Joystick> = None;
-        let mut joysticks: [Option<Joystick>; 16] = [NONE; 16];
-
         loop {
             self.platform.start_loop();
 
@@ -177,10 +140,18 @@ impl Application for MiSTer {
                             .borrow_mut()
                             .open(*which)
                             .unwrap();
-                        joysticks[*which as usize] = Some(j);
+                        if let Some(Some(j)) = self.joysticks.get(*which as usize) {
+                            warn!("Joystick {} was already connected. Replacing it.", j.name());
+                        }
+
+                        self.joysticks[*which as usize] = Some(j);
                     }
                     Event::JoyDeviceRemoved { which, .. } => {
-                        joysticks[*which as usize] = None;
+                        if let Some(None) = self.joysticks.get(*which as usize) {
+                            warn!("Joystick #{which} was not detected.");
+                        }
+
+                        self.joysticks[*which as usize] = None;
                     }
                     _ => {}
                 }

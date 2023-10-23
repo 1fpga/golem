@@ -22,7 +22,7 @@ pub mod video;
 
 fn main() {
     if let Err(e) = main_inner::main() {
-        eprintln!("Application error: {}", e);
+        tracing::error!("Application error: {}", e);
         std::process::exit(1);
     }
 }

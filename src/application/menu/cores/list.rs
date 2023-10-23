@@ -1,24 +1,19 @@
 use crate::application::menu::cores::download::cores_download_panel;
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
-use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
+use crate::application::menu::text_menu;
 use crate::application::panels::alert::show_error;
 use crate::application::panels::core_loop::run_core_loop;
-use crate::application::TopLevelViewType;
 use crate::macguiver::application::Application;
 use crate::platform::{CoreManager, MiSTerPlatform};
-use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::Drawable;
-use embedded_menu::items::NavigationItem;
-use embedded_menu::Menu;
 use tracing::{error, info};
 
 #[derive(Default, Debug, Clone, Copy)]
 pub enum MenuAction {
     #[default]
     Back,
-    Download,
+    Manage,
     ManualLoad,
     ShowCoreInfo(usize),
 }
@@ -40,86 +35,70 @@ fn build_cores_items_(database: &mut mister_db::Connection) -> Vec<mister_db::mo
     }
 }
 
-pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) -> TopLevelViewType {
-    let all_items = build_cores_items_(&mut app.database().write().unwrap());
-    let mut items: Vec<NavigationItem<_, _, _, _>> = all_items
-        .iter()
-        .enumerate()
-        .map(|(i, core)| {
-            NavigationItem::new(&core.name, MenuAction::ShowCoreInfo(i)).with_marker(">")
-        })
-        .collect();
+pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
+    let mut state = None;
 
-    let mut menu = Menu::with_style(" Cores", style::menu_style())
-        .add_items(&mut items)
-        .add_item(
-            NavigationItem::new("Load Core Manually", MenuAction::ManualLoad).with_marker(">"),
-        )
-        .add_item(NavigationItem::new(
-            "Install/Uninstall Cores",
-            MenuAction::Download,
-        ))
-        .add_item(NavigationItem::new("Back", MenuAction::Back).with_marker(">"))
-        .build();
+    loop {
+        let all_cores = build_cores_items_(&mut app.database().write().unwrap());
 
-    app.event_loop(|app, state| {
-        for ev in state.events() {
-            match menu.interact(ev) {
-                None => {}
-                Some(MenuAction::Download) => {
-                    cores_download_panel(app);
-                    return Some(TopLevelViewType::Cores);
-                }
-                Some(MenuAction::Back) => {
-                    return Some(TopLevelViewType::MainMenu);
-                }
-                Some(MenuAction::ShowCoreInfo(i)) => {
-                    let core = &all_items[i];
-                    let path = &core.path;
-                    info!("Loading core from path {:?}", path);
+        let mut menu_items = all_cores
+            .iter()
+            .enumerate()
+            .map(|(i, core)| (core.name.as_str(), "", MenuAction::ShowCoreInfo(i)))
+            .collect::<Vec<_>>();
 
-                    app.hide_toolbar();
-                    let manager = app.platform_mut().core_manager_mut();
+        menu_items.push(("Load Core Manually", "", MenuAction::ManualLoad));
+        menu_items.push(("Manage Cores", "", MenuAction::Manage));
+        menu_items.push(("Back", "", MenuAction::Back));
 
-                    let core = match manager.load_program(std::path::Path::new(&path)) {
-                        Ok(core) => core,
-                        Err(e) => {
-                            show_error(app, format!("Failed to load core: {}", e));
-                            return Some(TopLevelViewType::Cores);
-                        }
-                    };
+        let (result, new_state) = text_menu(app, "Cores", &menu_items, state);
+        state = Some(new_state);
+        match result {
+            MenuAction::Back => break,
+            MenuAction::Manage => {
+                cores_download_panel(app);
+            }
+            MenuAction::ShowCoreInfo(i) => {
+                let core = &all_cores[i];
+                let path = &core.path;
+                info!("Loading core from path {:?}", path);
 
-                    run_core_loop(app, core);
-                }
-                Some(MenuAction::ManualLoad) => {
-                    let path = select_file_path_menu(
-                        app,
-                        "Select Core Manually",
-                        std::env::current_exe().unwrap().parent().unwrap(),
-                        FilesystemMenuOptions::default().with_allow_back(true),
-                    );
-                    info!("Loading core from path {:?}", path);
+                app.hide_toolbar();
+                let manager = app.platform_mut().core_manager_mut();
 
-                    if let Ok(Some(path)) = path {
-                        app.hide_toolbar();
-                        let core = app
-                            .platform_mut()
-                            .core_manager_mut()
-                            .load_program(&path)
-                            .expect("Failed to load core");
-                        run_core_loop(app, core);
-                    } else {
-                        info!("No core selected.");
+                let core = match manager.load_program(std::path::Path::new(&path)) {
+                    Ok(core) => core,
+                    Err(e) => {
+                        show_error(app, format!("Failed to load core: {}", e));
+                        return;
                     }
+                };
+
+                run_core_loop(app, core);
+            }
+            MenuAction::ManualLoad => {
+                let path = select_file_path_menu(
+                    app,
+                    "Select Core Manually",
+                    std::env::current_exe().unwrap().parent().unwrap(),
+                    FilesystemMenuOptions::default().with_allow_back(true),
+                );
+                info!("Loading core from path {:?}", path);
+
+                if let Ok(Some(path)) = path {
+                    app.hide_toolbar();
+                    let core = app
+                        .platform_mut()
+                        .core_manager_mut()
+                        .load_program(&path)
+                        .expect("Failed to load core");
+                    run_core_loop(app, core);
+
+                    // TODO: reload the Menu core here.
+                } else {
+                    info!("No core selected.");
                 }
             }
         }
-
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        menu.update(buffer);
-        menu.draw(buffer).unwrap();
-
-        None
-    })
+    }
 }

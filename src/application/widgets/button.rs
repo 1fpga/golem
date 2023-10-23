@@ -1,3 +1,4 @@
+#![allow(unused)]
 use embedded_graphics::geometry::AnchorPoint;
 use embedded_graphics::mono_font::{MonoFont, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;

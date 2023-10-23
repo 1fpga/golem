@@ -167,13 +167,13 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
-    pub fn write(mut self, word: impl Into<u16>) -> Self {
+    pub fn write(self, word: impl Into<u16>) -> Self {
         self.spi.write(word);
         self
     }
 
     #[inline]
-    pub fn write_buffer(mut self, buffer: &[u16]) -> Self {
+    pub fn write_buffer(self, buffer: &[u16]) -> Self {
         for word in buffer {
             self.spi.write(*word);
         }
@@ -181,12 +181,12 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
-    pub fn write_b(mut self, byte: u8) -> Self {
+    pub fn write_b(self, byte: u8) -> Self {
         self.write(byte)
     }
 
     #[inline]
-    pub fn write_store(mut self, word: impl Into<u16>, store: &mut u16) -> Self {
+    pub fn write_store(self, word: impl Into<u16>, store: &mut u16) -> Self {
         *store = self.spi.write(word);
         self
     }

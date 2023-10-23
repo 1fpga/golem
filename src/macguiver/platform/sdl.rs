@@ -7,7 +7,6 @@ use sdl3::event::Event;
 use sdl3::EventPump;
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::debug;
 
 pub mod settings;
 pub mod theme;
@@ -120,21 +119,6 @@ where
         'main: loop {
             event_pump.borrow_mut().pump_events();
             let events: Vec<Event> = event_pump.borrow_mut().poll_iter().collect();
-
-            for event in events.iter() {
-                match event {
-                    Event::JoyDeviceAdded { which, .. } => {
-                        let j = self.joystick.borrow_mut().open(*which).unwrap();
-                        let name = j.name();
-                        let guid = j.instance_id();
-                        let has_rumble = j.has_rumble();
-                        let has_rumble_triggers = j.has_rumble_triggers();
-                        let has_led = j.has_led();
-                        debug!(?name, "Joystick {} added", which);
-                    }
-                    _ => {}
-                }
-            }
 
             let state = SdlState { events };
 

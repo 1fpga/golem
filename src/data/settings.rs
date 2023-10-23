@@ -1,5 +1,4 @@
 use crate::application::menu::style::{menu_style, MenuReturn, SdlMenuInputAdapter};
-use crate::application::TopLevelViewType;
 use crate::data::paths;
 use bus::{Bus, BusReader};
 use embedded_menu::selection_indicator::style::Invert;
@@ -105,16 +104,29 @@ impl PartialEq<Keycode> for MenuKeyBinding {
     }
 }
 
+// We need a separate enum for the menu events, because the menu macro
+// requires it (cannot use `()`).
+#[derive(Copy, Clone)]
+pub enum MenuAction {
+    Back,
+}
+
+impl MenuReturn for MenuAction {
+    fn back() -> Self {
+        MenuAction::Back
+    }
+}
+
 #[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
 #[menu(
     title = " Settings",
-    navigation(events = TopLevelViewType, marker = ""),
+    navigation(events = MenuAction, marker = ""),
     items = [
         data(label = "Show FPS", field = show_fps),
         data(label = "Invert toolbar colors", field = invert_toolbar),
         data(label = "Toolbar date format", field = toolbar_datetime_format),
         data(label = "Menu Key Binding", field = menu_key_bind),
-        navigation(label = "Back", event = TopLevelViewType::MainMenu)
+        navigation(label = "Back", event = MenuAction::Back)
     ]
 )]
 pub struct InnerSettings {
@@ -148,7 +160,7 @@ impl Default for InnerSettings {
 
 impl MenuReturn for InnerSettingsMenuEvents {
     fn back() -> Self {
-        Self::NavigationEvent(TopLevelViewType::back())
+        Self::NavigationEvent(MenuAction::back())
     }
 }
 

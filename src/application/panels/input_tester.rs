@@ -1,5 +1,4 @@
 use crate::application::widgets::keyboard::KeyboardTesterWidget;
-use crate::application::TopLevelViewType;
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -7,7 +6,7 @@ use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use sdl3::keyboard::Keycode;
 
-pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) -> TopLevelViewType {
+pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) {
     let mut widget = KeyboardTesterWidget::new();
 
     app.event_loop(|app, state| {
@@ -22,7 +21,7 @@ pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) -> TopLevel
                     ..
                 } => match code {
                     Keycode::Escape => {
-                        return Some(TopLevelViewType::MainMenu);
+                        return Some(());
                     }
                     _ => {
                         widget.insert(code.into());

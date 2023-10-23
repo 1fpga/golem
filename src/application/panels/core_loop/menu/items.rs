@@ -14,6 +14,7 @@ use embedded_menu::{Marker, MenuItem, MenuStyle};
 use std::convert::TryFrom;
 use std::ops::Range;
 
+#[non_exhaustive]
 pub enum ConfigMenuSelectType {
     Option {
         bits: Range<u8>,
@@ -24,12 +25,6 @@ pub enum ConfigMenuSelectType {
 
 impl ConfigMenuSelectType {
     #[inline]
-    pub fn selected(&self) -> usize {
-        match self {
-            Self::Option { selected, .. } => *selected,
-        }
-    }
-    #[inline]
     pub fn select(&mut self, index: usize) {
         match self {
             Self::Option {
@@ -37,6 +32,7 @@ impl ConfigMenuSelectType {
             } => *selected = index.min(options.len() - 1),
         }
     }
+
     #[inline]
     pub fn bits(&self) -> Option<&Range<u8>> {
         match self {
@@ -102,7 +98,6 @@ impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
                 *selected = (*selected + 1) % options.len();
                 CoreMenuAction::ToggleOption(bits.start, bits.end, *selected)
             }
-            _ => CoreMenuAction::Nothing,
         }
     }
 
@@ -122,7 +117,6 @@ impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
                     .unwrap_or("");
                 self.line = MenuLine::new(longest_str, style);
             }
-            _ => {}
         }
     }
 
@@ -139,7 +133,6 @@ impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
             ConfigMenuSelectType::Option {
                 options, selected, ..
             } => options[*selected].as_str(),
-            _ => "",
         }
     }
 
@@ -166,16 +159,13 @@ impl ConfigMenuSelect {
             ConfigMenuSelectType::Option {
                 options, selected, ..
             } => options[*selected].as_str(),
-            _ => "",
         }
     }
 
-    pub fn selected(&self) -> usize {
-        self.type_.selected()
-    }
     pub fn select(&mut self, index: usize) {
         self.type_.select(index)
     }
+
     pub fn bits(&self) -> Option<&Range<u8>> {
         self.type_.bits()
     }

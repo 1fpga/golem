@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::application::menu::style::{menu_style, MenuReturn};
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;

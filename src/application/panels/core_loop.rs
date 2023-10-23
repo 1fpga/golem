@@ -2,7 +2,8 @@ use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, MiSTerPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
-use tracing::debug;
+use std::time::Instant;
+use tracing::{debug, trace};
 
 pub mod menu;
 
@@ -14,6 +15,7 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
     let mut menu_key_binding = settings.menu_key_binding();
 
     let mut i = 0;
+    let mut prev = Instant::now();
     // Hide the OSD
     app.platform_mut().core_manager_mut().hide_menu();
 
@@ -21,14 +23,26 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
     // except for the menu button(s).
     app.event_loop(move |app, state| {
         i += 1;
-        // Check for things that might be expensive once every 100 frames.
+        // Check for things that might be expensive once every some frames, to reduce lag.
         if i % 100 == 0 {
+            let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
                 menu_key_binding = app.settings().menu_key_binding();
             }
+
+            if i % 500 == 0 {
+                trace!("Settings update took {:?}", now.elapsed());
+                trace!(
+                    "FPS: {}",
+                    500.0 / ((now - prev).as_millis() as f32 / 1000.0)
+                );
+            }
+
+            prev = now;
         }
 
         for ev in state.events() {
+            eprintln!("event: {ev:?}");
             match ev {
                 Event::KeyDown {
                     keycode: Some(keycode),
@@ -60,5 +74,5 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
         }
 
         None
-    })
+    });
 }

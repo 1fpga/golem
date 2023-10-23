@@ -1,5 +1,5 @@
 use crate::platform::de10::core_manager::core::buttons::{ButtonMap, ButtonMapping, MisterButtons};
-use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga, SpiCommands, SpiFeature};
+use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga, SpiCommands};
 use crate::types::StatusBitMap;
 use crate::utils::config_string::ConfigMenu;
 use tracing::{debug, info};
@@ -9,9 +9,9 @@ mod config_string;
 
 pub struct MisterFpgaCore {
     fpga: Fpga,
-    core_type: CoreType,
-    spi_type: CoreInterfaceType,
-    io_version: u8,
+    pub core_type: CoreType,
+    pub spi_type: CoreInterfaceType,
+    pub io_version: u8,
     config: config_string::Config,
 
     mapping: ButtonMapping,
@@ -91,7 +91,7 @@ impl crate::platform::Core for MisterFpgaCore {
 
         let spi = self.fpga.spi_mut();
 
-        let mut command = spi
+        let command = spi
             .command(SpiCommands::from_joystick_index(joystick_idx))
             .write(button_mask as u16);
         if button_mask >> 16 == 0 {
@@ -105,7 +105,7 @@ impl crate::platform::Core for MisterFpgaCore {
 
         let spi = self.fpga.spi_mut();
 
-        let mut command = spi
+        let command = spi
             .command(SpiCommands::from_joystick_index(joystick_idx))
             .write((button_mask & 0xFFFF) as u16);
         if button_mask >> 16 == 0 {

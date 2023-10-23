@@ -1,7 +1,5 @@
 use bitvec::array::BitArray;
-use bitvec::order::{BitOrder, Lsb0, Msb0};
-use bitvec::store::BitStore;
-use bitvec::view::{BitView, BitViewSized};
+use bitvec::order::Lsb0;
 use std::fmt::{Debug, Formatter};
 
 pub mod units;
