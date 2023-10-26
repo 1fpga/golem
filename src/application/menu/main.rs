@@ -37,11 +37,11 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
             app,
             " ",
             &[
-                ("Cores", &format!("({ncores})"), MenuAction::Cores),
-                ("Games", &format!("({ngames})"), MenuAction::Games),
-                ("Settings...", "", MenuAction::Settings),
-                ("Tools...", "", MenuAction::Tools),
-                ("About", "", MenuAction::About),
+                ("Cores", format!("({ncores})"), MenuAction::Cores),
+                ("Games", format!("({ngames})"), MenuAction::Games),
+                ("Settings...", "".to_string(), MenuAction::Settings),
+                ("Tools...", "".to_string(), MenuAction::Tools),
+                ("About", "".to_string(), MenuAction::About),
             ],
             TextMenuOptions::default().with_state(state),
         );

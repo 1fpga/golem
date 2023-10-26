@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use std::path::Path;
 use strum::{Display, EnumCount, FromRepr};
 
-#[derive(Default, Debug, FromRepr, Display, EnumCount)]
+#[derive(Default, Copy, Clone, Debug, FromRepr, Display, EnumCount)]
 pub enum CoreOrder {
     NameAsc,
     NameDesc,
@@ -19,6 +19,16 @@ impl CoreOrder {
 
     pub fn previous(self) -> Self {
         Self::from_repr((self as usize).checked_sub(1).unwrap_or(Self::COUNT - 1)).unwrap()
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::NameAsc => "Name A-Z",
+            Self::NameDesc => "Name Z-A",
+            Self::LastDownloaded => "Last Downloaded",
+            Self::LastPlayed => "Last Used",
+            Self::Favorite => "Favorite",
+        }
     }
 }
 

@@ -60,11 +60,11 @@ pub fn menu_tester(app: &mut impl Application<Color = BinaryColor>) {
     loop {
         let (result, new_state) = text_menu(
             app,
-            "Games",
+            "<Menu Tester>",
             &items,
             TextMenuOptions::default()
                 .with_state(state)
-                .with_sort("name")
+                .with_sort("Name")
                 .with_details("Details")
                 .with_prefix(&prefixes)
                 .with_suffix(&suffixes),

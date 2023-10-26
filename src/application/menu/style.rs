@@ -118,6 +118,16 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
                 }
                 Keycode::Home => Interaction::Navigation(Navigation::Beginning).into(),
                 Keycode::End => Interaction::Navigation(Navigation::End).into(),
+
+                Keycode::Tab | Keycode::KpTab => {
+                    Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into()
+                }
+                Keycode::Space => {
+                    // Interaction::Action(Action::Return(SdlMenuAction::ShowOptions())).into()
+                    // Here be dragons.
+                    InputState::Idle.into()
+                }
+
                 kc if kc.name().len() == 1 => {
                     Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into()
                 }

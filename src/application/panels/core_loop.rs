@@ -9,6 +9,8 @@ pub mod menu;
 
 /// Run the core loop and send events to the core.
 pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
+    tracing::debug!("Starting core loop...");
+
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
 
@@ -42,7 +44,7 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
         }
 
         for ev in state.events() {
-            eprintln!("event: {ev:?}");
+            tracing::debug!(?ev, "Core loop event");
             match ev {
                 Event::KeyDown {
                     keycode: Some(keycode),
@@ -75,4 +77,6 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
 
         None
     });
+
+    tracing::debug!("Core loop ended");
 }

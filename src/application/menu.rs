@@ -1,8 +1,12 @@
 use crate::application::menu::style::OptionalMenuItem;
 use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
+use crate::application::widgets::controller::ControllerButton;
 use crate::application::widgets::menu::SizedMenu;
+use crate::application::widgets::opt::OptionalView;
+use crate::application::widgets::text::FontRendererView;
+use crate::application::widgets::EmptyView;
 use crate::macguiver::application::Application;
-use embedded_graphics::mono_font::{ascii, MonoTextStyle};
+use embedded_graphics::mono_font::{ascii, MonoFont, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
@@ -21,10 +25,6 @@ pub mod games;
 pub mod main;
 pub mod style;
 
-use crate::application::widgets::controller::ControllerButton;
-use crate::application::widgets::opt::OptionalView;
-use crate::application::widgets::text::FontRendererView;
-use crate::application::widgets::EmptyView;
 pub use cores::cores_menu_panel;
 pub use main::main_menu;
 
@@ -32,14 +32,16 @@ pub type GolemMenuState<R> = MenuState<style::SdlMenuInputAdapter<R>, AnimatedPo
 
 #[derive(Clone)]
 pub struct TextMenuOptions<'a, R: MenuReturn + Copy> {
-    pub sort_by: Option<&'a str>,
-    pub detail_label: Option<&'a str>,
-    pub state: Option<GolemMenuState<R>>,
+    back_label: Option<&'a str>,
+    sort_by: Option<&'a str>,
+    detail_label: Option<&'a str>,
+    state: Option<GolemMenuState<R>>,
+    title_font: Option<&'static MonoFont<'static>>,
 
     /// Prefix items added to the menu before the categorized and sorted section of items.
-    pub prefix: &'a [(&'a str, &'a str, R)],
+    prefix: &'a [(&'a str, &'a str, R)],
     /// Suffix items added to the menu after the categorized and sorted section of items.
-    pub suffix: &'a [(&'a str, &'a str, R)],
+    suffix: &'a [(&'a str, &'a str, R)],
 }
 
 impl<'a, R: MenuReturn + Copy> Default for TextMenuOptions<'a, R> {
@@ -47,14 +49,30 @@ impl<'a, R: MenuReturn + Copy> Default for TextMenuOptions<'a, R> {
         Self {
             prefix: &[],
             suffix: &[],
+            back_label: None,
             sort_by: None,
             detail_label: None,
             state: None,
+            title_font: None,
         }
     }
 }
 
 impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
+    pub fn with_back(self, label: &'a str) -> Self {
+        Self {
+            back_label: Some(label),
+            ..self
+        }
+    }
+
+    pub fn with_title_font(self, font: &'static MonoFont<'static>) -> Self {
+        Self {
+            title_font: Some(font),
+            ..self
+        }
+    }
+
     pub fn with_details(self, label: &'a str) -> Self {
         Self {
             detail_label: Some(label),
@@ -82,16 +100,18 @@ impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
     }
 }
 
-pub fn text_menu<R: MenuReturn + Copy>(
+pub fn text_menu<R: MenuReturn + Copy, L: AsRef<str>, M: AsRef<str>>(
     app: &mut impl Application<Color = BinaryColor>,
     title: &str,
-    items: &[(&str, &str, R)],
+    items: &[(L, M, R)],
     options: TextMenuOptions<R>,
 ) -> (R, GolemMenuState<R>) {
     let TextMenuOptions {
+        back_label,
         sort_by,
         state,
         detail_label,
+        title_font,
         prefix,
         suffix,
     } = options;
@@ -99,17 +119,21 @@ pub fn text_menu<R: MenuReturn + Copy>(
     let show_details = detail_label.is_some();
     let show_sort = R::sort().is_some();
 
-    fn to_navigation<'a, R: MenuReturn + Copy>(
-        (label, marker, result): &(&'a str, &'a str, R),
+    fn to_navigation<'a, R: MenuReturn + Copy, L: AsRef<str>, M: AsRef<str>>(
+        (label, marker, result): &'a (L, M, R),
     ) -> NavigationItem<&'a str, &'a str, &'a str, SdlMenuAction<R>> {
-        NavigationItem::new(*label, SdlMenuAction::Select(*result)).with_marker(*marker)
+        NavigationItem::new(label.as_ref(), SdlMenuAction::Select(*result))
+            .with_marker(marker.as_ref())
     }
 
     let mut prefix_items = prefix.iter().map(to_navigation).collect::<Vec<_>>();
     let mut items_items = items.iter().map(to_navigation).collect::<Vec<_>>();
     let mut suffix_items = suffix.iter().map(to_navigation).collect::<Vec<_>>();
     let mut back_items = if show_back {
-        vec![NavigationItem::new("Back", SdlMenuAction::Back).with_marker("<-")]
+        vec![
+            NavigationItem::new(back_label.unwrap_or("Back"), SdlMenuAction::Back)
+                .with_marker("<-"),
+        ]
     } else {
         vec![]
     };
@@ -130,9 +154,14 @@ pub fn text_menu<R: MenuReturn + Copy>(
         .bounding_box()
         .size
         .saturating_sub(Size::new(0, bottom_row.height));
+    let mut menu_style = style::menu_style();
+    if let Some(font) = title_font {
+        menu_style = menu_style.with_title_font(font);
+    }
+
     let menu = SizedMenu::new(
         menu_size,
-        Menu::with_style(title, style::menu_style())
+        Menu::with_style(title, menu_style)
             .add_items(&mut prefix_items)
             .add_item(separator1)
             .add_items(&mut items_items)
@@ -146,7 +175,7 @@ pub fn text_menu<R: MenuReturn + Copy>(
     type Font = u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic;
     let sort_field = format!(
         "Sort{}",
-        sort_by.map(|f| format!(" ({f})")).unwrap_or("".to_string())
+        sort_by.map(|f| format!(" - {f}")).unwrap_or("".to_string())
     );
     let bottom_bar = Chain::new(EmptyView::default())
         .append(ControllerButton::new("a", &ascii::FONT_6X10))
