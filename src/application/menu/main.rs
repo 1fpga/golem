@@ -1,36 +1,35 @@
-use crate::application::menu::cores_menu_panel;
+use crate::application::menu::games::games_list;
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::text_menu;
+use crate::application::menu::{cores_menu_panel, TextMenuOptions};
 use crate::application::panels::alert::alert;
-use crate::application::panels::input_tester::input_tester;
 use crate::application::panels::settings::settings_panel;
+use crate::application::panels::tools::tools_menu;
 use crate::macguiver::application::Application;
 use embedded_graphics::pixelcolor::BinaryColor;
-use mister_db::diesel::{QueryDsl, RunQueryDsl};
-use mister_db::schema::cores::dsl::cores;
-use std::ops::DerefMut;
+use mister_db::models;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
 enum MenuAction {
     Games,
     Cores,
     Settings,
-    InputTester,
     About,
+    Tools,
+    #[default]
     Idle,
 }
 
-impl MenuReturn for MenuAction {
-    fn back() -> Self {
-        MenuAction::Idle
-    }
-}
+impl MenuReturn for MenuAction {}
 
 pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
-    let ncores: i64 = cores
-        .count()
-        .get_result(app.database().write().unwrap().deref_mut())
-        .unwrap();
+    let db = app.database();
+    let (ncores, ngames) = {
+        let mut db = db.lock().unwrap();
+        let ncores: i64 = models::Core::count(&mut db).unwrap();
+        let ngames = models::Game::count(&mut db).unwrap();
+        (ncores, ngames)
+    };
     let mut state = None;
 
     loop {
@@ -39,22 +38,20 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
             " ",
             &[
                 ("Cores", &format!("({ncores})"), MenuAction::Cores),
-                ("Games", "(0)", MenuAction::Games),
+                ("Games", &format!("({ngames})"), MenuAction::Games),
                 ("Settings...", "", MenuAction::Settings),
-                ("Input Tester", "", MenuAction::InputTester),
+                ("Tools...", "", MenuAction::Tools),
                 ("About", "", MenuAction::About),
             ],
-            state,
+            TextMenuOptions::default().with_state(state),
         );
         state = Some(new_state);
 
         match result {
-            MenuAction::Games => {
-                alert(app, "Games", "Not implemented", &["Okay"]);
-            }
+            MenuAction::Games => games_list(app),
             MenuAction::Cores => cores_menu_panel(app),
             MenuAction::Settings => settings_panel(app),
-            MenuAction::InputTester => input_tester(app),
+            MenuAction::Tools => tools_menu(app),
             MenuAction::About => {
                 alert(app, "About", "Not implemented", &["Okay"]);
             }

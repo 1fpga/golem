@@ -24,8 +24,8 @@ pub enum MenuAction {
 }
 
 impl MenuReturn for MenuAction {
-    fn back() -> Self {
-        MenuAction::Back
+    fn back() -> Option<Self> {
+        Some(MenuAction::Back)
     }
 }
 
@@ -51,7 +51,7 @@ pub fn alert(
 
     let menu = SizedMenu::new(
         Size::new(100, 100),
-        Menu::with_style(" ", style::menu_style())
+        Menu::with_style(" ", style::menu_style_simple())
             .add_items(&mut choices)
             .build(),
     );

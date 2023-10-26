@@ -1,5 +1,5 @@
 use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
-use embedded_graphics::geometry::{Point, Size};
+use embedded_graphics::geometry::{Dimensions, Point, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor, Rgb888};
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;
@@ -9,7 +9,7 @@ use embedded_menu::collection::MenuItemCollection;
 use embedded_menu::interaction::{InputAdapter, InputAdapterSource};
 use embedded_menu::selection_indicator::style::IndicatorStyle;
 use embedded_menu::selection_indicator::SelectionIndicatorController;
-use embedded_menu::Menu;
+use embedded_menu::{Menu, MenuState};
 
 pub struct SizedMenu<T, IT, VG, R, C, P, S>
 where
@@ -21,6 +21,20 @@ where
 {
     rectangle: Rectangle,
     menu: Menu<T, IT, VG, R, C, P, S>,
+}
+
+impl<T, IT, VG, R, C, P, S> SizedMenu<T, IT, VG, R, C, P, S>
+where
+    T: AsRef<str>,
+    IT: InputAdapterSource<R>,
+    C: PixelColor,
+    VG: MenuItemCollection<R>,
+    P: SelectionIndicatorController,
+    S: IndicatorStyle,
+{
+    pub(crate) fn state(&self) -> MenuState<IT::InputAdapter, P, S> {
+        self.menu.state()
+    }
 }
 
 impl<T, IT, VG, R, C, P, S> SizedMenu<T, IT, VG, R, C, P, S>
@@ -48,17 +62,11 @@ where
     P: SelectionIndicatorController,
     S: IndicatorStyle,
 {
-    pub fn interact(&mut self, input: <IT::InputAdapter as InputAdapter>::Input) -> Option<R>
-    where
-        R: std::fmt::Debug,
-    {
+    pub fn interact(&mut self, input: <IT::InputAdapter as InputAdapter>::Input) -> Option<R> {
         self.menu.interact(input)
     }
 
-    pub fn update<D>(&mut self, display: &mut D)
-    where
-        D: DrawTarget<Color = C>,
-    {
+    pub fn update(&mut self, display: &impl Dimensions) {
         self.menu.update(display);
     }
 }

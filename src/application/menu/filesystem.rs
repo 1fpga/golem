@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use crate::application::menu::style::{menu_style, MenuReturn};
+use crate::application::menu::style::{menu_style_simple, MenuReturn};
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::ascii;
@@ -69,8 +69,8 @@ enum MenuAction {
 }
 
 impl MenuReturn for MenuAction {
-    fn back() -> Self {
-        MenuAction::Back
+    fn back() -> Option<Self> {
+        Some(MenuAction::Back)
     }
 }
 
@@ -179,11 +179,14 @@ pub fn select_file_path_menu(
         .into_iter()
         .collect::<Vec<_>>();
 
-        let mut menu = Menu::with_style(&title, menu_style().with_title_font(&ascii::FONT_6X9))
-            .add_items(maybe_dotdot.as_mut_slice())
-            .add_items(entries_items.as_mut_slice())
-            .add_item(NavigationItem::new("< Cancel", MenuAction::Back).with_marker("<<"))
-            .build();
+        let mut menu = Menu::with_style(
+            &title,
+            menu_style_simple().with_title_font(&ascii::FONT_6X9),
+        )
+        .add_items(maybe_dotdot.as_mut_slice())
+        .add_items(entries_items.as_mut_slice())
+        .add_item(NavigationItem::new("< Cancel", MenuAction::Back).with_marker("<<"))
+        .build();
 
         let selection: EventLoopResult = app.event_loop(|app, state| {
             let buffer = app.main_buffer();

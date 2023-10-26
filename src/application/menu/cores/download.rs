@@ -9,36 +9,73 @@ use embedded_graphics::Drawable;
 use embedded_menu::items::select::SelectValue;
 use embedded_menu::items::{NavigationItem, Select};
 use embedded_menu::Menu;
+use mister_db::models;
 use retronomicon_dto::cores::CoreListItem;
 use tracing::{debug, info};
 
+/// The action to perform for a selected core.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum CoreAction {
+    /// The core is not installed.
+    IsNotInstalled,
+    /// The core should be installed.
+    Install,
+
+    /// The core is already installed.
+    IsInstalled,
+
+    /// The core should be uninstalled.
+    Uninstall,
+}
+
+impl CoreAction {
+    pub fn toggle(&self) -> Self {
+        match self {
+            Self::IsNotInstalled => Self::Install,
+            Self::Install => Self::IsNotInstalled,
+
+            Self::IsInstalled => Self::Uninstall,
+            Self::Uninstall => Self::IsInstalled,
+        }
+    }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CoreAction::IsNotInstalled => "",
+            CoreAction::Install => "Install",
+            CoreAction::IsInstalled => "Installed",
+            CoreAction::Uninstall => "Remove",
+        }
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
-pub enum MenuAction {
+enum MenuAction {
     #[default]
     Back,
 
-    ToggleCore(usize, bool),
-    DoInstall,
+    ToggleCore(usize, CoreAction),
+    /// Execute the selected actions for all cores.
+    Execute,
 }
 
 impl MenuReturn for MenuAction {
-    fn back() -> Self {
-        MenuAction::Back
+    fn back() -> Option<Self> {
+        Some(MenuAction::Back)
     }
 }
 
 impl SelectValue for MenuAction {
     fn next(&self) -> Self {
         match self {
-            Self::ToggleCore(a, b) => Self::ToggleCore(*a, !*b),
+            Self::ToggleCore(a, b) => Self::ToggleCore(*a, b.toggle()),
             _ => Self::Back,
         }
     }
 
     fn name(&self) -> &'static str {
         match self {
-            Self::ToggleCore(_, true) => "[X]",
-            Self::ToggleCore(_, false) => "[ ]",
+            Self::ToggleCore(_, action) => action.as_str(),
             _ => "",
         }
     }
@@ -73,7 +110,7 @@ fn install_single_core(
         .build()
         .unwrap();
     let db_connection = app.database();
-    let mut db = db_connection.write().unwrap();
+    let mut db = db_connection.lock().unwrap();
 
     if mister_db::models::Core::has(&mut db, &core.slug, &core.latest_release.version)? {
         info!(?core, "Core already installed");
@@ -111,10 +148,26 @@ fn install_single_core(
     Ok(())
 }
 
-fn install_cores(app: &mut impl Application<Color = BinaryColor>, cores: Vec<&CoreListItem>) {
-    for core in cores {
-        if let Err(e) = install_single_core(app, &core) {
-            show_error(app, &e.to_string());
+fn execute_core_actions(
+    app: &mut impl Application<Color = BinaryColor>,
+    cores: Vec<(&CoreListItem, CoreAction)>,
+) {
+    for (core, action) in cores {
+        match action {
+            CoreAction::Install => {
+                if let Err(e) = install_single_core(app, &core) {
+                    show_error(app, &e.to_string());
+                }
+            }
+            CoreAction::Uninstall => {
+                let core_root = paths::core_root(core, &core.latest_release);
+                if let Err(e) = std::fs::remove_dir_all(&core_root) {
+                    show_error(app, &e.to_string());
+                } else {
+                    let _ = models::Core::delete(&mut app.database().lock().unwrap(), core.id);
+                }
+            }
+            _ => {}
         }
     }
 }
@@ -127,11 +180,15 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
             return;
         }
     };
-    let mut should_install = cores
+    let mut actions = cores
         .iter()
         .map(|core| {
             let path = paths::core_root(core, &core.latest_release);
-            path.exists()
+            if path.exists() {
+                CoreAction::IsInstalled
+            } else {
+                CoreAction::IsNotInstalled
+            }
         })
         .collect::<Vec<_>>();
 
@@ -140,14 +197,17 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
         .enumerate()
         .map(|(i, core)| {
             let core_name = format!("{} ({})", core.name, &core.latest_release.version);
-            Select::new(core_name, MenuAction::ToggleCore(i, should_install[i]))
+            Select::new(core_name, MenuAction::ToggleCore(i, actions[i]))
                 .with_value_converter(std::convert::identity)
         })
         .collect::<Vec<_>>();
 
-    let mut menu = Menu::with_style(" Download Cores", style::menu_style())
+    let mut menu = Menu::with_style(" Download Cores", style::menu_style_simple())
         .add_items(&mut core_list)
-        .add_item(NavigationItem::new("Install", MenuAction::DoInstall).with_marker(">"))
+        .add_item(
+            NavigationItem::new("Install / Uninstall selected cores", MenuAction::Execute)
+                .with_marker(">"),
+        )
         .add_item(NavigationItem::new("Cancel", MenuAction::Back).with_marker(">"))
         .build();
 
@@ -162,18 +222,20 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
                 match action {
                     MenuAction::Back => return Some(()),
                     MenuAction::ToggleCore(slug, i) => {
-                        should_install[slug] = i;
-                        info!("Installing core {} version {}", slug, i);
-                        // info!("Installing core {} version {}", slug, release_version);
+                        actions[slug] = i;
                     }
-                    MenuAction::DoInstall => {
-                        install_cores(
+                    MenuAction::Execute => {
+                        execute_core_actions(
                             app,
                             cores
                                 .iter()
                                 .enumerate()
-                                .filter(|(i, _)| should_install[*i])
-                                .map(|(_, core)| core)
+                                .filter_map(|(i, core)| match actions[i] {
+                                    a @ CoreAction::Install | a @ CoreAction::Uninstall => {
+                                        Some((core, a))
+                                    }
+                                    _ => None,
+                                })
                                 .collect(),
                         );
                         // TODO: uninstall cores.

@@ -1,14 +1,14 @@
 use mister_db::Connection;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex};
 use walkdir::WalkDir;
 
 pub struct CoreManager {
-    database: Arc<RwLock<Connection>>,
+    database: Arc<Mutex<Connection>>,
 }
 
 impl CoreManager {
-    pub fn new(database: Arc<RwLock<Connection>>) -> Self {
+    pub fn new(database: Arc<Mutex<Connection>>) -> Self {
         Self { database }
     }
 

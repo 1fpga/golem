@@ -5,7 +5,7 @@ use crate::main_inner::Flags;
 use crate::platform::MiSTerPlatform;
 use embedded_graphics::pixelcolor::PixelColor;
 use sdl3::event::Event;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 pub struct EventLoopState {
     events: Vec<Event>,
@@ -31,7 +31,7 @@ pub trait Application {
 
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color>;
 
-    fn database(&self) -> Arc<RwLock<mister_db::Connection>>;
+    fn database(&self) -> Arc<Mutex<mister_db::Connection>>;
     fn core_manager(&self) -> Arc<RwLock<CoreManager>>;
     fn platform(&self) -> &Self::Platform;
     fn platform_mut(&mut self) -> &mut Self::Platform;

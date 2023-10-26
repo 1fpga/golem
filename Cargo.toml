@@ -40,8 +40,8 @@ cyclone-v = { path = "./cyclone_v", features = ["std"] }
 debounce = "0.2.2"
 dirs = "5.0.1"
 embedded-graphics = "0.8.1"
-embedded-layout = "0.3.2"
-embedded-menu = "0.4.3"
+embedded-layout = "0.4.1"
+embedded-menu = "0.5.3"
 hex = "0.4.3"
 itertools = "0.11.0"
 json5 = "0.4.1"
@@ -66,6 +66,7 @@ strum = { version = "0.25.0", features = ["derive"] }
 thiserror = "1.0.40"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["tracing-log"] }
+u8g2-fonts = "0.3.0"
 validator = { version = "0.16.1", features = ["derive"] }
 walkdir = "2.3.3"
 

@@ -2,11 +2,13 @@ use crate::application::menu::cores::download::cores_download_panel;
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::text_menu;
+use crate::application::menu::TextMenuOptions;
 use crate::application::panels::alert::show_error;
 use crate::application::panels::core_loop::run_core_loop;
 use crate::macguiver::application::Application;
 use crate::platform::{CoreManager, MiSTerPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
+use mister_db::models::CoreOrder;
 use tracing::{error, info};
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -19,13 +21,13 @@ pub enum MenuAction {
 }
 
 impl MenuReturn for MenuAction {
-    fn back() -> Self {
-        MenuAction::Back
+    fn back() -> Option<Self> {
+        Some(MenuAction::Back)
     }
 }
 
 fn build_cores_items_(database: &mut mister_db::Connection) -> Vec<mister_db::models::Core> {
-    let all_cores = mister_db::models::Core::list(database);
+    let all_cores = mister_db::models::Core::list(database, 0, 1000, CoreOrder::LastPlayed);
     match all_cores {
         Ok(all_cores) => all_cores,
         Err(e) => {
@@ -39,19 +41,27 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
     let mut state = None;
 
     loop {
-        let all_cores = build_cores_items_(&mut app.database().write().unwrap());
+        // Refresh the cores.
+        let all_cores = build_cores_items_(&mut app.database().lock().unwrap());
 
-        let mut menu_items = all_cores
+        let menu_items = all_cores
             .iter()
             .enumerate()
             .map(|(i, core)| (core.name.as_str(), "", MenuAction::ShowCoreInfo(i)))
             .collect::<Vec<_>>();
 
-        menu_items.push(("Load Core Manually", "", MenuAction::ManualLoad));
-        menu_items.push(("Manage Cores", "", MenuAction::Manage));
-        menu_items.push(("Back", "", MenuAction::Back));
-
-        let (result, new_state) = text_menu(app, "Cores", &menu_items, state);
+        let (result, new_state) = text_menu(
+            app,
+            "Cores",
+            &menu_items,
+            TextMenuOptions::default()
+                .with_state(state)
+                .with_sort("Name")
+                .with_suffix(&[
+                    ("Load Core Manually", "", MenuAction::ManualLoad),
+                    ("Manage Cores", "", MenuAction::Manage),
+                ]),
+        );
         state = Some(new_state);
         match result {
             MenuAction::Back => break,

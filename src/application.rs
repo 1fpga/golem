@@ -12,7 +12,7 @@ use embedded_graphics::Drawable;
 use mister_db::Connection;
 use sdl3::event::Event;
 use sdl3::joystick::Joystick;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tracing::{info, warn};
 
 // mod icons;
@@ -29,7 +29,7 @@ use crate::data::paths;
 pub struct MiSTer {
     toolbar: Toolbar,
     settings: Arc<Settings>,
-    database: Arc<RwLock<Connection>>,
+    database: Arc<Mutex<Connection>>,
 
     render_toolbar: bool,
 
@@ -50,7 +50,7 @@ impl MiSTer {
 
         let database = mister_db::establish_connection(&database_url.to_string_lossy())
             .expect("Failed to connect to database");
-        let database = Arc::new(RwLock::new(database));
+        let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let main_size = platform.main_dimensions();
         let core_manager = CoreManager::new(database.clone());
@@ -94,7 +94,7 @@ impl Application for MiSTer {
         &mut self.main_buffer
     }
 
-    fn database(&self) -> Arc<RwLock<Connection>> {
+    fn database(&self) -> Arc<Mutex<Connection>> {
         self.database.clone()
     }
 

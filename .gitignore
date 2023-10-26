@@ -36,3 +36,7 @@ target/
 # Runtime files
 settings.json5
 
+# SQLite for tests
+mister.sqlite
+
+

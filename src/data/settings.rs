@@ -1,4 +1,4 @@
-use crate::application::menu::style::{menu_style, MenuReturn, SdlMenuInputAdapter};
+use crate::application::menu::style::{menu_style_simple, MenuReturn, SimpleSdlMenuInputAdapter};
 use crate::data::paths;
 use bus::{Bus, BusReader};
 use embedded_menu::selection_indicator::style::Invert;
@@ -112,8 +112,8 @@ pub enum MenuAction {
 }
 
 impl MenuReturn for MenuAction {
-    fn back() -> Self {
-        MenuAction::Back
+    fn back() -> Option<Self> {
+        Some(MenuAction::Back)
     }
 }
 
@@ -159,8 +159,8 @@ impl Default for InnerSettings {
 }
 
 impl MenuReturn for InnerSettingsMenuEvents {
-    fn back() -> Self {
-        Self::NavigationEvent(MenuAction::back())
+    fn back() -> Option<Self> {
+        MenuAction::back().map(Self::NavigationEvent)
     }
 }
 
@@ -248,14 +248,14 @@ impl Settings {
     pub fn menu(
         &self,
     ) -> InnerSettingsMenuWrapper<
-        SdlMenuInputAdapter<InnerSettingsMenuEvents>,
+        SimpleSdlMenuInputAdapter<InnerSettingsMenuEvents>,
         AnimatedPosition,
         Invert,
     > {
         self.inner
             .read()
             .unwrap()
-            .create_menu_with_style(menu_style())
+            .create_menu_with_style(menu_style_simple())
     }
 
     pub fn update(&self, other: InnerSettings) {

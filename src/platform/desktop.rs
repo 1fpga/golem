@@ -7,6 +7,8 @@ use crate::macguiver::platform::sdl::{
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
 use crate::platform::{sizes, Core, CoreManager, MiSTerPlatform};
+use crate::types::StatusBitMap;
+use crate::utils::config_string::ConfigMenu;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
@@ -18,6 +20,18 @@ pub struct DummyCore;
 impl Core for DummyCore {
     fn name(&self) -> &str {
         "DummyCore"
+    }
+
+    fn menu_options(&self) -> &[ConfigMenu] {
+        todo!()
+    }
+
+    fn status_bits(&self) -> StatusBitMap {
+        unreachable!()
+    }
+
+    fn set_status_bits(&mut self, _bits: StatusBitMap) {
+        unreachable!()
     }
 
     fn send_key(&mut self, key: u8) {
@@ -41,7 +55,7 @@ pub struct DummyCoreManager;
 impl CoreManager for DummyCoreManager {
     type Core = DummyCore;
 
-    fn load_program(&mut self, path: &Path) -> Result<Self::Core, String> {
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
         info!("DummyCoreManager::load_program({:?})", path.as_ref());
         Ok(DummyCore)
     }

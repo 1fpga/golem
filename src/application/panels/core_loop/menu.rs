@@ -21,8 +21,8 @@ pub enum CoreMenuAction {
 }
 
 impl MenuReturn for CoreMenuAction {
-    fn back() -> Self {
-        Self::Back
+    fn back() -> Option<Self> {
+        Some(Self::Back)
     }
 }
 
@@ -43,7 +43,7 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
         })
         .collect::<Vec<_>>();
 
-    let mut menu = Menu::with_style("Core Menu", style::menu_style())
+    let mut menu = Menu::with_style("Core Menu", style::menu_style_simple())
         .add_items(&mut items)
         .add_item(NavigationItem::new("Back", CoreMenuAction::Back))
         .add_item(NavigationItem::new("Quit Core", CoreMenuAction::Quit))

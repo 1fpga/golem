@@ -21,12 +21,10 @@ CREATE TABLE games
     name          VARCHAR             NOT NULL,
     slug          VARCHAR             NOT NULL,
     core_id       INTEGER             NOT NULL REFERENCES cores (id) ON DELETE CASCADE,
-    version       VARCHAR             NOT NULL,
-    path          VARCHAR             NOT NULL,
+    path          VARCHAR,
     description   VARCHAR             NOT NULL,
     last_played   TIMESTAMP,
-    favorite      BOOLEAN             NOT NULL DEFAULT FALSE,
-    released_at   TIMESTAMP           NOT NULL,
-    downloaded_at TIMESTAMP           NOT NULL DEFAULT CURRENT_TIMESTAMP
+    added_at      TIMESTAMP           NOT NULL,
+    favorite      BOOLEAN             NOT NULL DEFAULT FALSE
 );
 
