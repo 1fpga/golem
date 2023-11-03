@@ -1,7 +1,6 @@
 use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::application::widgets::menu::SizedMenu;
-use crate::application::widgets::text::wrap_text;
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::ascii;
@@ -14,6 +13,8 @@ use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
 use embedded_menu::items::NavigationItem;
 use embedded_menu::Menu;
+use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
+use embedded_text::TextBox;
 use tracing::error;
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -50,19 +51,24 @@ pub fn alert(
         .collect::<Vec<_>>();
 
     let menu = SizedMenu::new(
-        Size::new(100, 100),
+        Size::new(128, 48),
         Menu::with_style(" ", style::menu_style_simple())
             .add_items(&mut choices)
             .build(),
     );
 
-    let text_style = MonoTextStyle::new(&ascii::FONT_8X13, BinaryColor::On);
-    let message = wrap_text(
-        message,
-        display_area.bounding_box().size.width,
-        &text_style.font,
-    )
-    .join("\n");
+    let character_style = u8g2_fonts::U8g2TextStyle::new(
+        u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
+        BinaryColor::On,
+    );
+    let textbox_style = TextBoxStyleBuilder::new()
+        .height_mode(HeightMode::FitToText)
+        .alignment(embedded_text::alignment::HorizontalAlignment::Justified)
+        .paragraph_spacing(1)
+        .build();
+
+    let bounds = app.main_buffer().bounding_box();
+    let text_box = TextBox::with_textbox_style(message, bounds, character_style, textbox_style);
 
     let mut layout = LinearLayout::vertical(
         Chain::new(Text::new(
@@ -77,7 +83,7 @@ pub fn alert(
             )
             .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
         )
-        .append(Text::new(&message, Point::zero(), text_style))
+        .append(text_box)
         .append(menu),
     )
     .with_alignment(horizontal::Center)
@@ -99,7 +105,7 @@ pub fn alert(
                 Some(MenuAction::Select(idx)) => return Some(Some(idx)),
             }
         }
-        menu.update(buffer);
+        // menu.update(buffer);
 
         None
     })

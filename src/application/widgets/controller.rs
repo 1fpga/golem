@@ -6,6 +6,7 @@ use embedded_graphics::primitives::{Circle, Primitive, PrimitiveStyle, Rectangle
 use embedded_graphics::text::Text;
 use embedded_graphics::transform::Transform;
 use embedded_graphics::Drawable;
+use embedded_layout::View;
 
 #[derive(Debug, Copy, Clone)]
 pub struct ControllerButton<'l, C>
@@ -54,7 +55,7 @@ where
     }
 
     fn translate_mut(&mut self, by: Point) -> &mut Self {
-        self.circle.translate_mut(by);
+        View::translate_mut(&mut self.circle, by);
         self
     }
 }

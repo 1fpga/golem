@@ -31,9 +31,14 @@ where
     VG: MenuItemCollection<R>,
     P: SelectionIndicatorController,
     S: IndicatorStyle,
+    R: Copy,
 {
     pub(crate) fn state(&self) -> MenuState<IT::InputAdapter, P, S> {
         self.menu.state()
+    }
+
+    pub(crate) fn selected_value(&self) -> R {
+        self.menu.selected_value()
     }
 }
 

@@ -1,10 +1,9 @@
 #![allow(dead_code)]
-use crate::application::menu::style::{menu_style_simple, MenuReturn};
+use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::macguiver::application::Application;
 use embedded_graphics::mono_font::ascii;
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_menu::items::NavigationItem;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
@@ -23,7 +22,7 @@ pub struct FilesystemMenuOptions {
     /// Show extensions on files.
     show_extensions: bool,
 
-    /// Select directory.
+    /// Select directory only (not files).
     directory: bool,
 
     /// File pattern to show.
@@ -47,9 +46,17 @@ impl FilesystemMenuOptions {
     pub fn with_allow_back(self, allow_back: bool) -> Self {
         Self { allow_back, ..self }
     }
-    pub fn pattern(self, pattern: Regex) -> Self {
+
+    pub fn with_pattern(self, pattern: Regex) -> Self {
         Self {
             pattern: Some(pattern),
+            ..self
+        }
+    }
+
+    pub fn with_select_dir(self) -> Self {
+        Self {
+            directory: true,
             ..self
         }
     }
@@ -60,6 +67,7 @@ enum MenuAction {
     Back,
     UpDir,
     Select(usize),
+    SelectCurrentDirectory,
     ChangeSort,
 }
 
@@ -71,14 +79,6 @@ impl MenuReturn for MenuAction {
     fn sort() -> Option<Self> {
         Some(Self::ChangeSort)
     }
-}
-
-#[derive(Default)]
-enum EventLoopResult {
-    #[default]
-    Back,
-    Continue(PathBuf),
-    Select(PathBuf),
 }
 
 enum SortOption {
@@ -114,8 +114,16 @@ pub fn select_file_path_menu(
     initial: impl AsRef<Path>,
     options: FilesystemMenuOptions,
 ) -> Result<Option<PathBuf>, std::io::Error> {
+    let FilesystemMenuOptions {
+        allow_back,
+        dir_first,
+        show_hidden,
+        show_extensions,
+        directory,
+        pattern,
+    } = options;
+
     let mut path = initial.as_ref().to_path_buf();
-    let mut menu_state = None;
 
     let mut sort = SortOption::NameAsc;
 
@@ -126,25 +134,27 @@ pub fn select_file_path_menu(
                 let path = entry.path();
                 let name = path.file_name()?.to_string_lossy().to_string();
 
-                if !options.show_hidden && name.starts_with('.') {
+                if !show_hidden && name.starts_with('.') {
                     return None;
                 }
 
-                if let Some(pattern) = options.pattern.as_ref() {
+                if let Some(pattern) = pattern.as_ref() {
                     if !pattern.is_match(&name) {
                         return None;
                     }
                 }
 
                 if path.is_dir() {
-                    if let Some(pattern) = options.pattern.as_ref() {
+                    if let Some(pattern) = pattern.as_ref() {
                         if !pattern.is_match(&name) {
                             return None;
                         }
                     }
+                } else if directory {
+                    return None;
                 }
 
-                let mut name = if options.show_extensions {
+                let mut name = if show_extensions {
                     name
                 } else {
                     path.file_stem()
@@ -160,10 +170,16 @@ pub fn select_file_path_menu(
             })
             .collect::<Vec<_>>();
 
-        entries.sort_by(|(a, _), (b, _)| match (a.is_dir(), b.is_dir()) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => match sort {
+        entries.sort_by(|(a, _), (b, _)| {
+            if dir_first {
+                match (a.is_dir(), b.is_dir()) {
+                    (true, false) => return std::cmp::Ordering::Less,
+                    (false, true) => return std::cmp::Ordering::Greater,
+                    _ => {}
+                }
+            }
+
+            match sort {
                 SortOption::NameAsc => a.file_name().cmp(&b.file_name()),
                 SortOption::NameDesc => b.file_name().cmp(&a.file_name()),
                 SortOption::SizeAsc => a
@@ -176,10 +192,10 @@ pub fn select_file_path_menu(
                     .unwrap()
                     .len()
                     .cmp(&a.metadata().unwrap().len()),
-            },
+            }
         });
 
-        let mut entries_items = entries
+        let entries_items = entries
             .iter()
             .enumerate()
             .map(|(idx, (path, name))| {
@@ -212,17 +228,23 @@ pub fn select_file_path_menu(
         );
 
         let mut menu_options = TextMenuOptions::default()
-            .with_state(menu_state)
             .with_sort(sort.as_str())
             .with_title_font(&ascii::FONT_6X9)
             .with_back("Cancel");
 
-        if path.parent().is_some() && (options.allow_back || path != initial.as_ref()) {
+        if path.parent().is_some() && (allow_back || path != initial.as_ref()) {
             menu_options = menu_options.with_prefix(&[("..", "", MenuAction::UpDir)]);
         }
+        if directory {
+            menu_options = menu_options.with_suffix(&[(
+                "Select Current Directory",
+                "",
+                MenuAction::SelectCurrentDirectory,
+            )]);
+        }
 
-        let (selection, new_state) = text_menu(app, &title, entries_items.as_slice(), menu_options);
-        menu_state = Some(new_state);
+        let (selection, _new_state) =
+            text_menu(app, &title, entries_items.as_slice(), menu_options);
 
         match selection {
             MenuAction::Select(idx) => {
@@ -232,6 +254,9 @@ pub fn select_file_path_menu(
                 } else {
                     return Ok(Some(p));
                 }
+            }
+            MenuAction::SelectCurrentDirectory => {
+                return Ok(Some(path.to_path_buf()));
             }
             MenuAction::Back => return Ok(None),
             MenuAction::UpDir => {

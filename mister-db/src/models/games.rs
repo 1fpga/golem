@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use std::path::Path;
 use strum::{Display, EnumCount, FromRepr};
 
-#[derive(Default, Debug, FromRepr, Display, EnumCount)]
+#[derive(Copy, Clone, Default, Debug, FromRepr, Display, EnumCount)]
 pub enum GameOrder {
     NameAsc,
     NameDesc,
@@ -23,6 +23,17 @@ impl GameOrder {
     pub fn previous(self) -> Self {
         Self::from_repr((self as usize).checked_sub(1).unwrap_or(Self::COUNT - 1)).unwrap()
     }
+
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::NameAsc => "Name (A-Z)",
+            Self::NameDesc => "Name (Z-A)",
+            Self::CoreAsc => "Core (A-Z)",
+            Self::LastAdded => "Last Added",
+            Self::LastPlayed => "Last Played",
+            Self::Favorite => "Favorites",
+        }
+    }
 }
 
 #[derive(Debug, Queryable, Selectable, Identifiable)]
@@ -35,11 +46,9 @@ pub struct Game {
     /// The name of this game.
     pub name: String,
 
-    /// The slug or ID of this game in the backend library.
-    pub slug: String,
-
-    /// Overwritten name by the user.
-    pub core_id: i32,
+    /// The core that can load this game. If unset, there's no core downloaded that can
+    /// read it, the user has to download a core.
+    pub core_id: Option<i32>,
 
     /// The path to the game's rom. This is None if the core does not load ROMs
     /// (e.g. Arcade), in which case there should be only one row per core.
@@ -67,7 +76,6 @@ impl Game {
     pub fn create(
         conn: &mut crate::Connection,
         name: String,
-        slug: String,
         core: &Core,
         path: impl AsRef<Path>,
         description: String,
@@ -77,7 +85,6 @@ impl Game {
         diesel::insert_into(schema::games::table)
             .values((
                 dsl::name.eq(&name),
-                dsl::slug.eq(&slug),
                 dsl::core_id.eq(core.id),
                 dsl::path.eq(path.as_ref().to_str().unwrap()),
                 dsl::description.eq(&description),

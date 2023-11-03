@@ -6,11 +6,13 @@ use crate::macguiver::application::Application;
 use embedded_graphics::pixelcolor::BinaryColor;
 
 mod menu_tester;
+mod progress_tester;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Menu {
     InputTester,
     MenuTester,
+    ProgressTester,
     Back,
 }
 
@@ -30,6 +32,7 @@ pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
             &[
                 ("Input Tester", "", Menu::InputTester),
                 ("Menu Tester", "", Menu::MenuTester),
+                ("Progress Tester", "", Menu::ProgressTester),
             ],
             TextMenuOptions::default().with_state(state),
         );
@@ -38,6 +41,7 @@ pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
         match result {
             Menu::InputTester => input_tester(app),
             Menu::MenuTester => menu_tester::menu_tester(app),
+            Menu::ProgressTester => progress_tester::progress_tester(app),
             Menu::Back => break,
         }
     }

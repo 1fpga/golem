@@ -3,14 +3,13 @@ use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparato
 use crate::application::widgets::controller::ControllerButton;
 use crate::application::widgets::menu::SizedMenu;
 use crate::application::widgets::opt::OptionalView;
-use crate::application::widgets::text::FontRendererView;
 use crate::application::widgets::EmptyView;
 use crate::macguiver::application::Application;
 use embedded_graphics::mono_font::{ascii, MonoFont, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
-use embedded_layout::align::{horizontal, vertical, Align};
+use embedded_layout::align::horizontal;
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::object_chain::Chain;
 use embedded_menu::items::NavigationItem;
@@ -25,6 +24,7 @@ pub mod games;
 pub mod main;
 pub mod style;
 
+use crate::application::widgets::text::FontRendererView;
 pub use cores::cores_menu_panel;
 pub use main::main_menu;
 
@@ -138,9 +138,13 @@ pub fn text_menu<R: MenuReturn + Copy, L: AsRef<str>, M: AsRef<str>>(
         vec![]
     };
 
-    let separator1 = OptionalMenuItem::new(!prefix_items.is_empty(), SectionSeparator::new());
-    let separator2 = OptionalMenuItem::new(!suffix_items.is_empty(), SectionSeparator::new());
-    let separator3 = OptionalMenuItem::new(show_back, SectionSeparator::new());
+    let show1 = !prefix_items.is_empty();
+    let show2 = !items_items.is_empty() && !suffix_items.is_empty();
+    let show3 = show_back;
+
+    let separator1 = OptionalMenuItem::new(show1, SectionSeparator::new());
+    let separator2 = OptionalMenuItem::new(show2, SectionSeparator::new());
+    let separator3 = OptionalMenuItem::new(show3, SectionSeparator::new());
 
     let display_area = app.main_buffer().bounding_box();
     let text_style = MonoTextStyle::new(&ascii::FONT_6X10, BinaryColor::On);
@@ -177,6 +181,7 @@ pub fn text_menu<R: MenuReturn + Copy, L: AsRef<str>, M: AsRef<str>>(
         "Sort{}",
         sort_by.map(|f| format!(" - {f}")).unwrap_or("".to_string())
     );
+
     let bottom_bar = Chain::new(EmptyView::default())
         .append(ControllerButton::new("a", &ascii::FONT_6X10))
         .append(FontRendererView::new::<Font>(
@@ -237,25 +242,22 @@ pub fn text_menu<R: MenuReturn + Copy, L: AsRef<str>, M: AsRef<str>>(
             ),
     )
     .with_alignment(horizontal::Left)
-    .arrange()
-    .align_to(&display_area, horizontal::Center, vertical::Top)
-    .into_inner();
+    .arrange();
 
     let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
-    let mut selected: Option<R> = None;
 
     app.event_loop(|app, state| {
         let buffer = app.main_buffer();
         buffer.clear(BinaryColor::Off).unwrap();
 
         {
-            let menu = &mut layout.parent.parent.object;
+            let menu = &mut layout.inner_mut().parent.parent.object;
             menu.update(&menu_bounding_box);
         }
 
         layout.draw(buffer).unwrap();
 
-        let menu = &mut layout.parent.parent.object;
+        let menu = &mut layout.inner_mut().parent.parent.object;
 
         for ev in state.events() {
             if let Some(action) = menu.interact(ev) {
@@ -263,9 +265,12 @@ pub fn text_menu<R: MenuReturn + Copy, L: AsRef<str>, M: AsRef<str>>(
                     SdlMenuAction::Back => return R::back().map(|b| (b, menu.state())),
                     SdlMenuAction::Select(result) => return Some((result, menu.state())),
                     SdlMenuAction::ChangeSort => return R::sort().map(|r| (r, menu.state())),
-                    SdlMenuAction::ShowOptions(result) => {
-                        return result.into_details().map(|r| (r, menu.state()))
-                    }
+                    SdlMenuAction::ShowOptions => match menu.selected_value() {
+                        SdlMenuAction::Select(r) => {
+                            return r.into_details().map(|r| (r, menu.state()))
+                        }
+                        _ => {}
+                    },
                     _ => {}
                 }
             }

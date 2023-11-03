@@ -83,6 +83,15 @@ impl View for ConfigMenuSelect {
 }
 
 impl MenuItem<CoreMenuAction> for ConfigMenuSelect {
+    fn value_of(&self) -> CoreMenuAction {
+        match self {
+            Self {
+                type_: ConfigMenuSelectType::Option { selected, bits, .. },
+                ..
+            } => CoreMenuAction::ToggleOption(bits.start, bits.end, *selected),
+        }
+    }
+
     fn interact(&mut self) -> CoreMenuAction {
         match self {
             Self {

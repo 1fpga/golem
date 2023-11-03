@@ -26,13 +26,7 @@ pub enum SdlMenuAction<R> {
     Select(R),
 
     /// The user pressed the "Show Option" button, by default "Y" on a Nintendo controller.
-    ShowOptions(R),
-
-    /// The user used the left shoulder to move to the left in a page setting.
-    LeftPage,
-
-    /// The user used the right shoulder to move to the right in a page setting.
-    RightPage,
+    ShowOptions,
 
     /// The user pressed a key from the keyboard that is not mapped to a menu action.
     /// This can be used to start a filter action, which is normally not possible
@@ -69,6 +63,8 @@ where
         None
     }
 }
+
+impl MenuReturn for () {}
 
 #[derive(Clone, Copy)]
 pub struct SdlMenuInputAdapter<R: Copy> {
@@ -122,10 +118,8 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
                 Keycode::Tab | Keycode::KpTab => {
                     Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into()
                 }
-                Keycode::Space => {
-                    // Interaction::Action(Action::Return(SdlMenuAction::ShowOptions())).into()
-                    // Here be dragons.
-                    InputState::Idle.into()
+                Keycode::Space | Keycode::KpSpace => {
+                    Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into()
                 }
 
                 kc if kc.name().len() == 1 => {
@@ -239,11 +233,23 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
                     }
                 }
 
+                // Shoulder Left
+                9 => Interaction::Navigation(Navigation::Beginning).into(),
+
+                // Shoulder Right
+                10 => Interaction::Navigation(Navigation::End).into(),
+
                 // Up
                 11 => Interaction::Navigation(Navigation::Previous).into(),
 
                 // Down
                 12 => Interaction::Navigation(Navigation::Next).into(),
+
+                // Right
+                13 => Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE)).into(),
+
+                // Left
+                14 => Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into(),
 
                 _ => InputState::Idle.into(),
             },

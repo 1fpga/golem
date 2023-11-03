@@ -23,16 +23,16 @@ enum MenuAction {
 impl MenuReturn for MenuAction {}
 
 pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
-    let db = app.database();
-    let (ncores, ngames) = {
-        let mut db = db.lock().unwrap();
-        let ncores: i64 = models::Core::count(&mut db).unwrap();
-        let ngames = models::Game::count(&mut db).unwrap();
-        (ncores, ngames)
-    };
     let mut state = None;
 
     loop {
+        let (ncores, ngames) = {
+            let db = app.database();
+            let mut db = db.lock().unwrap();
+            let ncores: i64 = models::Core::count(&mut db).unwrap();
+            let ngames = models::Game::count(&mut db).unwrap();
+            (ncores, ngames)
+        };
         let (result, new_state) = text_menu(
             app,
             " ",

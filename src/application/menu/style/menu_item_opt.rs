@@ -62,8 +62,16 @@ where
     R: Default,
     I: MenuItem<R>,
 {
+    fn value_of(&self) -> R {
+        if self.show {
+            self.item.value_of()
+        } else {
+            R::default()
+        }
+    }
+
     fn interact(&mut self) -> R {
-        R::default()
+        self.item.interact()
     }
 
     fn set_style<C, S, IT, P>(&mut self, style: &MenuStyle<C, S, IT, P, R>)

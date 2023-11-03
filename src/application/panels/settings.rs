@@ -13,7 +13,7 @@ pub fn settings_panel(app: &mut impl Application<Color = BinaryColor>) {
         menu.draw(buffer).unwrap();
 
         for ev in state.events() {
-            if let Some(_) = menu.interact(ev) {
+            if menu.interact(ev).is_some() {
                 return Some(());
             }
         }

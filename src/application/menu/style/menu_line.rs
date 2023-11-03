@@ -25,12 +25,13 @@ impl<R> Default for SectionSeparator<R> {
 
 impl<R> Marker for SectionSeparator<R> {}
 
-impl<R> MenuItem<R> for SectionSeparator<R>
-where
-    R: Default,
-{
+impl<R> MenuItem<R> for SectionSeparator<R> {
+    fn value_of(&self) -> R {
+        unreachable!()
+    }
+
     fn interact(&mut self) -> R {
-        R::default()
+        unreachable!()
     }
 
     fn set_style<C, S, IT, P>(&mut self, _style: &MenuStyle<C, S, IT, P, R>)

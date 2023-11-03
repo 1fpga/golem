@@ -32,7 +32,7 @@ impl CoreOrder {
     }
 }
 
-#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[derive(Clone, Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = crate::schema::cores)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Core {
@@ -55,6 +55,10 @@ pub struct Core {
 
     /// A description of the core.
     pub description: String,
+
+    /// The config string for this core. This should be overwritten when the core is
+    /// loaded. If NULL, the core hasn't been loaded yet.
+    pub config_string: Option<String>,
 
     /// When this core was added to the database.
     pub released_at: chrono::NaiveDateTime,
@@ -108,8 +112,11 @@ impl Core {
         cores.order(id.desc()).first(conn)
     }
 
-    pub fn get(conn: &mut crate::Connection, id: i32) -> Result<Self, diesel::result::Error> {
-        crate::schema::cores::table.find(id).first(conn)
+    pub fn get(
+        conn: &mut crate::Connection,
+        id: i32,
+    ) -> Result<Option<Self>, diesel::result::Error> {
+        crate::schema::cores::table.find(id).first(conn).optional()
     }
 
     pub fn has(

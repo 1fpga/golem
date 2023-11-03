@@ -8,6 +8,7 @@ use crate::application::panels::core_loop::run_core_loop;
 use crate::macguiver::application::Application;
 use crate::platform::{CoreManager, MiSTerPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
+use mister_db::models;
 use mister_db::models::CoreOrder;
 use tracing::{error, info};
 
@@ -19,6 +20,7 @@ pub enum MenuAction {
     Manage,
     ManualLoad,
     ExecuteCore(usize),
+    SelectCore(usize),
     ShowCoreDetails(usize),
 }
 
@@ -39,16 +41,54 @@ impl MenuReturn for MenuAction {
     }
 }
 
-fn build_cores_items_(
-    database: &mut mister_db::Connection,
-    order: CoreOrder,
-) -> Vec<mister_db::models::Core> {
-    let all_cores = mister_db::models::Core::list(database, 0, 1000, order);
+fn build_cores_items_(database: &mut mister_db::Connection, order: CoreOrder) -> Vec<models::Core> {
+    let all_cores = models::Core::list(database, 0, 1000, order);
     match all_cores {
         Ok(all_cores) => all_cores,
         Err(e) => {
             error!("Database error: {e}");
             Vec::new()
+        }
+    }
+}
+
+pub fn select_core(
+    app: &mut impl Application<Color = BinaryColor>,
+    title: &str,
+) -> Option<models::Core> {
+    let mut state = None;
+    let mut core_order = CoreOrder::default();
+
+    loop {
+        // Refresh the cores.
+        let mut all_cores = build_cores_items_(&mut app.database().lock().unwrap(), core_order);
+
+        let menu_items = all_cores
+            .iter()
+            .enumerate()
+            .map(|(i, core)| (core.name.as_str(), "", MenuAction::SelectCore(i)))
+            .collect::<Vec<_>>();
+
+        let (result, new_state) = text_menu(
+            app,
+            title,
+            &menu_items,
+            TextMenuOptions::default()
+                .with_state(state)
+                .with_sort(core_order.as_str()),
+        );
+        state = Some(new_state);
+
+        match result {
+            MenuAction::Back => {
+                return None;
+            }
+            MenuAction::SelectCore(i) => {
+                let core = all_cores.swap_remove(i);
+                return Some(core);
+            }
+            MenuAction::ChangeSort => core_order = core_order.next(),
+            _ => {}
         }
     }
 }
@@ -87,7 +127,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
                 cores_download_panel(app);
             }
             MenuAction::ChangeSort => core_order = core_order.next(),
-            MenuAction::ExecuteCore(i) => {
+            MenuAction::ExecuteCore(i) | MenuAction::SelectCore(i) => {
                 let core = &all_cores[i];
                 let path = &core.path;
                 info!("Loading core from path {:?}", path);
@@ -95,15 +135,14 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
                 app.hide_toolbar();
                 let manager = app.platform_mut().core_manager_mut();
 
-                let core = match manager.load_program(std::path::Path::new(&path)) {
-                    Ok(core) => core,
+                match manager.load_program(std::path::Path::new(&path)) {
+                    Ok(core) => {
+                        run_core_loop(app, core);
+                    }
                     Err(e) => {
                         show_error(app, format!("Failed to load core: {}", e));
-                        return;
                     }
                 };
-
-                run_core_loop(app, core);
             }
             MenuAction::ShowCoreDetails(i) => {
                 alert(
@@ -124,16 +163,15 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
 
                 if let Ok(Some(path)) = path {
                     app.hide_toolbar();
-                    let core = app
-                        .platform_mut()
-                        .core_manager_mut()
-                        .load_program(&path)
-                        .expect("Failed to load core");
 
-                    // Skip the core loop on desktop.
-                    #[cfg(not(feature = "platform_desktop"))]
-                    {
-                        run_core_loop(app, core);
+                    match app.platform_mut().core_manager_mut().load_program(&path) {
+                        Ok(core) => {
+                            run_core_loop(app, core);
+                        }
+                        Err(e) => {
+                            show_error(app, format!("Failed to load core: {}", e));
+                            return;
+                        }
                     }
 
                     // TODO: reload the Menu core here.
