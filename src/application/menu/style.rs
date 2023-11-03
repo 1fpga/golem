@@ -52,6 +52,11 @@ where
         None
     }
 
+    /// Value to return when using a "simple" menu and supporting details.
+    fn details() -> Option<Self> {
+        None
+    }
+
     /// Value to return when doing `details()` on a selection item. By default disable
     /// details.
     fn into_details(self) -> Option<Self> {
@@ -73,14 +78,6 @@ pub struct SdlMenuInputAdapter<R: Copy> {
 
 impl<R: Copy> Default for SdlMenuInputAdapter<R> {
     fn default() -> Self {
-        Self {
-            _phantom: Default::default(),
-        }
-    }
-}
-
-impl<R: Copy> SdlMenuInputAdapter<R> {
-    pub fn new() -> Self {
         Self {
             _phantom: Default::default(),
         }
@@ -134,6 +131,14 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
 
                 // B
                 1 => Interaction::Action(Action::Return(SdlMenuAction::Back)).into(),
+
+                // X
+                2 =>                     Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into()
+,
+
+                // Y
+                3 =>                     Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into()
+,
 
                 // Up
                 11 => Interaction::Navigation(Navigation::Previous).into(),
@@ -227,6 +232,24 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
                 // B
                 1 => {
                     if let Some(b) = R::back() {
+                        Interaction::Action(Action::Return(b)).into()
+                    } else {
+                        InputState::Idle.into()
+                    }
+                }
+
+                // X
+                2 => {
+                    if let Some(b) = R::details() {
+                        Interaction::Action(Action::Return(b)).into()
+                    } else {
+                        InputState::Idle.into()
+                    }
+                }
+
+                // Y
+                3 => {
+                    if let Some(b) = R::sort() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {
                         InputState::Idle.into()

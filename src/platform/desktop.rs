@@ -6,7 +6,7 @@ use crate::macguiver::platform::sdl::{
 };
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
-use crate::platform::{sizes, Core, CoreManager, MiSTerPlatform};
+use crate::platform::{sizes, Core, CoreManager, GoLEmPlatform};
 use crate::types::StatusBitMap;
 use crate::utils::config_string::ConfigMenu;
 use embedded_graphics::geometry::Size;
@@ -20,6 +20,11 @@ pub struct DummyCore;
 impl Core for DummyCore {
     fn name(&self) -> &str {
         "DummyCore"
+    }
+
+    fn load_file(&self, path: &Path) -> Result<(), String> {
+        info!("DummyCore::load_file({:?})", path);
+        Ok(())
     }
 
     fn menu_options(&self) -> &[ConfigMenu] {
@@ -99,7 +104,7 @@ impl Default for DesktopPlatform {
     }
 }
 
-impl MiSTerPlatform for DesktopPlatform {
+impl GoLEmPlatform for DesktopPlatform {
     type Color = BinaryColor;
     type CoreManager = DummyCoreManager;
 

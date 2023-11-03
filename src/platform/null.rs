@@ -1,6 +1,6 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
-use crate::platform::MiSTerPlatform;
+use crate::platform::GoLEmPlatform;
 use crate::types::StatusBitMap;
 use crate::utils::config_string::ConfigMenu;
 use embedded_graphics::geometry::Size;
@@ -61,7 +61,7 @@ impl super::CoreManager for NullCoreManager {
 #[derive(Default)]
 pub struct NullPlatform;
 
-impl MiSTerPlatform for NullPlatform {
+impl GoLEmPlatform for NullPlatform {
     type Color = BinaryColor;
     type CoreManager = NullCoreManager;
 

@@ -7,7 +7,7 @@ use crate::application::panels::settings::settings_panel;
 use crate::application::panels::tools::tools_menu;
 use crate::macguiver::application::Application;
 use embedded_graphics::pixelcolor::BinaryColor;
-use mister_db::models;
+use golem_db::models;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
 enum MenuAction {

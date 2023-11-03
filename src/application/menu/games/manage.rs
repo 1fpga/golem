@@ -7,7 +7,7 @@ use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::progress::{progress_bar, ProgressBarUpdate};
 use crate::macguiver::application::Application;
 use embedded_graphics::pixelcolor::BinaryColor;
-use mister_db::models;
+use golem_db::models;
 use std::ops::DerefMut;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use tracing::info;

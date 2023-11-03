@@ -5,7 +5,7 @@ use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
 use crate::platform::de10::buffer::OsdDisplay;
-use crate::platform::{sizes, CoreManager, MiSTerPlatform};
+use crate::platform::{sizes, CoreManager, GoLEmPlatform};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -78,7 +78,7 @@ impl Default for De10Platform {
     }
 }
 
-impl MiSTerPlatform for De10Platform {
+impl GoLEmPlatform for De10Platform {
     type Color = BinaryColor;
     type CoreManager = core_manager::CoreManager;
 

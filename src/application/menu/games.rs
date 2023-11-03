@@ -1,10 +1,13 @@
 use crate::application::menu::games::manage::manage_games;
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
-use crate::application::panels::alert::alert;
+use crate::application::panels::alert::{alert, show_error};
+use crate::application::panels::core_loop::run_core_loop;
 use crate::macguiver::application::Application;
+use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
-use mister_db::models::GameOrder;
+use golem_db::models::GameOrder;
+use std::path::PathBuf;
 
 mod manage;
 
@@ -34,10 +37,10 @@ impl MenuReturn for MenuAction {
 }
 
 fn build_games_list_(
-    database: &mut mister_db::Connection,
+    database: &mut golem_db::Connection,
     sort: GameOrder,
-) -> Vec<mister_db::models::Game> {
-    let all_games = mister_db::models::Game::list(database, 0, 1000, sort);
+) -> Vec<golem_db::models::Game> {
+    let all_games = golem_db::models::Game::list(database, 0, 1000, sort);
     match all_games {
         Ok(all_games) => all_games,
         Err(e) => {
@@ -75,7 +78,46 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
         match result {
             MenuAction::Back => break,
             MenuAction::Manage => manage_games(app),
-            MenuAction::LoadGame(_) => {
+            MenuAction::LoadGame(i) => {
+                let game = &all_games[i];
+                let file_path = match game.path.as_ref() {
+                    Some(path) => path,
+                    None => {
+                        show_error(app, "No file path for game");
+                        return;
+                    }
+                };
+                let file_path = PathBuf::from(file_path);
+                let core_path = if let Some(core_id) = game.core_id {
+                    let core =
+                        golem_db::models::Core::get(&mut app.database().lock().unwrap(), core_id)
+                            .unwrap()
+                            .unwrap();
+                    PathBuf::from(core.path)
+                } else {
+                    show_error(app, "No core for game");
+                    return;
+                };
+
+                // Load the core
+                match app
+                    .platform_mut()
+                    .core_manager_mut()
+                    .load_program(&core_path)
+                {
+                    Ok(core) => {
+                        if let Err(e) = core.load_file(&file_path) {
+                            show_error(app, format!("Failed to load file: {}", e));
+                        } else {
+                            run_core_loop(app, core);
+                        }
+                    }
+                    Err(e) => {
+                        show_error(app, format!("Failed to load core: {}", e));
+                        return;
+                    }
+                }
+
                 alert(
                     app,
                     "Not implemented yet",

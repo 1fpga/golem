@@ -28,7 +28,8 @@ host
 *.user
 .vs
 MiSTer
-MiSTer_rust
+MiSTer*
+GoLEm*
 
 # Rust stuff
 target/
@@ -38,5 +39,6 @@ settings.json5
 
 # SQLite for tests
 mister.sqlite
+golem.sqlite
 
 

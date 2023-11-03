@@ -1,7 +1,7 @@
 use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::macguiver::application::Application;
-use crate::platform::{Core, CoreManager, MiSTerPlatform};
+use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;

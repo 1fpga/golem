@@ -1,8 +1,8 @@
 use crate::application::menu::games::manage::scanner::ScanResult;
 use datary::optimize::OptimizedDatafile;
 use datary::Datafile;
-use mister_db::models::{Core, DatFile, Game};
-use mister_db::Connection;
+use golem_db::models::{Core, DatFile, Game};
+use golem_db::Connection;
 use std::path::PathBuf;
 use tracing::info;
 

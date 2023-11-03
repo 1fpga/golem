@@ -3,8 +3,9 @@ use std::ops::Index;
 use strum::{Display, EnumCount, EnumIter};
 
 /// Buttons supported by the MisterFPGA API.
+/// This is MiSTer specific.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter)]
-pub enum MisterButtons {
+pub enum MisterFpgaButtons {
     // No mapping exists and the button should be discarded or ignored.
     NoMapping = -1,
 
@@ -43,11 +44,11 @@ pub enum MisterButtons {
 }
 
 pub struct ButtonMapping {
-    map: Vec<MisterButtons>,
+    map: Vec<MisterFpgaButtons>,
 }
 
 impl Index<usize> for ButtonMapping {
-    type Output = MisterButtons;
+    type Output = MisterFpgaButtons;
 
     #[inline]
     fn index(&self, index: usize) -> &Self::Output {
@@ -55,8 +56,8 @@ impl Index<usize> for ButtonMapping {
     }
 }
 
-impl<const N: usize> From<[MisterButtons; N]> for ButtonMapping {
-    fn from(value: [MisterButtons; N]) -> Self {
+impl<const N: usize> From<[MisterFpgaButtons; N]> for ButtonMapping {
+    fn from(value: [MisterFpgaButtons; N]) -> Self {
         Self {
             map: value.to_vec(),
         }
@@ -66,39 +67,39 @@ impl<const N: usize> From<[MisterButtons; N]> for ButtonMapping {
 impl ButtonMapping {
     pub fn new(capacity: usize) -> Self {
         Self {
-            map: vec![MisterButtons::NoMapping; capacity],
+            map: vec![MisterFpgaButtons::NoMapping; capacity],
         }
     }
 
     /// Create a default SDL mapping to MisterFPGA buttons, naively.
     pub fn sdl() -> Self {
         [
-            MisterButtons::B,
-            MisterButtons::A,
-            MisterButtons::Y,
-            MisterButtons::X,
-            MisterButtons::Back,
-            MisterButtons::Guide,
-            MisterButtons::Start,
-            MisterButtons::LeftX,
-            MisterButtons::RightX,
-            MisterButtons::LeftShoulder,
-            MisterButtons::RightShoulder,
-            MisterButtons::DpadUp,
-            MisterButtons::DpadDown,
-            MisterButtons::DpadLeft,
-            MisterButtons::DpadRight,
-            MisterButtons::NoMapping,
-            MisterButtons::NoMapping,
-            MisterButtons::NoMapping,
-            MisterButtons::NoMapping,
-            MisterButtons::NoMapping,
-            MisterButtons::NoMapping,
+            MisterFpgaButtons::B,
+            MisterFpgaButtons::A,
+            MisterFpgaButtons::Y,
+            MisterFpgaButtons::X,
+            MisterFpgaButtons::Back,
+            MisterFpgaButtons::Guide,
+            MisterFpgaButtons::Start,
+            MisterFpgaButtons::LeftX,
+            MisterFpgaButtons::RightX,
+            MisterFpgaButtons::LeftShoulder,
+            MisterFpgaButtons::RightShoulder,
+            MisterFpgaButtons::DpadUp,
+            MisterFpgaButtons::DpadDown,
+            MisterFpgaButtons::DpadLeft,
+            MisterFpgaButtons::DpadRight,
+            MisterFpgaButtons::NoMapping,
+            MisterFpgaButtons::NoMapping,
+            MisterFpgaButtons::NoMapping,
+            MisterFpgaButtons::NoMapping,
+            MisterFpgaButtons::NoMapping,
+            MisterFpgaButtons::NoMapping,
         ]
         .into()
     }
 
-    pub fn map(&mut self, from: usize, to: MisterButtons) {
+    pub fn map(&mut self, from: usize, to: MisterFpgaButtons) {
         self.map[from] = to;
     }
 }
@@ -111,14 +112,14 @@ impl ButtonMap {
         Self::default()
     }
 
-    pub fn down(&mut self, btn: MisterButtons) {
-        if btn == MisterButtons::NoMapping {
+    pub fn down(&mut self, btn: MisterFpgaButtons) {
+        if btn == MisterFpgaButtons::NoMapping {
             return;
         }
         self.0.set(btn as usize, true);
     }
-    pub fn up(&mut self, btn: MisterButtons) {
-        if btn == MisterButtons::NoMapping {
+    pub fn up(&mut self, btn: MisterFpgaButtons) {
+        if btn == MisterFpgaButtons::NoMapping {
             return;
         }
         self.0.set(btn as usize, false);

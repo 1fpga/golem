@@ -1,4 +1,4 @@
-use mister_db::Connection;
+use golem_db::Connection;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use walkdir::WalkDir;
@@ -22,7 +22,7 @@ impl CoreManager {
 
         eprintln!("{:?}", cores.size_hint());
 
-        // let cores = mister_db::core::find_all(&self.database.read().unwrap());
+        // let cores = golem_db::core::find_all(&self.database.read().unwrap());
         // println!("{:?}", cores);
     }
 }

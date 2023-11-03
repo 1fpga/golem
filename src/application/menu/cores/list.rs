@@ -6,10 +6,10 @@ use crate::application::menu::TextMenuOptions;
 use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::core_loop::run_core_loop;
 use crate::macguiver::application::Application;
-use crate::platform::{CoreManager, MiSTerPlatform};
+use crate::platform::{CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
-use mister_db::models;
-use mister_db::models::CoreOrder;
+use golem_db::models;
+use golem_db::models::CoreOrder;
 use tracing::{error, info};
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -41,7 +41,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-fn build_cores_items_(database: &mut mister_db::Connection, order: CoreOrder) -> Vec<models::Core> {
+fn build_cores_items_(database: &mut golem_db::Connection, order: CoreOrder) -> Vec<models::Core> {
     let all_cores = models::Core::list(database, 0, 1000, order);
     match all_cores {
         Ok(all_cores) => all_cores,

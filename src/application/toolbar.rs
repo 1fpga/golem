@@ -79,7 +79,7 @@ pub struct Toolbar {
 }
 
 impl Toolbar {
-    pub fn new(settings: Arc<Settings>, _database: Arc<Mutex<mister_db::Connection>>) -> Self {
+    pub fn new(settings: Arc<Settings>, _database: Arc<Mutex<golem_db::Connection>>) -> Self {
         let on_settings_update = settings.on_update();
         let clock = DateTimeWidget::new(settings.toolbar_datetime_format().time_format());
 

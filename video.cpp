@@ -2947,7 +2947,7 @@ static void video_fb_config()
 
 	brd_x = cfg.vscale_border / fb_scale_x;
 	brd_y = cfg.vscale_border / fb_scale_y;
-
+    printf("video_fb_config: fb_scale_x=%d, fb_scale_y=%d, fb_width=%d, fb_height=%d, brd_x=%d, brd_y=%d\n", fb_scale_x, fb_scale_y, fb_width, fb_height, brd_x, brd_y);
 	if (fb_enabled) video_fb_enable(1, fb_num);
 
 	fb_write_module_params();
@@ -3403,7 +3403,7 @@ void video_menu_bg(int n, int idle)
 			{
 				dst_x = brd_x;
 				dst_y = brd_y;
-				dst_w = width * 2 / 7;
+				dst_w = src_w;
 				dst_h = src_h * dst_w / src_w;
 			}
 

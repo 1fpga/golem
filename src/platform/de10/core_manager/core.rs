@@ -1,7 +1,10 @@
-use crate::platform::de10::core_manager::core::buttons::{ButtonMap, ButtonMapping, MisterButtons};
+use crate::platform::de10::core_manager::core::buttons::{
+    ButtonMap, ButtonMapping, MisterFpgaButtons,
+};
 use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga, SpiCommands};
 use crate::types::StatusBitMap;
 use crate::utils::config_string::ConfigMenu;
+use std::path::Path;
 use tracing::{debug, info};
 
 mod buttons;
@@ -54,6 +57,10 @@ impl crate::platform::Core for MisterFpgaCore {
         &self.config.name
     }
 
+    fn load_file(&self, path: &Path) -> Result<(), String> {
+        self.config.
+    }
+
     fn menu_options(&self) -> &[ConfigMenu] {
         self.config.menu.as_slice()
     }
@@ -85,7 +92,7 @@ impl crate::platform::Core for MisterFpgaCore {
     }
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8) {
-        let mister_button: MisterButtons = self.mapping[button as usize];
+        let mister_button: MisterFpgaButtons = self.mapping[button as usize];
         self.map.down(mister_button);
         let button_mask = self.map.mask();
 
@@ -99,7 +106,7 @@ impl crate::platform::Core for MisterFpgaCore {
         }
     }
     fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8) {
-        let mister_button: MisterButtons = self.mapping[button as usize];
+        let mister_button: MisterFpgaButtons = self.mapping[button as usize];
         self.map.up(mister_button);
         let button_mask = self.map.mask();
 

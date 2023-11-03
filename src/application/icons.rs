@@ -14,7 +14,7 @@ use std::sync::{Arc, RwLock};
 pub struct IconView;
 
 impl Panel for IconView {
-    fn new(_settings: &Settings, _database: Arc<RwLock<mister_db::Connection>>) -> Self
+    fn new(_settings: &Settings, _database: Arc<RwLock<golem_db::Connection>>) -> Self
     where
         Self: Sized,
     {

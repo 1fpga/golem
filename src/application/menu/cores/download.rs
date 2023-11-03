@@ -9,7 +9,7 @@ use embedded_graphics::Drawable;
 use embedded_menu::items::select::SelectValue;
 use embedded_menu::items::{NavigationItem, Select};
 use embedded_menu::Menu;
-use mister_db::models;
+use golem_db::models;
 use retronomicon_dto::cores::CoreListItem;
 use tracing::{debug, info};
 
@@ -112,7 +112,7 @@ fn install_single_core(
     let db_connection = app.database();
     let mut db = db_connection.lock().unwrap();
 
-    if mister_db::models::Core::has(&mut db, &core.slug, &core.latest_release.version)? {
+    if golem_db::models::Core::has(&mut db, &core.slug, &core.latest_release.version)? {
         info!(?core, "Core already installed");
         return Ok(());
     }
@@ -142,7 +142,7 @@ fn install_single_core(
 
         std::fs::write(&core_path, file)?;
         // Update the database.
-        let _ = mister_db::models::Core::create(&mut db, &core, &core.latest_release, &core_path)?;
+        let _ = golem_db::models::Core::create(&mut db, &core, &core.latest_release, &core_path)?;
     }
 
     Ok(())

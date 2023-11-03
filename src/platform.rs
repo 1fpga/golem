@@ -92,6 +92,8 @@ impl OriginDimensions for PlatformState {
 pub trait Core {
     fn name(&self) -> &str;
 
+    fn load_file(&self, path: &Path) -> Result<(), String>;
+
     fn menu_options(&self) -> &[ConfigMenu];
 
     fn status_bits(&self) -> StatusBitMap;
@@ -118,7 +120,7 @@ pub trait CoreManager {
     fn hide_menu(&mut self);
 }
 
-pub trait MiSTerPlatform {
+pub trait GoLEmPlatform {
     type Color: PixelColor;
     type CoreManager: CoreManager;
 
@@ -157,9 +159,9 @@ pub struct WindowManager {
 
 impl WindowManager {}
 
-impl MiSTerPlatform for WindowManager {
-    type Color = <PlatformWindowManager as MiSTerPlatform>::Color;
-    type CoreManager = <PlatformWindowManager as MiSTerPlatform>::CoreManager;
+impl GoLEmPlatform for WindowManager {
+    type Color = <PlatformWindowManager as GoLEmPlatform>::Color;
+    type CoreManager = <PlatformWindowManager as GoLEmPlatform>::CoreManager;
 
     fn init(&mut self, flags: &Flags) {
         self.inner.init(flags);

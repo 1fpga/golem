@@ -28,7 +28,7 @@ INCLUDE += -I./lib/flac/src/include
 INCLUDE += -I./lib/bluetooth
 INCLUDE += -I./lib/serial_server/library
 
-PRJ = MiSTer_rust
+PRJ = GoLEm_firmware
 C_SRC =   $(wildcard *.c) \
           $(wildcard ./lib/miniz/*.c) \
           $(wildcard ./lib/md5/*.c) \

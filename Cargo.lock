@@ -1381,6 +1381,79 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
+name = "golem"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bitfield",
+ "bitvec",
+ "bus",
+ "byteorder",
+ "cfg-if",
+ "chrono",
+ "clap",
+ "clap-verbosity-flag",
+ "core_affinity",
+ "crossbeam-channel",
+ "crossbeam-queue",
+ "crossbeam-utils",
+ "cyclone-v",
+ "datary",
+ "debounce",
+ "dirs",
+ "embedded-graphics",
+ "embedded-layout",
+ "embedded-menu",
+ "embedded-text",
+ "golem-db",
+ "hex",
+ "humansize",
+ "itertools",
+ "json5",
+ "json5format",
+ "libc",
+ "md5",
+ "merge",
+ "network-interface",
+ "num-integer",
+ "num-traits",
+ "once_cell",
+ "ouroboros 0.17.2",
+ "regex",
+ "reqwest",
+ "retronomicon-dto",
+ "sdl3",
+ "serde",
+ "serde-hex",
+ "serde_with",
+ "sha1",
+ "sha2",
+ "static_assertions",
+ "strum",
+ "tempdir",
+ "test-generator",
+ "thiserror",
+ "tracing",
+ "tracing-subscriber",
+ "u8g2-fonts",
+ "validator",
+ "vergen",
+ "walkdir",
+]
+
+[[package]]
+name = "golem-db"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "diesel",
+ "diesel_migrations",
+ "retronomicon-dto",
+ "strum",
+ "tracing",
+]
+
+[[package]]
 name = "h2"
 version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1803,79 +1876,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys",
-]
-
-[[package]]
-name = "mister"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bitfield",
- "bitvec",
- "bus",
- "byteorder",
- "cfg-if",
- "chrono",
- "clap",
- "clap-verbosity-flag",
- "core_affinity",
- "crossbeam-channel",
- "crossbeam-queue",
- "crossbeam-utils",
- "cyclone-v",
- "datary",
- "debounce",
- "dirs",
- "embedded-graphics",
- "embedded-layout",
- "embedded-menu",
- "embedded-text",
- "hex",
- "humansize",
- "itertools",
- "json5",
- "json5format",
- "libc",
- "md5",
- "merge",
- "mister-db",
- "network-interface",
- "num-integer",
- "num-traits",
- "once_cell",
- "ouroboros 0.17.2",
- "regex",
- "reqwest",
- "retronomicon-dto",
- "sdl3",
- "serde",
- "serde-hex",
- "serde_with",
- "sha1",
- "sha2",
- "static_assertions",
- "strum",
- "tempdir",
- "test-generator",
- "thiserror",
- "tracing",
- "tracing-subscriber",
- "u8g2-fonts",
- "validator",
- "vergen",
- "walkdir",
-]
-
-[[package]]
-name = "mister-db"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "diesel",
- "diesel_migrations",
- "retronomicon-dto",
- "strum",
- "tracing",
 ]
 
 [[package]]

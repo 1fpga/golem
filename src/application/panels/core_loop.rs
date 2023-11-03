@@ -1,5 +1,5 @@
 use crate::macguiver::application::Application;
-use crate::platform::{Core, CoreManager, MiSTerPlatform};
+use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 use std::time::Instant;
@@ -44,7 +44,7 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
         }
 
         for ev in state.events() {
-            tracing::debug!(?ev, "Core loop event");
+            debug!(?ev, "Core loop event");
             match ev {
                 Event::KeyDown {
                     keycode: Some(keycode),

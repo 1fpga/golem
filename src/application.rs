@@ -4,12 +4,12 @@ use crate::data::settings::Settings;
 use crate::macguiver::application::{Application, EventLoopState};
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
-use crate::platform::{MiSTerPlatform, WindowManager};
+use crate::platform::{GoLEmPlatform, WindowManager};
 pub use cores::CoreManager;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
-use mister_db::Connection;
+use golem_db::Connection;
 use sdl3::event::Event;
 use sdl3::joystick::Joystick;
 use std::sync::{Arc, Mutex, RwLock};
@@ -48,7 +48,7 @@ impl MiSTer {
 
         let database_url = paths::config_root_path().join("golem.sqlite");
 
-        let database = mister_db::establish_connection(&database_url.to_string_lossy())
+        let database = golem_db::establish_connection(&database_url.to_string_lossy())
             .expect("Failed to connect to database");
         let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
