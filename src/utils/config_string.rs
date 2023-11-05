@@ -9,6 +9,7 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::ops::Range;
+use std::path::Path;
 use std::str::FromStr;
 use tracing::{debug, info};
 
@@ -27,6 +28,28 @@ static OPTION_RE: Lazy<Regex> =
 fn parse_bit_index_(s: &str, high: bool) -> Option<u8> {
     let i = u8::from_str_radix(s, 32).ok()?;
     Some(if high { i + 32 } else { i })
+}
+
+#[derive(Debug, Clone)]
+pub struct LoadFileInfo {
+    /// Core supports save files, load a file, and mount a save for reading or writing
+    save_support: bool,
+
+    /// Explicit index (or index is generated from line number if index not given).
+    index: u8,
+
+    /// A concatenated list of 3 character file extensions. For example, BINGEN would be
+    /// BIN and GEN extensions.
+    extensions: Vec<String>,
+
+    /// Optional {Text} string is the text that is displayed before the extensions like
+    /// "Load RAM". If {Text} is not specified, then default is "Load *".
+    label: Option<String>,
+
+    /// Optional {Address} - load file directly into DDRAM at this address.
+    /// ioctl_index from hps_io will be: ioctl_index[5:0] = index(explicit or auto),
+    /// ioctl_index[7:6] = extension index
+    address: Option<usize>,
 }
 
 /// A component of a Core config string.
@@ -54,26 +77,7 @@ pub enum ConfigMenu {
     Dip,
 
     /// Load file menu option.
-    LoadFile {
-        /// Core supports save files, load a file, and mount a save for reading or writing
-        save_support: bool,
-
-        /// Explicit index (or index is generated from line number if index not given).
-        index: u8,
-
-        /// A concatenated list of 3 character file extensions. For example, BINGEN would be
-        /// BIN and GEN extensions.
-        extensions: Vec<String>,
-
-        /// Optional {Text} string is the text that is displayed before the extensions like
-        /// "Load RAM". If {Text} is not specified, then default is "Load *".
-        label: Option<String>,
-
-        /// Optional {Address} - load file directly into DDRAM at this address.
-        /// ioctl_index from hps_io will be: ioctl_index[5:0] = index(explicit or auto),
-        /// ioctl_index[7:6] = extension index
-        address: Option<usize>,
-    },
+    LoadFile(Box<LoadFileInfo>),
 
     /// Open file and remember it, useful for remembering an alternative rom, config, or other
     /// type of file. See [Self::LoadFile] for more information.
@@ -163,14 +167,14 @@ pub enum ConfigMenu {
 
 impl ConfigMenu {
     fn load_file_remember(s: &str, default_index: u8) -> Result<Self, &'static str> {
-        if let Self::LoadFile {
-            save_support,
-            index,
-            extensions,
-            label,
-            address,
-        } = Self::load_file(s, default_index)?
-        {
+        if let Self::LoadFile(inner) = Self::load_file(s, default_index)? {
+            let LoadFileInfo {
+                save_support,
+                index,
+                extensions,
+                label,
+                address,
+            } = *inner;
             Ok(Self::LoadFileAndRemember {
                 save_support,
                 index,
@@ -207,13 +211,13 @@ impl ConfigMenu {
             .get(5)
             .map(|s| usize::from_str_radix(s.as_str(), 16).unwrap_or(0));
 
-        Ok(Self::LoadFile {
+        Ok(Self::LoadFile(Box::new(LoadFileInfo {
             save_support,
             index,
             extensions,
             label,
             address,
-        })
+        })))
     }
 
     fn sd_card(s: &str) -> Result<Self, &'static str> {
@@ -421,6 +425,22 @@ impl Config {
         }
 
         arr
+    }
+
+    pub fn load_info(&self, path: impl AsRef<Path>) -> Result<Option<LoadFileInfo>, String> {
+        let ext = match path.as_ref().extension() {
+            Some(ext) => ext.to_string_lossy(),
+            None => return Err("No extension".to_string()),
+        };
+
+        for item in self.menu.iter() {
+            if let ConfigMenu::LoadFile(ref info) = item {
+                if info.extensions.iter().any(|ext| ext == ext.as_str()) {
+                    return Ok(Some(info.as_ref().clone()));
+                }
+            }
+        }
+        Ok(None)
     }
 }
 

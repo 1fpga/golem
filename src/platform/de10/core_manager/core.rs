@@ -58,7 +58,10 @@ impl crate::platform::Core for MisterFpgaCore {
     }
 
     fn load_file(&self, path: &Path) -> Result<(), String> {
-        self.config.
+        if let Some(load_info) = self.config.load_index(path)? {
+            eprintln!("Found info: {load_info:?}");
+        }
+        Ok(())
     }
 
     fn menu_options(&self) -> &[ConfigMenu] {
