@@ -11,7 +11,6 @@ use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
-use std::path::Path;
 use tracing::{debug, error};
 
 mod battery;
@@ -85,10 +84,7 @@ impl GoLEmPlatform for De10Platform {
     fn init(&mut self, _flags: &Flags) {
         unsafe {
             offload::offload_start();
-            self.core_manager
-                .load_program(Path::new("/media/fat/menu.rbf"))
-                .unwrap();
-            self.core_manager.show_menu();
+            self.core_manager.load_menu().unwrap();
         }
     }
 

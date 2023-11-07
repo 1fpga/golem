@@ -113,8 +113,9 @@ pub enum ConfigMenu {
     /// `T{Index},{Name}` - Trigger button. This is a simple button that will pulse HIGH of
     /// specified `{Index}` bit in status register. A perfect example of this is for a reset
     /// button. `{Name}` is the text that describes the button function.
+    /// `R{Index},{Name}` is the same but should close the OSD.
     Trigger {
-        close: bool,
+        close_osd: bool,
         index: u8,
         label: String,
     },
@@ -287,7 +288,7 @@ impl ConfigMenu {
         let label = s[2..].to_string();
 
         Ok(Self::Trigger {
-            close,
+            close_osd: close,
             index,
             label,
         })
@@ -441,6 +442,15 @@ impl Config {
             }
         }
         Ok(None)
+    }
+
+    pub fn version(&self) -> Option<&str> {
+        for item in self.menu.iter() {
+            if let ConfigMenu::Version(ref version) = item {
+                return Some(version);
+            }
+        }
+        None
     }
 }
 

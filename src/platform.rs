@@ -94,10 +94,19 @@ pub trait Core {
 
     fn load_file(&self, path: &Path) -> Result<(), String>;
 
+    fn version(&self) -> Option<&str>;
+
     fn menu_options(&self) -> &[ConfigMenu];
 
     fn status_bits(&self) -> StatusBitMap;
+    fn status_pulse(&mut self, bit: usize) {
+        let mut bits = self.status_bits();
+        bits.set(bit, true);
+        self.set_status_bits(bits);
 
+        bits.set(bit, false);
+        self.set_status_bits(bits);
+    }
     fn set_status_bits(&mut self, bits: StatusBitMap);
 
     fn send_key(&mut self, key: u8);
@@ -113,6 +122,9 @@ pub trait CoreManager {
     /// Load a core into the FPGA.
     // TODO: Change the error type to something more usable than string.
     fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
+
+    /// Load the main menu core.
+    fn load_menu(&mut self) -> Result<Self::Core, String>;
 
     /// Show the menu (OSD).
     fn show_menu(&mut self);

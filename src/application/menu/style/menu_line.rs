@@ -12,20 +12,19 @@ use embedded_menu::{
 };
 
 #[derive(Clone)]
-pub struct SectionSeparator<R> {
+pub struct SectionSeparator {
     line: Rectangle,
-    _r: core::marker::PhantomData<R>,
 }
 
-impl<R> Default for SectionSeparator<R> {
+impl Default for SectionSeparator {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<R> Marker for SectionSeparator<R> {}
+impl Marker for SectionSeparator {}
 
-impl<R> MenuItem<R> for SectionSeparator<R> {
+impl<R> MenuItem<R> for SectionSeparator {
     fn value_of(&self) -> R {
         unreachable!()
     }
@@ -79,16 +78,15 @@ impl<R> MenuItem<R> for SectionSeparator<R> {
     }
 }
 
-impl<R> SectionSeparator<R> {
+impl SectionSeparator {
     pub fn new() -> Self {
         Self {
             line: Rectangle::new(Point::zero(), Size::new(300, 1)),
-            _r: core::marker::PhantomData,
         }
     }
 }
 
-impl<R> View for SectionSeparator<R> {
+impl View for SectionSeparator {
     fn translate_impl(&mut self, by: Point) {
         View::translate_mut(&mut self.line, by);
     }

@@ -132,9 +132,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
                 let path = &core.path;
                 info!("Loading core from path {:?}", path);
 
-                app.hide_toolbar();
                 let manager = app.platform_mut().core_manager_mut();
-
                 match manager.load_program(std::path::Path::new(&path)) {
                     Ok(core) => {
                         run_core_loop(app, core);

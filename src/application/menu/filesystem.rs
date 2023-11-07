@@ -195,7 +195,7 @@ pub fn select_file_path_menu(
             }
         });
 
-        let entries_items = entries
+        let items = entries
             .iter()
             .enumerate()
             .map(|(idx, (path, name))| {
@@ -212,6 +212,10 @@ pub fn select_file_path_menu(
                     )
                 }
             })
+            .collect::<Vec<_>>();
+        let entries_items = items
+            .iter()
+            .map(|(a, b, c)| (a.as_str(), b.as_str(), *c))
             .collect::<Vec<_>>();
 
         let path_string = path.to_string_lossy().to_string();
@@ -232,15 +236,19 @@ pub fn select_file_path_menu(
             .with_title_font(&ascii::FONT_6X9)
             .with_back("Cancel");
 
+        let up = [("..", "", MenuAction::UpDir).into()];
         if path.parent().is_some() && (allow_back || path != initial.as_ref()) {
-            menu_options = menu_options.with_prefix(&[("..", "", MenuAction::UpDir)]);
+            menu_options = menu_options.with_prefix(&up);
         }
+
+        let select_curr_dir = [(
+            "Select Current Directory",
+            "",
+            MenuAction::SelectCurrentDirectory,
+        )
+            .into()];
         if directory {
-            menu_options = menu_options.with_suffix(&[(
-                "Select Current Directory",
-                "",
-                MenuAction::SelectCurrentDirectory,
-            )]);
+            menu_options = menu_options.with_suffix(&select_curr_dir);
         }
 
         let (selection, _new_state) =

@@ -21,19 +21,8 @@ impl CoreManager {
     pub fn fpga_mut(&mut self) -> &mut Fpga {
         &mut self.fpga
     }
-}
 
-impl crate::platform::CoreManager for CoreManager {
-    type Core = MisterFpgaCore;
-
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<MisterFpgaCore, String> {
-        let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
-        let program = bytes.as_slice();
-
-        if program.as_ptr() as usize % 4 != 0 {
-            return Err("Program is not aligned to 4 bytes".to_string());
-        }
-
+    fn load(&mut self, program: &[u8]) -> Result<MisterFpgaCore, String> {
         let program = if &program[..6] != b"MiSTer" {
             program
         } else {
@@ -53,7 +42,7 @@ impl crate::platform::CoreManager for CoreManager {
         let core = MisterFpgaCore::new(self.fpga.clone())
             .map_err(|e| format!("Could not instantiate Core: {e}"))?;
 
-        self.hide_menu();
+        self.fpga_mut().osd_disable();
 
         unsafe {
             crate::file_io::FindStorage();
@@ -62,9 +51,27 @@ impl crate::platform::CoreManager for CoreManager {
                 std::ptr::null(),
             );
         }
+        Ok(core)
+    }
+}
 
-        crate::platform::de10::osd::OsdSetSize(19);
+impl crate::platform::CoreManager for CoreManager {
+    type Core = MisterFpgaCore;
 
+    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<MisterFpgaCore, String> {
+        let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
+        let core = self.load(&bytes)?;
+        Ok(core)
+    }
+
+    fn load_menu(&mut self) -> Result<Self::Core, String> {
+        #[repr(align(4))]
+        struct Aligned<T: ?Sized>(T);
+
+        let bytes = Aligned(include_bytes!("../../../assets/menu.rbf"));
+
+        let core = self.load(bytes.0)?;
+        self.fpga_mut().osd_enable();
         Ok(core)
     }
 

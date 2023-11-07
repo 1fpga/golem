@@ -27,6 +27,10 @@ impl Core for DummyCore {
         Ok(())
     }
 
+    fn version(&self) -> Option<&str> {
+        None
+    }
+
     fn menu_options(&self) -> &[ConfigMenu] {
         todo!()
     }
@@ -62,6 +66,11 @@ impl CoreManager for DummyCoreManager {
 
     fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
         info!("DummyCoreManager::load_program({:?})", path.as_ref());
+        Ok(DummyCore)
+    }
+
+    fn load_menu(&mut self) -> Result<Self::Core, String> {
+        info!("DummyCoreManager::load_menu()");
         Ok(DummyCore)
     }
 

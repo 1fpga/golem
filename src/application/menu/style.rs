@@ -47,6 +47,11 @@ pub trait MenuReturn: Copy
 where
     Self: Sized,
 {
+    /// Return true if the line should be selectable.
+    fn is_selectable(&self) -> bool {
+        true
+    }
+
     /// Return a value for the "Back" action.
     fn back() -> Option<Self> {
         None
@@ -70,6 +75,30 @@ where
 }
 
 impl MenuReturn for () {}
+
+impl<T> MenuReturn for SdlMenuAction<T>
+where
+    T: MenuReturn,
+{
+    fn back() -> Option<Self> {
+        T::back().map(|b| Self::Select(b))
+    }
+
+    fn details() -> Option<Self> {
+        Some(Self::ShowOptions)
+    }
+
+    fn into_details(self) -> Option<Self> {
+        match self {
+            Self::Select(r) => r.into_details().map(Self::Select),
+            _ => None,
+        }
+    }
+
+    fn sort() -> Option<Self> {
+        Some(Self::ChangeSort)
+    }
+}
 
 #[derive(Clone, Copy)]
 pub struct SdlMenuInputAdapter<R: Copy> {

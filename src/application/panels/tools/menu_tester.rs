@@ -33,11 +33,12 @@ impl MenuReturn for Menu {
 pub fn menu_tester(app: &mut impl Application<Color = BinaryColor>) {
     let mut state = None;
 
-    let prefixes: Vec<(&str, &str, Menu)> = ["A", "B", "C", "D"]
+    let prefixes = ["A", "B", "C", "D"]
         .iter()
         .copied()
         .map(|s| (s, "1234", Menu::Idle))
         .collect::<Vec<_>>();
+
     let suffixes = ["z", "y", "x", "w"]
         .iter()
         .copied()

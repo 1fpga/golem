@@ -3,13 +3,13 @@ use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 use std::time::Instant;
-use tracing::{debug, trace};
+use tracing::{debug, info, trace};
 
 pub mod menu;
 
 /// Run the core loop and send events to the core.
 pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
-    tracing::debug!("Starting core loop...");
+    debug!("Starting core loop...");
 
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
@@ -19,6 +19,7 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
     let mut i = 0;
     let mut prev = Instant::now();
     // Hide the OSD
+    app.hide_toolbar();
     app.platform_mut().core_manager_mut().hide_menu();
 
     // This is a special loop that forwards everything to the core,
@@ -78,5 +79,8 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
         None
     });
 
-    tracing::debug!("Core loop ended");
+    debug!("Core loop ended");
+    info!("Loading Main Menu");
+    app.platform_mut().core_manager_mut().load_menu().unwrap();
+    app.show_toolbar();
 }

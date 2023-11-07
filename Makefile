@@ -1,7 +1,7 @@
 # makefile to fail if any command in pipe is failed.
 SHELL = /bin/bash -o pipefail
 
-MISTER_IP = 127.0.0.1
+GOLEM_IP = 0.0.0.0
 
 # using gcc version 10.2.1
 
@@ -56,7 +56,7 @@ ifeq ($(PROFILING),1)
 	DFLAGS += -DPROFILING
 endif
 
-$(PRJ): $(OBJ) target/armv7-unknown-linux-gnueabihf/release/libmister.a
+$(PRJ): $(OBJ) target/armv7-unknown-linux-gnueabihf/release/libgolem.a
 	$(Q)$(info $@)
 	$(Q)$(CC) -o $@ $+ $(LFLAGS)
 	$(Q)cp $@ $@.elf
@@ -92,15 +92,15 @@ endif
 # Ensure correct time stamp
 main.cpp.o: $(filter-out main.cpp.o, $(OBJ))
 
-# Custom rule to build rust libmister.
-#target/armv7-unknown-linux-gnueabihf/release/libmister.a:
+# Custom rule to build rust libgolem.
+#target/armv7-unknown-linux-gnueabihf/release/libgolem.a:
 .PHONY: rust
 rust:
 	cargo build --release
 
-# Custom rule to send the binary to the MiSTer.
+# Custom rule to send the binary to the GoLEm.
 .PHONY: send
 send: $(PRJ)
-	ssh root@$(MISTER_IP) 'killall MiSTer'
-	scp ./MiSTer root@$MISTER_IP:/media/fat/MiSTer
-	ssh root@$(MISTER_IP) 'sync; PATH=/media/fat:$PATH; MiSTer'
+	ssh root@$(GOLEM_IP) 'killall -9 MiSTer GoLEm_firmware'
+	scp ./GoLEm_firmware root@$GOLEM_IP:/media/fat/GoLEm_firmware
+	ssh root@$(GOLEM_IP) 'sync; PATH=/media/fat:$PATH; GoLEm_firmware'

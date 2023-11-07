@@ -70,7 +70,7 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
             TextMenuOptions::default()
                 .with_state(state)
                 .with_sort(sort_order.as_str())
-                .with_suffix(&[("Manage Games", "", MenuAction::Manage)])
+                .with_suffix(&[("Manage Games", "", MenuAction::Manage).into()])
                 .with_details("Details"),
         );
         state = Some(new_state);
