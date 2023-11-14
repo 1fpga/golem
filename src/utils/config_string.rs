@@ -8,6 +8,7 @@ use crate::types::StatusBitMap;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
+use std::convert::TryFrom;
 use std::ops::Range;
 use std::path::Path;
 use std::str::FromStr;
@@ -16,6 +17,9 @@ use tracing::{debug, info};
 pub mod midi;
 pub mod settings;
 pub mod uart;
+
+mod types;
+pub use types::*;
 
 static LABELED_SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d*)(\([^)]*\))?").unwrap());
 static LOAD_FILE_RE: Lazy<Regex> =
@@ -33,23 +37,27 @@ fn parse_bit_index_(s: &str, high: bool) -> Option<u8> {
 #[derive(Debug, Clone)]
 pub struct LoadFileInfo {
     /// Core supports save files, load a file, and mount a save for reading or writing
-    save_support: bool,
+    pub save_support: bool,
 
     /// Explicit index (or index is generated from line number if index not given).
-    index: u8,
+    pub index: u8,
 
     /// A concatenated list of 3 character file extensions. For example, BINGEN would be
     /// BIN and GEN extensions.
-    extensions: Vec<String>,
+    pub extensions: Vec<String>,
+
+    /// A label marker for the menu extensions. This is because the menu does not
+    /// own this data.
+    pub marker: String,
 
     /// Optional {Text} string is the text that is displayed before the extensions like
     /// "Load RAM". If {Text} is not specified, then default is "Load *".
-    label: Option<String>,
+    pub label: Option<String>,
 
     /// Optional {Address} - load file directly into DDRAM at this address.
     /// ioctl_index from hps_io will be: ioctl_index[5:0] = index(explicit or auto),
     /// ioctl_index[7:6] = extension index
-    address: Option<usize>,
+    pub address: Option<FpgaRamMemoryAddress>,
 }
 
 /// A component of a Core config string.
@@ -81,13 +89,7 @@ pub enum ConfigMenu {
 
     /// Open file and remember it, useful for remembering an alternative rom, config, or other
     /// type of file. See [Self::LoadFile] for more information.
-    LoadFileAndRemember {
-        save_support: bool,
-        index: u8,
-        extensions: Vec<String>,
-        label: Option<String>,
-        address: Option<usize>,
-    },
+    LoadFileAndRemember(Box<LoadFileInfo>),
 
     /// Mount SD card menu option.
     MountSdCard {
@@ -132,11 +134,11 @@ pub enum ConfigMenu {
         buttons: Vec<String>,
     },
 
-    SnesButtonList {
+    SnesButtonDefaultList {
         buttons: Vec<String>,
     },
 
-    SnesButtonDefaultList {
+    SnesButtonDefaultPositionalList {
         buttons: Vec<String>,
     },
 
@@ -150,12 +152,11 @@ pub enum ConfigMenu {
         /// The page number.
         index: u8,
 
-        /// The label of the page.
+        /// The title of the page.
         label: String,
-
-        /// The menu items on the page.
-        items: Vec<ConfigMenu>,
     },
+
+    PageItem(u8, Box<ConfigMenu>),
 
     /// `I,INFO1,INFO2,...,INFO255` - INFO1-INFO255 lines to display as OSD info (top left
     /// corner of screen).
@@ -167,22 +168,21 @@ pub enum ConfigMenu {
 }
 
 impl ConfigMenu {
+    pub fn page(&self) -> Option<u8> {
+        match self {
+            ConfigMenu::DisableIf(_, inner) => inner.page(),
+            ConfigMenu::DisableUnless(_, inner) => inner.page(),
+            ConfigMenu::HideIf(_, inner) => inner.page(),
+            ConfigMenu::HideUnless(_, inner) => inner.page(),
+            ConfigMenu::Page { index, .. } => Some(*index),
+            ConfigMenu::PageItem(index, _) => Some(*index),
+            _ => None,
+        }
+    }
+
     fn load_file_remember(s: &str, default_index: u8) -> Result<Self, &'static str> {
         if let Self::LoadFile(inner) = Self::load_file(s, default_index)? {
-            let LoadFileInfo {
-                save_support,
-                index,
-                extensions,
-                label,
-                address,
-            } = *inner;
-            Ok(Self::LoadFileAndRemember {
-                save_support,
-                index,
-                extensions,
-                label,
-                address,
-            })
+            Ok(Self::LoadFileAndRemember(inner))
         } else {
             Err("Invalid load file (remember) string.")
         }
@@ -208,14 +208,18 @@ impl ConfigMenu {
             .map(|chunk| chunk.collect::<String>())
             .collect::<Vec<_>>();
         let label = captures.get(4).map(|s| s.as_str().to_string());
-        let address = captures
+        let address: Option<FpgaRamMemoryAddress> = captures
             .get(5)
-            .map(|s| usize::from_str_radix(s.as_str(), 16).unwrap_or(0));
+            .map(|s| usize::from_str_radix(s.as_str(), 16).unwrap_or(0))
+            .map_or(Ok(None), |i| FpgaRamMemoryAddress::try_from(i).map(Some))?;
+
+        let marker = extensions.iter().join(",");
 
         Ok(Self::LoadFile(Box::new(LoadFileInfo {
             save_support,
             index,
             extensions,
+            marker,
             label,
             address,
         })))
@@ -296,7 +300,7 @@ impl ConfigMenu {
 }
 
 impl ConfigMenu {
-    pub fn parse_line(line: &str, index: u8) -> Result<Self, &'static str> {
+    pub fn parse_line(line: &str, line_index: u8) -> Result<Self, &'static str> {
         #[inline]
         fn to_str(s: &[u8]) -> &str {
             unsafe { std::str::from_utf8_unchecked(s) }
@@ -320,21 +324,37 @@ impl ConfigMenu {
 
             [b'D', b'I', b'P'] => Ok(ConfigMenu::Dip),
 
-            [b'D', d, rest @ ..] => to_u32(&[*d])
-                .ok_or("Invalid D index")
-                .map(|d| Self::DisableIf(d, Self::parse_line(to_str(rest), index).unwrap().into())),
-            [b'd', d, rest @ ..] => to_u32(&[*d]).ok_or("Invalid d index").map(|d| {
-                Self::DisableUnless(d, Self::parse_line(to_str(rest), index).unwrap().into())
-            }),
-            [b'H', h, rest @ ..] => to_u32(&[*h])
-                .ok_or("Invalid H index")
-                .map(|h| Self::HideIf(h, Self::parse_line(to_str(rest), index).unwrap().into())),
-            [b'h', h, rest @ ..] => to_u32(&[*h]).ok_or("Invalid h index").map(|h| {
-                Self::HideUnless(h, Self::parse_line(to_str(rest), index).unwrap().into())
-            }),
+            [b'D', d, rest @ ..] => {
+                let d = to_u32(&[*d]).ok_or("Invalid D index")?;
+                Ok(Self::DisableIf(
+                    d,
+                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
+                ))
+            }
+            [b'd', d, rest @ ..] => {
+                let d = to_u32(&[*d]).ok_or("Invalid D index")?;
+                Ok(Self::DisableUnless(
+                    d,
+                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
+                ))
+            }
+            [b'H', h, rest @ ..] => {
+                let h = to_u32(&[*h]).ok_or("Invalid H index")?;
+                Ok(Self::HideIf(
+                    h,
+                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
+                ))
+            }
+            [b'h', h, rest @ ..] => {
+                let h = to_u32(&[*h]).ok_or("Invalid H index")?;
+                Ok(Self::HideUnless(
+                    h,
+                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
+                ))
+            }
 
-            [b'F', b'C', rest @ ..] => Self::load_file_remember(to_str(rest), index),
-            [b'F', rest @ ..] => Self::load_file(to_str(rest), index),
+            [b'F', b'C', rest @ ..] => Self::load_file_remember(to_str(rest), line_index),
+            [b'F', rest @ ..] => Self::load_file(to_str(rest), line_index),
             [b'S', rest @ ..] => Self::sd_card(to_str(rest)),
 
             [b'O', rest @ ..] => Self::option(to_str(rest), false),
@@ -351,14 +371,30 @@ impl ConfigMenu {
                     .collect::<Vec<_>>(),
             )),
 
-            [b'P', number, rest @ ..] => {
+            [b'P', number, b',', rest @ ..] => {
                 let index = to_u32(&[*number]).ok_or("Invalid page index")?;
                 let label = to_string(rest);
                 Ok(ConfigMenu::Page {
                     index: index as u8,
                     label,
-                    items: Vec::new(),
                 })
+            }
+
+            [b'P', number1, number2, b',', rest @ ..] => {
+                let index = to_u32(&[*number1, *number2]).ok_or("Invalid page index")?;
+                let label = to_string(rest);
+                Ok(ConfigMenu::Page {
+                    index: index as u8,
+                    label,
+                })
+            }
+
+            [b'P', number1, rest @ ..] => {
+                let index = to_u32(&[*number1]).ok_or("Invalid page index")?;
+                Ok(ConfigMenu::PageItem(
+                    index as u8,
+                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
+                ))
             }
 
             [b'J', b'1', b',', buttons @ ..] => Ok(ConfigMenu::JoystickButtons {
@@ -375,13 +411,13 @@ impl ConfigMenu {
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>(),
             }),
-            [b'j', b'n', rest @ ..] => Ok(ConfigMenu::SnesButtonList {
+            [b'j', b'n', b',', rest @ ..] => Ok(ConfigMenu::SnesButtonDefaultList {
                 buttons: to_str(rest)
                     .split(',')
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>(),
             }),
-            [b'j', b'p', rest @ ..] => Ok(ConfigMenu::SnesButtonDefaultList {
+            [b'j', b'p', b',', rest @ ..] => Ok(ConfigMenu::SnesButtonDefaultPositionalList {
                 buttons: to_str(rest)
                     .split(',')
                     .map(|s| s.to_string())
@@ -429,19 +465,32 @@ impl Config {
     }
 
     pub fn load_info(&self, path: impl AsRef<Path>) -> Result<Option<LoadFileInfo>, String> {
-        let ext = match path.as_ref().extension() {
+        let path_ext = match path.as_ref().extension() {
             Some(ext) => ext.to_string_lossy(),
             None => return Err("No extension".to_string()),
         };
 
         for item in self.menu.iter() {
             if let ConfigMenu::LoadFile(ref info) = item {
-                if info.extensions.iter().any(|ext| ext == ext.as_str()) {
+                if info
+                    .extensions
+                    .iter()
+                    .any(|ext| ext.eq_ignore_ascii_case(&path_ext))
+                {
                     return Ok(Some(info.as_ref().clone()));
                 }
             }
         }
         Ok(None)
+    }
+
+    pub fn snes_default_button_list(&self) -> Option<&Vec<String>> {
+        for item in self.menu.iter() {
+            if let ConfigMenu::SnesButtonDefaultList { ref buttons } = item {
+                return Some(buttons);
+            }
+        }
+        None
     }
 
     pub fn version(&self) -> Option<&str> {

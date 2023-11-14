@@ -1,5 +1,6 @@
 use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
 use embedded_graphics::geometry::Size;
+use embedded_graphics::primitives::{Line, PrimitiveStyle, StyledDrawable};
 use embedded_graphics::{
     pixelcolor::Rgb888,
     prelude::{DrawTarget, PixelColor, Point},
@@ -24,6 +25,7 @@ where
     pub return_value: R,
     pub marker: M,
     pub selectable: bool,
+    pub disabled: bool,
     pub line: MenuLine,
 }
 
@@ -73,7 +75,7 @@ where
     }
 
     fn selectable(&self) -> bool {
-        self.selectable
+        self.disabled == false && self.selectable
     }
 
     fn draw_styled<C, S, IT, P, DIS>(
@@ -93,7 +95,45 @@ where
             self.marker.as_ref(),
             style,
             display,
-        )
+        )?;
+        if self.disabled {
+            let mut bound = self.line.bounds();
+            bound.size.width = display.bounding_box().size.width;
+            let h = bound.size.height as i32;
+
+            for x in (-(h * 2)..bound.size.width as i32).step_by(h as usize) {
+                Line::new(
+                    Point::new(x, bound.top_left.y),
+                    Point::new(x + h, bound.top_left.y + h),
+                )
+                .draw_styled(
+                    &PrimitiveStyle::with_stroke(Rgb888::new(255, 255, 255).into(), 1),
+                    display,
+                )?;
+            }
+            for x in (0i32..(bound.size.width as i32 + 16)).step_by(h as usize) {
+                Line::new(
+                    Point::new(x, bound.top_left.y),
+                    Point::new(x - h, bound.top_left.y + h),
+                )
+                .draw_styled(
+                    &PrimitiveStyle::with_stroke(Rgb888::new(255, 255, 255).into(), 1),
+                    display,
+                )?;
+            }
+
+            // let y = (bound.size.height as i32 / 2 + bound.top_left.y);
+            //
+            // embedded_graphics::primitives::Rectangle::new(
+            //     Point::new(bound.top_left.x, y),
+            //     Point::new(display.bounding_box().size.width as i32, y),
+            // )
+            // .draw_styled(
+            //     &PrimitiveStyle::with_stroke(Rgb888::new(255, 255, 255).into(), 1),
+            //     display,
+            // )?;
+        }
+        Ok(())
     }
 }
 
@@ -109,6 +149,7 @@ where
             details: "",
             marker: "",
             selectable: value.is_selectable(),
+            disabled: false,
             line: MenuLine::empty(),
         }
     }
@@ -126,6 +167,7 @@ where
             details: "",
             marker: "",
             selectable: false,
+            disabled: false,
             line: MenuLine::empty(),
         }
     }
@@ -145,17 +187,14 @@ where
             details: self.details,
             line: self.line,
             selectable: self.selectable,
+            disabled: self.disabled,
         }
     }
 
-    pub fn with_detail_text<D2: AsRef<str>>(self, details: D2) -> SimpleMenuItem<T, D2, M, R> {
+    pub fn disabled(self) -> Self {
         SimpleMenuItem {
-            details,
-            title_text: self.title_text,
-            return_value: self.return_value,
-            marker: self.marker,
-            line: self.line,
-            selectable: self.selectable,
+            disabled: true,
+            ..self
         }
     }
 }
@@ -192,6 +231,14 @@ where
         Self::MenuItem(SimpleMenuItem::new(l, SdlMenuAction::Select(r)).with_marker(v))
     }
 
+    pub fn disabled_navigation_item(l: &'a str, v: &'a str, r: R) -> Self {
+        Self::MenuItem(
+            SimpleMenuItem::new(l, SdlMenuAction::Select(r))
+                .with_marker(v)
+                .disabled(),
+        )
+    }
+
     pub fn separator() -> Self {
         TextMenuItem::Separator(SectionSeparator::new())
     }
@@ -202,6 +249,14 @@ where
 
     pub fn empty() -> Self {
         TextMenuItem::Empty(Point::zero())
+    }
+
+    pub fn disabled(self) -> Self {
+        if let TextMenuItem::MenuItem(item) = self {
+            TextMenuItem::MenuItem(item.disabled())
+        } else {
+            self
+        }
     }
 }
 
@@ -267,7 +322,7 @@ where
     fn title(&self) -> &str {
         match self {
             TextMenuItem::MenuItem(item) => item.title(),
-            TextMenuItem::Separator(item) => "",
+            TextMenuItem::Separator(_item) => "",
             TextMenuItem::Empty(_) => "",
         }
     }
@@ -275,7 +330,7 @@ where
     fn details(&self) -> &str {
         match self {
             TextMenuItem::MenuItem(item) => item.details(),
-            TextMenuItem::Separator(item) => "",
+            TextMenuItem::Separator(_item) => "",
             TextMenuItem::Empty(_) => "",
         }
     }
@@ -283,7 +338,7 @@ where
     fn value(&self) -> &str {
         match self {
             TextMenuItem::MenuItem(item) => item.value(),
-            TextMenuItem::Separator(item) => "",
+            TextMenuItem::Separator(_item) => "",
             TextMenuItem::Empty(_) => "",
         }
     }
@@ -291,7 +346,7 @@ where
     fn selectable(&self) -> bool {
         match self {
             TextMenuItem::MenuItem(item) => item.selectable(),
-            TextMenuItem::Separator(item) => false,
+            TextMenuItem::Separator(_item) => false,
             TextMenuItem::Empty(_) => false,
         }
     }

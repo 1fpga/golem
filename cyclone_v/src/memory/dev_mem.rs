@@ -1,6 +1,7 @@
 #![cfg(feature = "std")]
 use crate::memory::MemoryMapper;
 use std::fmt;
+use std::ops::{Index, RangeBounds};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
 
@@ -59,6 +60,10 @@ impl MemoryMapper for DevMemMemoryMapper {
         }
     }
 
+    fn len(&self) -> usize {
+        self.region.len()
+    }
+
     fn as_ptr<T>(&self) -> *const T {
         self.region.as_ptr() as *const T
     }
@@ -74,5 +79,13 @@ impl Drop for DevMemMemoryMapper {
             // We unfortunately cannot care if this fails, as we are in a drop function.
             let _ = libc::munmap(self.region.as_ptr() as *mut libc::c_void, self.region.len());
         }
+    }
+}
+
+impl<R: RangeBounds<usize>> Index<R> for DevMemMemoryMapper {
+    type Output = [u8];
+
+    fn index(&self, index: R) -> &Self::Output {
+        self.as_range(index)
     }
 }

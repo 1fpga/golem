@@ -1,14 +1,18 @@
+use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
+use crate::data::paths::core_root_path;
 use crate::macguiver::application::Application;
 use crate::platform::Core;
 use crate::types::StatusBitMap;
 use crate::utils::config_string::ConfigMenu;
 use embedded_graphics::pixelcolor::BinaryColor;
 use std::convert::TryFrom;
+use tracing::info;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub enum CoreMenuAction {
+    LoadFile(u8),
     Trigger(u8, bool),
     ToggleOption(u8, u8, usize, usize),
     #[default]
@@ -66,13 +70,45 @@ fn into_text_menu_item<'a>(
                 None
             }
         }
-        // ConfigMenu::
+        ConfigMenu::DisableIf(b, sub) => {
+            if status.get(*b as usize) {
+                into_text_menu_item(sub, status)
+            } else if let Some(mut item) = into_text_menu_item(sub, status) {
+                Some(item.disabled())
+            } else {
+                None
+            }
+        }
+        ConfigMenu::DisableUnless(b, sub) => {
+            if status.get(*b as usize) {
+                if let Some(mut item) = into_text_menu_item(sub, status) {
+                    Some(item.disabled())
+                } else {
+                    None
+                }
+            } else {
+                into_text_menu_item(sub, status)
+            }
+        }
+        ConfigMenu::LoadFile(info) => {
+            const DEFAULT_LABEL: &str = "Load File";
+            Some(TextMenuItem::navigation_item(
+                info.label.as_deref().unwrap_or(DEFAULT_LABEL),
+                info.marker.as_str(),
+                CoreMenuAction::LoadFile(info.index),
+            ))
+        }
+        ConfigMenu::PageItem(_index, sub) => {
+            // TODO: add full page support.
+            into_text_menu_item(sub, status)
+        }
         _ => None,
     }
 }
 
 /// The Core Settings menu. We cannot use `text_menu` here as we need to generate
 /// custom menu lines for some items.
+/// Returns whether we should close the OSD or not.
 pub fn core_settings(
     app: &mut impl Application<Color = BinaryColor>,
     core: &mut impl Core,
@@ -108,6 +144,35 @@ pub fn core_settings(
                 if close_osd {
                     break true;
                 }
+            }
+            CoreMenuAction::LoadFile(index) => {
+                let info = core
+                    .menu_options()
+                    .iter()
+                    .filter_map(|c| match c {
+                        ConfigMenu::LoadFile(info) if info.index == index => Some(info),
+                        _ => None,
+                    })
+                    .next()
+                    .unwrap();
+
+                let path = select_file_path_menu(
+                    app,
+                    "Select File",
+                    core_root_path(),
+                    FilesystemMenuOptions::default()
+                        .with_allow_back(true)
+                        .with_extensions(info.extensions.clone()),
+                )
+                .unwrap();
+
+                let p = match path {
+                    None => continue,
+                    Some(p) => p,
+                };
+                info!("Loading file {:?}", p);
+                core.load_file(&p, Some(info.as_ref().clone())).unwrap();
+                break true;
             }
         }
     }

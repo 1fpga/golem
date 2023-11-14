@@ -11,7 +11,7 @@ use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::main_inner::Flags;
 use crate::types::StatusBitMap;
-use crate::utils::config_string::ConfigMenu;
+use crate::utils::config_string::{ConfigMenu, LoadFileInfo};
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
@@ -92,12 +92,14 @@ impl OriginDimensions for PlatformState {
 pub trait Core {
     fn name(&self) -> &str;
 
-    fn load_file(&self, path: &Path) -> Result<(), String>;
+    /// Send a file to the core. The file_info is implementation specific.
+    fn load_file(&mut self, path: &Path, file_info: Option<LoadFileInfo>) -> Result<(), String>;
 
     fn version(&self) -> Option<&str>;
 
     fn menu_options(&self) -> &[ConfigMenu];
 
+    fn status_mask(&self) -> StatusBitMap;
     fn status_bits(&self) -> StatusBitMap;
     fn status_pulse(&mut self, bit: usize) {
         let mut bits = self.status_bits();

@@ -8,7 +8,7 @@ use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
 use crate::platform::{sizes, Core, CoreManager, GoLEmPlatform};
 use crate::types::StatusBitMap;
-use crate::utils::config_string::ConfigMenu;
+use crate::utils::config_string::{ConfigMenu, LoadFileInfo};
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
@@ -22,7 +22,7 @@ impl Core for DummyCore {
         "DummyCore"
     }
 
-    fn load_file(&self, path: &Path) -> Result<(), String> {
+    fn load_file(&mut self, path: &Path, _file_info: Option<LoadFileInfo>) -> Result<(), String> {
         info!("DummyCore::load_file({:?})", path);
         Ok(())
     }
@@ -33,6 +33,10 @@ impl Core for DummyCore {
 
     fn menu_options(&self) -> &[ConfigMenu] {
         todo!()
+    }
+
+    fn status_mask(&self) -> StatusBitMap {
+        unreachable!()
     }
 
     fn status_bits(&self) -> StatusBitMap {

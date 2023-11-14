@@ -40,6 +40,9 @@ impl StatusBitMap {
     pub fn as_raw_slice(&self) -> &[u16] {
         self.0.as_raw_slice()
     }
+    pub fn as_mut_raw_slice(&mut self) -> &mut [u16] {
+        self.0.as_raw_mut_slice()
+    }
 
     pub fn has_extra(&self) -> bool {
         self.0.as_raw_slice()[4..].iter().any(|x| *x != 0)
@@ -72,15 +75,19 @@ impl StatusBitMap {
         }
     }
 
-    pub fn debug_string(&self) -> String {
-        let mut result = [
-            "              Upper                          Lower",
-            "0         1         2         3          4         5         6",
-            "01234567890123456789012345678901 23456789012345678901234567890123",
-            "0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV",
-            "",
-        ]
-        .join("\n");
+    pub fn debug_header() -> String {
+        "              Upper                          Lower\n\
+        0         1         2         3          4         5         6\n\
+        01234567890123456789012345678901 23456789012345678901234567890123\n\
+        0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV"
+            .to_string()
+    }
+
+    pub fn debug_string(&self, header: bool) -> String {
+        let mut result = String::new();
+        if header {
+            result += &Self::debug_header();
+        }
 
         let arr = self.0.as_bitslice();
         let mut iter = arr.into_iter();
@@ -90,14 +97,15 @@ impl StatusBitMap {
 
         let raw = self.0.as_raw_slice();
         if raw[2] != 0 || raw[3] != 0 {
-            result += [
-                "",
-                "0     0         0         0          1         1         1       ",
-                "6     7         8         9          0         1         2       ",
-                "45678901234567890123456789012345 67890123456789012345678901234567",
-            ]
-            .join("\n")
-            .as_str();
+            if header {
+                result += &[
+                    "",
+                    "0     0         0         0          1         1         1       ",
+                    "6     7         8         9          0         1         2       ",
+                    "45678901234567890123456789012345 67890123456789012345678901234567",
+                ]
+                .join("\n")
+            }
 
             result.push('\n');
             result.extend(iter.by_ref().take(32).map(|b| if *b { 'X' } else { ' ' }));

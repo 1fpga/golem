@@ -4,6 +4,7 @@ use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 
+mod core_debug;
 mod core_settings;
 mod items;
 
@@ -11,6 +12,7 @@ mod items;
 enum CoreMenuAction {
     Reset,
     CoreSettings,
+    DebugInfo,
     Back,
     Quit,
 
@@ -27,6 +29,9 @@ impl MenuReturn for CoreMenuAction {
     }
 }
 
+/// Shows the core menu and interact with it.
+/// This will return `true` if the user decided to quit the core (in which case the
+/// main MENU should be reloaded).
 pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut impl Core) -> bool {
     app.platform_mut().core_manager_mut().show_menu();
     let mut state = None;
@@ -41,6 +46,7 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
             &[
                 ("Reset Core", "", CoreMenuAction::Reset),
                 ("Core Settings", "", CoreMenuAction::CoreSettings),
+                ("Debug Info", "", CoreMenuAction::DebugInfo),
             ],
             TextMenuOptions::default()
                 .with_state(state)
@@ -61,6 +67,9 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
                 if core_settings::core_settings(app, core) {
                     break false;
                 }
+            }
+            CoreMenuAction::DebugInfo => {
+                core_debug::debug_info(app, core);
             }
             CoreMenuAction::Back => {
                 break false;

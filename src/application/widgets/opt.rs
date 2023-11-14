@@ -48,21 +48,6 @@ impl<S, I> OptionalView<S, I> {
     }
 }
 
-impl<I> OptionalView<bool, I> {
-    pub fn toggle(&mut self) -> bool {
-        self.show = !self.show;
-        self.show
-    }
-
-    pub fn show(&mut self) {
-        self.show = true;
-    }
-
-    pub fn hide(&mut self) {
-        self.show = false;
-    }
-}
-
 impl<S, I> Dimensions for OptionalView<S, I>
 where
     S: ShouldShow,

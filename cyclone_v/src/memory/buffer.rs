@@ -31,6 +31,10 @@ impl MemoryMapper for RegionMemoryMapper {
         unimplemented!()
     }
 
+    fn len(&self) -> usize {
+        self.region.len()
+    }
+
     fn as_ptr<T>(&self) -> *const T {
         self.region.as_ptr() as *const T
     }

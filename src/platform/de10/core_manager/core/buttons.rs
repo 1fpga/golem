@@ -1,10 +1,12 @@
 use bitvec::prelude::*;
+use std::fmt::{Debug, Formatter};
 use std::ops::Index;
-use strum::{Display, EnumCount, EnumIter};
+use std::str::FromStr;
+use strum::{Display, EnumCount, EnumIter, EnumString};
 
 /// Buttons supported by the MisterFPGA API.
 /// This is MiSTer specific.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString)]
 pub enum MisterFpgaButtons {
     // No mapping exists and the button should be discarded or ignored.
     NoMapping = -1,
@@ -13,38 +15,50 @@ pub enum MisterFpgaButtons {
     DpadLeft,
     DpadDown,
     DpadUp,
-    B,
     A,
-    Y,
+    B,
     X,
+    Y,
     LeftShoulder,
     RightShoulder,
     Back,
     Start,
-    _Null12 = 12,
-    _Null13,
-    _Null14,
-    _Null15,
-    _Null16,
-    _Null17,
-    _Null18,
-    _Null19,
-    _Null20,
-    Guide,
-    Guide2,
+    MsRight = 12,
+    MsLeft,
+    MsDown,
+    MsUp,
+    MsBtnL,
+    MsBtnR,
+    MsBtnM,
+    MsBtnEmu,
+    BtnOsdKtglKb = 20,
+    BtnOsdKtglGamepad1,
+    BtnOsdKtglGamepad2,
     Menu,
-    LeftX,
-    LeftY,
-    RightX,
-    RightY,
-    AsysX,
-    AsysY,
-    Null30,
-    Null31,
+    Axis1X,
+    Axis1Y,
+    Axis2X,
+    Axis2Y,
+    AxisX,
+    AxisY,
+    AxisMX,
+    AxisMY,
 }
 
 pub struct ButtonMapping {
     map: Vec<MisterFpgaButtons>,
+}
+
+impl Default for ButtonMapping {
+    fn default() -> Self {
+        Self::sdl()
+    }
+}
+
+impl Debug for ButtonMapping {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.map.iter().enumerate()).finish()
+    }
 }
 
 impl Index<usize> for ButtonMapping {
@@ -79,10 +93,10 @@ impl ButtonMapping {
             MisterFpgaButtons::Y,
             MisterFpgaButtons::X,
             MisterFpgaButtons::Back,
-            MisterFpgaButtons::Guide,
+            MisterFpgaButtons::BtnOsdKtglGamepad1,
             MisterFpgaButtons::Start,
-            MisterFpgaButtons::LeftX,
-            MisterFpgaButtons::RightX,
+            MisterFpgaButtons::Axis1X,
+            MisterFpgaButtons::Axis2X,
             MisterFpgaButtons::LeftShoulder,
             MisterFpgaButtons::RightShoulder,
             MisterFpgaButtons::DpadUp,
@@ -97,6 +111,27 @@ impl ButtonMapping {
             MisterFpgaButtons::NoMapping,
         ]
         .into()
+    }
+
+    pub fn from_snes_list(mut mapping: &[impl AsRef<str>]) -> Self {
+        let mut inner = [MisterFpgaButtons::NoMapping; 16];
+        let mut i = 0;
+        while i < 11 {
+            if let Some(btn) = mapping.get(i) {
+                inner[i] = MisterFpgaButtons::from_str(btn.as_ref())
+                    .unwrap_or(MisterFpgaButtons::NoMapping);
+                i += 1;
+            } else {
+                break;
+            }
+        }
+        inner[11..15].copy_from_slice(&[
+            MisterFpgaButtons::DpadUp,
+            MisterFpgaButtons::DpadDown,
+            MisterFpgaButtons::DpadLeft,
+            MisterFpgaButtons::DpadRight,
+        ]);
+        inner.into()
     }
 
     pub fn map(&mut self, from: usize, to: MisterFpgaButtons) {
@@ -131,4 +166,11 @@ impl ButtonMap {
     pub fn mask(&self) -> u32 {
         self.0.load()
     }
+}
+
+#[test]
+fn test_button_nes() {
+    let mapping = ButtonMapping::from_snes_list(&vec!["A", "B", "Select", "Start"]);
+    assert_eq!(mapping[0], MisterFpgaButtons::A);
+    assert_eq!(mapping[1], MisterFpgaButtons::B);
 }

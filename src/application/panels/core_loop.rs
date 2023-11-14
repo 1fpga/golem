@@ -7,10 +7,7 @@ use tracing::{debug, info, trace};
 
 pub mod menu;
 
-/// Run the core loop and send events to the core.
-pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
-    debug!("Starting core loop...");
-
+fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
 
@@ -18,9 +15,6 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
 
     let mut i = 0;
     let mut prev = Instant::now();
-    // Hide the OSD
-    app.hide_toolbar();
-    app.platform_mut().core_manager_mut().hide_menu();
 
     // This is a special loop that forwards everything to the core,
     // except for the menu button(s).
@@ -33,7 +27,8 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
                 menu_key_binding = app.settings().menu_key_binding();
             }
 
-            if i % 500 == 0 {
+            // Every 500 frames, show FPS.
+            if tracing::enabled!(tracing::Level::TRACE) && i % 500 == 0 {
                 trace!("Settings update took {:?}", now.elapsed());
                 trace!(
                     "FPS: {}",
@@ -49,6 +44,7 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
             match ev {
                 Event::KeyDown {
                     keycode: Some(keycode),
+                    scancode: Some(scancode),
                     ..
                 } => {
                     if menu_key_binding == keycode {
@@ -60,7 +56,7 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
                         }
                     }
 
-                    core.send_key(keycode as u8);
+                    core.send_key(scancode as u8);
                 }
                 Event::JoyButtonDown {
                     which, button_idx, ..
@@ -78,6 +74,28 @@ pub fn run_core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: 
 
         None
     });
+}
+
+/// Run the core loop and send events to the core.
+pub fn run_core_loop(
+    app: &mut impl Application<Color = BinaryColor>,
+    mut core: impl Core,
+    should_show_menu: bool,
+) {
+    let mut should_run_loop = true;
+    debug!("Starting core loop...");
+
+    // Hide the OSD
+    app.hide_toolbar();
+    if !should_show_menu {
+        app.platform_mut().core_manager_mut().hide_menu();
+    } else {
+        should_run_loop = !menu::core_menu(app, &mut core);
+    }
+
+    if should_run_loop {
+        core_loop(app, core);
+    }
 
     debug!("Core loop ended");
     info!("Loading Main Menu");

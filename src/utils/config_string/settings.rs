@@ -1,6 +1,7 @@
-use super::midi;
 use super::uart;
+use super::{midi, FpgaRamMemoryAddress};
 use crate::types::units::UnitConversion;
+use std::convert::TryFrom;
 use std::ops::Range;
 use std::str::FromStr;
 
@@ -13,11 +14,11 @@ pub struct Settings {
     pub midi_mode: Vec<midi::MidiSpeed>,
 
     /// The save state memory range of the core.
-    pub save_state: Option<Range<usize>>,
+    pub save_state: Option<Range<FpgaRamMemoryAddress>>,
 }
 
 impl Settings {
-    fn parse_save_state(s: &str) -> Result<Range<usize>, &'static str> {
+    fn parse_save_state(s: &str) -> Result<Range<FpgaRamMemoryAddress>, &'static str> {
         if let Some((base, size)) = s.split_once(':') {
             // Strip anything after a comma of size.
             let size = size.split(',').next().unwrap_or(size);
@@ -25,9 +26,8 @@ impl Settings {
             let size = usize::from_str_radix(size, 16).map_err(|_| "Invalid size")?;
             let end = base.checked_add(size).ok_or("Save state range overflow")?;
 
-            if base < 0x2000_0000 || !(0x2000_0000..0x4000_0000).contains(&end) {
-                return Err("Save state range out of bounds");
-            }
+            let base = FpgaRamMemoryAddress::try_from(base)?;
+            let end = FpgaRamMemoryAddress::try_from(end)?;
             if size > 128.mebibytes() {
                 return Err("Save state size too large");
             }

@@ -27,6 +27,9 @@ pub struct FilesystemMenuOptions {
 
     /// File pattern to show.
     pattern: Option<Regex>,
+
+    /// Extensions to show.
+    extensions: Option<Vec<String>>,
 }
 
 impl Default for FilesystemMenuOptions {
@@ -38,6 +41,7 @@ impl Default for FilesystemMenuOptions {
             show_extensions: true,
             directory: false,
             pattern: None,
+            extensions: None,
         }
     }
 }
@@ -57,6 +61,13 @@ impl FilesystemMenuOptions {
     pub fn with_select_dir(self) -> Self {
         Self {
             directory: true,
+            ..self
+        }
+    }
+
+    pub fn with_extensions(self, extensions: Vec<String>) -> Self {
+        Self {
+            extensions: Some(extensions),
             ..self
         }
     }
@@ -121,6 +132,7 @@ pub fn select_file_path_menu(
         show_extensions,
         directory,
         pattern,
+        extensions,
     } = options;
 
     let mut path = initial.as_ref().to_path_buf();
@@ -141,6 +153,18 @@ pub fn select_file_path_menu(
                 if let Some(pattern) = pattern.as_ref() {
                     if !pattern.is_match(&name) {
                         return None;
+                    }
+                }
+
+                if let Some(ext) = extensions.as_ref() {
+                    if path.is_file() {
+                        let extension = path.extension().unwrap_or_default().to_string_lossy();
+                        if !ext
+                            .iter()
+                            .any(|e| e.as_str().eq_ignore_ascii_case(&extension))
+                        {
+                            return None;
+                        }
                     }
                 }
 

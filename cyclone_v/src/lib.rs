@@ -73,7 +73,7 @@ macro_rules! create_memory_locations {
         #[allow(dead_code)]
         mod offsets {
             $(
-                pub const $const_name: usize = ($start - crate::addresses::BASE);
+                pub const $const_name: usize = (($start as usize) .saturating_sub(crate::addresses::BASE));
             )*
         }
 
@@ -82,6 +82,13 @@ macro_rules! create_memory_locations {
         mod sizes {
             $(
                 pub const $const_name: usize = ($end - $start);
+            )*
+        }
+
+        /// Ranges of memory.
+        pub mod ranges {
+            $(
+                pub const $const_name: core::ops::Range<usize> = $start .. $end;
             )*
         }
 
@@ -104,25 +111,28 @@ macro_rules! create_memory_locations {
 
 create_memory_locations! {
     /// The base location of the memory pointed to with the memory mapper.
-    base(BASE):         u8 [pointer]                    => 0xFF000000 .. 0xFFFFFFFF;
+    base(BASE):                 u8 [pointer]                    => 0xFF000000 .. 0xFFFFFFFF;
+
+    /// The accessible host memory from and to the core.
+    host_memory(HOST_MEMORY):   u8 [pointer]                    => 0x20000000 .. 0x3FFFFFFF;
 
     /// The FPGA Manager registers.
-    regs(FPGAMGRREGS):  fpgamgrregs::FpgaManagerRegs    => 0xFF706000 .. 0xFF706FFF;
+    regs(FPGAMGRREGS):          fpgamgrregs::FpgaManagerRegs    => 0xFF706000 .. 0xFF706FFF;
 
     /// The FPGA Manager data.
-    data(FPGAMGRDATA):  u8 [pointer]                    => 0xFFB90000 .. 0xFFB90003;
+    data(FPGAMGRDATA):          u8 [pointer]                    => 0xFFB90000 .. 0xFFB90003;
 
     /// The SDRAM Controller.
-    sdr(SDR):           sdr::SdramCtrl                  => 0xFFC20000 .. 0xFFC2FFFF;
+    sdr(SDR):                   sdr::SdramCtrl                  => 0xFFC20000 .. 0xFFC2FFFF;
 
     /// The Reset Manager.
-    rstmgr(RSTMGR):     rstmgr::ResetManager            => 0xFFD05000 .. 0xFFD050FF;
+    rstmgr(RSTMGR):             rstmgr::ResetManager            => 0xFFD05000 .. 0xFFD050FF;
 
     /// Registers to control L3 interconnect settings.
-    l3regs(L3_REGS):    l3regs::L3Regs                  => 0xFF800000 .. 0xFF87FFFF;
+    l3regs(L3_REGS):            l3regs::L3Regs                  => 0xFF800000 .. 0xFF87FFFF;
 
     /// System Manager Module
-    sysmgr(SYSMGR):     sysmgr::SystemManagerModule     => 0xFFD08000 .. 0xFFD08FFF;
+    sysmgr(SYSMGR):             sysmgr::SystemManagerModule     => 0xFFD08000 .. 0xFFD08FFF;
 }
 
 #[cfg(feature = "std")]

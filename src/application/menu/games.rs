@@ -105,11 +105,11 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
                     .core_manager_mut()
                     .load_program(&core_path)
                 {
-                    Ok(core) => {
-                        if let Err(e) = core.load_file(&file_path) {
+                    Ok(mut core) => {
+                        if let Err(e) = core.load_file(&file_path, None) {
                             show_error(app, format!("Failed to load file: {}", e));
                         } else {
-                            run_core_loop(app, core);
+                            run_core_loop(app, core, false);
                         }
                     }
                     Err(e) => {

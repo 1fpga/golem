@@ -1,6 +1,8 @@
+use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::text_menu;
 use crate::application::menu::TextMenuOptions;
+use crate::application::panels::alert::alert;
 use crate::application::panels::input_tester::input_tester;
 use crate::macguiver::application::Application;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -12,6 +14,7 @@ mod progress_tester;
 enum Menu {
     InputTester,
     MenuTester,
+    MenuTesterBinNes,
     ProgressTester,
     Back,
 }
@@ -32,6 +35,7 @@ pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
             &[
                 ("Input Tester", "", Menu::InputTester),
                 ("Menu Tester", "", Menu::MenuTester),
+                ("Menu Tester (bin, nes)", "", Menu::MenuTesterBinNes),
                 ("Progress Tester", "", Menu::ProgressTester),
             ],
             TextMenuOptions::default().with_state(state),
@@ -42,6 +46,17 @@ pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
             Menu::InputTester => input_tester(app),
             Menu::MenuTester => menu_tester::menu_tester(app),
             Menu::ProgressTester => progress_tester::progress_tester(app),
+            Menu::MenuTesterBinNes => {
+                let p = select_file_path_menu(
+                    app,
+                    "Select a file",
+                    dirs::desktop_dir().unwrap_or(std::env::current_dir().unwrap()),
+                    FilesystemMenuOptions::default()
+                        .with_allow_back(true)
+                        .with_extensions(vec!["bin".to_string(), "nes".to_string()]),
+                );
+                alert(app, "Selected", &format!("Selected: {:?}", p), &["Okay"]);
+            }
             Menu::Back => break,
         }
     }

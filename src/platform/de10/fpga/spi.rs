@@ -2,6 +2,7 @@ use cyclone_v::memory::MemoryMapper;
 use cyclone_v::SocFpga;
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
+use std::ops::{Add, AddAssign};
 use std::rc::Rc;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -23,6 +24,14 @@ pub enum SpiCommands {
     UserIoGetString = 0x14,
 
     SetStatus32Bits = 0x1e,
+
+    /// Update status from the core
+    GetStatusBits = 0x29,
+
+    FileIoFileTx = 0x53,
+    FileIoFileTxDat = 0x54,
+    FileIoFileIndex = 0x55,
+    FileIoFileInfo = 0x56,
 }
 
 impl SpiCommands {
@@ -55,7 +64,14 @@ impl SpiCommands {
             | Self::UserIoJoystick4
             | Self::UserIoJoystick5
             | Self::UserIoGetString
-            | Self::SetStatus32Bits => SpiFeature::IO,
+            | Self::SetStatus32Bits
+            | Self::GetStatusBits => SpiFeature::IO,
+
+            Self::FileIoFileIndex
+            | Self::FileIoFileInfo
+            | Self::FileIoFileTx
+            | Self::FileIoFileTxDat => SpiFeature::FPGA,
+
             _ => SpiFeature::ALL,
         }
     }
@@ -108,6 +124,21 @@ impl From<SpiFeature> for u32 {
 impl From<u32> for SpiFeature {
     fn from(value: u32) -> Self {
         Self(value)
+    }
+}
+
+impl Add<SpiFeature> for SpiFeature {
+    type Output = SpiFeature;
+
+    fn add(mut self, rhs: SpiFeature) -> Self::Output {
+        self.0 = self.0 | rhs.0;
+        self
+    }
+}
+
+impl AddAssign<SpiFeature> for SpiFeature {
+    fn add_assign(&mut self, rhs: SpiFeature) {
+        self.0 = self.0 | rhs.0;
     }
 }
 
@@ -167,8 +198,37 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
+    pub fn enable(mut self, feature: SpiFeature) -> Self {
+        self.feature += feature;
+        self.spi.enable(self.feature);
+        self
+    }
+
+    #[inline]
     pub fn write(self, word: impl Into<u16>) -> Self {
         self.spi.write(word);
+        self
+    }
+
+    #[inline]
+    pub fn write_read(self, word: impl Into<u16>, out: &mut u16) -> Self {
+        *out = self.spi.write(word);
+        self
+    }
+
+    #[inline]
+    pub fn write_cond(self, cond: bool, word: impl Into<u16>) -> Self {
+        if cond {
+            self.spi.write(word);
+        }
+        self
+    }
+
+    #[inline]
+    pub fn write_if(self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> Self {
+        if cond() {
+            self.spi.write(word);
+        }
         self
     }
 
@@ -176,6 +236,14 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     pub fn write_buffer(self, buffer: &[u16]) -> Self {
         for word in buffer {
             self.spi.write(*word);
+        }
+        self
+    }
+
+    #[inline]
+    pub fn write_buffer_b(self, buffer: &[u8]) -> Self {
+        for word in buffer {
+            self.spi.write_b(*word);
         }
         self
     }
@@ -279,7 +347,7 @@ impl<M: MemoryMapper> Spi<M> {
     #[inline]
     pub fn config_string(&mut self) -> String {
         let mut str_builder = String::with_capacity(10240);
-        let feature = self.inner_command(SpiCommands::UserIoGetString);
+        let feature = self.inner_command(SpiCommands::UserIoGetString, &mut 0);
 
         loop {
             let i = self.write_b(0);
@@ -294,17 +362,25 @@ impl<M: MemoryMapper> Spi<M> {
     }
 
     #[inline]
-    fn inner_command(&mut self, command: SpiCommands) -> SpiFeature {
+    fn inner_command(&mut self, command: SpiCommands, out: &mut u16) -> SpiFeature {
         let feature = command.spi_feature();
         self.enable(feature);
-        self.write(command as u16);
+        *out = self.write(command as u16);
         feature
     }
 
     #[inline]
     #[must_use]
     pub fn command(&mut self, command: SpiCommands) -> SpiCommand<'_, M> {
-        let feature = self.inner_command(command);
+        let feature = self.inner_command(command, &mut 0);
+
+        SpiCommand::new(self, feature)
+    }
+
+    #[inline]
+    #[must_use]
+    pub fn command_read(&mut self, command: SpiCommands, out: &mut u16) -> SpiCommand<'_, M> {
+        let feature = self.inner_command(command, out);
 
         SpiCommand::new(self, feature)
     }
