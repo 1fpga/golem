@@ -2,10 +2,12 @@ use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenu
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::text_menu;
 use crate::application::menu::TextMenuOptions;
-use crate::application::panels::alert::alert;
+use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::input_tester::input_tester;
 use crate::macguiver::application::Application;
+use anyhow::anyhow;
 use embedded_graphics::pixelcolor::BinaryColor;
+use thiserror::__private::AsDynError;
 
 mod menu_tester;
 mod progress_tester;
@@ -16,6 +18,7 @@ enum Menu {
     MenuTester,
     MenuTesterBinNes,
     ProgressTester,
+    ErrorTester,
     Back,
 }
 
@@ -37,6 +40,7 @@ pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
                 ("Menu Tester", "", Menu::MenuTester),
                 ("Menu Tester (bin, nes)", "", Menu::MenuTesterBinNes),
                 ("Progress Tester", "", Menu::ProgressTester),
+                ("Error Tester", "", Menu::ErrorTester),
             ],
             TextMenuOptions::default().with_state(state),
         );
@@ -57,6 +61,12 @@ pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
                 );
                 alert(app, "Selected", &format!("Selected: {:?}", p), &["Okay"]);
             }
+            Menu::ErrorTester => show_error(
+                app,
+                anyhow!("Test Error. This is a test error. Please do not report this.")
+                    .as_dyn_error(),
+                true,
+            ),
             Menu::Back => break,
         }
     }

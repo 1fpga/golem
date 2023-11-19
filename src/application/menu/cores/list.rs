@@ -7,9 +7,11 @@ use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::core_loop::run_core_loop;
 use crate::macguiver::application::Application;
 use crate::platform::{CoreManager, GoLEmPlatform};
+use anyhow::anyhow;
 use embedded_graphics::pixelcolor::BinaryColor;
 use golem_db::models;
 use golem_db::models::CoreOrder;
+use thiserror::__private::AsDynError;
 use tracing::{error, info};
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -138,7 +140,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
                         run_core_loop(app, core, true);
                     }
                     Err(e) => {
-                        show_error(app, format!("Failed to load core: {}", e));
+                        show_error(app, anyhow!(e).as_dyn_error(), true);
                     }
                 };
             }
@@ -165,7 +167,7 @@ pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
                             run_core_loop(app, core, true);
                         }
                         Err(e) => {
-                            show_error(app, format!("Failed to load core: {}", e));
+                            show_error(app, anyhow!(e).as_dyn_error(), true);
                             return;
                         }
                     }

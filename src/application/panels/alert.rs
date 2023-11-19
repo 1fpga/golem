@@ -1,5 +1,6 @@
 use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
+use crate::application::panels::qrcode::qrcode_alert;
 use crate::application::widgets::menu::SizedMenu;
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
@@ -15,6 +16,7 @@ use embedded_menu::items::NavigationItem;
 use embedded_menu::Menu;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
+use reqwest::Url;
 use tracing::error;
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -30,10 +32,64 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn show_error(app: &mut impl Application<Color = BinaryColor>, error: impl AsRef<str>) {
-    let error = error.as_ref();
+pub fn report_issue(
+    app: &mut impl Application<Color = BinaryColor>,
+    error: &impl std::error::Error,
+) {
+    let mut url = Url::parse("https://github.com/golem-fpga/golem/issues/new").unwrap();
+    url.query_pairs_mut()
+        .append_pair("title", "Reporting Error")
+        .append_pair(
+            "body",
+            &format!(
+                "**Describe what you were doing**\n\n\n{}",
+                error.to_string()
+            ),
+        )
+        .append_pair("labels", "qr-code");
+
+    qrcode_alert(
+        app,
+        "Report issue",
+        "Using this QR Code will lead you to GitHub to report an issue. No other data is shared.",
+        url.as_str(),
+    );
+}
+
+pub fn show_error(
+    app: &mut impl Application<Color = BinaryColor>,
+    error: impl std::error::Error,
+    recoverable: bool,
+) {
+    let error_str = error.to_string();
     error!(?error);
-    let _ = alert(app, "Error", error, &["Okay"]);
+    let reboot = if recoverable {
+        loop {
+            match alert(
+                app,
+                "An error occurred",
+                &error_str,
+                &["Report", "Reboot", "Back"],
+            ) {
+                None | Some(2) => break false,
+                Some(1) => break true,
+                Some(0) => report_issue(app, &error),
+                _ => {}
+            }
+        }
+    } else {
+        let _ = alert(app, "Error", &error_str, &["Report"]);
+        true
+    };
+
+    #[cfg(feature = "platform_de10")]
+    if reboot {
+        libc::reboot(libc::RB_AUTOBOOT);
+    }
+
+    if reboot {
+        error!("Rebooting... Just kidding you're on a desktop.");
+    }
 }
 
 pub fn alert(

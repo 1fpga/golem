@@ -12,6 +12,7 @@ use embedded_menu::Menu;
 use golem_db::models;
 use retronomicon_dto::cores::CoreListItem;
 use retronomicon_dto::routes;
+use thiserror::__private::AsDynError;
 use tracing::{debug, info};
 
 /// The action to perform for a selected core.
@@ -165,13 +166,13 @@ fn execute_core_actions(
         match action {
             CoreAction::Install => {
                 if let Err(e) = install_single_core(app, &core) {
-                    show_error(app, &e.to_string());
+                    show_error(app, e.as_dyn_error(), true);
                 }
             }
             CoreAction::Uninstall => {
                 let core_root = paths::core_root(core);
                 if let Err(e) = std::fs::remove_dir_all(&core_root) {
-                    show_error(app, &e.to_string());
+                    show_error(app, e.as_dyn_error(), true);
                 } else {
                     let _ = models::Core::delete(&mut app.database().lock().unwrap(), core.id);
                 }
@@ -185,7 +186,7 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
     let cores = match list_cores_from_retronomicon(app) {
         Ok(cores) => cores,
         Err(e) => {
-            show_error(app, &e.to_string());
+            show_error(app, e.as_dyn_error(), true);
             return;
         }
     };

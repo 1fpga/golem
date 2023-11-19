@@ -5,9 +5,11 @@ use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::core_loop::run_core_loop;
 use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
+use anyhow::anyhow;
 use embedded_graphics::pixelcolor::BinaryColor;
 use golem_db::models::GameOrder;
 use std::path::PathBuf;
+use thiserror::__private::AsDynError;
 
 mod manage;
 
@@ -83,7 +85,7 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
                 let file_path = match game.path.as_ref() {
                     Some(path) => path,
                     None => {
-                        show_error(app, "No file path for game");
+                        show_error(app, anyhow!("No file path for game").as_dyn_error(), true);
                         return;
                     }
                 };
@@ -95,7 +97,7 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
                             .unwrap();
                     PathBuf::from(core.path)
                 } else {
-                    show_error(app, "No core for game");
+                    show_error(app, anyhow!("No core for game").as_dyn_error(), true);
                     return;
                 };
 
@@ -107,13 +109,21 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
                 {
                     Ok(mut core) => {
                         if let Err(e) = core.load_file(&file_path, None) {
-                            show_error(app, format!("Failed to load file: {}", e));
+                            show_error(
+                                app,
+                                anyhow!("Failed to load file: {}", e).as_dyn_error(),
+                                true,
+                            );
                         } else {
                             run_core_loop(app, core, false);
                         }
                     }
                     Err(e) => {
-                        show_error(app, format!("Failed to load core: {}", e));
+                        show_error(
+                            app,
+                            anyhow!("Failed to load core: {}", e).as_dyn_error(),
+                            true,
+                        );
                         return;
                     }
                 }

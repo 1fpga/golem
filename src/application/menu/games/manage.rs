@@ -141,7 +141,7 @@ fn add_dat_file_(app: &mut impl Application<Color = BinaryColor>) {
     let datfile = match datfile {
         Ok(datfile) => datfile,
         Err(e) => {
-            show_error(app, format!("Failed to read DAT file: {}", e));
+            show_error(app, e, true);
             return;
         }
     };
