@@ -112,24 +112,15 @@ impl Game {
         use schema::games::dsl;
 
         diesel::update(dsl::games.find(self.id))
-            .set(dsl::favorite.eq(true))
+            .set(dsl::favorite.eq(!self.favorite))
             .execute(conn)?;
-        self.favorite = true;
+        self.favorite = !self.favorite;
 
         Ok(())
     }
 
-    pub fn unfavorite(
-        &mut self,
-        conn: &mut crate::Connection,
-    ) -> Result<(), diesel::result::Error> {
-        use schema::games::dsl;
-
-        diesel::update(dsl::games.find(self.id))
-            .set(dsl::favorite.eq(false))
-            .execute(conn)?;
-        self.favorite = false;
-
+    pub fn delete(&mut self, conn: &mut crate::Connection) -> Result<(), diesel::result::Error> {
+        diesel::delete(schema::games::table.find(self.id)).execute(conn)?;
         Ok(())
     }
 
