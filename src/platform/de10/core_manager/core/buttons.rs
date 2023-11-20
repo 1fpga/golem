@@ -1,12 +1,15 @@
 use bitvec::prelude::*;
-use std::fmt::{Debug, Formatter};
-use std::ops::Index;
+use fixed_map::Key;
+use static_assertions::{const_assert, const_assert_eq};
+use std::fmt::Debug;
 use std::str::FromStr;
-use strum::{Display, EnumCount, EnumIter, EnumString};
+use strum::{Display, EnumCount, EnumIter, EnumString, IntoEnumIterator};
+use tracing::trace;
 
 /// Buttons supported by the MisterFPGA API.
 /// This is MiSTer specific.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key)]
+#[repr(i8)]
 pub enum MisterFpgaButtons {
     // No mapping exists and the button should be discarded or ignored.
     NoMapping = -1,
@@ -15,12 +18,18 @@ pub enum MisterFpgaButtons {
     DpadLeft,
     DpadDown,
     DpadUp,
-    A,
+
     B,
-    X,
+    A,
     Y,
+    X,
+
+    #[strum(serialize = "L")]
     LeftShoulder,
+    #[strum(serialize = "R")]
     RightShoulder,
+
+    #[strum(serialize = "Select", serialize = "Back")]
     Back,
     Start,
     MsRight = 12,
@@ -45,53 +54,61 @@ pub enum MisterFpgaButtons {
     AxisMY,
 }
 
-pub struct ButtonMapping {
-    map: Vec<MisterFpgaButtons>,
+/// A pressed button map. This receives SDL button index and create a bits
+/// array of pressed buttons that can be sent to MiSTer.
+#[derive(Debug, Clone)]
+pub struct ButtonMap {
+    /// The map of SDL Button Index (`u8`) to MisterFpgaButtons..
+    /// Since there's only 256 buttons, we can use a 256 bytes to store
+    /// the mapping.
+    map: Box<[MisterFpgaButtons; 256]>,
+
+    /// The map of MisterFpgaButtons to indices in the core (`u8`).
+    core_map: fixed_map::Map<MisterFpgaButtons, u8>,
+
+    /// The bits array of pressed buttons. In a SNES controller, there
+    /// are 16 buttons.
+    bits: BitArray<[u32; 1], Lsb0>,
 }
 
-impl Default for ButtonMapping {
-    fn default() -> Self {
-        Self::sdl()
-    }
-}
+const_assert!(std::mem::size_of::<MisterFpgaButtons>() == 1);
+const_assert_eq!(std::mem::size_of::<[Option<u8>; 256]>(), 512);
 
-impl Debug for ButtonMapping {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_list().entries(self.map.iter().enumerate()).finish()
-    }
-}
-
-impl Index<usize> for ButtonMapping {
-    type Output = MisterFpgaButtons;
-
-    #[inline]
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.map[index]
-    }
-}
-
-impl<const N: usize> From<[MisterFpgaButtons; N]> for ButtonMapping {
+impl<const N: usize> From<[MisterFpgaButtons; N]> for ButtonMap {
     fn from(value: [MisterFpgaButtons; N]) -> Self {
-        Self {
-            map: value.to_vec(),
+        let mut this = Self::new();
+        for (i, btn) in value.iter().enumerate() {
+            this.add_mapping(i as u8, *btn);
         }
+        this
     }
 }
 
-impl ButtonMapping {
-    pub fn new(capacity: usize) -> Self {
-        Self {
-            map: vec![MisterFpgaButtons::NoMapping; capacity],
-        }
+impl Default for ButtonMap {
+    fn default() -> Self {
+        Self::map_from_snes_list(&["A", "B", "X", "Y", "L", "R", "Back", "Start"])
     }
+}
 
-    /// Create a default SDL mapping to MisterFPGA buttons, naively.
-    pub fn sdl() -> Self {
-        [
-            MisterFpgaButtons::B,
+impl ButtonMap {
+    pub fn new() -> Self {
+        let mut this = Self {
+            map: Box::new([MisterFpgaButtons::NoMapping; 256]),
+            // The default SNES -> Core map is simply i => i.
+            core_map: MisterFpgaButtons::iter()
+                .filter(|x| x != &MisterFpgaButtons::NoMapping)
+                .enumerate()
+                .map(|(i, btn)| (btn, i as u8))
+                .collect::<fixed_map::Map<_, _>>(),
+            bits: BitArray::ZERO,
+        };
+
+        // This is the default SDL -> SNES map.
+        this.map[0..15].clone_from_slice(&[
             MisterFpgaButtons::A,
-            MisterFpgaButtons::Y,
+            MisterFpgaButtons::B,
             MisterFpgaButtons::X,
+            MisterFpgaButtons::Y,
             MisterFpgaButtons::Back,
             MisterFpgaButtons::BtnOsdKtglGamepad1,
             MisterFpgaButtons::Start,
@@ -103,68 +120,70 @@ impl ButtonMapping {
             MisterFpgaButtons::DpadDown,
             MisterFpgaButtons::DpadLeft,
             MisterFpgaButtons::DpadRight,
-            MisterFpgaButtons::NoMapping,
-            MisterFpgaButtons::NoMapping,
-            MisterFpgaButtons::NoMapping,
-            MisterFpgaButtons::NoMapping,
-            MisterFpgaButtons::NoMapping,
-            MisterFpgaButtons::NoMapping,
-        ]
-        .into()
+        ]);
+
+        this
     }
 
-    pub fn from_snes_list(mut mapping: &[impl AsRef<str>]) -> Self {
-        let mut inner = [MisterFpgaButtons::NoMapping; 16];
-        let mut i = 0;
-        while i < 11 {
-            if let Some(btn) = mapping.get(i) {
-                inner[i] = MisterFpgaButtons::from_str(btn.as_ref())
-                    .unwrap_or(MisterFpgaButtons::NoMapping);
-                i += 1;
-            } else {
-                break;
+    pub fn map_from_snes_list(list: &[&str]) -> Self {
+        let mut map = Self::new();
+        // Clear the SNES -> Index map, we only will support what's passed in.
+        map.core_map = fixed_map::Map::new();
+        map.add_mapping(0, MisterFpgaButtons::DpadRight);
+        map.add_mapping(1, MisterFpgaButtons::DpadLeft);
+        map.add_mapping(2, MisterFpgaButtons::DpadDown);
+        map.add_mapping(3, MisterFpgaButtons::DpadUp);
+
+        for (i, name) in list.iter().enumerate() {
+            if let Ok(btn) = MisterFpgaButtons::from_str(name) {
+                map.add_mapping((i + 4) as u8, btn);
             }
         }
-        inner[11..15].copy_from_slice(&[
-            MisterFpgaButtons::DpadUp,
-            MisterFpgaButtons::DpadDown,
-            MisterFpgaButtons::DpadLeft,
-            MisterFpgaButtons::DpadRight,
-        ]);
-        inner.into()
+
+        map
     }
 
-    pub fn map(&mut self, from: usize, to: MisterFpgaButtons) {
-        self.map[from] = to;
-    }
-}
-
-#[derive(Default, Debug, Copy, Clone)]
-pub struct ButtonMap(BitArray<[u32; 1], Lsb0>);
-
-impl ButtonMap {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn down(&mut self, btn: MisterFpgaButtons) {
-        if btn == MisterFpgaButtons::NoMapping {
-            return;
+    pub fn add_mapping(&mut self, index: u8, mister_btn: MisterFpgaButtons) {
+        if mister_btn != MisterFpgaButtons::NoMapping {
+            trace!(?index, ?mister_btn, "mapping");
+            self.core_map.insert(mister_btn, index);
         }
-        self.0.set(btn as usize, true);
     }
-    pub fn up(&mut self, btn: MisterFpgaButtons) {
-        if btn == MisterFpgaButtons::NoMapping {
-            return;
+
+    pub fn map(&mut self, sdl_btn: u8) -> Option<u8> {
+        let snes_btn = self.map[sdl_btn as usize];
+        self.core_map.get(snes_btn).copied()
+    }
+
+    pub fn down(&mut self, sdl_btn: u8) -> u32 {
+        let index = self.map(sdl_btn);
+        if let Some(i) = index {
+            self.bits.set(i as usize, true);
         }
-        self.0.set(btn as usize, false);
+
+        if tracing::enabled!(tracing::Level::TRACE) {
+            let mask = format!("0b{0:16b}", self.value());
+            let snes = self.map[sdl_btn as usize];
+            trace!(?sdl_btn, ?snes, ?index, ?mask, "button down");
+        }
+
+        self.value()
+    }
+
+    pub fn up(&mut self, sdl_btn: u8) -> u32 {
+        let index = self.map(sdl_btn);
+        if let Some(i) = index {
+            self.bits.set(i as usize, false);
+        }
+        self.value()
     }
 
     pub fn set(&mut self, v: u32) {
-        self.0.store(v);
+        self.bits.store(v);
     }
-    pub fn mask(&self) -> u32 {
-        self.0.load()
+
+    pub fn value(&self) -> u32 {
+        self.bits.load()
     }
 }
 

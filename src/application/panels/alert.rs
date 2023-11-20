@@ -105,7 +105,7 @@ pub fn alert(
                 Some(MenuAction::Select(idx)) => return Some(Some(idx)),
             }
         }
-        // menu.update(buffer);
+        menu.update(buffer);
 
         None
     })

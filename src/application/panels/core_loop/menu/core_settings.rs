@@ -73,7 +73,7 @@ fn into_text_menu_item<'a>(
         ConfigMenu::DisableIf(b, sub) => {
             if status.get(*b as usize) {
                 into_text_menu_item(sub, status)
-            } else if let Some(mut item) = into_text_menu_item(sub, status) {
+            } else if let Some(item) = into_text_menu_item(sub, status) {
                 Some(item.disabled())
             } else {
                 None
@@ -81,7 +81,7 @@ fn into_text_menu_item<'a>(
         }
         ConfigMenu::DisableUnless(b, sub) => {
             if status.get(*b as usize) {
-                if let Some(mut item) = into_text_menu_item(sub, status) {
+                if let Some(item) = into_text_menu_item(sub, status) {
                     Some(item.disabled())
                 } else {
                     None

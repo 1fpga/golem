@@ -3,6 +3,7 @@ use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 use std::time::Instant;
+use sdl3::keyboard::Keycode;
 use tracing::{debug, info, trace};
 
 pub mod menu;
@@ -10,8 +11,6 @@ pub mod menu;
 fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
-
-    let mut menu_key_binding = settings.menu_key_binding();
 
     let mut i = 0;
     let mut prev = Instant::now();
@@ -24,7 +23,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
         if i % 100 == 0 {
             let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
-                menu_key_binding = app.settings().menu_key_binding();
+                debug!("Settings updated...");
             }
 
             // Every 500 frames, show FPS.
@@ -47,7 +46,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
                     scancode: Some(scancode),
                     ..
                 } => {
-                    if menu_key_binding == keycode {
+                    if keycode == Keycode::F12 {
                         debug!("Opening core menu");
                         if menu::core_menu(app, &mut core) {
                             return Some(());

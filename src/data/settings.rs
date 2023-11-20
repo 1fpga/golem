@@ -1,12 +1,7 @@
-use crate::application::menu::style::{menu_style_simple, MenuReturn, SimpleSdlMenuInputAdapter};
 use crate::data::paths;
 use bus::{Bus, BusReader};
-use embedded_menu::selection_indicator::style::Invert;
-use embedded_menu::selection_indicator::AnimatedPosition;
-use embedded_menu::{Menu, SelectValue};
 use merge::Merge;
 use reqwest::Url;
-use sdl3::keyboard::Keycode;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
@@ -14,10 +9,11 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use strum::Display;
 use tracing::{debug, error};
 
 fn default_retronomicon_backend_() -> Vec<Url> {
-    vec![Url::parse("https://alpha.retronomicon.land/api/v1/").unwrap()]
+    vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
 }
 
 fn create_settings_save_thread_(
@@ -55,7 +51,7 @@ fn invert_toolbar_() -> bool {
     true
 }
 
-#[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, SelectValue)]
+#[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, Display)]
 pub enum DateTimeFormat {
     /// The default local format for datetime (respecting Locale).
     #[default]
@@ -72,6 +68,15 @@ pub enum DateTimeFormat {
 }
 
 impl DateTimeFormat {
+    pub fn next(&self) -> Self {
+        match self {
+            DateTimeFormat::Default => DateTimeFormat::Short,
+            DateTimeFormat::Short => DateTimeFormat::TimeOnly,
+            DateTimeFormat::TimeOnly => DateTimeFormat::Hidden,
+            DateTimeFormat::Hidden => DateTimeFormat::Default,
+        }
+    }
+
     pub fn time_format(&self) -> String {
         match self {
             DateTimeFormat::Default => "%c".to_string(),
@@ -82,53 +87,7 @@ impl DateTimeFormat {
     }
 }
 
-#[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, SelectValue)]
-pub enum MenuKeyBinding {
-    /// Default Menu Key Binding.
-    #[default]
-    F12,
-
-    F11,
-
-    PrtSc,
-}
-
-impl PartialEq<Keycode> for MenuKeyBinding {
-    fn eq(&self, other: &Keycode) -> bool {
-        matches!(
-            (self, other),
-            (Self::F12, Keycode::F12)
-                | (Self::F11, Keycode::F11)
-                | (Self::PrtSc, Keycode::PrintScreen)
-        )
-    }
-}
-
-// We need a separate enum for the menu events, because the menu macro
-// requires it (cannot use `()`).
-#[derive(Copy, Clone)]
-pub enum MenuAction {
-    Back,
-}
-
-impl MenuReturn for MenuAction {
-    fn back() -> Option<Self> {
-        Some(MenuAction::Back)
-    }
-}
-
-#[derive(Debug, Copy, Clone, Hash, Serialize, Deserialize, Merge, Menu)]
-#[menu(
-    title = " Settings",
-    navigation(events = MenuAction, marker = ""),
-    items = [
-        data(label = "Show FPS", field = show_fps),
-        data(label = "Invert toolbar colors", field = invert_toolbar),
-        data(label = "Toolbar date format", field = toolbar_datetime_format),
-        data(label = "Menu Key Binding", field = menu_key_bind),
-        navigation(label = "Back", event = MenuAction::Back)
-    ]
-)]
+#[derive(Debug, Clone, Hash, Serialize, Deserialize, Merge)]
 pub struct InnerSettings {
     #[serde(default = "show_fps_default_")]
     #[merge(strategy = merge::overwrite)]
@@ -144,7 +103,7 @@ pub struct InnerSettings {
 
     #[serde(default)]
     #[merge(strategy = merge::overwrite)]
-    menu_key_bind: MenuKeyBinding,
+    language: Option<String>,
 }
 
 impl Default for InnerSettings {
@@ -153,14 +112,8 @@ impl Default for InnerSettings {
             show_fps: false,
             invert_toolbar: true,
             toolbar_datetime_format: DateTimeFormat::default(),
-            menu_key_bind: MenuKeyBinding::F12,
+            language: None,
         }
-    }
-}
-
-impl MenuReturn for InnerSettingsMenuEvents {
-    fn back() -> Option<Self> {
-        MenuAction::back().map(Self::NavigationEvent)
     }
 }
 
@@ -240,24 +193,11 @@ impl Merge for Settings {
         self.inner
             .write()
             .unwrap()
-            .merge(*other.inner.read().unwrap());
+            .merge(other.inner.read().unwrap().clone());
     }
 }
 
 impl Settings {
-    pub fn menu(
-        &self,
-    ) -> InnerSettingsMenuWrapper<
-        SimpleSdlMenuInputAdapter<InnerSettingsMenuEvents>,
-        AnimatedPosition,
-        Invert,
-    > {
-        self.inner
-            .read()
-            .unwrap()
-            .create_menu_with_style(menu_style_simple())
-    }
-
     pub fn update(&self, other: InnerSettings) {
         if self.inner.write().unwrap().merge_check(other) {
             self.update.borrow_mut().broadcast(());
@@ -302,12 +242,46 @@ impl Settings {
     }
 
     #[inline]
-    pub fn menu_key_binding(&self) -> MenuKeyBinding {
-        self.inner.read().unwrap().menu_key_bind
+    pub fn set_show_fps(&self, v: bool) {
+        self.inner.write().unwrap().show_fps = v;
+    }
+
+    #[inline]
+    pub fn set_invert_toolbar(&self, v: bool) {
+        self.inner.write().unwrap().invert_toolbar = v;
+    }
+
+    #[inline]
+    pub fn toggle_toolbar_datetime_format(&self) {
+        let mut inner = self.inner.write().unwrap();
+        inner.toolbar_datetime_format = inner.toolbar_datetime_format.next();
+    }
+
+    #[inline]
+    pub fn set_toolbar_datetime_format(&self, v: DateTimeFormat) {
+        self.inner.write().unwrap().toolbar_datetime_format = v;
     }
 
     #[inline]
     pub fn retronomicon_backend(&self) -> Vec<Url> {
         default_retronomicon_backend_()
+    }
+
+    #[inline]
+    pub fn reset_all_settings(&self) {
+        let folders = [
+            paths::config_root_path(),
+            paths::core_root_path(),
+            paths::settings_path(),
+        ];
+        for f in folders {
+            if f.exists() {
+                std::fs::remove_dir_all(f).unwrap();
+            }
+        }
+
+        unsafe {
+            libc::reboot(libc::RB_AUTOBOOT);
+        }
     }
 }

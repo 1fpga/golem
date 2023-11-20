@@ -5,6 +5,7 @@ diesel::table! {
         id -> Integer,
         name -> Text,
         slug -> Text,
+        system_slug -> Text,
         version -> Text,
         path -> Text,
         author -> Text,

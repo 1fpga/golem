@@ -1,25 +1,55 @@
+use crate::application::menu::style::MenuReturn;
+use crate::application::menu::{text_menu, TextMenuOptions};
+use crate::application::panels::alert::alert;
 use crate::macguiver::application::Application;
-use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::Drawable;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum MenuAction {
+    ChangeTimestampFormat,
+    ResetAll,
+    Back,
+}
+
+impl MenuReturn for MenuAction {
+    fn back() -> Option<Self> {
+        Some(Self::Back)
+    }
+}
 
 pub fn settings_panel(app: &mut impl Application<Color = BinaryColor>) {
-    let mut menu = app.settings().menu();
+    let mut state = None;
+    loop {
+        let (result, new_state) = text_menu(
+            app,
+            "Settings",
+            &[
+                (
+                    "Change timestamp format",
+                    app.settings()
+                        .toolbar_datetime_format()
+                        .to_string()
+                        .as_str(),
+                    MenuAction::ChangeTimestampFormat,
+                ),
+                ("Reset all settings", "", MenuAction::ResetAll),
+            ],
+            TextMenuOptions::default().with_state(state),
+        );
 
-    app.event_loop(move |app, state| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        menu.update(buffer);
-        menu.draw(buffer).unwrap();
+        state = Some(new_state);
 
-        for ev in state.events() {
-            if menu.interact(ev).is_some() {
-                return Some(());
+        match result {
+            MenuAction::ChangeTimestampFormat => {
+                app.settings().toggle_toolbar_datetime_format();
             }
+            MenuAction::ResetAll => {
+                let ok = alert(app, "Reset all settings?", "This will reset all settings and downloaded files to their default values. Are you sure?", &["Yes", "No"]);
+                if ok == Some(0) {
+                    app.settings().reset_all_settings();
+                }
+            }
+            MenuAction::Back => break,
         }
-
-        app.settings().update(*menu.data());
-
-        None
-    })
+    }
 }

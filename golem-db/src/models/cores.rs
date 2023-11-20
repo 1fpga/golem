@@ -44,6 +44,9 @@ pub struct Core {
     /// The slug of this core.
     pub slug: String,
 
+    /// The slug of the system this core belongs to on Retronomicon.
+    pub system_slug: String,
+
     /// Overwritten name by the user.
     pub version: String,
 
@@ -88,6 +91,7 @@ impl Core {
     pub fn create(
         conn: &mut crate::Connection,
         core: &retronomicon_dto::cores::CoreListItem,
+        system: &retronomicon_dto::systems::SystemRef,
         release: &retronomicon_dto::cores::releases::CoreReleaseRef,
         file_path: impl AsRef<Path>,
     ) -> Result<Self, diesel::result::Error> {
@@ -98,6 +102,7 @@ impl Core {
             .values((
                 name.eq(&core.name),
                 slug.eq(&core.slug),
+                system_slug.eq(&system.slug),
                 version.eq(&release.version),
                 path.eq(file_path.as_ref().to_str().unwrap()),
                 author.eq(&core.owner_team.slug),

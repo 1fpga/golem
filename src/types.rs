@@ -87,6 +87,7 @@ impl StatusBitMap {
         let mut result = String::new();
         if header {
             result += &Self::debug_header();
+            result += "\n";
         }
 
         let arr = self.0.as_bitslice();

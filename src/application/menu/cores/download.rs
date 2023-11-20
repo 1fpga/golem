@@ -11,6 +11,7 @@ use embedded_menu::items::{NavigationItem, Select};
 use embedded_menu::Menu;
 use golem_db::models;
 use retronomicon_dto::cores::CoreListItem;
+use retronomicon_dto::routes;
 use tracing::{debug, info};
 
 /// The action to perform for a selected core.
@@ -83,7 +84,7 @@ impl SelectValue for MenuAction {
 
 fn list_cores_from_retronomicon(
     app: &mut impl Application<Color = BinaryColor>,
-) -> Result<Vec<retronomicon_dto::cores::CoreListItem>, anyhow::Error> {
+) -> Result<Vec<CoreListItem>, anyhow::Error> {
     let client = reqwest::blocking::Client::builder()
         .danger_accept_invalid_certs(true)
         .build()
@@ -94,7 +95,8 @@ fn list_cores_from_retronomicon(
         .first()
         .ok_or(anyhow::Error::msg("No Retronomicon backend"))?;
 
-    let url = url_base.join("cores?platform=mister-fpga")?;
+    let mut url = routes::v1::cores(url_base);
+    url.query_pairs_mut().append_pair("platform", "mister-fpga");
     debug!(url = url.to_string(), "Download core list");
     let response = client.get(url).send()?;
 
@@ -109,40 +111,47 @@ fn install_single_core(
         .tls_built_in_root_certs(true)
         .build()
         .unwrap();
+
+    let backend = if let Some(backend) = app.settings().retronomicon_backend().first() {
+        backend.clone()
+    } else {
+        return Err(anyhow::Error::msg("No Retronomicon backend"));
+    };
     let db_connection = app.database();
     let mut db = db_connection.lock().unwrap();
 
-    if golem_db::models::Core::has(&mut db, &core.slug, &core.latest_release.version)? {
-        info!(?core, "Core already installed");
+    let latest_release = if let Some(latest_release) = &core.latest_release {
+        if models::Core::has(&mut db, &core.slug, &latest_release.version)? {
+            info!(?core, "Core already installed");
+            return Ok(());
+        }
+        latest_release
+    } else {
+        info!(?core, "Core has no releases");
         return Ok(());
-    }
+    };
 
     info!(?core, "Installing core");
-
     let artifacts: Vec<retronomicon_dto::artifact::CoreReleaseArtifactListItem> = client
-        .get(format!(
-            "https://alpha.retronomicon.land/api/v1/cores/{}/releases/{}/artifacts",
-            core.slug, core.latest_release.id
+        .get(routes::v1::cores_releases_artifacts(
+            &backend,
+            &core.slug.as_str().into(),
+            latest_release.id,
         ))
         .send()?
         .json()?;
 
+    let rclient = reqwest::blocking::Client::builder().build()?;
     for a in artifacts.iter() {
-        let file = client
-            .get(format!(
-                "https://alpha.retronomicon.land/{}",
-                a.download_url.as_ref().unwrap()
-            ))
-            .send()?
-            .bytes()?;
+        let file = rclient.get(&a.download_url).send()?.bytes()?;
 
-        let core_root = paths::core_root(core, &core.latest_release);
+        let core_root = paths::core_release_root(core, &latest_release);
         let core_path = core_root.join(&a.filename);
         std::fs::create_dir_all(&core_root)?;
 
         std::fs::write(&core_path, file)?;
         // Update the database.
-        let _ = golem_db::models::Core::create(&mut db, &core, &core.latest_release, &core_path)?;
+        let _ = models::Core::create(&mut db, core, &core.system, latest_release, &core_path)?;
     }
 
     Ok(())
@@ -160,7 +169,7 @@ fn execute_core_actions(
                 }
             }
             CoreAction::Uninstall => {
-                let core_root = paths::core_root(core, &core.latest_release);
+                let core_root = paths::core_root(core);
                 if let Err(e) = std::fs::remove_dir_all(&core_root) {
                     show_error(app, &e.to_string());
                 } else {
@@ -182,12 +191,17 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
     };
     let mut actions = cores
         .iter()
-        .map(|core| {
-            let path = paths::core_root(core, &core.latest_release);
-            if path.exists() {
-                CoreAction::IsInstalled
+        .filter_map(|core| {
+            let latest_release = if let Some(latest_release) = &core.latest_release {
+                latest_release
             } else {
-                CoreAction::IsNotInstalled
+                return None;
+            };
+            let path = paths::core_release_root(core, &latest_release);
+            if path.exists() {
+                Some(CoreAction::IsInstalled)
+            } else {
+                Some(CoreAction::IsNotInstalled)
             }
         })
         .collect::<Vec<_>>();
@@ -195,10 +209,18 @@ pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
     let mut core_list = cores
         .iter()
         .enumerate()
-        .map(|(i, core)| {
-            let core_name = format!("{} ({})", core.name, &core.latest_release.version);
-            Select::new(core_name, MenuAction::ToggleCore(i, actions[i]))
-                .with_value_converter(std::convert::identity)
+        .filter_map(|(i, core)| {
+            let latest_release = if let Some(latest_release) = &core.latest_release {
+                latest_release
+            } else {
+                return None;
+            };
+
+            let core_name = format!("{} ({})", core.name, &latest_release.version);
+            Some(
+                Select::new(core_name, MenuAction::ToggleCore(i, actions[i]))
+                    .with_value_converter(std::convert::identity),
+            )
         })
         .collect::<Vec<_>>();
 

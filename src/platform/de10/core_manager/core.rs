@@ -1,6 +1,4 @@
-use crate::platform::de10::core_manager::core::buttons::{
-    ButtonMap, ButtonMapping, MisterFpgaButtons,
-};
+use crate::platform::de10::core_manager::core::buttons::ButtonMap;
 use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga, SpiCommands};
 use crate::platform::Core;
 use crate::types::StatusBitMap;
@@ -49,7 +47,6 @@ pub struct MisterFpgaCore {
     pub io_version: u8,
     config: config_string::Config,
 
-    mapping: ButtonMapping,
     map: ButtonMap,
 
     status: StatusBitMap,
@@ -64,11 +61,14 @@ impl MisterFpgaCore {
         let io_version = fpga.core_io_version().ok_or("Could not get IO version.")?;
         let config = config_string::Config::new(&mut fpga)?;
 
-        let mut mapping = ButtonMapping::default();
+        let mut map = ButtonMap::default();
         if let Some(list) = config.snes_default_button_list() {
-            mapping = ButtonMapping::from_snes_list(list);
+            info!("Loading mapping from config file");
+            map = ButtonMap::map_from_snes_list(
+                &list.iter().map(|s| s.as_str()).collect::<Vec<&str>>(),
+            );
         }
-        info!(?mapping);
+        info!(?map);
 
         info!(?core_type, ?spi_type, io_version, "Core loaded");
         info!(
@@ -84,8 +84,8 @@ impl MisterFpgaCore {
             spi_type,
             io_version,
             config,
-            mapping,
-            map: ButtonMap::new(),
+            // mapping,
+            map,
             status: Default::default(),
         })
     }
@@ -326,14 +326,9 @@ impl Core for MisterFpgaCore {
     }
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8) {
-        let mister_button: MisterFpgaButtons = self.mapping[button as usize];
-        self.map.down(mister_button);
-        let button_mask = self.map.mask();
-
-        trace!(?button, ?button_mask, ?mister_button, "button down");
+        let button_mask = self.map.down(button);
 
         let spi = self.fpga.spi_mut();
-
         let command = spi
             .command(SpiCommands::from_joystick_index(joystick_idx))
             .write(button_mask as u16);
@@ -341,14 +336,11 @@ impl Core for MisterFpgaCore {
             command.write((button_mask >> 16) as u16);
         }
     }
+
     fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8) {
-        let mister_button: MisterFpgaButtons = self.mapping[button as usize];
-        self.map.up(mister_button);
-        let button_mask = self.map.mask();
-        trace!(?button, ?button_mask, ?mister_button, "button up");
+        let button_mask = self.map.up(button);
 
         let spi = self.fpga.spi_mut();
-
         let command = spi
             .command(SpiCommands::from_joystick_index(joystick_idx))
             .write((button_mask & 0xFFFF) as u16);

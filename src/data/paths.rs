@@ -26,11 +26,15 @@ pub fn core_root_path() -> PathBuf {
     p
 }
 
-pub fn core_root(
+pub fn core_root(core: &retronomicon_dto::cores::CoreListItem) -> PathBuf {
+    core_root_path().join(&core.slug)
+}
+
+pub fn core_release_root(
     core: &retronomicon_dto::cores::CoreListItem,
     release: &retronomicon_dto::cores::releases::CoreReleaseRef,
 ) -> PathBuf {
-    core_root_path().join(&core.slug).join(&release.version)
+    core_root(core).join(&release.version)
 }
 
 pub fn settings_path() -> PathBuf {

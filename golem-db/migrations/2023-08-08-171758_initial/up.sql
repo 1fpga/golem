@@ -3,6 +3,7 @@ CREATE TABLE cores
     id            INTEGER PRIMARY KEY NOT NULL,
     name          VARCHAR             NOT NULL,
     slug          VARCHAR             NOT NULL,
+    system_slug   VARCHAR             NOT NULL,
     version       VARCHAR             NOT NULL,
     path          VARCHAR             NOT NULL,
     author        VARCHAR             NOT NULL,
