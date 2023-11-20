@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::video::aspect::AspectRatio;
 use crate::video::resolution::Resolution;
 

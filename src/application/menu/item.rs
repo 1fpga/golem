@@ -231,14 +231,6 @@ where
         Self::MenuItem(SimpleMenuItem::new(l, SdlMenuAction::Select(r)).with_marker(v))
     }
 
-    pub fn disabled_navigation_item(l: &'a str, v: &'a str, r: R) -> Self {
-        Self::MenuItem(
-            SimpleMenuItem::new(l, SdlMenuAction::Select(r))
-                .with_marker(v)
-                .disabled(),
-        )
-    }
-
     pub fn separator() -> Self {
         TextMenuItem::Separator(SectionSeparator::new())
     }

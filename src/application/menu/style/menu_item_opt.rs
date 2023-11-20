@@ -144,12 +144,4 @@ where
             _marker: core::marker::PhantomData,
         }
     }
-
-    pub fn hide(&mut self) {
-        self.show = false;
-    }
-
-    pub fn show(&mut self) {
-        self.show = true;
-    }
 }

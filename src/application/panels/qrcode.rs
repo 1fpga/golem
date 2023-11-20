@@ -2,15 +2,10 @@ use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::application::widgets::menu::SizedMenu;
 use crate::macguiver::application::Application;
-use bitvec::order::Lsb0;
-use bitvec::prelude::Msb0;
-use bitvec::vec::BitVec;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Dimensions, Point};
-use embedded_graphics::image;
-use embedded_graphics::image::ImageRaw;
+use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
-use embedded_graphics::pixelcolor::raw::{ByteOrder, LittleEndian};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
@@ -22,9 +17,6 @@ use embedded_menu::items::NavigationItem;
 use embedded_menu::Menu;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
-use fast_qr::convert::image::ImageBuilder;
-use fast_qr::convert::{Builder, Shape};
-use fast_qr::QRBuilder;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub enum MenuAction {
@@ -45,26 +37,24 @@ pub fn qrcode_alert(
     url: &str,
 ) {
     let display_area = app.main_buffer().bounding_box();
-    let qrcode = QRBuilder::new(url).build().unwrap();
+    let qrcode = qrcode::QrCode::new(url).unwrap();
+    let pixmap = qrcode
+        .render()
+        .dark_color(image::Luma([0u8; 1]))
+        .light_color(image::Luma([255; 1]))
+        .quiet_zone(false) // disable quiet zone (white border)
+        .max_dimensions(128, 128) // adjust colors
+        .build();
 
-    let pixmap = ImageBuilder::default()
-        .shape(Shape::Square)
-        .margin(2)
-        .background_color([0, 0, 0, 0])
-        .fit_height(app.main_buffer().size().height)
-        .fit_width(app.main_buffer().size().width / 2)
-        .to_pixmap(&qrcode);
-    let width = pixmap.width();
-    let height = pixmap.height();
+    // Do some reason rendering the QR code to a pixmap and then reading its
+    // pixels into a buffer does not work. Creating a file and reading it does.
+    let dir = tempdir::TempDir::new("qrcode").unwrap();
+    let path = dir.path().join("qrcode.bmp");
+    pixmap.save(&path).unwrap();
+    let bmp_content = std::fs::read(&path).unwrap();
+    let bmp = tinybmp::Bmp::from_slice(&bmp_content).unwrap();
 
-    let mut pixels: BitVec<_, Msb0> = BitVec::with_capacity((width * height) as usize);
-    for p in pixmap.pixels() {
-        pixels.push(p.alpha() != 0);
-    }
-    let image: ImageRaw<BinaryColor, LittleEndian> =
-        image::ImageRaw::new(pixels.as_raw_slice(), width);
-
-    let image = image::Image::new(&image, Point::zero());
+    let image = Image::new(&bmp, Point::zero());
 
     let character_style = u8g2_fonts::U8g2TextStyle::new(
         u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
@@ -76,12 +66,12 @@ pub fn qrcode_alert(
         .paragraph_spacing(1)
         .build();
 
-    let bounds = Rectangle::new(Point::zero(), Size::new(128, 64));
+    let bounds = Rectangle::new(Point::zero(), Size::new(128, 100));
     let text_box = TextBox::with_textbox_style(message, bounds, character_style, textbox_style);
 
     let mut items = [NavigationItem::new("Back", MenuAction::Back)];
     let menu = SizedMenu::new(
-        Size::new(48, 24),
+        Size::new(64, 32),
         Menu::with_style(" ", style::menu_style_simple())
             .add_items(&mut items)
             .build(),
@@ -110,10 +100,9 @@ pub fn qrcode_alert(
             .arrange(),
         ),
     )
-    .with_alignment(vertical::Top)
-    .with_spacing(spacing::FixedMargin(2))
+    .with_alignment(vertical::Center)
     .arrange()
-    .align_to(&display_area, horizontal::Center, vertical::Top);
+    .align_to(&display_area, horizontal::Center, vertical::Center);
 
     app.event_loop(move |app, state| {
         let buffer = app.main_buffer();

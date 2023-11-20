@@ -5,14 +5,13 @@ use crate::macguiver::application::{Application, EventLoopState};
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
 use crate::platform::{GoLEmPlatform, WindowManager};
-pub use cores::CoreManager;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use golem_db::Connection;
 use sdl3::event::Event;
 use sdl3::joystick::Joystick;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 use tracing::{info, warn};
 
 // mod icons;
@@ -21,8 +20,6 @@ pub mod menu;
 mod panels;
 mod toolbar;
 mod widgets;
-
-mod cores;
 
 use crate::data::paths;
 
@@ -34,8 +31,6 @@ pub struct MiSTer {
     render_toolbar: bool,
 
     joysticks: [Option<Joystick>; 16],
-
-    core_manager: Arc<RwLock<CoreManager>>,
 
     pub platform: WindowManager,
     main_buffer: DrawBuffer<BinaryColor>,
@@ -53,7 +48,6 @@ impl MiSTer {
         let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let main_size = platform.main_dimensions();
-        let core_manager = CoreManager::new(database.clone());
 
         // Due to a limitation in Rust language right now, None does not implement Copy
         // when Option<T> does not. This means we can't use it in an array. So we use a
@@ -64,7 +58,6 @@ impl MiSTer {
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
             render_toolbar: true,
-            core_manager: Arc::new(RwLock::new(core_manager)),
             joysticks,
             database,
             settings,
@@ -96,10 +89,6 @@ impl Application for MiSTer {
 
     fn database(&self) -> Arc<Mutex<Connection>> {
         self.database.clone()
-    }
-
-    fn core_manager(&self) -> Arc<RwLock<CoreManager>> {
-        Arc::clone(&self.core_manager)
     }
 
     fn platform(&self) -> &Self::Platform {

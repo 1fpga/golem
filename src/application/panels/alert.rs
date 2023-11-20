@@ -51,7 +51,10 @@ pub fn report_issue(
     qrcode_alert(
         app,
         "Report issue",
-        "Using this QR Code will lead you to GitHub to report an issue. No other data is shared.",
+        "\
+            Using this QR Code will lead you to GitHub to report the issue, \
+            including your error message. No other data is shared.\
+        ",
         url.as_str(),
     );
 }
@@ -84,7 +87,9 @@ pub fn show_error(
 
     #[cfg(feature = "platform_de10")]
     if reboot {
-        libc::reboot(libc::RB_AUTOBOOT);
+        unsafe {
+            libc::reboot(libc::RB_AUTOBOOT);
+        }
     }
 
     if reboot {

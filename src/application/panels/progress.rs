@@ -98,6 +98,7 @@ impl ProgressBar {
     }
 }
 
+#[allow(unused)]
 pub enum ProgressBarUpdate {
     UpdateBar(u32),
     UpdateBarTotal(u32, u32),

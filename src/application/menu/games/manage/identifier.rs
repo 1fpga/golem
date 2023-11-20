@@ -44,7 +44,7 @@ fn create_games_from_datfile_(
 pub fn create_games_from_retronomicon_(
     db: &mut Connection,
     url: &Url,
-    mut scans: Vec<ScanResult>,
+    scans: Vec<ScanResult>,
 ) -> Result<Vec<ScanResult>, anyhow::Error> {
     info!("Identifying {} files...", scans.len());
 

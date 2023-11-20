@@ -1,11 +1,10 @@
-use crate::application::CoreManager;
 use crate::data::settings::Settings;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
 use crate::platform::GoLEmPlatform;
 use embedded_graphics::pixelcolor::PixelColor;
 use sdl3::event::Event;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, Mutex};
 
 pub struct EventLoopState {
     events: Vec<Event>,
@@ -32,7 +31,6 @@ pub trait Application {
     fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color>;
 
     fn database(&self) -> Arc<Mutex<golem_db::Connection>>;
-    fn core_manager(&self) -> Arc<RwLock<CoreManager>>;
     fn platform(&self) -> &Self::Platform;
     fn platform_mut(&mut self) -> &mut Self::Platform;
 

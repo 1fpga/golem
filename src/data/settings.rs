@@ -280,6 +280,7 @@ impl Settings {
             }
         }
 
+        #[cfg(target_os = "linux")]
         unsafe {
             libc::reboot(libc::RB_AUTOBOOT);
         }

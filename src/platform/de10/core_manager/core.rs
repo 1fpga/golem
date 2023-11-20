@@ -98,7 +98,7 @@ impl MisterFpgaCore {
             .write_b(index);
 
         // Send extension.
-        let mut ext_bytes = ext.as_bytes();
+        let ext_bytes = ext.as_bytes();
         // Extend to 4 characters with the dot.
         let ext: [u8; 4] = [
             b'.',
