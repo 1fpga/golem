@@ -4,19 +4,19 @@ use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
 use crate::main_inner::Flags;
-use crate::platform::de10::buffer::OsdDisplay;
 use crate::platform::{sizes, CoreManager, GoLEmPlatform};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
+use mister_fpga::osd::OsdDisplay;
 use sdl3::event::Event;
 use tracing::{debug, error};
 
+pub use mister_fpga::fpga;
+
 mod battery;
-mod buffer;
 mod core_manager;
-pub mod fpga;
 mod input;
 mod offload;
 mod osd;
@@ -56,7 +56,7 @@ impl Default for De10Platform {
         // Need at least 1 window to get events.
         let window = platform.window("Title", Size::new(1, 1));
 
-        let fpga = fpga::Fpga::init().unwrap();
+        let fpga = fpga::MisterFpga::init().unwrap();
         if !fpga.is_ready() {
             debug!("GPI[31] == 1");
             error!("FPGA is uninitialized or incompatible core loaded.");
@@ -91,10 +91,11 @@ impl GoLEmPlatform for De10Platform {
     fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {
         self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
         buffer.draw(&mut self.toolbar_buffer).unwrap();
-        self.title_display.send(&self.toolbar_buffer);
+        self.title_display
+            .send(self.core_manager.fpga_mut(), &self.toolbar_buffer);
     }
     fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
-        self.main_display.send(buffer);
+        self.main_display.send(self.core_manager.fpga_mut(), buffer);
     }
 
     fn toolbar_dimensions(&self) -> Size {

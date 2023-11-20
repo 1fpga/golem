@@ -44,7 +44,7 @@ fn create_settings_save_thread_(
 }
 
 fn show_fps_default_() -> bool {
-    false
+    true
 }
 
 fn invert_toolbar_() -> bool {

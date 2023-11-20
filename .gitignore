@@ -28,7 +28,7 @@ host
 *.user
 .vs
 MiSTer
-MiSTer*
+MiSTer_*
 GoLEm*
 
 # Rust stuff

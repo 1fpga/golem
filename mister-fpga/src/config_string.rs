@@ -448,6 +448,14 @@ pub struct Config {
 }
 
 impl Config {
+    /// Create a new config from the FPGA.
+    /// This is disabled in Test as this module is still included in the test build.
+    pub fn from_fpga(fpga: &mut crate::fpga::MisterFpga) -> Result<Self, &'static str> {
+        let cfg_string = fpga.spi_mut().config_string();
+
+        Self::from_str(&cfg_string)
+    }
+
     pub fn status_bit_map_mask(&self) -> StatusBitMap {
         let mut arr = StatusBitMap::new();
         // First bit is always 1 for soft reset (reserved).

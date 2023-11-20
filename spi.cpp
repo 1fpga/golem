@@ -29,10 +29,10 @@ void EnableOsd_on(int target)
 void EnableOsd()
 {
 	if (!(osd_target & OSD_ALL)) osd_target = OSD_ALL;
-
 	uint32_t mask = SSPI_OSD_EN | SSPI_IO_EN | SSPI_FPGA_EN;
 	if (osd_target & OSD_HDMI) mask &= ~SSPI_FPGA_EN;
 	if (osd_target & OSD_VGA) mask &= ~SSPI_IO_EN;
+fprintf(stderr, "EnableOsd %x %x\n", osd_target, mask);
 
 	fpga_spi_en(mask, 1);
 }

@@ -2,8 +2,8 @@ use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
-use std::time::Instant;
 use sdl3::keyboard::Keycode;
+use std::time::Instant;
 use tracing::{debug, info, trace};
 
 pub mod menu;

@@ -1,5 +1,4 @@
-use bitvec::array::BitArray;
-use bitvec::order::Lsb0;
+use bitvec::prelude::*;
 use std::fmt::{Debug, Formatter};
 
 pub mod units;

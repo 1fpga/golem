@@ -5,7 +5,6 @@ use cfg_if::cfg_if;
 cfg_if! {
     if #[cfg(not(test))] {
         pub mod bootcore;
-        pub mod charrom;
         pub mod hardware;
         pub mod scheduler;
     }
@@ -20,8 +19,6 @@ pub mod core;
 pub mod file_io;
 pub mod macguiver;
 pub mod platform;
-pub mod types;
-pub mod utils;
 pub mod video;
 
 #[cfg(not(test))]

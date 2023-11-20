@@ -1,5 +1,3 @@
-use crate::platform::de10::osd::{OSD_CMD_DISABLE, OSD_CMD_ENABLE};
-use crate::platform::de10::spi as ffi_spi;
 use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
 use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
@@ -168,7 +166,7 @@ static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
 // TODO: Remove this when we're done re-writing fpga_io.cpp
 // This is needed for the FFI implementations to work.
 // Also, remove the Rc<RefCell<_>> below.
-static mut FPGA_SINGLETON: Option<Fpga> = None;
+static mut FPGA_SINGLETON: Option<MisterFpga> = None;
 
 /// FPGA core type.
 #[derive(Display, Debug, Eq, PartialEq, EnumIter, FromRepr)]
@@ -213,31 +211,37 @@ extern "C" {
 }
 
 #[derive(Debug, Clone)]
-pub struct Fpga {
+pub struct MisterFpga {
     soc: Rc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
     spi: spi::Spi<DevMemMemoryMapper>,
 }
 
 // OSD specific functions.
-impl Fpga {
+impl MisterFpga {
     pub fn osd_enable(&mut self) {
+        // let _ = self.spi_mut().command(SpiCommands::OsdEnable);
+        extern "C" {
+            fn spi_osd_cmd(cmd: u8);
+        }
+
         unsafe {
-            // self.spi_mut().write_b(OSD_CMD_ENABLE);
-            // self.spi_mut()
-            //     .enable(SpiFeature::default().with_osd().with_io().with_fpga());
-            ffi_spi::spi_osd_cmd(OSD_CMD_ENABLE);
+            spi_osd_cmd(0x41 /* OSD_CMD_ENABLE */);
         }
     }
     pub fn osd_disable(&mut self) {
+        // let _ = self.spi_mut().command(SpiCommands::OsdDisable);
+
+        extern "C" {
+            fn spi_osd_cmd(cmd: u8);
+        }
+
         unsafe {
-            // self.spi_mut()
-            //     .disable(SpiFeature::default().with_osd().with_io().with_fpga());
-            ffi_spi::spi_osd_cmd(OSD_CMD_DISABLE);
+            spi_osd_cmd(0x40 /* OSD_CMD_ENABLE */);
         }
     }
 }
 
-impl Fpga {
+impl MisterFpga {
     fn new(soc: Rc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>) -> Self {
         Self {
             soc: soc.clone(),

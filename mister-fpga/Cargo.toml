@@ -1,0 +1,19 @@
+[package]
+name = "mister-fpga"
+version = "0.1.0"
+edition = "2021"
+description = "A Rust library to work with the MiSTer FPGA Cores API."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+cyclone-v = { path = "../cyclone_v", version = "0.1" }
+embedded-graphics = "0.8.1"
+libc = "0.2.150"
+num-traits = "0.2.15"
+strum = { version = "0.25.0", features = ["derive"] }
+tracing = "0.1.40"
+once_cell = "1.18.0"
+regex = "1.10.2"
+bitvec = "1.0.1"
+itertools = "0.12.0"

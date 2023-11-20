@@ -1,16 +1,17 @@
 use crate::platform::de10::core_manager::core::buttons::ButtonMap;
-use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, Fpga, SpiCommands};
+use crate::platform::de10::fpga::{CoreInterfaceType, CoreType, SpiCommands};
 use crate::platform::Core;
-use crate::types::StatusBitMap;
-use crate::utils::config_string::{ConfigMenu, FpgaRamMemoryAddress, LoadFileInfo};
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+use mister_fpga::config_string;
+use mister_fpga::config_string::{ConfigMenu, FpgaRamMemoryAddress, LoadFileInfo};
+use mister_fpga::fpga::MisterFpga;
+use mister_fpga::types::StatusBitMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::path::Path;
 use tracing::{debug, info, trace};
 
 mod buttons;
-mod config_string;
 
 pub enum MisterFpgaSendFileInfo {
     Memory {
@@ -41,7 +42,7 @@ impl MisterFpgaSendFileInfo {
 }
 
 pub struct MisterFpgaCore {
-    fpga: Fpga,
+    fpga: MisterFpga,
     pub core_type: CoreType,
     pub spi_type: CoreInterfaceType,
     pub io_version: u8,
@@ -53,13 +54,13 @@ pub struct MisterFpgaCore {
 }
 
 impl MisterFpgaCore {
-    pub fn new(mut fpga: Fpga) -> Result<Self, &'static str> {
+    pub fn new(mut fpga: MisterFpga) -> Result<Self, &'static str> {
         let core_type = fpga.core_type().ok_or("Could not get core type.")?;
         let spi_type = fpga
             .core_interface_type()
             .ok_or("Could not get SPI type.")?;
         let io_version = fpga.core_io_version().ok_or("Could not get IO version.")?;
-        let config = config_string::Config::new(&mut fpga)?;
+        let config = config_string::Config::from_fpga(&mut fpga)?;
 
         let mut map = ButtonMap::default();
         if let Some(list) = config.snes_default_button_list() {

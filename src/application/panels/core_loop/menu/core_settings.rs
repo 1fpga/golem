@@ -4,9 +4,9 @@ use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
 use crate::data::paths::core_root_path;
 use crate::macguiver::application::Application;
 use crate::platform::Core;
-use crate::types::StatusBitMap;
-use crate::utils::config_string::ConfigMenu;
 use embedded_graphics::pixelcolor::BinaryColor;
+use mister_fpga::config_string::ConfigMenu;
+use mister_fpga::types::StatusBitMap;
 use std::convert::TryFrom;
 use tracing::info;
 

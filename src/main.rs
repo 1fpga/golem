@@ -3,7 +3,6 @@
 
 // TODO: make all these modules test friendly.
 pub mod bootcore;
-pub mod charrom;
 pub mod hardware;
 pub mod scheduler;
 

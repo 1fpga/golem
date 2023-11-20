@@ -1,24 +1,24 @@
-use crate::platform::de10::fpga::Fpga;
 use byteorder::{LittleEndian, ReadBytesExt};
+use mister_fpga::fpga::MisterFpga;
 use std::path::Path;
 
 pub mod core;
 pub use core::MisterFpgaCore;
 
 pub struct CoreManager {
-    fpga: Fpga,
+    fpga: MisterFpga,
 }
 
 impl CoreManager {
-    pub fn new(fpga: Fpga) -> Self {
+    pub fn new(fpga: MisterFpga) -> Self {
         Self { fpga }
     }
 
-    pub fn fpga(&self) -> &Fpga {
+    pub fn fpga(&self) -> &MisterFpga {
         &self.fpga
     }
 
-    pub fn fpga_mut(&mut self) -> &mut Fpga {
+    pub fn fpga_mut(&mut self) -> &mut MisterFpga {
         &mut self.fpga
     }
 

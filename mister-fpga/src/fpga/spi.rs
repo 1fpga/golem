@@ -4,8 +4,10 @@ use std::cell::UnsafeCell;
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign};
 use std::rc::Rc;
+use strum::EnumDiscriminants;
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, EnumDiscriminants)]
+#[repr(u16)]
 pub enum SpiCommands {
     UserIoStatus = 0x00,
     UserIoButtonSwitch = 0x01,
@@ -25,13 +27,58 @@ pub enum SpiCommands {
 
     SetStatus32Bits = 0x1e,
 
+    /// Write a line to the OSD. Lines are from `0..=8`.
+    OsdWriteLine(u8) = 0x20,
+
     /// Update status from the core
     GetStatusBits = 0x29,
+
+    /// Disable the OSD menu.
+    OsdDisable = 0x40,
+
+    /// Enable the OSD menu.
+    OsdEnable = 0x41,
 
     FileIoFileTx = 0x53,
     FileIoFileTxDat = 0x54,
     FileIoFileIndex = 0x55,
     FileIoFileInfo = 0x56,
+}
+
+impl From<SpiCommands> for u16 {
+    fn from(value: SpiCommands) -> Self {
+        use SpiCommands::*;
+
+        match value {
+            UserIoStatus => 0x00,
+            UserIoButtonSwitch => 0x01,
+
+            UserIoJoystick0 => 0x02,
+            UserIoJoystick1 => 0x03,
+            UserIoMouse => 0x04,
+            UserIoKeyboard => 0x05,
+            UserIoKeyboardOsd => 0x06,
+
+            UserIoJoystick2 => 0x10,
+            UserIoJoystick3 => 0x11,
+            UserIoJoystick4 => 0x12,
+            UserIoJoystick5 => 0x13,
+
+            UserIoGetString => 0x14,
+
+            SetStatus32Bits => 0x1e,
+            GetStatusBits => 0x29,
+
+            OsdWriteLine(line) => 0x20 + line as u16,
+            OsdDisable => 0x40,
+            OsdEnable => 0x41,
+
+            FileIoFileTx => 0x53,
+            FileIoFileTxDat => 0x54,
+            FileIoFileIndex => 0x55,
+            FileIoFileInfo => 0x56,
+        }
+    }
 }
 
 impl SpiCommands {
@@ -66,6 +113,8 @@ impl SpiCommands {
             | Self::UserIoGetString
             | Self::SetStatus32Bits
             | Self::GetStatusBits => SpiFeature::IO,
+
+            Self::OsdWriteLine(_) | Self::OsdDisable | Self::OsdEnable => SpiFeature::OSD,
 
             Self::FileIoFileIndex
             | Self::FileIoFileInfo
@@ -365,7 +414,7 @@ impl<M: MemoryMapper> Spi<M> {
     fn inner_command(&mut self, command: SpiCommands, out: &mut u16) -> SpiFeature {
         let feature = command.spi_feature();
         self.enable(feature);
-        *out = self.write(command as u16);
+        *out = self.write(command);
         feature
     }
 

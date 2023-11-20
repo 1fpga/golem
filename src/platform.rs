@@ -10,11 +10,11 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::main_inner::Flags;
-use crate::types::StatusBitMap;
-use crate::utils::config_string::{ConfigMenu, LoadFileInfo};
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
+use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
+use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
 use std::path::Path;
 use tracing::trace;

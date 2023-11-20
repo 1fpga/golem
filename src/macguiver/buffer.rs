@@ -1,3 +1,4 @@
+use embedded_graphics::image::GetPixel;
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -326,6 +327,14 @@ impl<C: PixelColor> Drawable for DrawBuffer<C> {
         D: DrawTarget<Color = Self::Color>,
     {
         self.inner.borrow().draw(target)
+    }
+}
+
+impl<C: PixelColor> GetPixel for DrawBuffer<C> {
+    type Color = C;
+
+    fn pixel(&self, p: Point) -> Option<Self::Color> {
+        Some(self.get_pixel(p))
     }
 }
 

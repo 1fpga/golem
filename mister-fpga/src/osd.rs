@@ -1,8 +1,15 @@
-use crate::macguiver::buffer::DrawBuffer;
+//! Module that implements a BinaryColor display for embedded-graphics for the OSD
+//! display on the MiSTer FPGA.
+//!
+//! The OsdDisplay does not implement any Drawable, instead relying on the `send`
+//! method to send the data to the FPGA itself. It does not keep any internal
+//! buffers, and is light weigh.
+use crate::fpga::{MisterFpga, SpiCommands};
+use embedded_graphics::image::GetPixel;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 
-mod sizes {
+pub mod sizes {
     use embedded_graphics::geometry::Size;
 
     /// The size of the title bar.
@@ -37,21 +44,25 @@ pub struct OsdDisplay {
 }
 
 impl OsdDisplay {
-    pub fn line_iter(&self) -> impl Iterator<Item = u32> {
+    fn line_iter(&self) -> impl Iterator<Item = u32> {
         self.top_line..self.top_line + self.lines
     }
 
-    pub fn send(&self, buffer: &DrawBuffer<BinaryColor>) {
-        use super::{osd, spi};
-
-        // Send everything to the scaler.
+    /// Send the buffer to the OSD.
+    pub fn send<B: GetPixel<Color = BinaryColor> + OriginDimensions>(
+        &self,
+        fpga: &mut MisterFpga,
+        buffer: &B,
+    ) {
+        let size = buffer.size();
+        // Send everything to the scaler. We could optimize by only sending differences,
+        // but it isn't needed and would add complexity.
         for line in self.line_iter() {
-            unsafe {
-                let line_buffer = self.get_binary_line_array(buffer, line);
-                spi::spi_osd_cmd_cont(osd::OSD_CMD_WRITE | (line as u8));
-                spi::spi_write(line_buffer.as_ptr(), 256, 0);
-                spi::DisableOsd();
-            }
+            let line_buffer = self.get_binary_line_array(buffer, line, size);
+
+            fpga.spi_mut()
+                .command(SpiCommands::OsdWriteLine(line as u8))
+                .write_buffer_b(&line_buffer);
         }
     }
 }
@@ -98,15 +109,18 @@ impl OsdDisplay {
     }
 
     /// Get a binary line array from the buffer (a single line).
-    pub fn get_binary_line_array(&self, buffer: &DrawBuffer<BinaryColor>, line: u32) -> Vec<u8> {
-        let height = buffer.size().height as i32;
+    fn get_binary_line_array<B: GetPixel<Color = BinaryColor>>(
+        &self,
+        buffer: &B,
+        line: u32,
+        size: Size,
+    ) -> Vec<u8> {
+        let height = size.height as i32;
         let y = ((line - self.top_line) * 8) as i32 - self.offset_y as i32;
 
-        let mut line_buffer = vec![0u8; buffer.size().width as usize];
-        let off = BinaryColor::Off;
-
+        let mut line_buffer = vec![0u8; size.width as usize];
         let px = |x, y| {
-            if y >= 0 && y < height && buffer.get_pixel(Point::new(x, y)) != off {
+            if y >= 0 && y < height && buffer.pixel(Point::new(x, y)) == Some(BinaryColor::On) {
                 1u8
             } else {
                 0u8
