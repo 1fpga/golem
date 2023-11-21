@@ -1,9 +1,9 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::MisterFpga;
 use std::path::Path;
 
 pub mod core;
-pub use core::MisterFpgaCore;
 
 pub struct CoreManager {
     fpga: MisterFpga,

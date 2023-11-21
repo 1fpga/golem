@@ -111,7 +111,7 @@ pub trait Core {
     }
     fn set_status_bits(&mut self, bits: StatusBitMap);
 
-    fn send_key(&mut self, key: u8);
+    fn send_key(&mut self, key: sdl3::keyboard::Keycode);
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8);
 

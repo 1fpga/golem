@@ -57,7 +57,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
                         }
                     }
 
-                    core.send_key(scancode as u8);
+                    core.send_key(keycode);
                 }
                 Event::JoyButtonDown {
                     which, button_idx, ..

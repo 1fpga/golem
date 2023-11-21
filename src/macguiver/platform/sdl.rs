@@ -1,4 +1,5 @@
 //! An SDL3 platform for MacGUIver.
+use crate::macguiver::platform::sdl::settings::OutputSettings;
 use crate::macguiver::platform::Platform;
 use embedded_graphics::pixelcolor::raw::ToBytes;
 use embedded_graphics::pixelcolor::Rgb888;
@@ -14,10 +15,6 @@ pub mod window;
 pub use window::Window;
 
 mod output;
-
-use crate::macguiver::platform::sdl::settings::OutputSettings;
-pub use settings::OutputSettingsBuilder;
-pub use theme::BinaryColorTheme;
 
 thread_local! {
     static SDL_CONTEXT: std::cell::RefCell<sdl3::Sdl> = {
