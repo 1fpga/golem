@@ -6,7 +6,9 @@ use sdl3::keyboard::Keycode;
 use std::time::Instant;
 use tracing::{debug, info, trace};
 
-pub mod menu;
+mod commands;
+mod input;
+mod menu;
 
 fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
     let settings = app.settings();
