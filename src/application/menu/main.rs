@@ -37,8 +37,8 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
             app,
             " ",
             &[
-                ("Cores", format!("({ncores})").as_str(), MenuAction::Cores),
                 ("Games", format!("({ngames})").as_str(), MenuAction::Games),
+                ("Cores", format!("({ncores})").as_str(), MenuAction::Cores),
                 ("Settings...", "", MenuAction::Settings),
                 ("Tools...", "", MenuAction::Tools),
                 ("About", "", MenuAction::About),
