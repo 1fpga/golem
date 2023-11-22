@@ -56,10 +56,19 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
             match ev {
                 Event::KeyDown {
                     scancode: Some(scancode),
+                    repeat,
                     ..
                 } => {
-                    inputs.key_down(scancode);
+                    if !repeat {
+                        inputs.key_down(scancode);
+                    }
                     core.send_key(scancode);
+                }
+                Event::KeyUp {
+                    scancode: Some(scancode),
+                    ..
+                } => {
+                    inputs.key_up(scancode);
                 }
                 Event::JoyButtonDown {
                     which, button_idx, ..

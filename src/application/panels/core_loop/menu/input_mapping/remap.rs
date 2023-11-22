@@ -109,6 +109,7 @@ pub fn remap(app: &mut impl Application<Color = BinaryColor>, command: CoreComma
             match e {
                 Event::KeyDown {
                     scancode: Some(scancode),
+                    repeat: false,
                     ..
                 } => {
                     if scancode == sdl3::keyboard::Scancode::Escape {

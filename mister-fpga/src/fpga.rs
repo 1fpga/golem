@@ -388,7 +388,7 @@ impl MisterFpga {
     #[inline]
     fn wait_for(&mut self, mut f: impl FnMut(&mut Self) -> bool) -> Result<(), ()> {
         let now = Instant::now();
-        let timeout = Duration::from_secs(3);
+        let timeout = Duration::from_secs(10);
 
         while now.elapsed() < timeout {
             if f(self) {
@@ -465,8 +465,12 @@ impl MisterFpga {
 
         debug!("Configuration and initialization.");
         self.enable_bridge();
+
+        debug!("Polling configuration done...");
         self.poll_configuration_done()?;
+        debug!("Polling init phase...");
         self.poll_init_phase()?;
+        debug!("Polling user mode...");
         self.poll_user_mode()?;
 
         trace!(

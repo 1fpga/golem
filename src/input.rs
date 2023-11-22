@@ -140,6 +140,9 @@ impl BasicInputShortcut {
     }
 
     pub fn add_key(&mut self, code: Scancode) {
+        if self.keyboard.iter().any(|k| k == &Some(code)) {
+            return;
+        }
         self.keyboard
             .iter_mut()
             .find_or_last(|k| k.is_none())
