@@ -1,18 +1,29 @@
+use crate::input::commands::CoreCommands;
+use crate::input::InputState;
 use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
-use sdl3::keyboard::Keycode;
 use std::time::Instant;
 use tracing::{debug, info, trace};
 
-mod commands;
-mod input;
-mod menu;
+pub mod menu;
 
 fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
+    let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
+
+    let commands = [
+        (
+            settings.inner().mappings().show_menu.clone(),
+            CoreCommands::ShowCoreMenu,
+        ),
+        (
+            settings.inner().mappings().quit_core.clone(),
+            CoreCommands::QuitCore,
+        ),
+    ];
 
     let mut i = 0;
     let mut prev = Instant::now();
@@ -41,14 +52,39 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
         }
 
         for ev in state.events() {
-            debug!(?ev, "Core loop event");
+            // debug!(?ev, "Core loop event");
             match ev {
                 Event::KeyDown {
-                    keycode: Some(keycode),
                     scancode: Some(scancode),
                     ..
                 } => {
-                    if keycode == Keycode::F12 {
+                    inputs.key_down(scancode);
+                    core.send_key(scancode);
+                }
+                Event::JoyButtonDown {
+                    which, button_idx, ..
+                } => {
+                    inputs.gamepad_button_down(which, button_idx);
+                    core.sdl_joy_button_down((which - 1) as u8, button_idx);
+                }
+                Event::JoyButtonUp {
+                    which, button_idx, ..
+                } => {
+                    inputs.gamepad_button_up(which, button_idx);
+                    core.sdl_joy_button_up((which - 1) as u8, button_idx);
+                }
+                _ => {}
+            }
+        }
+
+        // Check if any action needs to be taken.
+        for (mapping, command) in &commands {
+            if mapping.as_ref().map(|x| x.matches(&inputs)) == Some(true) {
+                eprintln!("Mapping {:?} triggered", mapping);
+                inputs.clear();
+
+                match command {
+                    CoreCommands::ShowCoreMenu => {
                         debug!("Opening core menu");
                         if menu::core_menu(app, &mut core) {
                             return Some(());
@@ -56,20 +92,11 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
                             continue;
                         }
                     }
-
-                    core.send_key(keycode);
+                    CoreCommands::QuitCore => {
+                        debug!("Quitting core");
+                        return Some(());
+                    }
                 }
-                Event::JoyButtonDown {
-                    which, button_idx, ..
-                } => {
-                    core.sdl_joy_button_down((which - 1) as u8, button_idx);
-                }
-                Event::JoyButtonUp {
-                    which, button_idx, ..
-                } => {
-                    core.sdl_joy_button_up((which - 1) as u8, button_idx);
-                }
-                _ => {}
             }
         }
 

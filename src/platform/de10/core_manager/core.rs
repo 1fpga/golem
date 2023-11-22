@@ -2,7 +2,7 @@ use crate::platform::Core;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::types::StatusBitMap;
-use sdl3::keyboard::Keycode;
+use sdl3::keyboard::Scancode;
 use std::path::Path;
 
 impl Core for MisterFpgaCore {
@@ -34,7 +34,7 @@ impl Core for MisterFpgaCore {
         self.send_status_bits(bits)
     }
 
-    fn send_key(&mut self, key: Keycode) {
+    fn send_key(&mut self, key: Scancode) {
         self.send_key_code(key)
     }
 

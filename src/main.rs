@@ -13,10 +13,9 @@ mod main_inner;
 pub mod config;
 pub mod core;
 pub mod file_io;
+pub mod input;
 pub mod macguiver;
 pub mod platform;
-pub mod types;
-pub mod utils;
 pub mod video;
 
 fn main() {

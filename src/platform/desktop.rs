@@ -1,17 +1,18 @@
 #![cfg(feature = "platform_desktop")]
 
 use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::platform::sdl::{
-    BinaryColorTheme, OutputSettingsBuilder, SdlInitState, SdlPlatform, Window,
-};
+use crate::macguiver::platform::sdl::settings::OutputSettingsBuilder;
+use crate::macguiver::platform::sdl::theme::BinaryColorTheme;
+use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::{Platform, PlatformWindow};
 use crate::main_inner::Flags;
 use crate::platform::{sizes, Core, CoreManager, GoLEmPlatform};
-use crate::types::StatusBitMap;
-use crate::utils::config_string::{ConfigMenu, LoadFileInfo};
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
+use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
+use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
+use sdl3::keyboard::Scancode;
 use std::path::Path;
 use tracing::info;
 
@@ -47,7 +48,7 @@ impl Core for DummyCore {
         unreachable!()
     }
 
-    fn send_key(&mut self, key: u8) {
+    fn send_key(&mut self, key: Scancode) {
         info!("DummyCore::send_key({})", key);
     }
 

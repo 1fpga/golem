@@ -134,7 +134,7 @@ pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
                 }
             }
             MenuAction::ShowDetails(i) => {
-                let mut game = &mut all_games[i];
+                let game = &mut all_games[i];
                 if let Err(e) = details::games_details(app, game) {
                     show_error(app, e.as_dyn_error(), true);
                 }

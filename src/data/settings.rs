@@ -7,10 +7,13 @@ use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 use strum::Display;
 use tracing::{debug, error};
+
+pub mod mappings;
+use mappings::MappingSettings;
 
 fn default_retronomicon_backend_() -> Vec<Url> {
     vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
@@ -103,6 +106,10 @@ pub struct InnerSettings {
 
     #[serde(default)]
     #[merge(strategy = merge::overwrite)]
+    mappings: MappingSettings,
+
+    #[serde(default)]
+    #[merge(strategy = merge::overwrite)]
     language: Option<String>,
 }
 
@@ -112,6 +119,7 @@ impl Default for InnerSettings {
             show_fps: false,
             invert_toolbar: true,
             toolbar_datetime_format: DateTimeFormat::default(),
+            mappings: MappingSettings::default(),
             language: None,
         }
     }
@@ -153,6 +161,14 @@ impl InnerSettings {
         .unwrap();
 
         std::fs::write(path, content)
+    }
+
+    pub fn mappings(&self) -> &MappingSettings {
+        &self.mappings
+    }
+
+    pub fn mappings_mut(&mut self) -> &mut MappingSettings {
+        &mut self.mappings
     }
 }
 
@@ -202,6 +218,10 @@ impl Settings {
         if self.inner.write().unwrap().merge_check(other) {
             self.update.borrow_mut().broadcast(());
         }
+    }
+
+    pub fn update_done(&self) {
+        self.update.borrow_mut().broadcast(());
     }
 
     /// Load the settings from disk.
@@ -265,6 +285,16 @@ impl Settings {
     #[inline]
     pub fn retronomicon_backend(&self) -> Vec<Url> {
         default_retronomicon_backend_()
+    }
+
+    #[inline]
+    pub fn inner(&self) -> RwLockReadGuard<'_, InnerSettings> {
+        self.inner.read().unwrap()
+    }
+
+    #[inline]
+    pub fn inner_mut(&self) -> RwLockWriteGuard<'_, InnerSettings> {
+        self.inner.write().unwrap()
     }
 
     #[inline]

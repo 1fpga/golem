@@ -16,6 +16,7 @@ use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
+use sdl3::keyboard::Scancode;
 use std::path::Path;
 use tracing::trace;
 
@@ -32,9 +33,11 @@ cfg_if! {
     } else if #[cfg(feature = "platform_desktop")] {
         mod desktop;
         pub use desktop::DesktopPlatform as PlatformWindowManager;
+        pub use desktop::DummyCore as CoreType;
     } else if #[cfg(feature = "platform_de10")] {
         pub mod de10;
         pub use de10::De10Platform as PlatformWindowManager;
+        pub use mister_fpga::core::MisterFpgaCore as CoreType;
     } else {
         compile_error!("At least one platform must be enabled.");
     }
@@ -111,7 +114,7 @@ pub trait Core {
     }
     fn set_status_bits(&mut self, bits: StatusBitMap);
 
-    fn send_key(&mut self, key: sdl3::keyboard::Keycode);
+    fn send_key(&mut self, key: Scancode);
 
     fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8);
 

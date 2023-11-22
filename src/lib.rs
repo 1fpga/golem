@@ -17,6 +17,7 @@ pub mod application;
 pub mod config;
 pub mod core;
 pub mod file_io;
+pub mod input;
 pub mod macguiver;
 pub mod platform;
 pub mod video;

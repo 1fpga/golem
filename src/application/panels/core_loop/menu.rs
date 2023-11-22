@@ -6,12 +6,14 @@ use embedded_graphics::pixelcolor::BinaryColor;
 
 mod core_debug;
 mod core_settings;
+pub mod input_mapping;
 mod items;
 
 #[derive(Copy, Clone, PartialEq)]
 enum CoreMenuAction {
     Reset,
     CoreSettings,
+    InputMapping,
     DebugInfo,
     Back,
     Quit,
@@ -44,12 +46,15 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
             app,
             "Core",
             &[
-                ("Reset Core", "", CoreMenuAction::Reset),
-                ("Core Settings", "", CoreMenuAction::CoreSettings),
+                ("Input Mapping", "", CoreMenuAction::InputMapping),
                 ("Debug Info", "", CoreMenuAction::DebugInfo),
             ],
             TextMenuOptions::default()
                 .with_state(state)
+                .with_prefix(&[
+                    ("Reset Core", "", CoreMenuAction::Reset),
+                    ("Core Settings", "", CoreMenuAction::CoreSettings),
+                ])
                 .with_suffix(&[
                     version.unwrap_or(("", "", CoreMenuAction::Unselectable)),
                     ("Back", "<-", CoreMenuAction::Back),
@@ -70,6 +75,9 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
             }
             CoreMenuAction::DebugInfo => {
                 core_debug::debug_info(app, core);
+            }
+            CoreMenuAction::InputMapping => {
+                input_mapping::menu(app, Some(core));
             }
             CoreMenuAction::Back => {
                 break false;

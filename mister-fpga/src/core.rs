@@ -4,6 +4,7 @@ use crate::core::buttons::ButtonMap;
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga, SpiCommands};
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+use sdl3::keyboard::Scancode;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::path::Path;
@@ -215,9 +216,9 @@ impl MisterFpgaCore {
         self.status = bits;
     }
 
-    pub fn send_key_code(&mut self, keycode: sdl3::keyboard::Keycode) {
+    pub fn send_key_code(&mut self, keycode: Scancode) {
         let key = keycode as u8;
-        debug!(?key, "Sending key code");
+        debug!(?key, "Sending scan code");
         self.fpga
             .spi_mut()
             .command(SpiCommands::UserIoKeyboard)
