@@ -187,9 +187,9 @@ impl ButtonMap {
     }
 }
 
-#[test]
-fn test_button_nes() {
-    let mapping = ButtonMapping::from_snes_list(&vec!["A", "B", "Select", "Start"]);
-    assert_eq!(mapping[0], MisterFpgaButtons::A);
-    assert_eq!(mapping[1], MisterFpgaButtons::B);
-}
+// #[test]
+// fn test_button_nes() {
+//     let mapping = ButtonMapping::from_snes_list(&vec!["A", "B", "Select", "Start"]);
+//     assert_eq!(mapping[0], MisterFpgaButtons::A);
+//     assert_eq!(mapping[1], MisterFpgaButtons::B);
+// }

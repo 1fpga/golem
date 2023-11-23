@@ -93,6 +93,11 @@ pub fn create_games_from_retronomicon_(
             continue;
         };
 
+        // If the game is already in the database, skip the rest.
+        if Game::get_by_name(db, &g.name).is_ok() {
+            continue;
+        }
+
         let maybe_core = system_to_core.get(&g.system_id.slug);
         let core = if let Some(core) = maybe_core {
             core

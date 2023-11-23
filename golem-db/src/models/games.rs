@@ -68,6 +68,25 @@ pub struct Game {
 }
 
 impl Game {
+    pub fn get(
+        conn: &mut crate::Connection,
+        id: i32,
+    ) -> Result<Option<Self>, diesel::result::Error> {
+        schema::games::table.find(id).first(conn).optional()
+    }
+
+    pub fn get_by_name(
+        conn: &mut crate::Connection,
+        name: &str,
+    ) -> Result<Option<Self>, diesel::result::Error> {
+        use schema::games::dsl;
+        schema::games::table
+            .select(schema::games::all_columns)
+            .filter(dsl::name.eq(name))
+            .first(conn)
+            .optional()
+    }
+
     pub fn count(conn: &mut crate::Connection) -> Result<i64, diesel::result::Error> {
         use schema::games::dsl::*;
         games.count().get_result(conn)

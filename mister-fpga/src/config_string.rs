@@ -12,26 +12,44 @@ use std::convert::TryFrom;
 use std::ops::Range;
 use std::path::Path;
 use std::str::FromStr;
-use tracing::{debug, info};
 
 pub mod midi;
 pub mod settings;
 pub mod uart;
 
+mod parser;
+
 mod types;
 pub use types::*;
 
 static LABELED_SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d*)(\([^)]*\))?").unwrap());
-static LOAD_FILE_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(S)?(\d)?,((?:\w{3})+)(?:,([^,]*))?(?:,([0-9a-fA-F]*))?").unwrap());
-static MOUNT_SD_CARD_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"(\d),((?:\w{3})+)(?:,([^,]*))?").unwrap());
-static OPTION_RE: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"([0-9A-V])([0-9A-V])?,([^,]*),(.*)").unwrap());
 
-fn parse_bit_index_(s: &str, high: bool) -> Option<u8> {
-    let i = u8::from_str_radix(s, 32).ok()?;
-    Some(if high { i + 32 } else { i })
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct FileExtension(pub [u8; 3]);
+
+impl std::ops::Deref for FileExtension {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { std::str::from_utf8_unchecked(&self.0).trim() }
+    }
+}
+
+impl FromStr for FileExtension {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() > 3 {
+            return Err("Invalid file extension");
+        }
+
+        let bytes = s.as_bytes();
+        Ok(Self([
+            bytes.get(0).copied().unwrap_or(b' '),
+            bytes.get(1).copied().unwrap_or(b' '),
+            bytes.get(2).copied().unwrap_or(b' '),
+        ]))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -44,7 +62,7 @@ pub struct LoadFileInfo {
 
     /// A concatenated list of 3 character file extensions. For example, BINGEN would be
     /// BIN and GEN extensions.
-    pub extensions: Vec<String>,
+    pub extensions: Vec<FileExtension>,
 
     /// A label marker for the menu extensions. This is because the menu does not
     /// own this data.
@@ -94,7 +112,7 @@ pub enum ConfigMenu {
     /// Mount SD card menu option.
     MountSdCard {
         slot: u8,
-        extensions: Vec<String>,
+        extensions: Vec<FileExtension>,
         label: Option<String>,
     },
 
@@ -179,260 +197,6 @@ impl ConfigMenu {
             _ => None,
         }
     }
-
-    fn load_file_remember(s: &str, default_index: u8) -> Result<Self, &'static str> {
-        if let Self::LoadFile(inner) = Self::load_file(s, default_index)? {
-            Ok(Self::LoadFileAndRemember(inner))
-        } else {
-            Err("Invalid load file (remember) string.")
-        }
-    }
-
-    fn load_file(s: &str, default_index: u8) -> Result<Self, &'static str> {
-        let captures = LOAD_FILE_RE
-            .captures(s)
-            .ok_or("Invalid load file string.")?;
-
-        let save_support = captures.get(1).is_some();
-        let index = captures
-            .get(2)
-            .map(|s| s.as_str().parse::<u8>().unwrap_or(0))
-            .unwrap_or(default_index);
-        let extensions = captures
-            .get(3)
-            .ok_or("Invalid extension list")?
-            .as_str()
-            .chars()
-            .chunks(3)
-            .into_iter()
-            .map(|chunk| chunk.collect::<String>())
-            .collect::<Vec<_>>();
-        let label = captures.get(4).map(|s| s.as_str().to_string());
-        let address: Option<FpgaRamMemoryAddress> = captures
-            .get(5)
-            .map(|s| usize::from_str_radix(s.as_str(), 16).unwrap_or(0))
-            .map_or(Ok(None), |i| FpgaRamMemoryAddress::try_from(i).map(Some))?;
-
-        let marker = extensions.iter().join(",");
-
-        Ok(Self::LoadFile(Box::new(LoadFileInfo {
-            save_support,
-            index,
-            extensions,
-            marker,
-            label,
-            address,
-        })))
-    }
-
-    fn sd_card(s: &str) -> Result<Self, &'static str> {
-        let captures = MOUNT_SD_CARD_RE
-            .captures(s)
-            .ok_or("Invalid SD card string.")?;
-
-        let slot = captures
-            .get(1)
-            .ok_or("Invalid SD card slot")?
-            .as_str()
-            .parse::<u8>()
-            .map_err(|_| "Invalid SD card slot")?;
-        let extensions = captures
-            .get(2)
-            .ok_or("Invalid extension list")?
-            .as_str()
-            .chars()
-            .chunks(3)
-            .into_iter()
-            .map(|chunk| chunk.collect::<String>())
-            .collect::<Vec<_>>();
-        let label = captures.get(3).map(|s| s.as_str().to_string());
-
-        Ok(Self::MountSdCard {
-            slot,
-            extensions,
-            label,
-        })
-    }
-
-    fn option(s: &str, high: bool) -> Result<Self, &'static str> {
-        let captures = OPTION_RE.captures(s).ok_or("Invalid option string.")?;
-
-        let index1 = match captures.get(1) {
-            Some(s) => parse_bit_index_(s.as_str(), high).ok_or("Invalid index.")?,
-            None => Err("Invalid index start.")?,
-        };
-        let index2 = match captures.get(2) {
-            Some(s) => parse_bit_index_(s.as_str(), high).ok_or("Invalid index.")?,
-            None => index1,
-        };
-
-        let label = captures
-            .get(3)
-            .ok_or("No label specified")?
-            .as_str()
-            .to_string();
-
-        let choices = captures
-            .get(4)
-            .ok_or("No choices specified")?
-            .as_str()
-            .split(',')
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>();
-
-        Ok(Self::Option {
-            bits: index1..(index2 + 1),
-            label,
-            choices,
-        })
-    }
-
-    fn trigger(s: &str, high: bool, close: bool) -> Result<Self, &'static str> {
-        let index = parse_bit_index_(&s[..1], high).ok_or("Invalid index.")?;
-        let label = s[2..].to_string();
-
-        Ok(Self::Trigger {
-            close_osd: close,
-            index,
-            label,
-        })
-    }
-}
-
-impl ConfigMenu {
-    pub fn parse_line(line: &str, line_index: u8) -> Result<Self, &'static str> {
-        #[inline]
-        fn to_str(s: &[u8]) -> &str {
-            unsafe { std::str::from_utf8_unchecked(s) }
-        }
-
-        #[inline]
-        fn to_string(s: &[u8]) -> String {
-            to_str(s).to_string()
-        }
-
-        #[inline]
-        fn to_u32(s: &[u8]) -> Option<u32> {
-            to_str(s).parse::<u32>().ok()
-        }
-
-        match line.as_bytes() {
-            [b'-'] => Ok(ConfigMenu::Empty(None)),
-            [b'-', rest @ ..] => Ok(ConfigMenu::Empty(Some(to_string(rest)))),
-            [b'C', b',', label @ ..] => Ok(ConfigMenu::Cheat(Some(to_string(label)))),
-            [b'C'] => Ok(ConfigMenu::Cheat(None)),
-
-            [b'D', b'I', b'P'] => Ok(ConfigMenu::Dip),
-
-            [b'D', d, rest @ ..] => {
-                let d = to_u32(&[*d]).ok_or("Invalid D index")?;
-                Ok(Self::DisableIf(
-                    d,
-                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
-                ))
-            }
-            [b'd', d, rest @ ..] => {
-                let d = to_u32(&[*d]).ok_or("Invalid D index")?;
-                Ok(Self::DisableUnless(
-                    d,
-                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
-                ))
-            }
-            [b'H', h, rest @ ..] => {
-                let h = to_u32(&[*h]).ok_or("Invalid H index")?;
-                Ok(Self::HideIf(
-                    h,
-                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
-                ))
-            }
-            [b'h', h, rest @ ..] => {
-                let h = to_u32(&[*h]).ok_or("Invalid H index")?;
-                Ok(Self::HideUnless(
-                    h,
-                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
-                ))
-            }
-
-            [b'F', b'C', rest @ ..] => Self::load_file_remember(to_str(rest), line_index),
-            [b'F', rest @ ..] => Self::load_file(to_str(rest), line_index),
-            [b'S', rest @ ..] => Self::sd_card(to_str(rest)),
-
-            [b'O', rest @ ..] => Self::option(to_str(rest), false),
-            [b'o', rest @ ..] => Self::option(to_str(rest), true),
-            [b'R', rest @ ..] => Self::trigger(to_str(rest), false, true),
-            [b'r', rest @ ..] => Self::trigger(to_str(rest), true, true),
-            [b'T', rest @ ..] => Self::trigger(to_str(rest), false, false),
-            [b't', rest @ ..] => Self::trigger(to_str(rest), true, false),
-
-            [b'I', rest @ ..] => Ok(Self::Info(
-                to_str(rest)
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-            )),
-
-            [b'P', number, b',', rest @ ..] => {
-                let index = to_u32(&[*number]).ok_or("Invalid page index")?;
-                let label = to_string(rest);
-                Ok(ConfigMenu::Page {
-                    index: index as u8,
-                    label,
-                })
-            }
-
-            [b'P', number1, number2, b',', rest @ ..] => {
-                let index = to_u32(&[*number1, *number2]).ok_or("Invalid page index")?;
-                let label = to_string(rest);
-                Ok(ConfigMenu::Page {
-                    index: index as u8,
-                    label,
-                })
-            }
-
-            [b'P', number1, rest @ ..] => {
-                let index = to_u32(&[*number1]).ok_or("Invalid page index")?;
-                Ok(ConfigMenu::PageItem(
-                    index as u8,
-                    Self::parse_line(to_str(rest), line_index).unwrap().into(),
-                ))
-            }
-
-            [b'J', b'1', b',', buttons @ ..] => Ok(ConfigMenu::JoystickButtons {
-                keyboard: true,
-                buttons: to_str(buttons)
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-            }),
-            [b'J', b',', buttons @ ..] => Ok(ConfigMenu::JoystickButtons {
-                keyboard: false,
-                buttons: to_str(buttons)
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-            }),
-            [b'j', b'n', b',', rest @ ..] => Ok(ConfigMenu::SnesButtonDefaultList {
-                buttons: to_str(rest)
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-            }),
-            [b'j', b'p', b',', rest @ ..] => Ok(ConfigMenu::SnesButtonDefaultPositionalList {
-                buttons: to_str(rest)
-                    .split(',')
-                    .map(|s| s.to_string())
-                    .collect::<Vec<_>>(),
-            }),
-
-            [b'V', b',', rest @ ..] => Ok(Self::Version(to_string(rest))),
-
-            _ => {
-                debug!(?line, "Unknown menu option");
-                eprintln!("line {line:?}");
-                Err("Unknown menu option")
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -450,7 +214,7 @@ pub struct Config {
 impl Config {
     /// Create a new config from the FPGA.
     /// This is disabled in Test as this module is still included in the test build.
-    pub fn from_fpga(fpga: &mut crate::fpga::MisterFpga) -> Result<Self, &'static str> {
+    pub fn from_fpga(fpga: &mut crate::fpga::MisterFpga) -> Result<Self, String> {
         let cfg_string = fpga.spi_mut().config_string();
 
         Self::from_str(&cfg_string)
@@ -512,43 +276,17 @@ impl Config {
 }
 
 impl FromStr for Config {
-    type Err = &'static str;
+    type Err = String;
 
     fn from_str(cfg_string: &str) -> Result<Self, Self::Err> {
-        if cfg_string.is_empty() {
-            return Err("Empty config string.");
-        }
+        let (rest, (name, settings, menu)) =
+            parser::parse_config_menu(cfg_string.into()).map_err(|e| e.to_string())?;
 
-        let name: String;
-        let mut menu = Vec::new();
-        let mut settings = settings::Settings::default();
-
-        info!("Parsing config string: {}", cfg_string);
-
-        let mut iter = cfg_string.split(';');
-        // First element is always the name.
-        if let Some(core_name) = iter.next() {
-            name = core_name.to_string();
-        } else {
-            return Err("Empty config string");
-        }
-
-        // Next element is always the various settings.
-        if let Some(core_settings) = iter.next() {
-            if !core_settings.is_empty() {
-                settings = settings::Settings::from_str(core_settings)?;
-            }
-        } else {
-            return Err("No settings in config string");
-        }
-
-        // Rest is menu options.
-        for (i, item) in iter.enumerate() {
-            let item = item.trim();
-            if item.is_empty() {
-                continue;
-            }
-            menu.push(ConfigMenu::parse_line(item, i as u8)?);
+        if !rest.fragment().is_empty() {
+            return Err(format!(
+                "Did not parse config string to the end. Rest:\n{}",
+                rest.fragment()
+            ));
         }
 
         Ok(Self {
@@ -795,4 +533,60 @@ fn input_tester() {
     assert!(config.is_ok(), "{:?}", config);
     let config = config.unwrap();
     assert!(config.settings.uart_mode.is_empty());
+}
+
+#[test]
+fn config_string_gba() {
+    let config = Config::from_str(
+        "GBA;SS3E000000:80000;FS,GBA,Load,300C0000;-;\
+        C,Cheats;\
+        H1O[6],Cheats Enabled,Yes,No;\
+        -;\
+        D0R[12],Reload Backup RAM;\
+        D0R[13],Save Backup RAM;\
+        D0O[23],Autosave,Off,On;\
+        D0-;\
+        O[36],Savestates to SDCard,On,Off;\
+        O[43],Autoincrement Slot,Off,On;\
+        O[38:37],Savestate Slot,1,2,3,4;\
+        h4H3R[17],Save state (Alt-F1);\
+        h4H3R[18],Restore state (F1);\
+        -;\
+        P1,Video & Audio;\
+        P1-;\
+        P1O[33:32],Aspect ratio,Original,Full Screen,[ARC1],[ARC2];\
+        P1O[4:2],Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;\
+        P1O[35:34],Scale,Normal,V-Integer,Narrower HV-Integer,Wider HV-Integer;\
+        P1-;\
+        P1O[26:24],Modify Colors,Off,GBA 2.2,GBA 1.6,NDS 1.6,VBA 1.4,75%,50%,25%;\
+        P1-;\
+        P1O[39],Sync core to video,On,Off;\
+        P1O[10:9],Flickerblend,Off,Blend,30Hz;\
+        P1O[22:21],2XResolution,Off,Background,Sprites,Both;\
+        P1O[20],Spritelimit,Off,On;\
+        P1-;\
+        P1O[8:7],Stereo Mix,None,25%,50%,100%;\
+        P1O[19],Fast Forward Sound,On,Off;\
+        P2,Hardware;\
+        P2-;\
+        H6P2O[31:29],Solar Sensor,0%,15%,30%,42%,55%,70%,85%,100%;\
+        H2P2O[16],Turbo,Off,On;\
+        P2O[28],Homebrew BIOS(Reset!),Off,On;\
+        P3,Miscellaneous;\
+        P3-;\
+        P3O[15:14],Storage,Auto,SDRAM,DDR3;\
+        D5P3O[5],Pause when OSD is open,Off,On;\
+        P3O[27],Rewind Capture,Off,On;\
+        P3-;\
+        P3-,Only Romhacks or Crash!;\
+        P3O[40],GPIO HACK(RTC+Rumble),Off,On;\
+        P3O[42:41],Underclock CPU,0,1,2,3;\
+        - ;\
+        R0,Reset;\
+        J1,A,B,L,R,Select,Start,FastForward,Rewind,Savestates;\
+        jn,A,B,L,R,Select,Start,X,X;\
+        I,Load=DPAD Up|Save=Down|Slot=L+R,Active Slot 1,Active Slot 2,Active Slot 3,Active Slot 4,Save to state 1,Restore state 1,Save to state 2,Restore state 2,Save to state 3,Restore state 3,Save to state 4,Restore state 4,Rewinding...;\
+        V,v230803"
+    );
+    assert!(config.is_ok(), "{:?}", config);
 }

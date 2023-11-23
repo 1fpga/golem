@@ -162,7 +162,7 @@ pub fn core_settings(
                     core_root_path(),
                     FilesystemMenuOptions::default()
                         .with_allow_back(true)
-                        .with_extensions(info.extensions.clone()),
+                        .with_extensions(info.extensions.iter().map(|x| x.to_string()).collect()),
                 )
                 .unwrap();
 

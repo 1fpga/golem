@@ -53,7 +53,7 @@ pub struct MisterFpgaCore {
 }
 
 impl MisterFpgaCore {
-    pub fn new(mut fpga: MisterFpga) -> Result<Self, &'static str> {
+    pub fn new(mut fpga: MisterFpga) -> Result<Self, String> {
         let core_type = fpga.core_type().ok_or("Could not get core type.")?;
         let spi_type = fpga
             .core_interface_type()

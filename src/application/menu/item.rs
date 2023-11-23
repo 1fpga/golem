@@ -13,6 +13,7 @@ use embedded_menu::{
     selection_indicator::{style::IndicatorStyle, SelectionIndicatorController},
     Marker, MenuItem, MenuStyle,
 };
+use std::fmt::Debug;
 
 pub struct SimpleMenuItem<T, D, M, R>
 where
@@ -372,7 +373,7 @@ where
 
 impl<'a, R> IntoTextMenuItem<'a, R> for TextMenuItem<'a, R>
 where
-    R: MenuReturn + Copy,
+    R: MenuReturn + Copy + Debug,
     Self: 'a,
 {
     fn to_menu_item(&'a self) -> TextMenuItem<'a, R> {
@@ -382,7 +383,8 @@ where
                 i.marker,
                 match i.value_of() {
                     SdlMenuAction::Select(r) => r,
-                    _ => unreachable!(),
+                    SdlMenuAction::Back => R::back().unwrap(),
+                    x => unreachable!("Invalid action: {:?}", x),
                 },
             ),
             TextMenuItem::Separator(_) => Self::Separator(SectionSeparator::new()),
