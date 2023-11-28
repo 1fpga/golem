@@ -17,7 +17,7 @@ else
 	Q := @
 endif
 
-INCLUDE	= -I./
+INCLUDE	= -I./src_cpp/
 INCLUDE	+= -I./lib/libco
 INCLUDE	+= -I./lib/miniz
 INCLUDE	+= -I./lib/md5
@@ -29,7 +29,7 @@ INCLUDE += -I./lib/bluetooth
 INCLUDE += -I./lib/serial_server/library
 
 PRJ = GoLEm_firmware
-C_SRC =   $(wildcard *.c) \
+C_SRC =   $(wildcard src_cpp/*.c) \
           $(wildcard ./lib/miniz/*.c) \
           $(wildcard ./lib/md5/*.c) \
           $(wildcard ./lib/lzma/*.c) \
@@ -37,9 +37,9 @@ C_SRC =   $(wildcard *.c) \
           $(wildcard ./lib/libchdr/*.c) \
           lib/libco/arm.c
 
-CPP_SRC = $(wildcard *.cpp) \
+CPP_SRC = $(wildcard ./src_cpp/*.cpp) \
           $(wildcard ./lib/serial_server/library/*.cpp) \
-          $(wildcard ./support/*/*.cpp)
+          $(wildcard ./src_cpp/support/*/*.cpp)
 
 IMG =     $(wildcard *.png)
 

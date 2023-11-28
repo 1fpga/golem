@@ -19,7 +19,7 @@
 #include <vector>
 #include <string>
 #include <set>
-#include "lib/miniz/miniz.h"
+#include "../../lib/miniz/miniz.h"
 #include "osd.h"
 #include "fpga_io.h"
 #include "menu.h"

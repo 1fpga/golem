@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include <sys/statvfs.h>
 
-#include "lib/imlib2/Imlib2.h"
+#include "../../lib/imlib2/Imlib2.h"
 
 #include "hardware.h"
 #include "osd.h"
