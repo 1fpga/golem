@@ -1,6 +1,6 @@
 use bitvec::prelude::*;
 use itertools::Itertools;
-use sdl3::gamepad::Button;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -13,8 +13,8 @@ pub mod commands;
 pub struct InputState {
     pub keyboard: HashSet<Scancode>,
     pub joysticks: HashMap<u32, BitArray<[u32; 4], Lsb0>>,
-    pub gamepads: HashMap<u32, BitArray<[u32; 4], Lsb0>>,
-    pub axis: [(Option<i32>, Option<i32>); 4],
+    pub gamepads: HashMap<u32, HashSet<Button>>,
+    pub axis: HashMap<u32, HashMap<Axis, i16>>,
     pub mouse: (i32, i32),
 }
 
@@ -41,26 +41,44 @@ impl Display for InputState {
                     "".to_string()
                 }
             })
+            .filter(|x| !x.is_empty())
             .join("\n");
         let controllers = self
-            .joysticks
+            .gamepads
             .iter()
             .map(|(i, b)| {
-                let buttons = b
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, b)| *b == true)
-                    .map(|(i, _)| i.to_string())
-                    .join(", ");
+                let buttons = b.iter().map(|b| b.string()).join(", ");
                 if !buttons.is_empty() {
                     format!("Gamepad {i}: {}", buttons)
                 } else {
                     "".to_string()
                 }
             })
+            .filter(|x| !x.is_empty())
             .join("\n");
 
-        write!(f, "Keys: {}\n{}\n{}", keys, joysticks, controllers)
+        let axis = self
+            .axis
+            .iter()
+            .map(|(i, a)| {
+                let axis = a
+                    .iter()
+                    .map(|(a, v)| format!("{}: {}", a.string(), v))
+                    .join(", ");
+                if !axis.is_empty() {
+                    format!("Axis {i}: {}", axis)
+                } else {
+                    "".to_string()
+                }
+            })
+            .filter(|x| !x.is_empty())
+            .join("\n");
+
+        write!(
+            f,
+            "Keys: {}\n{}\n{}\n{}",
+            keys, joysticks, controllers, axis
+        )
     }
 }
 
@@ -68,7 +86,7 @@ impl InputState {
     pub fn clear(&mut self) {
         self.keyboard.clear();
         self.joysticks.clear();
-        self.axis = [(None, None); 4];
+        self.axis.clear();
         self.mouse = (0, 0);
     }
 
@@ -95,17 +113,15 @@ impl InputState {
     }
 
     pub fn controller_button_down(&mut self, controller: u32, button: Button) {
-        self.gamepads
-            .entry(controller)
-            .or_default()
-            .set(button as usize, true);
+        self.gamepads.entry(controller).or_default().insert(button);
     }
 
     pub fn controller_button_up(&mut self, controller: u32, button: Button) {
-        self.gamepads
-            .entry(controller)
-            .or_default()
-            .set(button as usize, false);
+        self.gamepads.entry(controller).or_default().remove(&button);
+    }
+
+    pub fn controller_axis_motion(&mut self, controller: u32, axis: Axis, value: i16) {
+        self.axis.entry(controller).or_default().insert(axis, value);
     }
 
     pub fn is_empty(&self) -> bool {

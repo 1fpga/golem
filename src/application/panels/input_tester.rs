@@ -92,6 +92,12 @@ pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) {
                 Event::ControllerButtonUp { which, button, .. } => {
                     current.controller_button_up(which, button);
                 }
+                Event::ControllerAxisMotion {
+                    which, axis, value, ..
+                } => {
+                    current.controller_axis_motion(which, axis, value);
+                }
+
                 _ => {}
             }
         }

@@ -22,6 +22,12 @@ pub mod macguiver;
 pub mod platform;
 pub mod video;
 
+// const LOGO: &[u8] = include_bytes!("../assets/logo.png");
+// #[no_mangle]
+// pub static mut _binary_logo_png_start: *const u8 = LOGO.as_ptr();
+// #[no_mangle]
+// pub static mut _binary_logo_png_end: *const u8 = unsafe { LOGO.as_ptr().add(LOGO.len()) };
+
 #[cfg(not(test))]
 #[cfg(feature = "platform_de10")]
 #[no_mangle]

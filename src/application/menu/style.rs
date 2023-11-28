@@ -7,6 +7,7 @@ use embedded_menu::selection_indicator::style::Invert;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{DisplayScrollbar, MenuStyle};
 use sdl3::event::Event;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Keycode;
 use std::marker::PhantomData;
 
@@ -113,14 +114,22 @@ impl<R: Copy> Default for SdlMenuInputAdapter<R> {
     }
 }
 
+#[derive(Default, Clone, Copy, PartialEq)]
+pub enum AxisState {
+    #[default]
+    Idle,
+    Up,
+    Down,
+}
+
 impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
     type Input = Event;
     type Value = SdlMenuAction<R>;
-    type State = ();
+    type State = (AxisState, AxisState);
 
     fn handle_input(
         &self,
-        _state: &mut Self::State,
+        state: &mut Self::State,
         action: Self::Input,
     ) -> InputResult<Self::Value> {
         match action {
@@ -154,33 +163,65 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
                 _ => InputState::Idle.into(),
             },
 
-            Event::JoyButtonDown { button_idx, .. } => match button_idx {
-                // A
-                0 => Interaction::Action(Action::Select).into(),
+            Event::ControllerButtonDown { button, .. } => match button {
+                Button::A => Interaction::Action(Action::Select).into(),
+                Button::B => Interaction::Action(Action::Return(SdlMenuAction::Back)).into(),
+                Button::X => Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into(),
+                Button::Y => Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into(),
+                Button::DPadUp => Interaction::Navigation(Navigation::Previous).into(),
+                Button::DPadDown => Interaction::Navigation(Navigation::Next).into(),
+                Button::DPadLeft => {
+                    Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE)).into()
+                }
+                Button::DPadRight => {
+                    Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into()
+                }
 
-                // B
-                1 => Interaction::Action(Action::Return(SdlMenuAction::Back)).into(),
+                _ => InputState::Idle.into(),
+            },
 
-                // X
-                2 =>                     Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into()
-,
-
-                // Y
-                3 =>                     Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into()
-,
-
-                // Up
-                11 => Interaction::Navigation(Navigation::Previous).into(),
-
-                // Down
-                12 => Interaction::Navigation(Navigation::Next).into(),
-
-                // Right
-                13 => Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE)).into(),
-
-                // Left
-                14 => Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into(),
-
+            Event::ControllerAxisMotion { axis, value, .. } => match axis {
+                Axis::LeftX => {
+                    if value > i16::MAX / 2 {
+                        if state.0 != AxisState::Up {
+                            state.0 = AxisState::Up;
+                            Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE))
+                                .into()
+                        } else {
+                            InputState::Idle.into()
+                        }
+                    } else if value < i16::MIN / 2 {
+                        if state.0 != AxisState::Down {
+                            state.0 = AxisState::Down;
+                            Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into()
+                        } else {
+                            InputState::Idle.into()
+                        }
+                    } else {
+                        state.0 = AxisState::Idle;
+                        InputState::Idle.into()
+                    }
+                }
+                Axis::LeftY => {
+                    if value > i16::MAX / 2 {
+                        if state.1 != AxisState::Up {
+                            state.1 = AxisState::Up;
+                            Interaction::Navigation(Navigation::Next).into()
+                        } else {
+                            InputState::Idle.into()
+                        }
+                    } else if value < i16::MIN / 2 {
+                        if state.1 != AxisState::Down {
+                            state.1 = AxisState::Down;
+                            Interaction::Navigation(Navigation::Previous).into()
+                        } else {
+                            InputState::Idle.into()
+                        }
+                    } else {
+                        state.1 = AxisState::Idle;
+                        InputState::Idle.into()
+                    }
+                }
                 _ => InputState::Idle.into(),
             },
 
@@ -254,30 +295,23 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
                 _ => InputState::Idle.into(),
             },
 
-            Event::JoyButtonDown { button_idx, .. } => match button_idx {
-                // A
-                0 => Interaction::Action(Action::Select).into(),
-
-                // B
-                1 => {
+            Event::ControllerButtonDown { button, .. } => match button {
+                Button::A => Interaction::Action(Action::Select).into(),
+                Button::B => {
                     if let Some(b) = R::back() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {
                         InputState::Idle.into()
                     }
                 }
-
-                // X
-                2 => {
+                Button::X => {
                     if let Some(b) = R::details() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {
                         InputState::Idle.into()
                     }
                 }
-
-                // Y
-                3 => {
+                Button::Y => {
                     if let Some(b) = R::sort() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {
@@ -285,23 +319,14 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
                     }
                 }
 
-                // Shoulder Left
-                9 => Interaction::Navigation(Navigation::Beginning).into(),
-
-                // Shoulder Right
-                10 => Interaction::Navigation(Navigation::End).into(),
-
-                // Up
-                11 => Interaction::Navigation(Navigation::Previous).into(),
-
-                // Down
-                12 => Interaction::Navigation(Navigation::Next).into(),
-
-                // Right
-                13 => Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE)).into(),
-
-                // Left
-                14 => Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into(),
+                Button::DPadUp => Interaction::Navigation(Navigation::Previous).into(),
+                Button::DPadDown => Interaction::Navigation(Navigation::Next).into(),
+                Button::DPadRight => {
+                    Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE)).into()
+                }
+                Button::DPadLeft => {
+                    Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into()
+                }
 
                 _ => InputState::Idle.into(),
             },
