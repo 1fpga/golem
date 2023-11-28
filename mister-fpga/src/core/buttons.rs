@@ -3,12 +3,14 @@ use fixed_map::Key;
 use static_assertions::{const_assert, const_assert_eq};
 use std::fmt::Debug;
 use std::str::FromStr;
-use strum::{Display, EnumCount, EnumIter, EnumString, IntoEnumIterator};
+use strum::{Display, EnumCount, EnumIter, EnumString, FromRepr, IntoEnumIterator};
 use tracing::trace;
 
 /// Buttons supported by the MisterFPGA API.
 /// This is MiSTer specific.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key)]
+#[derive(
+    Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key, FromRepr,
+)]
 #[repr(i8)]
 pub enum MisterFpgaButtons {
     // No mapping exists and the button should be discarded or ignored.
@@ -162,7 +164,7 @@ impl ButtonMap {
         }
 
         if tracing::enabled!(tracing::Level::TRACE) {
-            let mask = format!("0b{0:16b}", self.value());
+            let mask = format!("0b{:016b}", self.value());
             let snes = self.map[sdl_btn as usize];
             trace!(?sdl_btn, ?snes, ?index, ?mask, "button down");
         }
@@ -186,10 +188,3 @@ impl ButtonMap {
         self.bits.load()
     }
 }
-
-// #[test]
-// fn test_button_nes() {
-//     let mapping = ButtonMapping::from_snes_list(&vec!["A", "B", "Select", "Start"]);
-//     assert_eq!(mapping[0], MisterFpgaButtons::A);
-//     assert_eq!(mapping[1], MisterFpgaButtons::B);
-// }

@@ -14,7 +14,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
 
-    let commands = [
+    let mut commands = [
         (
             settings.inner().mappings().show_menu.clone(),
             CoreCommands::ShowCoreMenu,
@@ -36,6 +36,18 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
         if i % 100 == 0 {
             let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
+                let settings = app.settings();
+                commands = [
+                    (
+                        settings.inner().mappings().show_menu.clone(),
+                        CoreCommands::ShowCoreMenu,
+                    ),
+                    (
+                        settings.inner().mappings().quit_core.clone(),
+                        CoreCommands::QuitCore,
+                    ),
+                ];
+
                 debug!("Settings updated...");
             }
 
@@ -52,7 +64,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
         }
 
         for ev in state.events() {
-            // debug!(?ev, "Core loop event");
+            debug!(?ev, "Core loop event");
             match ev {
                 Event::KeyDown {
                     scancode: Some(scancode),
