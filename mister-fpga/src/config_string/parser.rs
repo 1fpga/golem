@@ -122,6 +122,10 @@ fn hide_unless(line: u8) -> impl FnMut(Input) -> Result<ConfigMenu> {
 
 /// File.
 fn file<'a>(line: u8) -> impl FnMut(Input<'a>) -> Result<'a, ConfigMenu> {
+    fn is_valid_filename_char(c: char) -> bool {
+        c.is_alphanumeric() || c == '.' || c == '_' || c == ' '
+    }
+
     preceded(
         char('F'),
         map(
@@ -132,9 +136,9 @@ fn file<'a>(line: u8) -> impl FnMut(Input<'a>) -> Result<'a, ConfigMenu> {
                 preceded(
                     char(','),
                     many1(recognize(tuple((
-                        satisfy(char::is_alphanumeric),
-                        opt(satisfy(char::is_alphanumeric)),
-                        opt(satisfy(char::is_alphanumeric)),
+                        satisfy(is_valid_filename_char),
+                        opt(satisfy(is_valid_filename_char)),
+                        opt(satisfy(is_valid_filename_char)),
                     )))),
                 ),
                 opt(preceded(
@@ -176,6 +180,10 @@ fn file<'a>(line: u8) -> impl FnMut(Input<'a>) -> Result<'a, ConfigMenu> {
 }
 
 fn sd_card(input: Input) -> Result<ConfigMenu> {
+    fn is_valid_filename_char(c: char) -> bool {
+        c.is_alphanumeric() || c == '.' || c == '_' || c == ' '
+    }
+
     preceded(
         char('S'),
         map(
@@ -184,9 +192,9 @@ fn sd_card(input: Input) -> Result<ConfigMenu> {
                 preceded(
                     char::<Input, _>(','),
                     many1(recognize(tuple((
-                        satisfy(char::is_alphanumeric),
-                        satisfy(char::is_alphanumeric),
-                        satisfy(char::is_alphanumeric),
+                        satisfy(is_valid_filename_char),
+                        opt(satisfy(is_valid_filename_char)),
+                        opt(satisfy(is_valid_filename_char)),
                     )))),
                 ),
                 opt(preceded(char(','), recognize(many1(satisfy(|c| c != ';'))))),
