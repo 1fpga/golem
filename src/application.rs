@@ -10,6 +10,7 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
 use golem_db::Connection;
 use sdl3::event::Event;
+use sdl3::gamepad::Gamepad;
 use sdl3::joystick::Joystick;
 use std::sync::{Arc, Mutex};
 use tracing::{info, warn};
@@ -31,6 +32,7 @@ pub struct MiSTer {
     render_toolbar: bool,
 
     joysticks: [Option<Joystick>; 16],
+    gamepads: [Option<Gamepad>; 16],
 
     pub platform: WindowManager,
     main_buffer: DrawBuffer<BinaryColor>,
@@ -52,13 +54,20 @@ impl MiSTer {
         // Due to a limitation in Rust language right now, None does not implement Copy
         // when Option<T> does not. This means we can't use it in an array. So we use a
         // constant to work around this.
-        const NONE: Option<Joystick> = None;
-        let joysticks = [NONE; 16];
+        let joysticks = {
+            const NONE: Option<Joystick> = None;
+            [NONE; 16]
+        };
+        let gamepads = {
+            const NONE: Option<Gamepad> = None;
+            [NONE; 16]
+        };
 
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
             render_toolbar: true,
             joysticks,
+            gamepads,
             database,
             settings,
             platform,
@@ -141,6 +150,27 @@ impl Application for MiSTer {
                         }
 
                         self.joysticks[*which as usize] = None;
+                    }
+                    Event::ControllerDeviceAdded { which, .. } => {
+                        let g = self
+                            .platform
+                            .sdl()
+                            .gamepad
+                            .borrow_mut()
+                            .open(*which)
+                            .unwrap();
+                        if let Some(Some(g)) = self.gamepads.get(*which as usize) {
+                            warn!("Gamepad {} was already connected. Replacing it.", g.name());
+                        }
+
+                        self.gamepads[*which as usize] = Some(g);
+                    }
+                    Event::ControllerDeviceRemoved { which, .. } => {
+                        if let Some(None) = self.gamepads.get(*which as usize) {
+                            warn!("Gamepad #{which} was not detected.");
+                        }
+
+                        self.gamepads[*which as usize] = None;
                     }
                     _ => {}
                 }

@@ -129,13 +129,13 @@ pub fn remap(app: &mut impl Application<Color = BinaryColor>, command: CoreComma
                     which, button_idx, ..
                 } => {
                     input.add_gamepad_button(button_idx);
-                    current.gamepad_button_down(which, button_idx);
+                    current.joystick_button_down(which, button_idx);
                     has_been_set = true;
                 }
                 Event::JoyButtonUp {
                     which, button_idx, ..
                 } => {
-                    current.gamepad_button_up(which, button_idx);
+                    current.joystick_button_up(which, button_idx);
                 }
                 _ => {}
             }

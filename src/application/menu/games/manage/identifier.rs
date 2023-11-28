@@ -6,7 +6,7 @@ use golem_db::{models, Connection};
 use reqwest::Url;
 use retronomicon_dto::routes;
 use std::path::PathBuf;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 fn create_games_from_datfile_(
     db: &mut Connection,
@@ -69,12 +69,17 @@ pub fn create_games_from_retronomicon_(
         .unwrap_or_default()
         .into_iter()
         .collect::<std::collections::HashMap<_, _>>();
+
     let mut sha_to_scan = scans
         .into_iter()
         .map(|s| (s.sha1.to_vec(), s))
         .collect::<std::collections::HashMap<_, _>>();
 
+    eprintln!("system_to_core: {:?}", system_to_core);
+    eprintln!("games: {:?}", games);
+
     for g in games {
+        info!("Creating game {}", g.name);
         let maybe_scan_found = g
             .artifacts
             .iter()
@@ -94,7 +99,8 @@ pub fn create_games_from_retronomicon_(
         };
 
         // If the game is already in the database, skip the rest.
-        if Game::get_by_name(db, &g.name).is_ok() {
+        if matches!(Game::get_by_name(db, &g.name), Ok(Some(_))) {
+            debug!("Found game {} in database", g.name);
             continue;
         }
 

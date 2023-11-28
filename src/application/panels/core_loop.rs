@@ -85,13 +85,13 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
                 Event::JoyButtonDown {
                     which, button_idx, ..
                 } => {
-                    inputs.gamepad_button_down(which, button_idx);
+                    inputs.joystick_button_down(which, button_idx);
                     core.sdl_joy_button_down((which - 1) as u8, button_idx);
                 }
                 Event::JoyButtonUp {
                     which, button_idx, ..
                 } => {
-                    inputs.gamepad_button_up(which, button_idx);
+                    inputs.joystick_button_up(which, button_idx);
                     core.sdl_joy_button_up((which - 1) as u8, button_idx);
                 }
                 _ => {}
