@@ -15,6 +15,10 @@ use retronomicon_dto::routes;
 use thiserror::__private::AsDynError;
 use tracing::{debug, info};
 
+/// For now, we don't allow cores that are known to not work at all to be
+/// installed.
+const SAFE_LIST: &'static [&'static str] = &["mister-input-test", "mister-nes", "mister-chess"];
+
 /// The action to perform for a selected core.
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum CoreAction {
@@ -100,8 +104,11 @@ fn list_cores_from_retronomicon(
     url.query_pairs_mut().append_pair("platform", "mister-fpga");
     debug!(url = url.to_string(), "Download core list");
     let response = client.get(url).send()?;
-
-    Ok(response.json()?)
+    let list: Vec<CoreListItem> = response.json()?;
+    Ok(list
+        .into_iter()
+        .filter(|c| SAFE_LIST.contains(&c.slug.as_str()))
+        .collect())
 }
 
 fn install_single_core(
