@@ -1,4 +1,4 @@
-use crate::input::{BasicInputShortcut, InputState};
+use crate::input::InputState;
 use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};

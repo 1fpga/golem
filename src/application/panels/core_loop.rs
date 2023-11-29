@@ -1,29 +1,34 @@
 use crate::input::commands::CoreCommands;
-use crate::input::InputState;
+use crate::input::{BasicInputShortcut, InputState};
 use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 use std::time::Instant;
-use tracing::{debug, info, trace};
+use tracing::{debug, error, info, trace};
 
 pub mod menu;
+
+fn commands_(
+    app: &mut impl Application<Color = BinaryColor>,
+    core: &impl Core,
+) -> Vec<(CoreCommands, BasicInputShortcut)> {
+    let settings = app.settings();
+    settings
+        .inner()
+        .mappings()
+        .global_commands()
+        .chain(settings.inner().mappings().core_commands(core.name()))
+        .map(|(cmd, shortcut)| (cmd, shortcut.clone()))
+        .collect::<Vec<_>>()
+}
 
 fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
     let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
 
-    let mut commands = [
-        (
-            settings.inner().mappings().show_menu.clone(),
-            CoreCommands::ShowCoreMenu,
-        ),
-        (
-            settings.inner().mappings().quit_core.clone(),
-            CoreCommands::QuitCore,
-        ),
-    ];
+    let mut commands = commands_(app, &core);
 
     let mut i = 0;
     let mut prev = Instant::now();
@@ -36,18 +41,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
         if i % 100 == 0 {
             let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
-                let settings = app.settings();
-                commands = [
-                    (
-                        settings.inner().mappings().show_menu.clone(),
-                        CoreCommands::ShowCoreMenu,
-                    ),
-                    (
-                        settings.inner().mappings().quit_core.clone(),
-                        CoreCommands::QuitCore,
-                    ),
-                ];
-
+                commands = commands_(app, &core);
                 debug!("Settings updated...");
             }
 
@@ -82,26 +76,23 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
                 } => {
                     inputs.key_up(scancode);
                 }
-                Event::JoyButtonDown {
-                    which, button_idx, ..
-                } => {
-                    inputs.joystick_button_down(which, button_idx);
-                    core.sdl_joy_button_down((which - 1) as u8, button_idx);
+                Event::ControllerButtonDown { which, button, .. } => {
+                    inputs.controller_button_down(which, button);
+                    core.sdl_button_down((which - 1) as u8, button);
                 }
-                Event::JoyButtonUp {
-                    which, button_idx, ..
-                } => {
-                    inputs.joystick_button_up(which, button_idx);
-                    core.sdl_joy_button_up((which - 1) as u8, button_idx);
+                Event::ControllerButtonUp { which, button, .. } => {
+                    inputs.controller_button_up(which, button);
+                    core.sdl_button_up((which - 1) as u8, button);
                 }
                 _ => {}
             }
         }
 
         // Check if any action needs to be taken.
-        for (mapping, command) in &commands {
-            if mapping.as_ref().map(|x| x.matches(&inputs)) == Some(true) {
-                eprintln!("Mapping {:?} triggered", mapping);
+        let mut update_commands = false;
+        for (command, mapping) in &commands {
+            if mapping.matches(&inputs) {
+                info!(?mapping, ?inputs, "Command {:?} triggered", command);
                 inputs.clear();
 
                 match command {
@@ -109,16 +100,45 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
                         debug!("Opening core menu");
                         if menu::core_menu(app, &mut core) {
                             return Some(());
-                        } else {
-                            continue;
                         }
+                        // For some reason this doesn't update properly if we only
+                        // use the bus. So regenerate the commands.
+                        update_commands = true;
+                    }
+                    CoreCommands::ResetCore => {
+                        debug!("Resetting core");
+                        core.status_pulse(0);
                     }
                     CoreCommands::QuitCore => {
                         debug!("Quitting core");
                         return Some(());
                     }
+                    CoreCommands::CoreSpecificCommand(id) => {
+                        let menu = core.menu_options().iter().find(|m| {
+                            eprintln!("{:?} == {} ({:?})", m.id(), id, m.label());
+                            m.id() == Some(*id)
+                        });
+                        let menu = menu.cloned();
+                        debug!(?menu, "Sending core-specific command {}", id);
+                        if let Some(menu) = menu {
+                            match core.trigger_menu(&menu) {
+                                Ok(true) => {
+                                    debug!("Core-specific command {} triggered", id);
+                                }
+                                Ok(false) => {
+                                    debug!("Core-specific command {} not triggered", id);
+                                }
+                                Err(e) => {
+                                    error!("Error triggering menu: {}", e);
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        }
+        if update_commands {
+            commands = commands_(app, &core);
         }
 
         None

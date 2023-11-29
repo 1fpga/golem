@@ -1,11 +1,13 @@
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::platform::GoLEmPlatform;
-use crate::types::StatusBitMap;
-use crate::utils::config_string::ConfigMenu;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
+use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
+use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
+use sdl3::gamepad::Button;
+use sdl3::keyboard::Scancode;
 use std::path::Path;
 
 pub struct NullCore;
@@ -15,7 +17,23 @@ impl super::Core for NullCore {
         ""
     }
 
+    fn load_file(&mut self, _path: &Path, _file_info: Option<LoadFileInfo>) -> Result<(), String> {
+        unreachable!()
+    }
+
+    fn version(&self) -> Option<&str> {
+        unreachable!()
+    }
+
     fn menu_options(&self) -> &[ConfigMenu] {
+        unreachable!()
+    }
+
+    fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String> {
+        unreachable!()
+    }
+
+    fn status_mask(&self) -> StatusBitMap {
         unreachable!()
     }
 
@@ -23,19 +41,19 @@ impl super::Core for NullCore {
         unreachable!()
     }
 
-    fn set_status_bits(&mut self, bits: StatusBitMap) {
+    fn set_status_bits(&mut self, _bits: StatusBitMap) {
         unreachable!()
     }
 
-    fn send_key(&mut self, key: u8) {
+    fn send_key(&mut self, _key: Scancode) {
         unreachable!()
     }
 
-    fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8) {
+    fn sdl_button_down(&mut self, _joystick_idx: u8, _button: Button) {
         unreachable!()
     }
 
-    fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8) {
+    fn sdl_button_up(&mut self, _joystick_idx: u8, _button: Button) {
         unreachable!()
     }
 }
@@ -45,7 +63,11 @@ pub struct NullCoreManager;
 impl super::CoreManager for NullCoreManager {
     type Core = NullCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
+    fn load_program(&mut self, _path: impl AsRef<Path>) -> Result<Self::Core, String> {
+        unreachable!("Platform should never run in NULL.")
+    }
+
+    fn load_menu(&mut self) -> Result<Self::Core, String> {
         unreachable!("Platform should never run in NULL.")
     }
 

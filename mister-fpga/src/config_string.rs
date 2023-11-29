@@ -186,6 +186,36 @@ pub enum ConfigMenu {
 }
 
 impl ConfigMenu {
+    pub fn label(&self) -> Option<&str> {
+        match self {
+            ConfigMenu::DisableIf(_, sub)
+            | ConfigMenu::DisableUnless(_, sub)
+            | ConfigMenu::HideIf(_, sub)
+            | ConfigMenu::HideUnless(_, sub) => sub.label(),
+            // TODO: add those.
+            // ConfigMenu::Cheat(name) => name.as_ref().map(|x| x.as_str()),
+            // ConfigMenu::LoadFileAndRemember(info) | ConfigMenu::LoadFile(info) => {
+            //     info.label.as_ref().map(|l| l.as_str())
+            // }
+            ConfigMenu::Option { label, .. } => Some(label.as_str()),
+            ConfigMenu::Trigger { label, .. } => Some(label.as_str()),
+            ConfigMenu::PageItem(_, sub) => sub.label(),
+            _ => None,
+        }
+    }
+
+    pub fn id_from_str(str: &str) -> u32 {
+        let mut s: u32 = 0;
+        for c in str.as_bytes() {
+            s = s.wrapping_mul(223).wrapping_add(*c as u32);
+        }
+        s
+    }
+
+    pub fn id(&self) -> Option<u32> {
+        self.label().map(Self::id_from_str)
+    }
+
     pub fn page(&self) -> Option<u8> {
         match self {
             ConfigMenu::DisableIf(_, inner) => inner.page(),

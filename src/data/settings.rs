@@ -216,12 +216,12 @@ impl Merge for Settings {
 impl Settings {
     pub fn update(&self, other: InnerSettings) {
         if self.inner.write().unwrap().merge_check(other) {
-            self.update.borrow_mut().broadcast(());
+            let _ = self.update.borrow_mut().try_broadcast(());
         }
     }
 
     pub fn update_done(&self) {
-        self.update.borrow_mut().broadcast(());
+        let _ = self.update.borrow_mut().try_broadcast(());
     }
 
     /// Load the settings from disk.

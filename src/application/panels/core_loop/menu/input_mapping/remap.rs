@@ -2,6 +2,7 @@ use crate::application::panels::alert::alert;
 use crate::input::commands::CoreCommands;
 use crate::input::{BasicInputShortcut, InputState};
 use crate::macguiver::application::Application;
+use crate::platform::Core;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -12,13 +13,18 @@ use embedded_layout::prelude::*;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
 use sdl3::event::Event;
+use tracing::info;
 
-pub fn remap(app: &mut impl Application<Color = BinaryColor>, command: CoreCommands) {
+pub fn remap(
+    app: &mut impl Application<Color = BinaryColor>,
+    core: Option<&(impl Core + ?Sized)>,
+    command: CoreCommands,
+) {
     let mapping = app
         .settings()
         .inner()
         .mappings()
-        .for_command(command)
+        .for_command(core.map(|x| x.name()), command)
         .cloned();
     let mapping_str = mapping.map(|m| m.to_string());
 
@@ -39,7 +45,10 @@ pub fn remap(app: &mut impl Application<Color = BinaryColor>, command: CoreComma
             return;
         }
         Some(1) => {
-            app.settings().inner_mut().mappings_mut().delete(command);
+            app.settings()
+                .inner_mut()
+                .mappings_mut()
+                .delete(core.map(|x| x.name()), command);
             app.settings().update_done();
             return;
         }
@@ -125,27 +134,47 @@ pub fn remap(app: &mut impl Application<Color = BinaryColor>, command: CoreComma
                 } => {
                     current.key_up(scancode);
                 }
-                Event::JoyButtonDown {
-                    which, button_idx, ..
-                } => {
-                    input.add_gamepad_button(button_idx);
-                    current.joystick_button_down(which, button_idx);
+                Event::ControllerButtonDown { which, button, .. } => {
+                    input.add_gamepad_button(button);
+                    current.controller_button_down(which, button);
                     has_been_set = true;
                 }
-                Event::JoyButtonUp {
-                    which, button_idx, ..
-                } => {
-                    current.joystick_button_up(which, button_idx);
+                Event::ControllerButtonUp { which, button, .. } => {
+                    current.controller_button_up(which, button);
                 }
                 _ => {}
             }
         }
 
         if has_been_set && current.is_empty() {
-            app.settings()
-                .inner_mut()
-                .mappings_mut()
-                .set(command, input.clone());
+            info!(
+                core = core.map(|x| x.name()),
+                ?command,
+                ?input,
+                "Updating mapping."
+            );
+
+            if let CoreCommands::CoreSpecificCommand(id) = command {
+                if let Some(c) = core {
+                    if let Some(label) = c
+                        .menu_options()
+                        .iter()
+                        .find(|o| o.id() == Some(id))
+                        .and_then(|o| o.label())
+                    {
+                        app.settings().inner_mut().mappings_mut().set_core_specific(
+                            c.name(),
+                            label,
+                            input.clone(),
+                        );
+                    }
+                }
+            } else {
+                app.settings()
+                    .inner_mut()
+                    .mappings_mut()
+                    .set(command, input.clone());
+            }
             app.settings().update_done();
             return Some(());
         }

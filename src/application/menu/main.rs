@@ -6,6 +6,7 @@ use crate::application::panels::alert::alert;
 use crate::application::panels::settings::settings_panel;
 use crate::application::panels::tools::tools_menu;
 use crate::macguiver::application::Application;
+use crate::platform;
 use embedded_graphics::pixelcolor::BinaryColor;
 use golem_db::models;
 
@@ -50,7 +51,7 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
         match result {
             MenuAction::Games => games_list(app),
             MenuAction::Cores => cores_menu_panel(app),
-            MenuAction::Settings => settings_panel(app),
+            MenuAction::Settings => settings_panel(app, &None::<&mut dyn platform::Core>),
             MenuAction::Tools => tools_menu(app),
             MenuAction::About => {
                 alert(app, "About", "Not implemented", &["Okay"]);

@@ -16,6 +16,7 @@ use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
+use sdl3::gamepad::Button;
 use sdl3::keyboard::Scancode;
 use std::path::Path;
 use tracing::trace;
@@ -24,6 +25,7 @@ cfg_if! {
     if #[cfg(test)] {
         mod null;
         pub use null::NullPlatform as PlatformWindowManager;
+        pub use null::NullCore as CoreType;
     } else if #[cfg(any(
         all(feature = "platform_de10", feature = "platform_desktop"),
         all(feature = "platform_de10", test),
@@ -102,6 +104,8 @@ pub trait Core {
 
     fn menu_options(&self) -> &[ConfigMenu];
 
+    fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String>;
+
     fn status_mask(&self) -> StatusBitMap;
     fn status_bits(&self) -> StatusBitMap;
     fn status_pulse(&mut self, bit: usize) {
@@ -116,9 +120,9 @@ pub trait Core {
 
     fn send_key(&mut self, key: Scancode);
 
-    fn sdl_joy_button_down(&mut self, joystick_idx: u8, button: u8);
+    fn sdl_button_down(&mut self, controller: u8, button: Button);
 
-    fn sdl_joy_button_up(&mut self, joystick_idx: u8, button: u8);
+    fn sdl_button_up(&mut self, controller: u8, button: Button);
 }
 
 pub trait CoreManager {

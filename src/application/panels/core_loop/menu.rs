@@ -77,7 +77,7 @@ pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut imp
                 core_debug::debug_info(app, core);
             }
             CoreMenuAction::InputMapping => {
-                input_mapping::menu(app, Some(core));
+                input_mapping::menu(app, &Some(core));
             }
             CoreMenuAction::Back => {
                 break false;

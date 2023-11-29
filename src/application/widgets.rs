@@ -9,7 +9,6 @@ use embedded_graphics::Drawable;
 
 pub mod button;
 pub mod controller;
-pub mod keyboard;
 pub mod menu;
 pub mod network;
 pub mod opt;

@@ -4,6 +4,7 @@ use crate::input::commands::CoreCommands;
 use crate::macguiver::application::Application;
 use crate::platform::Core;
 use embedded_graphics::pixelcolor::BinaryColor;
+use mister_fpga::config_string::ConfigMenu;
 
 mod remap;
 use remap::*;
@@ -24,7 +25,10 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn menu<C: Core>(app: &mut impl Application<Color = BinaryColor>, _core: Option<&mut C>) {
+pub fn menu(
+    app: &mut impl Application<Color = BinaryColor>,
+    core: &Option<&mut (impl Core + ?Sized)>,
+) {
     let mut state = None;
 
     loop {
@@ -35,6 +39,13 @@ pub fn menu<C: Core>(app: &mut impl Application<Color = BinaryColor>, _core: Opt
             .show_menu
             .as_ref()
             .map(|m| m.to_string());
+        let reset_core = app
+            .settings()
+            .inner()
+            .mappings()
+            .reset_core
+            .as_ref()
+            .map(|m| m.to_string());
         let quit_core = app
             .settings()
             .inner()
@@ -43,11 +54,43 @@ pub fn menu<C: Core>(app: &mut impl Application<Color = BinaryColor>, _core: Opt
             .as_ref()
             .map(|m| m.to_string());
 
+        let menu = if let Some(c) = core {
+            let menu = c.menu_options();
+            menu.iter()
+                .filter_map(|config_menu| {
+                    if let Some(label) = config_menu.label() {
+                        let command =
+                            CoreCommands::CoreSpecificCommand(ConfigMenu::id_from_str(label));
+                        Some((
+                            label,
+                            app.settings()
+                                .inner()
+                                .mappings()
+                                .for_command(Some(c.name()), command)
+                                .map(|x| x.to_string())
+                                .unwrap_or_default(),
+                            MenuAction::Remap(command),
+                        ))
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        };
+
+        let items = menu
+            .iter()
+            .map(|(a, b, c)| (*a, b.as_str(), *c))
+            .collect::<Vec<_>>();
+
         let (result, new_state) = text_menu(
             app,
             "Input Mapping",
-            &[
-                ("Global Shortcuts", "", MenuAction::Unselectable),
+            items.as_slice(),
+            TextMenuOptions::default().with_state(state).with_prefix(&[
+                ("Global Shortcuts (all cores)", "", MenuAction::Unselectable),
                 (
                     "Show Menu",
                     if let Some(s) = show_menu.as_ref() {
@@ -58,6 +101,15 @@ pub fn menu<C: Core>(app: &mut impl Application<Color = BinaryColor>, _core: Opt
                     MenuAction::Remap(CoreCommands::ShowCoreMenu),
                 ),
                 (
+                    "Reset Core",
+                    if let Some(s) = reset_core.as_ref() {
+                        s.as_str()
+                    } else {
+                        ""
+                    },
+                    MenuAction::Remap(CoreCommands::QuitCore),
+                ),
+                (
                     "Quit Core",
                     if let Some(s) = quit_core.as_ref() {
                         s.as_str()
@@ -66,8 +118,7 @@ pub fn menu<C: Core>(app: &mut impl Application<Color = BinaryColor>, _core: Opt
                     },
                     MenuAction::Remap(CoreCommands::QuitCore),
                 ),
-            ],
-            TextMenuOptions::default().with_state(state),
+            ]),
         );
 
         state = Some(new_state);
@@ -75,7 +126,7 @@ pub fn menu<C: Core>(app: &mut impl Application<Color = BinaryColor>, _core: Opt
         match result {
             MenuAction::Unselectable => {}
             MenuAction::Remap(command) => {
-                remap(app, command);
+                remap(app, core.as_deref(), command);
                 continue;
             }
 

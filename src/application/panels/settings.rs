@@ -2,6 +2,7 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::alert;
 use crate::macguiver::application::Application;
+use crate::platform::Core;
 use embedded_graphics::pixelcolor::BinaryColor;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -18,7 +19,10 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn settings_panel(app: &mut impl Application<Color = BinaryColor>) {
+pub fn settings_panel(
+    app: &mut impl Application<Color = BinaryColor>,
+    core: &Option<&mut (impl Core + ?Sized)>,
+) {
     let mut state = None;
     loop {
         let (result, new_state) = text_menu(
@@ -46,9 +50,7 @@ pub fn settings_panel(app: &mut impl Application<Color = BinaryColor>) {
                 app.settings().toggle_toolbar_datetime_format();
             }
             MenuAction::InputMapping => {
-                crate::application::panels::core_loop::menu::input_mapping::menu::<
-                    crate::platform::CoreType,
-                >(app, None);
+                crate::application::panels::core_loop::menu::input_mapping::menu(app, core);
             }
             MenuAction::ResetAll => {
                 let ok = alert(app, "Reset all settings?", "This will reset all settings and downloaded files to their default values. Are you sure?", &["Yes", "No"]);
