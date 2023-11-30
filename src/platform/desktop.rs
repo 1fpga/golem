@@ -37,6 +37,10 @@ impl Core for DummyCore {
         todo!()
     }
 
+    fn trigger_menu(&mut self, _menu: &ConfigMenu) -> Result<bool, String> {
+        unreachable!()
+    }
+
     fn status_mask(&self) -> StatusBitMap {
         unreachable!()
     }

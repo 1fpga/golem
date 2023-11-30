@@ -17,6 +17,7 @@ enum MenuAction {
     Settings,
     About,
     Tools,
+    Quit,
     #[default]
     Idle,
 }
@@ -43,6 +44,8 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
                 ("Settings...", "", MenuAction::Settings),
                 ("Tools...", "", MenuAction::Tools),
                 ("About", "", MenuAction::About),
+                ("-", "", MenuAction::Idle),
+                ("Quit GoLEm (and go back to MiSTer)", "", MenuAction::Quit),
             ],
             TextMenuOptions::default().with_state(state),
         );
@@ -56,7 +59,10 @@ pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
             MenuAction::About => {
                 alert(app, "About", "Not implemented", &["Okay"]);
             }
-            _ => {}
+            MenuAction::Quit => {
+                return;
+            }
+            MenuAction::Idle => {}
         }
     }
 }
