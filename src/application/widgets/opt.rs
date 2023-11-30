@@ -5,6 +5,8 @@ use embedded_graphics::prelude::Size;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::transform::Transform;
 use embedded_graphics::Drawable;
+use embedded_layout::view_group::ViewGroup;
+use embedded_layout::View;
 
 pub trait ShouldShow {
     fn should_show(&self) -> bool;
@@ -27,6 +29,30 @@ pub struct OptionalView<S, I> {
     inner: I,
 }
 
+impl<S, I> OptionalView<S, I> {
+    pub fn new(show: S, inner: I) -> Self {
+        Self { show, inner }
+    }
+}
+
+impl<S, I> ViewGroup for OptionalView<S, I>
+where
+    S: ShouldShow + Copy,
+    I: ViewGroup + Dimensions + Transform,
+{
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    fn at(&self, idx: usize) -> &dyn View {
+        self.inner.at(idx)
+    }
+
+    fn at_mut(&mut self, idx: usize) -> &mut dyn View {
+        self.inner.at_mut(idx)
+    }
+}
+
 impl<I> From<Option<I>> for OptionalView<bool, I>
 where
     I: Default,
@@ -39,12 +65,6 @@ where
             },
             Some(inner) => Self { show: true, inner },
         }
-    }
-}
-
-impl<S, I> OptionalView<S, I> {
-    pub fn new(show: S, inner: I) -> Self {
-        Self { show, inner }
     }
 }
 

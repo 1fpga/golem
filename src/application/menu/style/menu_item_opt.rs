@@ -144,4 +144,12 @@ where
             _marker: core::marker::PhantomData,
         }
     }
+
+    pub fn set_visible(&mut self, visible: bool) {
+        self.show = visible;
+    }
+
+    pub fn inner(&self) -> &I {
+        &self.item
+    }
 }

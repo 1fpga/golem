@@ -157,10 +157,7 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
                     Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into()
                 }
 
-                kc if kc.name().len() == 1 => {
-                    Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into()
-                }
-                _ => InputState::Idle.into(),
+                kc => Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into(),
             },
 
             Event::ControllerButtonDown { button, .. } => match button {
