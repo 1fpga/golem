@@ -27,8 +27,6 @@ host
 *.map
 *.user
 .vs
-MiSTer
-MiSTer_*
 GoLEm*
 
 # Rust stuff
