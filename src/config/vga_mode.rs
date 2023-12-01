@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(strum::Display, Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[repr(u8)]
 pub enum VgaModeConfig {
     #[default]
     #[serde(alias = "0")]
@@ -13,6 +14,8 @@ pub enum VgaModeConfig {
     Svideo = 2,
     #[serde(alias = "3")]
     Cvbs = 3,
+
+    Unknown = 0xFF,
 }
 
 impl Merge for VgaModeConfig {

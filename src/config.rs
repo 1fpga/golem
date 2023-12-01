@@ -928,6 +928,13 @@ impl Config {
                 ]
                 .contains(&name)
             },
+            |name: &str| -> Option<&str> {
+                if name == "ypbpr" {
+                    Some("vga_mode")
+                } else {
+                    None
+                }
+            }
         );
 
         Config::from_json(json.as_bytes())

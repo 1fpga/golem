@@ -29,7 +29,7 @@ impl super::Core for NullCore {
         unreachable!()
     }
 
-    fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String> {
+    fn trigger_menu(&mut self, _menu: &ConfigMenu) -> Result<bool, String> {
         unreachable!()
     }
 

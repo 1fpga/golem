@@ -83,14 +83,42 @@ impl<'a> Ini<'a> {
         &self,
         tx: impl Fn(&str, &str) -> Option<String>,
         is_seq: impl Fn(&str) -> bool,
+        aliases: impl Fn(&str) -> Option<&str>,
     ) -> String {
         fn output_section(
             section: &Section,
             tx: &impl Fn(&str, &str) -> Option<String>,
             is_seq: &impl Fn(&str) -> bool,
+            aliases: impl Fn(&str) -> Option<&str>,
         ) -> String {
             let mut json = String::with_capacity(1024);
             let entries = section.entries_seq();
+
+            // Merge aliases.
+            let entries = entries
+                .into_iter()
+                .map(|(k, v)| {
+                    if let Some(alias) = aliases(k) {
+                        (alias, v)
+                    } else {
+                        (k, v)
+                    }
+                })
+                .collect::<BTreeMap<_, _>>();
+
+            // Remove duplicates on keys that are not in `is_seq(key)`.
+            let entries = entries
+                .into_iter()
+                .map(|(k, v)| {
+                    if is_seq(k) {
+                        (k, v)
+                    } else {
+                        // Last key should overtake the first key.
+                        (k, vec![v[v.len() - 1]])
+                    }
+                })
+                .collect::<BTreeMap<_, _>>();
+
             for (key, value) in entries {
                 json.push_str(&format!("\"{}\":", key));
                 if is_seq(key) {
@@ -115,11 +143,11 @@ impl<'a> Ini<'a> {
         }
 
         let mut json = String::with_capacity(1024);
-        json.push('{');
-        output_section(&self.root, &tx, &is_seq);
+        json.push_str("{ ");
+        output_section(&self.root, &tx, &is_seq, &aliases);
         for (name, section) in self.sections() {
-            json.push_str(&format!("\"{}\":{{", name));
-            json.push_str(&output_section(section, &tx, &is_seq));
+            json.push_str(&format!("\"{}\":{{ ", name));
+            json.push_str(&output_section(section, &tx, &is_seq, &aliases));
             json.pop();
             json.push_str("},");
         }
