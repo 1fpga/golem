@@ -77,7 +77,7 @@ static const ini_var_t ini_vars[] =
 	{ "SHARED_FOLDER", (void*)(&(cfg.shared_folder)), STRING, 0, sizeof(cfg.shared_folder) - 1 },
 	{ "NO_MERGE_VID", (void*)(&(cfg.no_merge_vid)), HEX16, 0, 0xFFFF },
 	{ "NO_MERGE_PID", (void*)(&(cfg.no_merge_pid)), HEX16, 0, 0xFFFF },
-	{ "NO_MERGE_VIDPID", (void*)(cfg.no_merge_vidpid), HEX32ARR, 0, 0xFFFFFFFF },
+//	{ "NO_MERGE_VIDPID", (void*)(cfg.no_merge_vidpid), HEX32ARR, 0, 0xFFFFFFFF },
 	{ "CUSTOM_ASPECT_RATIO_1", (void*)(&(cfg.custom_aspect_ratio[0])), STRING, 0, sizeof(cfg.custom_aspect_ratio[0]) - 1 },
 	{ "CUSTOM_ASPECT_RATIO_2", (void*)(&(cfg.custom_aspect_ratio[1])), STRING, 0, sizeof(cfg.custom_aspect_ratio[1]) - 1 },
 	{ "SPINNER_VID", (void*)(&(cfg.spinner_vid)), HEX16, 0, 0xFFFF },
