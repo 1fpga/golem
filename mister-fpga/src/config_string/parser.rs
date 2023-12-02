@@ -226,27 +226,27 @@ fn single_char_bit_index(input: Input) -> Result<u8> {
 
 fn status_bit_index(input: Input) -> Result<u8> {
     alt((
-        single_char_bit_index,
         map(delimited(char('['), integer, char(']')), |i| i as u8),
+        single_char_bit_index,
     ))(input)
 }
 
 fn status_bit_range(input: Input) -> Result<Range<u8>> {
     alt((
-        // Single bits are also accepted in ranges.
-        map(
-            pair(single_char_bit_index, single_char_bit_index),
-            |(a, b)| a..(b + 1), // Bit ranges are inclusive.
-        ),
-        map(status_bit_index, |a| a..(a + 1)),
         map(
             delimited(
                 char('['),
                 separated_pair(integer, char(':'), integer),
                 char(']'),
             ),
-            |(a, b)| (a as u8)..(b as u8 + 1), // Bit ranges are inclusive.
+            |(b, a)| (a as u8)..(b as u8 + 1), // Bit ranges are inclusive.
         ),
+        // Single bits are also accepted in ranges.
+        map(
+            pair(single_char_bit_index, single_char_bit_index),
+            |(a, b)| a..(b + 1), // Bit ranges are inclusive.
+        ),
+        map(status_bit_index, |a| a..(a + 1)),
     ))(input)
 }
 
@@ -315,7 +315,10 @@ fn info(input: Input) -> Result<ConfigMenu> {
     map(
         preceded(
             char::<Input, _>('I'),
-            separated_list0(char(','), recognize(many0(satisfy(|i| i != ',')))),
+            separated_list0(
+                char(','),
+                recognize(many0(satisfy(|i| i != ',' && i != ';'))),
+            ),
         ),
         |lines| ConfigMenu::Info(lines.iter().map(|x| x.to_string()).collect()),
     )(input)

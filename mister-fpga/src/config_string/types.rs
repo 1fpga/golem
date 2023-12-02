@@ -1,13 +1,22 @@
 use std::convert::{TryFrom, TryInto};
+use std::fmt::{Debug, Formatter};
 use std::num::NonZeroU32;
 
 pub const FPGA_MEMORY_BASE: usize = 0x2000_0000;
 pub const FPGA_MEMORY_SIZE: usize = 0x0200_0000;
 
 /// A memory address in the RAM, that is accessible by the FPGA.
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[repr(transparent)]
 pub struct FpgaRamMemoryAddress(NonZeroU32);
+
+impl Debug for FpgaRamMemoryAddress {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("FpgaRamMemoryAddress")
+            .field(&format_args!("0x{:08x}", self.as_u32()))
+            .finish()
+    }
+}
 
 impl FpgaRamMemoryAddress {
     pub fn as_u32(&self) -> u32 {

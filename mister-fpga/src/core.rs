@@ -116,6 +116,7 @@ impl MisterFpgaCore {
                 trace!(?index, ?address, ?ext, ?size, "File info (memory)");
                 self.send_file_to_memory_(index, &ext, size, address, f)?;
             }
+            // MisterFpgaSendFileInfo::Memory { index, .. } |
             MisterFpgaSendFileInfo::Buffered { index } => {
                 let f = File::open(path).map_err(|e| e.to_string())?;
                 let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;

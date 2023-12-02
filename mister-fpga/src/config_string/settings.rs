@@ -2,10 +2,11 @@ use super::uart;
 use super::{midi, FpgaRamMemoryAddress};
 use crate::types::units::UnitConversion;
 use std::convert::TryFrom;
+use std::fmt::Debug;
 use std::ops::Range;
 use std::str::FromStr;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Clone)]
 pub struct Settings {
     /// UART mode
     pub uart_mode: Vec<uart::UartSpeed>,
@@ -15,6 +16,23 @@ pub struct Settings {
 
     /// The save state memory range of the core.
     pub save_state: Option<Range<FpgaRamMemoryAddress>>,
+}
+
+impl Debug for Settings {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let save_state = match self.save_state {
+            Some(ref x) => {
+                format!("0x{:08x}..0x{:08x}", x.start.as_u32(), x.end.as_u32())
+            }
+            None => "None".to_string(),
+        };
+
+        f.debug_struct("Settings")
+            .field("uart_mode", &self.uart_mode)
+            .field("midi_mode", &self.midi_mode)
+            .field("save_state", &save_state)
+            .finish()
+    }
 }
 
 impl Settings {

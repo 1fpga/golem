@@ -19,7 +19,7 @@ mod ntsc_mode;
 mod osd_rotate;
 mod reset_combo;
 mod vga_mode;
-mod video;
+pub mod video;
 mod vrr_mode;
 mod vscale_mode;
 mod vsync_adjust;

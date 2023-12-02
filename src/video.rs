@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-use crate::config::video::aspect::AspectRatio;
-use crate::config::video::resolution::Resolution;
+use mister_fpga::config::video::aspect::AspectRatio;
+use mister_fpga::config::video::resolution::Resolution;
 
 mod ffi {
     /// C++ structure for the video info, should be byte-compatible with the C version in `video.h`.

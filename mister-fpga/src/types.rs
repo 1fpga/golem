@@ -89,21 +89,27 @@ impl StatusBitMap {
             result += &Self::debug_header();
         }
 
-        fn output_word(result: &mut String, mut word: u16) {
-            while word != 0 {
-                result.push(if word & 1 != 0 { 'X' } else { ' ' });
-                word >>= 1;
+        fn output_u64(mut word64: u64) -> String {
+            let mut word_str = String::new();
+            while word64 != 0 {
+                word_str.push(if word64 & 1 != 0 { 'X' } else { ' ' });
+                word64 >>= 1;
             }
+            if word_str.len() > 32 {
+                word_str.insert(32, ' ');
+            }
+            word_str
         }
 
         let raw = self.0.as_raw_slice();
-        output_word(&mut result, raw[0]);
-        if raw[1] != 0 {
-            result.push(' ');
-            output_word(&mut result, raw[1]);
-        }
+        result.push_str(&output_u64(
+            (raw[0] as u64)
+                | ((raw[1] as u64) << 16)
+                | ((raw[2] as u64) << 32)
+                | ((raw[3] as u64) << 48),
+        ));
 
-        if raw[2] != 0 || raw[3] != 0 {
+        if raw[4] != 0 || raw[5] != 0 || raw[6] != 0 || raw[7] != 0 {
             if header {
                 result += "\n\
                     0     0         0         0          1         1         1       \n\
@@ -111,12 +117,12 @@ impl StatusBitMap {
                     45678901234567890123456789012345 67890123456789012345678901234567\n\
                     ";
             }
-
-            output_word(&mut result, raw[2]);
-            if raw[1] != 0 {
-                result.push(' ');
-                output_word(&mut result, raw[3]);
-            }
+            result.push_str(&output_u64(
+                ((raw[0] as u64) << 48)
+                    | ((raw[1] as u64) << 32)
+                    | ((raw[2] as u64) << 16)
+                    | (raw[3] as u64),
+            ));
         }
 
         result.push('\n');

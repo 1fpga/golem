@@ -9,7 +9,8 @@ use itertools::Itertools;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use std::convert::TryFrom;
-use std::ops::Range;
+use std::fmt::{Debug, Formatter};
+use std::ops::{Deref, Range};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::debug;
@@ -25,8 +26,16 @@ pub use types::*;
 
 static LABELED_SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d*)(\([^)]*\))?").unwrap());
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct FileExtension(pub [u8; 3]);
+
+impl Debug for FileExtension {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("FileExtension")
+            .field(&format_args!("'{}'", self.as_str()))
+            .finish()
+    }
+}
 
 impl std::ops::Deref for FileExtension {
     type Target = str;
@@ -50,6 +59,12 @@ impl FromStr for FileExtension {
             bytes.get(1).copied().unwrap_or(b' '),
             bytes.get(2).copied().unwrap_or(b' '),
         ]))
+    }
+}
+
+impl FileExtension {
+    pub fn as_str(&self) -> &str {
+        self.deref()
     }
 }
 
@@ -187,6 +202,30 @@ pub enum ConfigMenu {
 }
 
 impl ConfigMenu {
+    pub fn as_option(&self) -> Option<&Self> {
+        match self {
+            ConfigMenu::Option { .. } => Some(self),
+            ConfigMenu::DisableIf(_, sub)
+            | ConfigMenu::DisableUnless(_, sub)
+            | ConfigMenu::HideIf(_, sub)
+            | ConfigMenu::HideUnless(_, sub)
+            | ConfigMenu::PageItem(_, sub) => sub.as_option(),
+            _ => None,
+        }
+    }
+
+    pub fn as_trigger(&self) -> Option<&Self> {
+        match self {
+            ConfigMenu::Trigger { .. } => Some(self),
+            ConfigMenu::DisableIf(_, sub)
+            | ConfigMenu::DisableUnless(_, sub)
+            | ConfigMenu::HideIf(_, sub)
+            | ConfigMenu::HideUnless(_, sub)
+            | ConfigMenu::PageItem(_, sub) => sub.as_trigger(),
+            _ => None,
+        }
+    }
+
     pub fn label(&self) -> Option<&str> {
         match self {
             ConfigMenu::DisableIf(_, sub)
@@ -258,10 +297,12 @@ impl Config {
         arr.set(0, true);
 
         for item in self.menu.iter() {
-            if let ConfigMenu::Option { ref bits, .. } = item {
+            if let Some(ConfigMenu::Option { ref bits, .. }) = item.as_option() {
                 for i in bits.clone() {
                     arr.set(i as usize, true);
                 }
+            } else if let Some(ConfigMenu::Trigger { index, .. }) = item.as_trigger() {
+                arr.set(*index as usize, true);
             }
         }
 
