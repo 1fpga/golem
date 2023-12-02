@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 #[rstest]
-fn load_config_string(#[files("tests/assets/*")] root: PathBuf) {
+fn load_config_string(#[files("tests/assets/config_string/*")] root: PathBuf) {
     let config = std::fs::read_to_string(&root.join("config")).unwrap();
     let config = Config::from_str(config.trim_end());
 

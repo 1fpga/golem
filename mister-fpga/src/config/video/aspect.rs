@@ -1,4 +1,4 @@
-use crate::video::resolution::Resolution;
+use crate::config::video::resolution::Resolution;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;

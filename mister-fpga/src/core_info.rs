@@ -46,12 +46,12 @@ fn find_core_(path: &Path, name: &str) -> Result<Option<PathBuf>, std::io::Error
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Core {
+pub struct CoreInfo {
     name: String,
     path: PathBuf,
 }
 
-impl Core {
+impl CoreInfo {
     pub fn new(name: impl ToString, path: impl Into<PathBuf>) -> Self {
         Self {
             name: name.to_string(),
@@ -115,20 +115,23 @@ impl Core {
     }
 }
 
-impl From<config::BootCoreConfig> for Option<Core> {
+impl From<config::BootCoreConfig> for Option<CoreInfo> {
     fn from(value: config::BootCoreConfig) -> Self {
         match value {
             config::BootCoreConfig::None => None,
             config::BootCoreConfig::LastCore => {
                 let last_core_name = config::Config::last_core_data()?;
-                Some(Core::from_name(last_core_name, config::Config::cores_root()).ok()??)
+                Some(CoreInfo::from_name(last_core_name, config::Config::cores_root()).ok()??)
             }
             config::BootCoreConfig::ExactLastCore => {
                 let last_core_name = config::Config::last_core_data()?;
-                Some(Core::from_exact_name(last_core_name, config::Config::cores_root()).ok()??)
+                Some(
+                    CoreInfo::from_exact_name(last_core_name, config::Config::cores_root())
+                        .ok()??,
+                )
             }
             config::BootCoreConfig::CoreName(name) => {
-                Some(Core::from_name(name, config::Config::cores_root()).ok()??)
+                Some(CoreInfo::from_name(name, config::Config::cores_root()).ok()??)
             }
         }
     }
@@ -136,20 +139,20 @@ impl From<config::BootCoreConfig> for Option<Core> {
 
 #[test]
 fn from_path_works() {
-    let core = Core::from_path("config/cores/Somecore_12345678.rbf").unwrap();
+    let core = CoreInfo::from_path("config/cores/Somecore_12345678.rbf").unwrap();
     assert_eq!(core.name, "Somecore");
     assert_eq!(core.path, Path::new("config/cores/Somecore_12345678.rbf"));
 }
 
 #[test]
 fn from_path_works_none() {
-    let core = Core::from_path("config/cores/Somecore_12345678");
+    let core = CoreInfo::from_path("config/cores/Somecore_12345678");
     assert_eq!(core, None);
 }
 
 #[test]
 fn from_path_works_exact() {
-    let core = Core::from_path("config/cores/Somecore.rbf").unwrap();
+    let core = CoreInfo::from_path("config/cores/Somecore.rbf").unwrap();
     assert_eq!(core.name, "Somecore");
     assert_eq!(core.path, Path::new("config/cores/Somecore.rbf"));
 }
@@ -184,30 +187,30 @@ fn from_name_works() {
 
     // Testing base case.
     // Core_12345678 should be in $root/_Cores/ (not $root/config/).
-    let core = Core::from_name("Core", root).unwrap().unwrap();
+    let core = CoreInfo::from_name("Core", root).unwrap().unwrap();
     assert_eq!(core.name, "Core");
     assert_eq!(core.path, root.join("_Cores/Core_12345678.rbf"));
 
     // Testing no version number.
     // hello should be in $root/_Cores/ (not $root/config/).
-    let core = Core::from_name("hello", root).unwrap().unwrap();
+    let core = CoreInfo::from_name("hello", root).unwrap().unwrap();
     assert_eq!(core.name, "hello");
     assert_eq!(core.path, root.join("_Cores/hello.rbf"));
 
     // Testing iterative over directories.
     // Other_12345678 should be in $root/_Other/ (not $root/config/).
-    let core = Core::from_name("Other", root).unwrap().unwrap();
+    let core = CoreInfo::from_name("Other", root).unwrap().unwrap();
     assert_eq!(core.name, "Other");
     assert_eq!(core.path, root.join("_Other/Other_12345678.rbf"));
 
     // Testing recursive over directories.
     // Other_12345678 should be in $root/_Other/ (not $root/config/).
-    let core = Core::from_name("Bar", root).unwrap().unwrap();
+    let core = CoreInfo::from_name("Bar", root).unwrap().unwrap();
     assert_eq!(core.name, "Bar");
     assert_eq!(core.path, root.join("_Other/_Again/Bar_12345678.rbf"));
 
     // Testing skipping directories not starting with `_`.
-    let core = Core::from_name("Wrong", root).unwrap();
+    let core = CoreInfo::from_name("Wrong", root).unwrap();
     assert_eq!(core, None);
 }
 
@@ -242,7 +245,7 @@ fn from_bootcore_config() {
     std::fs::write(root.join("_Other/Other_12345678.rbf"), "").unwrap();
     std::fs::write(root.join("_Other/_Again/Bar_12345678.rbf"), "").unwrap();
 
-    let x: Option<Core> = Option::<Core>::from(config::BootCoreConfig::LastCore);
+    let x: Option<CoreInfo> = Option::<CoreInfo>::from(config::BootCoreConfig::LastCore);
     let core = x.unwrap();
     assert_eq!(core.name, "Core");
     assert_eq!(core.path, root.join("_Cores/Core_12345678.rbf"));

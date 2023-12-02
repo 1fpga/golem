@@ -14,13 +14,10 @@ pub mod data;
 mod main_inner;
 
 pub mod application;
-pub mod config;
-pub mod core;
 pub mod file_io;
 pub mod input;
 pub mod macguiver;
 pub mod platform;
-pub mod video;
 
 // const LOGO: &[u8] = include_bytes!("../assets/logo.png");
 // #[no_mangle]

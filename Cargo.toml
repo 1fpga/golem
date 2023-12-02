@@ -93,7 +93,6 @@ vergen = { version = "8.2.4", features = ["build", "git", "gitoxide"] }
 
 [dev-dependencies]
 tempdir = "0.3.7"
-test-generator = "0.3.1"
 
 [features]
 default = ["platform_desktop"]

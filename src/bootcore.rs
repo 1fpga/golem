@@ -1,4 +1,3 @@
-use crate::config;
 use libc::c_char;
 use std::ffi::CStr;
 use tracing::info;
@@ -15,40 +14,22 @@ pub unsafe extern "C" fn bootcore_init(path: *const u8) {
     info!("bootcore_init: path = {path:?}");
 
     // TODO: figure out why this is needed, and why is this here.
-    let timeout = config::cfg_bootcore_timeout() * 10;
-    config::cfg_set_bootcore_timeout(timeout);
-    btimeout = config::cfg_bootcore_timeout();
+    let timeout = mister_fpga::config::cfg_bootcore_timeout() * 10;
+    mister_fpga::config::cfg_set_bootcore_timeout(timeout);
+    btimeout = mister_fpga::config::cfg_bootcore_timeout();
 
     info!("bootcore_init: timeout = {timeout}");
 
-    let bootcore = config::Config::bootcore();
+    let bootcore = mister_fpga::config::Config::bootcore();
     info!("bootcore = {bootcore:?}");
 
     if bootcore.is_last_core() {
         let bootcore_str = match bootcore {
-            config::BootCoreConfig::LastCore => "lastcore",
-            config::BootCoreConfig::ExactLastCore => "lastexactcore",
+            mister_fpga::config::BootCoreConfig::LastCore => "lastcore",
+            mister_fpga::config::BootCoreConfig::ExactLastCore => "lastexactcore",
             _ => unreachable!(),
         };
         bootcoretype[..bootcore_str.len()].copy_from_slice(bootcore_str.as_bytes());
         bootcoretype[bootcore_str.len()] = 0; // Make sure we're NUL terminated.
     }
-
-    //
-    // info!("bootcore_init: cfg_bootcore = {bootcore}");
-    //
-    // if is_last_core && !path.is_empty() {
-    //     let core = if bootcore == "lastexactcore" || isXmlName(path.as_ptr() as *const _) != 0 {
-    //         Path::new(path).file_name().unwrap().to_str().unwrap()
-    //     } else {
-    //         core_name_of(Path::new(path)).unwrap_or("")
-    //     };
-    //
-    //     eprintln!("Loading last core: is_last_core={is_last_core} path='{path}' core='{core}' bootcore='{bootcore}'");
-    //     if core != bootcore {
-    //         std::fs::write("config/lastcore.dat", core).unwrap();
-    //     }
-    // }
-    //
-    // config::cfg_set_bootcore("\0".as_ptr())
 }

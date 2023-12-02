@@ -13,17 +13,24 @@ cyclone-v = { path = "../cyclone_v", version = "0.1" }
 embedded-graphics = "0.8.1"
 fixed-map = "0.9.3"
 itertools = "0.12.0"
+json5 = "0.4.1"
 libc = "0.2.150"
+merge = { git = "https://github.com/hansl/merge-rs.git", rev = "dcaf63c0ef296e93219a5393a8252302170b5e42", features = ["num", "derive"] }
 nom = "7.1.3"
 nom_locate = "4.2.0"
 num-traits = "0.2.15"
 once_cell = "1.18.0"
 regex = "1.10.2"
 sdl3 = "0.4.0"
+serde = "1.0.193"
+serde_with = "1.10.0"
 static_assertions = "1.1.0"
 strum = { version = "0.25.0", features = ["derive"] }
+thiserror = "1.0.50"
 tracing = "0.1.40"
+validator = "0.16.1"
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
 rstest = "0.18.2"
+tempdir = "0.3.7"

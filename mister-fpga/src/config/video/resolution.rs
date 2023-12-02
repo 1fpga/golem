@@ -1,4 +1,4 @@
-use crate::video::aspect::AspectRatio;
+use crate::config::video::aspect::AspectRatio;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 

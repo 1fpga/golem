@@ -1,4 +1,3 @@
-use cfg_if::cfg_if;
 use merge::Merge;
 use serde::Deserialize;
 use serde_with::{serde_as, DeserializeFromStr, DurationSeconds};
@@ -20,12 +19,11 @@ mod ntsc_mode;
 mod osd_rotate;
 mod reset_combo;
 mod vga_mode;
+mod video;
 mod vrr_mode;
 mod vscale_mode;
 mod vsync_adjust;
 
-use crate::video::aspect::AspectRatio;
-use crate::video::resolution::Resolution;
 pub use bootcore::*;
 pub use fb_size::*;
 pub use hdmi_limited::*;
@@ -34,6 +32,8 @@ pub use ntsc_mode::*;
 pub use osd_rotate::*;
 pub use reset_combo::*;
 pub use vga_mode::*;
+use video::aspect::AspectRatio;
+use video::resolution::Resolution;
 pub use vrr_mode::*;
 pub use vscale_mode::*;
 pub use vsync_adjust::*;
@@ -828,19 +828,15 @@ pub struct Config {
 
 impl Config {
     fn root() -> PathBuf {
-        cfg_if! {
-            if #[cfg(test)] {
-                unsafe {
-                    return testing::ROOT.clone().unwrap();
-                }
-            } else if #[cfg(feature = "platform_de10")] {
-                crate::file_io::root_dir()
-            } else if #[cfg(feature = "platform_desktop")] {
-                std::env::current_dir().unwrap()
-            } else {
-                compile_error!("No platform feature enabled");
+        #[cfg(test)]
+        {
+            unsafe {
+                return testing::ROOT.clone().unwrap();
             }
         }
+
+        #[cfg(not(test))]
+        PathBuf::from("/media/fat")
     }
 
     pub fn cores_root() -> PathBuf {
@@ -934,7 +930,7 @@ impl Config {
                 } else {
                     None
                 }
-            }
+            },
         );
 
         Config::from_json(json.as_bytes())
@@ -1127,9 +1123,9 @@ impl Config {
 #[cfg(not(test))]
 #[no_mangle]
 pub extern "C" fn rust_load_config() {
-    let root = Config::config_root();
+    let root = Config::root();
 
-    let p = root.join("../MiSTer.ini");
+    let p = root.join("MiSTer.ini");
     tracing::debug!("Loading config from {p:?}");
     let mut config = Config::load(p).unwrap();
     config.mister.set_defaults();
@@ -1164,8 +1160,8 @@ fn works_with_empty_file() {
 mod examples {
     use crate::config::*;
 
-    #[test_generator::test_resources("tests/assets/config/*.ini")]
-    fn works_with_example(p: &str) {
+    #[rstest::rstest]
+    fn works_with_example(#[files("tests/assets/config/*.ini")] p: PathBuf) {
         unsafe {
             let mut cpp_cfg: cpp::CppCfg = std::mem::zeroed();
             let config = Config::load(p).unwrap();
