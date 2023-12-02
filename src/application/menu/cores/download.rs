@@ -17,7 +17,12 @@ use tracing::{debug, info};
 
 /// For now, we don't allow cores that are known to not work at all to be
 /// installed.
-const SAFE_LIST: &'static [&'static str] = &["mister-input-test", "mister-nes", "mister-chess"];
+const SAFE_LIST: &'static [&'static str] = &[
+    "mister-input-test",
+    "mister-memtest",
+    "mister-nes",
+    "mister-chess",
+];
 
 /// The action to perform for a selected core.
 #[derive(Debug, Clone, Copy, PartialEq)]
