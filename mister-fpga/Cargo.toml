@@ -23,3 +23,7 @@ sdl3 = "0.4.0"
 static_assertions = "1.1.0"
 strum = { version = "0.25.0", features = ["derive"] }
 tracing = "0.1.40"
+
+[dev-dependencies]
+pretty_assertions = "1.4.0"
+rstest = "0.18.2"

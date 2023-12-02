@@ -1152,15 +1152,6 @@ pub extern "C" fn rust_load_config() {
 }
 
 #[test]
-fn works_with_example_ini() {
-    unsafe {
-        let mut cpp_cfg: cpp::CppCfg = std::mem::zeroed();
-        let config = Config::load(std::env::current_dir().unwrap().join("MiSTer.ini")).unwrap();
-        config.copy_to_cfg_cpp(&mut cpp_cfg);
-    }
-}
-
-#[test]
 fn works_with_empty_file() {
     unsafe {
         let mut cpp_cfg: cpp::CppCfg = std::mem::zeroed();

@@ -8,17 +8,17 @@ use tracing::info;
 
 #[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq)]
 pub struct MappingSettings {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub show_menu: Option<BasicInputShortcut>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reset_core: Option<BasicInputShortcut>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quit_core: Option<BasicInputShortcut>,
     // #[serde(default)]
     // pub save_state: Option<()>,
     // #[serde(default)]
     // pub load_save_state: Option<()>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     cores: BTreeMap<String, BTreeMap<String, BasicInputShortcut>>,
 }
 
@@ -133,7 +133,7 @@ fn serializes() {
     let serialized = json5::to_string(&settings).unwrap();
     assert_eq!(
         serialized,
-        r#"{"show_menu":{"keys":["F12"]},"quit_core":null}"#
+        r#"{"show_menu":{"keys":["F12"]}}"#
     );
 
     let new_settings = json5::from_str(&serialized).unwrap();

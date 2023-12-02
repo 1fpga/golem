@@ -137,7 +137,7 @@ impl ButtonMap {
         map.add_mapping(3, MisterFpgaButtons::DpadUp);
 
         for (i, name) in list.iter().enumerate() {
-            if let Ok(btn) = MisterFpgaButtons::from_str(name) {
+            if let Ok(btn) = MisterFpgaButtons::from_str(name.trim()) {
                 map.add_mapping((i + 4) as u8, btn);
             }
         }

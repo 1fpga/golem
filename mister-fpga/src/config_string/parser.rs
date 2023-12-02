@@ -444,7 +444,8 @@ pub fn parse_config_menu(input: Input) -> Result<(String, settings::Settings, Ve
                     Err(e) => Err(e),
                 }
             }),
+            opt(char(';')),
         )),
-        |(a, _, c, _, e)| (a, c, e),
+        |(a, _, c, _, e, _)| (a, c, e),
     )(input)
 }

@@ -1,0 +1,1 @@
+Chess;;-;O7,Opponent,AI,Human;O46,AI Strength,1,2,3,4,5,6,7;O23,AI Randomness,0,1,2,3;O1,Player Color,White,Black;O9,Boardview,White,Black;OA,Overlay,Off,On;-;O8,Aspect Ratio,4:3,16:9;-;R0,Reset;J1,Action,Cancel,SaveState,LoadState,Rewind;jn,A,B;jp,A,B;V,v221106

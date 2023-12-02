@@ -78,41 +78,48 @@ impl StatusBitMap {
         "              Upper                          Lower\n\
         0         1         2         3          4         5         6\n\
         01234567890123456789012345678901 23456789012345678901234567890123\n\
-        0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV"
-            .to_string()
+        0123456789ABCDEFGHIJKLMNOPQRSTUV 0123456789ABCDEFGHIJKLMNOPQRSTUV\n\
+        "
+        .to_string()
     }
 
     pub fn debug_string(&self, header: bool) -> String {
         let mut result = String::new();
         if header {
             result += &Self::debug_header();
-            result += "\n";
         }
 
-        let arr = self.0.as_bitslice();
-        let mut iter = arr.into_iter();
-        result.extend(iter.by_ref().take(32).map(|b| if *b { 'X' } else { ' ' }));
-        result.push(' ');
-        result.extend(iter.by_ref().take(32).map(|b| if *b { 'X' } else { ' ' }));
+        fn output_word(result: &mut String, mut word: u16) {
+            while word != 0 {
+                result.push(if word & 1 != 0 { 'X' } else { ' ' });
+                word >>= 1;
+            }
+        }
 
         let raw = self.0.as_raw_slice();
-        if raw[2] != 0 || raw[3] != 0 {
-            if header {
-                result += &[
-                    "",
-                    "0     0         0         0          1         1         1       ",
-                    "6     7         8         9          0         1         2       ",
-                    "45678901234567890123456789012345 67890123456789012345678901234567",
-                ]
-                .join("\n")
-            }
-
-            result.push('\n');
-            result.extend(iter.by_ref().take(32).map(|b| if *b { 'X' } else { ' ' }));
+        output_word(&mut result, raw[0]);
+        if raw[1] != 0 {
             result.push(' ');
-            result.extend(iter.take(32).map(|b| if *b { 'X' } else { ' ' }));
+            output_word(&mut result, raw[1]);
         }
 
+        if raw[2] != 0 || raw[3] != 0 {
+            if header {
+                result += "\n\
+                    0     0         0         0          1         1         1       \n\
+                    6     7         8         9          0         1         2       \n\
+                    45678901234567890123456789012345 67890123456789012345678901234567\n\
+                    ";
+            }
+
+            output_word(&mut result, raw[2]);
+            if raw[1] != 0 {
+                result.push(' ');
+                output_word(&mut result, raw[3]);
+            }
+        }
+
+        result.push('\n');
         result
     }
 }

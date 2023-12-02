@@ -12,6 +12,7 @@ use std::convert::TryFrom;
 use std::ops::Range;
 use std::path::Path;
 use std::str::FromStr;
+use tracing::debug;
 
 pub mod midi;
 pub mod settings;
@@ -246,6 +247,7 @@ impl Config {
     /// This is disabled in Test as this module is still included in the test build.
     pub fn from_fpga(fpga: &mut crate::fpga::MisterFpga) -> Result<Self, String> {
         let cfg_string = fpga.spi_mut().config_string();
+        debug!(?cfg_string, "Config string from FPGA");
 
         Self::from_str(&cfg_string)
     }
@@ -314,7 +316,7 @@ impl FromStr for Config {
 
         if !rest.fragment().is_empty() {
             return Err(format!(
-                "Did not parse config string to the end. Rest:\n{}",
+                "Did not parse config string to the end. Rest: '{}'",
                 rest.fragment()
             ));
         }
