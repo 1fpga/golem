@@ -1,6 +1,6 @@
 use crate::application::panels::alert::alert;
 use crate::application::GoLEmApp;
-use crate::input::commands::CoreCommands;
+use crate::input::commands::ShortcutCommand;
 use crate::input::{BasicInputShortcut, InputState};
 use crate::platform::Core;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
@@ -15,7 +15,7 @@ use embedded_text::TextBox;
 use sdl3::event::Event;
 use tracing::info;
 
-pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: CoreCommands) {
+pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: ShortcutCommand) {
     let mapping = app
         .settings()
         .inner()
@@ -150,7 +150,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: C
                 "Updating mapping."
             );
 
-            if let CoreCommands::CoreSpecificCommand(id) = command {
+            if let ShortcutCommand::CoreSpecificCommand(id) = command {
                 if let Some(c) = core {
                     if let Some(label) = c
                         .menu_options()

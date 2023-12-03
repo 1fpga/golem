@@ -1,6 +1,6 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
-use crate::input::commands::CoreCommands;
+use crate::input::commands::ShortcutCommand;
 use crate::platform::Core;
 use mister_fpga::config_string::ConfigMenu;
 
@@ -10,7 +10,7 @@ use remap::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum MenuAction {
-    Remap(CoreCommands),
+    Remap(ShortcutCommand),
     Unselectable,
     Back,
 }
@@ -56,7 +56,7 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
                 .filter_map(|config_menu| {
                     if let Some(label) = config_menu.label() {
                         let command =
-                            CoreCommands::CoreSpecificCommand(ConfigMenu::id_from_str(label));
+                            ShortcutCommand::CoreSpecificCommand(ConfigMenu::id_from_str(label));
                         Some((
                             label,
                             app.settings()
@@ -94,7 +94,7 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
                     } else {
                         ""
                     },
-                    MenuAction::Remap(CoreCommands::ShowCoreMenu),
+                    MenuAction::Remap(ShortcutCommand::ShowCoreMenu),
                 ),
                 (
                     "Reset Core",
@@ -103,7 +103,7 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
                     } else {
                         ""
                     },
-                    MenuAction::Remap(CoreCommands::QuitCore),
+                    MenuAction::Remap(ShortcutCommand::QuitCore),
                 ),
                 (
                     "Quit Core",
@@ -112,7 +112,7 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
                     } else {
                         ""
                     },
-                    MenuAction::Remap(CoreCommands::QuitCore),
+                    MenuAction::Remap(ShortcutCommand::QuitCore),
                 ),
             ]),
         );

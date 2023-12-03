@@ -18,7 +18,7 @@ use tracing::{info, warn};
 // mod icons;
 pub mod menu;
 
-mod panels;
+pub mod panels;
 mod toolbar;
 mod widgets;
 

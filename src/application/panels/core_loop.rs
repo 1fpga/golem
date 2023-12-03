@@ -1,5 +1,5 @@
 use crate::application::GoLEmApp;
-use crate::input::commands::CoreCommands;
+use crate::input::commands::{CommandResult, ShortcutCommand};
 use crate::input::{BasicInputShortcut, InputState};
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use sdl3::event::Event;
@@ -8,7 +8,7 @@ use tracing::{debug, error, info, trace};
 
 pub mod menu;
 
-fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(CoreCommands, BasicInputShortcut)> {
+fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, BasicInputShortcut)> {
     let settings = app.settings();
     settings
         .inner()
@@ -89,48 +89,17 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
         for (command, mapping) in &commands {
             if mapping.matches(&inputs) {
                 info!(?mapping, ?inputs, "Command {:?} triggered", command);
+                // TODO: do not clear the inputs, instead record inputs in the application.
                 inputs.clear();
+                update_commands = true;
 
-                match command {
-                    CoreCommands::ShowCoreMenu => {
-                        debug!("Opening core menu");
-                        if menu::core_menu(app, &mut core) {
-                            return Some(());
-                        }
-                        // For some reason this doesn't update properly if we only
-                        // use the bus. So regenerate the commands.
-                        update_commands = true;
+                match command.execute(app, &mut core) {
+                    CommandResult::Ok => {}
+                    CommandResult::Err(err) => {
+                        error!("Error executing command: {}", err);
                     }
-                    CoreCommands::ResetCore => {
-                        debug!("Resetting core");
-                        core.status_pulse(0);
-                    }
-                    CoreCommands::QuitCore => {
-                        debug!("Quitting core");
-                        return Some(());
-                    }
-                    CoreCommands::CoreSpecificCommand(id) => {
-                        let menu = core.menu_options().iter().find(|m| {
-                            eprintln!("{:?} == {} ({:?})", m.id(), id, m.label());
-                            m.id() == Some(*id)
-                        });
-                        let menu = menu.cloned();
-                        debug!(?menu, "Sending core-specific command {}", id);
-                        if let Some(menu) = menu {
-                            match core.trigger_menu(&menu) {
-                                Ok(true) => {
-                                    debug!("Core-specific command {} triggered", id);
-                                }
-                                Ok(false) => {
-                                    debug!("Core-specific command {} not triggered", id);
-                                }
-                                Err(e) => {
-                                    error!("Error triggering menu: {}", e);
-                                }
-                            }
-                        }
-                    }
-                }
+                    CommandResult::QuitCore => return Some(()),
+                };
             }
         }
         if update_commands {

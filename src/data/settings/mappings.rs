@@ -1,4 +1,4 @@
-use crate::input::commands::CoreCommands;
+use crate::input::commands::ShortcutCommand;
 use crate::input::BasicInputShortcut;
 use mister_fpga::config_string::ConfigMenu;
 use sdl3::keyboard::Scancode;
@@ -37,22 +37,22 @@ impl MappingSettings {
     pub fn core_commands(
         &self,
         core_name: &str,
-    ) -> impl Iterator<Item = (CoreCommands, &BasicInputShortcut)> {
+    ) -> impl Iterator<Item = (ShortcutCommand, &BasicInputShortcut)> {
         self.cores.get(core_name).into_iter().flat_map(|core| {
             core.iter().map(|(cmd, shortcut)| {
                 (
-                    CoreCommands::CoreSpecificCommand(ConfigMenu::id_from_str(cmd)),
+                    ShortcutCommand::CoreSpecificCommand(ConfigMenu::id_from_str(cmd)),
                     shortcut,
                 )
             })
         })
     }
 
-    pub fn global_commands(&self) -> impl Iterator<Item = (CoreCommands, &BasicInputShortcut)> {
+    pub fn global_commands(&self) -> impl Iterator<Item = (ShortcutCommand, &BasicInputShortcut)> {
         vec![
-            (CoreCommands::ShowCoreMenu, self.show_menu.as_ref()),
-            (CoreCommands::ResetCore, self.reset_core.as_ref()),
-            (CoreCommands::QuitCore, self.quit_core.as_ref()),
+            (ShortcutCommand::ShowCoreMenu, self.show_menu.as_ref()),
+            (ShortcutCommand::ResetCore, self.reset_core.as_ref()),
+            (ShortcutCommand::QuitCore, self.quit_core.as_ref()),
         ]
         .into_iter()
         .filter_map(|(cmd, shortcut)| shortcut.map(|s| (cmd, s)))
@@ -70,13 +70,13 @@ impl MappingSettings {
     pub fn for_command(
         &self,
         core: Option<&str>,
-        command: CoreCommands,
+        command: ShortcutCommand,
     ) -> Option<&BasicInputShortcut> {
         match command {
-            CoreCommands::ShowCoreMenu => self.show_menu.as_ref(),
-            CoreCommands::ResetCore => self.reset_core.as_ref(),
-            CoreCommands::QuitCore => self.quit_core.as_ref(),
-            CoreCommands::CoreSpecificCommand(id) => {
+            ShortcutCommand::ShowCoreMenu => self.show_menu.as_ref(),
+            ShortcutCommand::ResetCore => self.reset_core.as_ref(),
+            ShortcutCommand::QuitCore => self.quit_core.as_ref(),
+            ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
                     self.cores
                         .get(core)
@@ -88,12 +88,12 @@ impl MappingSettings {
         }
     }
 
-    pub fn delete(&mut self, core: Option<&str>, command: CoreCommands) {
+    pub fn delete(&mut self, core: Option<&str>, command: ShortcutCommand) {
         match command {
-            CoreCommands::ShowCoreMenu => self.show_menu = None,
-            CoreCommands::ResetCore => self.reset_core = None,
-            CoreCommands::QuitCore => self.quit_core = None,
-            CoreCommands::CoreSpecificCommand(id) => {
+            ShortcutCommand::ShowCoreMenu => self.show_menu = None,
+            ShortcutCommand::ResetCore => self.reset_core = None,
+            ShortcutCommand::QuitCore => self.quit_core = None,
+            ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
                     if let Some(core) = self.cores.get_mut(core) {
                         if let Some((key, _)) = Self::find_core_command_for_id(core, id) {
@@ -117,11 +117,11 @@ impl MappingSettings {
             .insert(command.to_string(), shortcut);
     }
 
-    pub fn set(&mut self, command: CoreCommands, shortcut: BasicInputShortcut) {
+    pub fn set(&mut self, command: ShortcutCommand, shortcut: BasicInputShortcut) {
         match command {
-            CoreCommands::ShowCoreMenu => self.show_menu = Some(shortcut),
-            CoreCommands::ResetCore => self.reset_core = Some(shortcut),
-            CoreCommands::QuitCore => self.quit_core = Some(shortcut),
+            ShortcutCommand::ShowCoreMenu => self.show_menu = Some(shortcut),
+            ShortcutCommand::ResetCore => self.reset_core = Some(shortcut),
+            ShortcutCommand::QuitCore => self.quit_core = Some(shortcut),
             _ => {}
         }
     }
@@ -131,10 +131,7 @@ impl MappingSettings {
 fn serializes() {
     let settings = MappingSettings::default();
     let serialized = json5::to_string(&settings).unwrap();
-    assert_eq!(
-        serialized,
-        r#"{"show_menu":{"keys":["F12"]}}"#
-    );
+    assert_eq!(serialized, r#"{"show_menu":{"keys":["F12"]}}"#);
 
     let new_settings = json5::from_str(&serialized).unwrap();
     assert_eq!(settings, new_settings);

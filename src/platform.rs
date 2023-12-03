@@ -104,6 +104,9 @@ pub trait Core {
 
     fn menu_options(&self) -> &[ConfigMenu];
 
+    /// Trigger a menu by its option. This will return `true` if the core can and
+    /// did execute the command successfully. `false` will be returned if the core
+    /// cannot execute the command (this is not an error).
     fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String>;
 
     fn status_mask(&self) -> StatusBitMap;

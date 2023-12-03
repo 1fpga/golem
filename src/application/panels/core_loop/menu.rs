@@ -13,7 +13,7 @@ enum CoreMenuAction {
     Reset,
     CoreSettings,
     InputMapping,
-    DebugInfo,
+    DebugMenu,
     Back,
     Quit,
 
@@ -46,7 +46,7 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
             "Core",
             &[
                 ("Input Mapping", "", CoreMenuAction::InputMapping),
-                ("Debug Info", "", CoreMenuAction::DebugInfo),
+                ("Debug", "", CoreMenuAction::DebugMenu),
             ],
             TextMenuOptions::default()
                 .with_state(state)
@@ -72,8 +72,8 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
                     break false;
                 }
             }
-            CoreMenuAction::DebugInfo => {
-                core_debug::debug_info(app, core);
+            CoreMenuAction::DebugMenu => {
+                core_debug::debug_menu(app, core);
             }
             CoreMenuAction::InputMapping => {
                 input_mapping::menu(app, &Some(core));
