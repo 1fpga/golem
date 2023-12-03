@@ -262,13 +262,15 @@ impl Settings {
     }
 
     #[inline]
-    pub fn set_show_fps(&self, v: bool) {
-        self.inner.write().unwrap().show_fps = v;
+    pub fn toggle_show_fps(&self) {
+        let mut inner = self.inner.write().unwrap();
+        inner.show_fps = !inner.show_fps;
     }
 
     #[inline]
-    pub fn set_invert_toolbar(&self, v: bool) {
-        self.inner.write().unwrap().invert_toolbar = v;
+    pub fn toggle_invert_toolbar(&self) {
+        let mut inner = self.inner.write().unwrap();
+        inner.invert_toolbar = !inner.invert_toolbar;
     }
 
     #[inline]

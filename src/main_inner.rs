@@ -29,7 +29,6 @@ pub struct Flags {
 #[allow(unused)]
 pub fn main() -> Result<(), String> {
     use crate::application;
-    use crate::macguiver::application::Application;
     use crate::platform::WindowManager;
     use clap_verbosity_flag::Level as VerbosityLevel;
     use tracing::Level;
@@ -72,7 +71,7 @@ pub fn main() -> Result<(), String> {
     // std::env::set_current_dir(std::env::current_exe().unwrap().parent().unwrap()).unwrap();
 
     // Create the application and run it.
-    let mut app = application::MiSTer::new(WindowManager::default());
+    let mut app = application::GoLEmApp::new(WindowManager::default());
     app.run(opts);
     Ok(())
 }

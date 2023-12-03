@@ -1,10 +1,9 @@
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
+use crate::application::GoLEmApp;
 use crate::data::paths::core_root_path;
-use crate::macguiver::application::Application;
 use crate::platform::Core;
-use embedded_graphics::pixelcolor::BinaryColor;
 use mister_fpga::config_string::ConfigMenu;
 use mister_fpga::types::StatusBitMap;
 use std::convert::TryFrom;
@@ -109,10 +108,7 @@ fn into_text_menu_item<'a>(
 /// The Core Settings menu. We cannot use `text_menu` here as we need to generate
 /// custom menu lines for some items.
 /// Returns whether we should close the OSD or not.
-pub fn core_settings(
-    app: &mut impl Application<Color = BinaryColor>,
-    core: &mut impl Core,
-) -> bool {
+pub fn core_settings(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
     let mut state = None;
     loop {
         let status = core.status_bits();

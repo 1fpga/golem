@@ -1,7 +1,7 @@
 use crate::application::menu::main_menu;
 use crate::application::toolbar::Toolbar;
 use crate::data::settings::Settings;
-use crate::macguiver::application::{Application, EventLoopState};
+use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::main_inner::Flags;
 use crate::platform::{GoLEmPlatform, WindowManager};
@@ -24,7 +24,7 @@ mod widgets;
 
 use crate::data::paths;
 
-pub struct MiSTer {
+pub struct GoLEmApp {
     toolbar: Toolbar,
     settings: Arc<Settings>,
     database: Arc<Mutex<Connection>>,
@@ -39,7 +39,7 @@ pub struct MiSTer {
     toolbar_buffer: DrawBuffer<BinaryColor>,
 }
 
-impl MiSTer {
+impl GoLEmApp {
     pub fn new(platform: WindowManager) -> Self {
         let settings = Arc::new(Settings::new());
 
@@ -75,48 +75,39 @@ impl MiSTer {
             toolbar_buffer: DrawBuffer::new(toolbar_size),
         }
     }
-}
 
-impl Application for MiSTer {
-    type Color = BinaryColor;
-    type Platform = WindowManager;
-
-    fn settings(&self) -> &Settings {
+    pub fn settings(&self) -> &Settings {
         &self.settings
     }
 
-    fn run(&mut self, flags: Flags) {
+    pub fn run(&mut self, flags: Flags) {
         self.platform.init(&flags);
 
         // Run the main menu.
         main_menu(self);
     }
 
-    fn main_buffer(&mut self) -> &mut DrawBuffer<Self::Color> {
+    pub fn main_buffer(&mut self) -> &mut DrawBuffer<BinaryColor> {
         &mut self.main_buffer
     }
 
-    fn database(&self) -> Arc<Mutex<Connection>> {
+    pub fn database(&self) -> Arc<Mutex<Connection>> {
         self.database.clone()
     }
 
-    fn platform(&self) -> &Self::Platform {
-        &self.platform
-    }
-
-    fn platform_mut(&mut self) -> &mut Self::Platform {
+    pub fn platform_mut(&mut self) -> &mut WindowManager {
         &mut self.platform
     }
 
-    fn hide_toolbar(&mut self) {
+    pub fn hide_toolbar(&mut self) {
         self.render_toolbar = false;
     }
 
-    fn show_toolbar(&mut self) {
+    pub fn show_toolbar(&mut self) {
         self.render_toolbar = true;
     }
 
-    fn event_loop<R>(
+    pub fn event_loop<R>(
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
     ) -> R {

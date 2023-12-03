@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use embedded_graphics::mono_font::ascii;
-use embedded_graphics::pixelcolor::BinaryColor;
 use regex::Regex;
 use std::path::{Path, PathBuf};
 
@@ -120,7 +119,7 @@ impl SortOption {
 }
 
 pub fn select_file_path_menu(
-    app: &mut impl Application<Color = BinaryColor>,
+    app: &mut GoLEmApp,
     title: impl AsRef<str>,
     initial: impl AsRef<Path>,
     options: FilesystemMenuOptions,

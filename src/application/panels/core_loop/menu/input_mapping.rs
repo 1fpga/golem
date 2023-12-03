@@ -1,12 +1,11 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::input::commands::CoreCommands;
-use crate::macguiver::application::Application;
 use crate::platform::Core;
-use embedded_graphics::pixelcolor::BinaryColor;
 use mister_fpga::config_string::ConfigMenu;
 
 mod remap;
+use crate::application::GoLEmApp;
 use remap::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,10 +24,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn menu(
-    app: &mut impl Application<Color = BinaryColor>,
-    core: &Option<&mut (impl Core + ?Sized)>,
-) {
+pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
     let mut state = None;
 
     loop {

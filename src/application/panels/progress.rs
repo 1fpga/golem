@@ -1,4 +1,4 @@
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Dimensions, Point, Size};
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
@@ -109,7 +109,7 @@ pub enum ProgressBarUpdate {
 }
 
 pub fn progress_bar(
-    app: &mut impl Application<Color = BinaryColor>,
+    app: &mut GoLEmApp,
     message: &str,
     total: u32,
     mut update_callback: impl FnMut() -> ProgressBarUpdate,

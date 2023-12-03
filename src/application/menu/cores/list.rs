@@ -5,10 +5,9 @@ use crate::application::menu::text_menu;
 use crate::application::menu::TextMenuOptions;
 use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::core_loop::run_core_loop;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use crate::platform::{CoreManager, GoLEmPlatform};
 use anyhow::anyhow;
-use embedded_graphics::pixelcolor::BinaryColor;
 use golem_db::models;
 use golem_db::models::CoreOrder;
 use thiserror::__private::AsDynError;
@@ -54,10 +53,7 @@ fn build_cores_items_(database: &mut golem_db::Connection, order: CoreOrder) -> 
     }
 }
 
-pub fn select_core(
-    app: &mut impl Application<Color = BinaryColor>,
-    title: &str,
-) -> Option<models::Core> {
+pub fn select_core(app: &mut GoLEmApp, title: &str) -> Option<models::Core> {
     let mut state = None;
     let mut core_order = CoreOrder::default();
 
@@ -95,7 +91,7 @@ pub fn select_core(
     }
 }
 
-pub fn cores_menu_panel(app: &mut impl Application<Color = BinaryColor>) {
+pub fn cores_menu_panel(app: &mut GoLEmApp) {
     let mut state = None;
     let mut core_order = CoreOrder::default();
 

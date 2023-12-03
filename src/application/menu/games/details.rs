@@ -1,7 +1,6 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
-use crate::macguiver::application::Application;
-use embedded_graphics::pixelcolor::BinaryColor;
+use crate::application::GoLEmApp;
 
 #[derive(Default, Debug, Clone, Copy)]
 enum MenuAction {
@@ -18,7 +17,7 @@ impl MenuReturn for MenuAction {
 }
 
 pub fn games_details(
-    app: &mut impl Application<Color = BinaryColor>,
+    app: &mut GoLEmApp,
     game: &mut golem_db::models::Game,
 ) -> Result<(), anyhow::Error> {
     let mut state = None;

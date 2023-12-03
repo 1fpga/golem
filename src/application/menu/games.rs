@@ -3,10 +3,9 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::show_error;
 use crate::application::panels::core_loop::run_core_loop;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use anyhow::anyhow;
-use embedded_graphics::pixelcolor::BinaryColor;
 use golem_db::models::GameOrder;
 use std::path::PathBuf;
 use thiserror::__private::AsDynError;
@@ -53,7 +52,7 @@ fn build_games_list_(
     }
 }
 
-pub fn games_list(app: &mut impl Application<Color = BinaryColor>) {
+pub fn games_list(app: &mut GoLEmApp) {
     let mut state = None;
     let mut sort_order = GameOrder::LastPlayed;
 

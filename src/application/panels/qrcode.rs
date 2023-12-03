@@ -1,7 +1,7 @@
 use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::application::widgets::menu::SizedMenu;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::image::Image;
@@ -30,12 +30,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn qrcode_alert(
-    app: &mut impl Application<Color = BinaryColor>,
-    title: &str,
-    message: &str,
-    url: &str,
-) {
+pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     let display_area = app.main_buffer().bounding_box();
     let qrcode = qrcode::QrCode::new(url).unwrap();
     let pixmap = qrcode

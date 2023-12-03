@@ -5,9 +5,8 @@ use crate::application::menu::{cores_menu_panel, TextMenuOptions};
 use crate::application::panels::alert::alert;
 use crate::application::panels::settings::settings_panel;
 use crate::application::panels::tools::tools_menu;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use crate::platform;
-use embedded_graphics::pixelcolor::BinaryColor;
 use golem_db::models;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
@@ -24,7 +23,7 @@ enum MenuAction {
 
 impl MenuReturn for MenuAction {}
 
-pub fn main_menu(app: &mut impl Application<Color = BinaryColor>) {
+pub fn main_menu(app: &mut GoLEmApp) {
     let mut state = None;
 
     loop {

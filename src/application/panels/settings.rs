@@ -1,13 +1,14 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::alert;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use crate::platform::Core;
-use embedded_graphics::pixelcolor::BinaryColor;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum MenuAction {
     ChangeTimestampFormat,
+    ShowFps,
+    InvertToolbar,
     InputMapping,
     ResetAll,
     Back,
@@ -19,10 +20,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn settings_panel(
-    app: &mut impl Application<Color = BinaryColor>,
-    core: &Option<&mut (impl Core + ?Sized)>,
-) {
+pub fn settings_panel(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
     let mut state = None;
     loop {
         let (result, new_state) = text_menu(
@@ -37,6 +35,24 @@ pub fn settings_panel(
                         .as_str(),
                     MenuAction::ChangeTimestampFormat,
                 ),
+                (
+                    "Show FPS",
+                    if app.settings().show_fps() {
+                        "On"
+                    } else {
+                        "Off"
+                    },
+                    MenuAction::ShowFps,
+                ),
+                (
+                    "Invert Header Bar",
+                    if app.settings().invert_toolbar() {
+                        "On"
+                    } else {
+                        "Off"
+                    },
+                    MenuAction::InvertToolbar,
+                ),
                 ("Input Mapping", "", MenuAction::InputMapping),
                 ("Reset all settings", "", MenuAction::ResetAll),
             ],
@@ -48,6 +64,12 @@ pub fn settings_panel(
         match result {
             MenuAction::ChangeTimestampFormat => {
                 app.settings().toggle_toolbar_datetime_format();
+            }
+            MenuAction::ShowFps => {
+                app.settings().toggle_show_fps();
+            }
+            MenuAction::InvertToolbar => {
+                app.settings().toggle_invert_toolbar();
             }
             MenuAction::InputMapping => {
                 crate::application::panels::core_loop::menu::input_mapping::menu(app, core);

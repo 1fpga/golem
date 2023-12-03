@@ -2,7 +2,7 @@ use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::application::panels::qrcode::qrcode_alert;
 use crate::application::widgets::menu::SizedMenu;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::ascii;
 use embedded_graphics::mono_font::MonoTextStyle;
@@ -32,10 +32,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn report_issue(
-    app: &mut impl Application<Color = BinaryColor>,
-    error: &impl std::error::Error,
-) {
+pub fn report_issue(app: &mut GoLEmApp, error: &impl std::error::Error) {
     let mut url = Url::parse("https://github.com/golem-fpga/golem/issues/new").unwrap();
     url.query_pairs_mut()
         .append_pair("title", "Reporting Error")
@@ -59,11 +56,7 @@ pub fn report_issue(
     );
 }
 
-pub fn show_error(
-    app: &mut impl Application<Color = BinaryColor>,
-    error: impl std::error::Error,
-    recoverable: bool,
-) {
+pub fn show_error(app: &mut GoLEmApp, error: impl std::error::Error, recoverable: bool) {
     let error_str = error.to_string();
     error!(?error);
     let reboot = if recoverable {
@@ -97,12 +90,7 @@ pub fn show_error(
     }
 }
 
-pub fn alert(
-    app: &mut impl Application<Color = BinaryColor>,
-    title: &str,
-    message: &str,
-    choices: &[&str],
-) -> Option<usize> {
+pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -> Option<usize> {
     let display_area = app.main_buffer().bounding_box();
 
     let mut choices = choices

@@ -1,8 +1,7 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::alert;
-use crate::macguiver::application::Application;
-use embedded_graphics::pixelcolor::BinaryColor;
+use crate::application::GoLEmApp;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum Menu {
@@ -30,7 +29,7 @@ impl MenuReturn for Menu {
     }
 }
 
-pub fn menu_tester(app: &mut impl Application<Color = BinaryColor>) {
+pub fn menu_tester(app: &mut GoLEmApp) {
     let mut state = None;
 
     let prefixes = ["A", "B", "C", "D"]

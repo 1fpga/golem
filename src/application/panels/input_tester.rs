@@ -1,5 +1,5 @@
+use crate::application::GoLEmApp;
 use crate::input::InputState;
-use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -13,7 +13,7 @@ use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
 use sdl3::event::Event;
 
-pub fn input_tester(app: &mut impl Application<Color = BinaryColor>) {
+pub fn input_tester(app: &mut GoLEmApp) {
     let display_area = app.main_buffer().bounding_box();
 
     let bounds = app.main_buffer().bounding_box();

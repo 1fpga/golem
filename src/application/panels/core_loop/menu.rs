@@ -1,8 +1,7 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
-use embedded_graphics::pixelcolor::BinaryColor;
 
 mod core_debug;
 mod core_settings;
@@ -34,7 +33,7 @@ impl MenuReturn for CoreMenuAction {
 /// Shows the core menu and interact with it.
 /// This will return `true` if the user decided to quit the core (in which case the
 /// main MENU should be reloaded).
-pub fn core_menu(app: &mut impl Application<Color = BinaryColor>, core: &mut impl Core) -> bool {
+pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
     app.platform_mut().core_manager_mut().show_menu();
     let mut state = None;
 

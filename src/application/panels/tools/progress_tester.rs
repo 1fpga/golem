@@ -1,9 +1,8 @@
 use crate::application::panels::progress::{progress_bar, ProgressBarUpdate};
-use crate::macguiver::application::Application;
-use embedded_graphics::pixelcolor::BinaryColor;
+use crate::application::GoLEmApp;
 use std::sync::atomic::{AtomicI8, Ordering};
 
-pub fn progress_tester(app: &mut impl Application<Color = BinaryColor>) {
+pub fn progress_tester(app: &mut GoLEmApp) {
     let state = AtomicI8::new(1);
 
     crossbeam_utils::thread::scope(|s| {

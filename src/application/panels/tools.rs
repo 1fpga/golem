@@ -4,9 +4,8 @@ use crate::application::menu::text_menu;
 use crate::application::menu::TextMenuOptions;
 use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::input_tester::input_tester;
-use crate::macguiver::application::Application;
+use crate::application::GoLEmApp;
 use anyhow::anyhow;
-use embedded_graphics::pixelcolor::BinaryColor;
 use thiserror::__private::AsDynError;
 
 mod menu_tester;
@@ -28,7 +27,7 @@ impl MenuReturn for Menu {
     }
 }
 
-pub fn tools_menu(app: &mut impl Application<Color = BinaryColor>) {
+pub fn tools_menu(app: &mut GoLEmApp) {
     let mut state = None;
 
     loop {

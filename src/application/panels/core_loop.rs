@@ -1,18 +1,14 @@
+use crate::application::GoLEmApp;
 use crate::input::commands::CoreCommands;
 use crate::input::{BasicInputShortcut, InputState};
-use crate::macguiver::application::Application;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
-use embedded_graphics::pixelcolor::BinaryColor;
 use sdl3::event::Event;
 use std::time::Instant;
 use tracing::{debug, error, info, trace};
 
 pub mod menu;
 
-fn commands_(
-    app: &mut impl Application<Color = BinaryColor>,
-    core: &impl Core,
-) -> Vec<(CoreCommands, BasicInputShortcut)> {
+fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(CoreCommands, BasicInputShortcut)> {
     let settings = app.settings();
     settings
         .inner()
@@ -23,7 +19,7 @@ fn commands_(
         .collect::<Vec<_>>()
 }
 
-fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Core) {
+fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
     let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
@@ -146,11 +142,7 @@ fn core_loop(app: &mut impl Application<Color = BinaryColor>, mut core: impl Cor
 }
 
 /// Run the core loop and send events to the core.
-pub fn run_core_loop(
-    app: &mut impl Application<Color = BinaryColor>,
-    mut core: impl Core,
-    should_show_menu: bool,
-) {
+pub fn run_core_loop(app: &mut GoLEmApp, mut core: impl Core, should_show_menu: bool) {
     let mut should_run_loop = true;
     debug!("Starting core loop...");
 

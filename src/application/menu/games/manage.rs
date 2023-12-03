@@ -5,8 +5,7 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::progress::{progress_bar, ProgressBarUpdate};
-use crate::macguiver::application::Application;
-use embedded_graphics::pixelcolor::BinaryColor;
+use crate::application::GoLEmApp;
 use golem_db::models;
 use std::ops::DerefMut;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
@@ -15,7 +14,7 @@ use tracing::info;
 mod identifier;
 mod scanner;
 
-fn scan_directory(app: &mut impl Application<Color = BinaryColor>) {
+fn scan_directory(app: &mut GoLEmApp) {
     let dir = select_file_path_menu(
         app,
         "Select Directory",
@@ -107,7 +106,7 @@ fn scan_directory(app: &mut impl Application<Color = BinaryColor>) {
     .unwrap();
 }
 
-fn add_dat_file_(app: &mut impl Application<Color = BinaryColor>) {
+fn add_dat_file_(app: &mut GoLEmApp) {
     let x = alert(
         app,
         "Adding DAT files",
@@ -137,8 +136,8 @@ fn add_dat_file_(app: &mut impl Application<Color = BinaryColor>) {
         Some(dat_path) => dat_path,
         None => return,
     };
-    let datfile = datary::read_file(&dat_path);
-    let datfile = match datfile {
+
+    let datfile = match datary::read_file(&dat_path) {
         Ok(datfile) => datfile,
         Err(e) => {
             show_error(app, e, true);
@@ -183,7 +182,7 @@ impl MenuReturn for Menu {
     }
 }
 
-pub fn manage_games(app: &mut impl Application<Color = BinaryColor>) {
+pub fn manage_games(app: &mut GoLEmApp) {
     let mut state = None;
 
     loop {

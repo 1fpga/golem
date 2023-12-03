@@ -1,8 +1,8 @@
 use crate::application::menu::style;
 use crate::application::menu::style::MenuReturn;
 use crate::application::panels::alert::show_error;
+use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::macguiver::application::Application;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
@@ -92,9 +92,7 @@ impl SelectValue for MenuAction {
     }
 }
 
-fn list_cores_from_retronomicon(
-    app: &mut impl Application<Color = BinaryColor>,
-) -> Result<Vec<CoreListItem>, anyhow::Error> {
+fn list_cores_from_retronomicon(app: &mut GoLEmApp) -> Result<Vec<CoreListItem>, anyhow::Error> {
     let client = reqwest::blocking::Client::builder()
         .danger_accept_invalid_certs(true)
         .build()
@@ -116,10 +114,7 @@ fn list_cores_from_retronomicon(
         .collect())
 }
 
-fn install_single_core(
-    app: &mut impl Application<Color = BinaryColor>,
-    core: &CoreListItem,
-) -> Result<(), anyhow::Error> {
+fn install_single_core(app: &mut GoLEmApp, core: &CoreListItem) -> Result<(), anyhow::Error> {
     let client = reqwest::blocking::Client::builder()
         .tls_built_in_root_certs(true)
         .build()
@@ -170,10 +165,7 @@ fn install_single_core(
     Ok(())
 }
 
-fn execute_core_actions(
-    app: &mut impl Application<Color = BinaryColor>,
-    cores: Vec<(&CoreListItem, CoreAction)>,
-) {
+fn execute_core_actions(app: &mut GoLEmApp, cores: Vec<(&CoreListItem, CoreAction)>) {
     for (core, action) in cores {
         match action {
             CoreAction::Install => {
@@ -194,7 +186,7 @@ fn execute_core_actions(
     }
 }
 
-pub fn cores_download_panel(app: &mut impl Application<Color = BinaryColor>) {
+pub fn cores_download_panel(app: &mut GoLEmApp) {
     let cores = match list_cores_from_retronomicon(app) {
         Ok(cores) => cores,
         Err(e) => {

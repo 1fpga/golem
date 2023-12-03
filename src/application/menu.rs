@@ -5,7 +5,6 @@ use crate::application::widgets::menu::SizedMenu;
 use crate::application::widgets::opt::OptionalView;
 use crate::application::widgets::text::FontRendererView;
 use crate::application::widgets::EmptyView;
-use crate::macguiver::application::Application;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -32,6 +31,7 @@ pub use item::*;
 pub use main::main_menu;
 
 pub mod options;
+use crate::application::GoLEmApp;
 pub use options::*;
 
 pub type GolemMenuState<R> = MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, Invert>;
@@ -95,7 +95,7 @@ fn bottom_bar_<'a>(
 }
 
 pub fn text_menu<'a, R: MenuReturn + Copy>(
-    app: &mut impl Application<Color = BinaryColor>,
+    app: &mut GoLEmApp,
     title: &str,
     items: &'a [impl IntoTextMenuItem<'a, R>],
     options: TextMenuOptions<R>,
