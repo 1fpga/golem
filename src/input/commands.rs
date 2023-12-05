@@ -1,7 +1,7 @@
 use crate::application::panels::core_loop::menu::core_menu;
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::input::BasicInputShortcut;
+use crate::input::Shortcut;
 use crate::platform::Core;
 use sdl3::keyboard::Scancode;
 use std::fmt::{Display, Formatter};
@@ -90,20 +90,12 @@ impl ShortcutCommand {
         }
     }
 
-    pub fn default_shortcut(&self) -> Option<BasicInputShortcut> {
+    pub fn default_shortcut(&self) -> Option<Shortcut> {
         match self {
-            ShortcutCommand::ShowCoreMenu => {
-                Some(BasicInputShortcut::default().with_key(Scancode::F12))
-            }
-            ShortcutCommand::ResetCore => {
-                Some(BasicInputShortcut::default().with_key(Scancode::F11))
-            }
-            ShortcutCommand::QuitCore => {
-                Some(BasicInputShortcut::default().with_key(Scancode::F10))
-            }
-            ShortcutCommand::TakeScreenshot => {
-                Some(BasicInputShortcut::default().with_key(Scancode::SysReq))
-            }
+            ShortcutCommand::ShowCoreMenu => Some(Shortcut::default().with_key(Scancode::F12)),
+            ShortcutCommand::ResetCore => Some(Shortcut::default().with_key(Scancode::F11)),
+            ShortcutCommand::QuitCore => Some(Shortcut::default().with_key(Scancode::F10)),
+            ShortcutCommand::TakeScreenshot => Some(Shortcut::default().with_key(Scancode::SysReq)),
             ShortcutCommand::CoreSpecificCommand(_) => None,
         }
     }

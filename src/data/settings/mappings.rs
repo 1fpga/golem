@@ -1,5 +1,5 @@
 use crate::input::commands::ShortcutCommand;
-use crate::input::BasicInputShortcut;
+use crate::input::Shortcut;
 use mister_fpga::config_string::ConfigMenu;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -9,10 +9,10 @@ use tracing::info;
 #[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq)]
 pub struct MappingSettings {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    cores: BTreeMap<String, BTreeMap<String, BasicInputShortcut>>,
+    cores: BTreeMap<String, BTreeMap<String, Shortcut>>,
 
     #[serde(flatten)]
-    shortcuts: BTreeMap<String, BasicInputShortcut>,
+    shortcuts: BTreeMap<String, Shortcut>,
 }
 
 impl Default for MappingSettings {
@@ -35,7 +35,7 @@ impl MappingSettings {
     pub fn all_commands(
         &self,
         core_name: &str,
-    ) -> impl Iterator<Item = (ShortcutCommand, &BasicInputShortcut)> {
+    ) -> impl Iterator<Item = (ShortcutCommand, &Shortcut)> {
         self.cores
             .get(core_name)
             .into_iter()
@@ -55,19 +55,15 @@ impl MappingSettings {
     }
 
     fn find_core_command_for_id(
-        core: &BTreeMap<String, BasicInputShortcut>,
+        core: &BTreeMap<String, Shortcut>,
         id: u32,
-    ) -> Option<(&str, &BasicInputShortcut)> {
+    ) -> Option<(&str, &Shortcut)> {
         core.iter()
             .find(|(k, _)| ConfigMenu::id_from_str(k) == id)
             .map(|(k, v)| (k.as_str(), v))
     }
 
-    pub fn for_command(
-        &self,
-        core: Option<&str>,
-        command: ShortcutCommand,
-    ) -> Option<&BasicInputShortcut> {
+    pub fn for_command(&self, core: Option<&str>, command: ShortcutCommand) -> Option<&Shortcut> {
         match command {
             ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
@@ -102,7 +98,7 @@ impl MappingSettings {
         }
     }
 
-    pub fn set_core_specific(&mut self, core: &str, command: &str, shortcut: BasicInputShortcut) {
+    pub fn set_core_specific(&mut self, core: &str, command: &str, shortcut: Shortcut) {
         info!(
             "Setting core-specific command {} for core {} to {:?}",
             command, core, shortcut
@@ -113,7 +109,7 @@ impl MappingSettings {
             .insert(command.to_string(), shortcut);
     }
 
-    pub fn set(&mut self, command: ShortcutCommand, shortcut: BasicInputShortcut) {
+    pub fn set(&mut self, command: ShortcutCommand, shortcut: Shortcut) {
         info!("Setting global command {} to {:?}", command, shortcut);
         if let Some(name) = command.setting_name() {
             self.shortcuts.insert(name.to_string(), shortcut);

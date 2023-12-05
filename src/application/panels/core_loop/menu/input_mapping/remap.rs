@@ -1,7 +1,7 @@
 use crate::application::panels::alert::alert;
 use crate::application::GoLEmApp;
 use crate::input::commands::ShortcutCommand;
-use crate::input::{BasicInputShortcut, InputState};
+use crate::input::{InputState, Shortcut};
 use crate::platform::Core;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -55,7 +55,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
 
     let bounds = app.main_buffer().bounding_box();
 
-    let mut input = BasicInputShortcut::default();
+    let mut input = Shortcut::default();
     let mut current = InputState::default();
     let mut has_been_set = false;
 

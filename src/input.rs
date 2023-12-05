@@ -11,13 +11,14 @@ use std::str::FromStr;
 
 pub mod commands;
 
+/// The current status of all inputs.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct InputState {
     pub keyboard: HashSet<Scancode>,
     pub joysticks: HashMap<u32, BitArray<[u32; 4], Lsb0>>,
     pub gamepads: HashMap<u32, HashSet<Button>>,
     pub axis: HashMap<u32, HashMap<Axis, i16>>,
-    pub mouse: (i32, i32),
+    pub mice: HashMap<u32, (i32, i32)>,
 }
 
 impl Display for InputState {
@@ -33,11 +34,6 @@ impl InputState {
             .iter()
             .map(|k| format!(r#""{}""#, k.name()))
             .join(" + ");
-        let keys = if keys.is_empty() {
-            "".to_string()
-        } else {
-            format!("Keys: {}\n", keys)
-        };
         let joysticks = self
             .joysticks
             .iter()
@@ -56,11 +52,6 @@ impl InputState {
             })
             .filter(|x| !x.is_empty())
             .join("\n");
-        let joysticks = if joysticks.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}\n", joysticks)
-        };
         let controllers = self
             .gamepads
             .iter()
@@ -74,11 +65,6 @@ impl InputState {
             })
             .filter(|x| !x.is_empty())
             .join("\n");
-        let controllers = if controllers.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}\n", controllers)
-        };
         let axis = self
             .axis
             .iter()
@@ -95,13 +81,16 @@ impl InputState {
             })
             .filter(|x| !x.is_empty())
             .join("\n");
-        let axis = if axis.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}\n", axis)
-        };
+        let mice = self
+            .mice
+            .iter()
+            .map(|(i, (x, y))| format!("Mouse {}: {}, {}", i, x, y))
+            .join("\n");
 
-        format!("{}{}{}{}", keys, joysticks, controllers, axis)
+        [keys, joysticks, controllers, axis, mice]
+            .iter()
+            .filter(|x| !x.is_empty())
+            .join("\n")
     }
 
     pub fn clear(&mut self) {
@@ -109,7 +98,7 @@ impl InputState {
         self.joysticks.clear();
         self.gamepads.clear();
         self.axis.clear();
-        self.mouse = (0, 0);
+        self.mice.clear();
     }
 
     pub fn key_down(&mut self, code: Scancode) {
@@ -148,6 +137,12 @@ impl InputState {
         } else {
             self.axis.entry(controller).or_default().insert(axis, value);
         }
+    }
+
+    pub fn mouse_move(&mut self, mouse: u32, x: i32, y: i32) {
+        let mut m = self.mice.entry(mouse).or_default();
+        m.0 += x;
+        m.1 += y;
     }
 
     pub fn is_empty(&self) -> bool {
@@ -236,14 +231,16 @@ impl AxisValue {
     }
 }
 
+/// A shortcut that can be compared to an input state.
+/// This is normally paired with a command.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct BasicInputShortcut {
+pub struct Shortcut {
     keyboard: HashSet<Scancode>,
     gamepad_button: HashSet<Button>,
     axis: HashMap<Axis, AxisValue>,
 }
 
-impl std::hash::Hash for BasicInputShortcut {
+impl std::hash::Hash for Shortcut {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.keyboard
             .iter()
@@ -263,7 +260,7 @@ impl std::hash::Hash for BasicInputShortcut {
     }
 }
 
-impl Display for BasicInputShortcut {
+impl Display for Shortcut {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let keys = self
             .keyboard
@@ -290,7 +287,7 @@ impl Display for BasicInputShortcut {
     }
 }
 
-impl Serialize for BasicInputShortcut {
+impl Serialize for Shortcut {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let keys = self.keyboard.iter().map(|k| k.name()).collect::<Vec<_>>();
         let buttons = self
@@ -318,7 +315,7 @@ impl Serialize for BasicInputShortcut {
     }
 }
 
-impl<'de> Deserialize<'de> for BasicInputShortcut {
+impl<'de> Deserialize<'de> for Shortcut {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -366,7 +363,7 @@ impl<'de> Deserialize<'de> for BasicInputShortcut {
     }
 }
 
-impl BasicInputShortcut {
+impl Shortcut {
     pub fn with_key(mut self, code: Scancode) -> Self {
         self.add_key(code);
         self
@@ -377,6 +374,9 @@ impl BasicInputShortcut {
     }
     pub fn add_gamepad_button(&mut self, button: Button) {
         self.gamepad_button.insert(button);
+    }
+    pub fn add_axis(&mut self, axis: Axis, value: AxisValue) {
+        self.axis.insert(axis, value);
     }
 
     pub fn matches(&self, state: &InputState) -> bool {
@@ -392,4 +392,19 @@ impl BasicInputShortcut {
                     .any(|gp| gp.get(a).map(|x| v.matches(*x)).unwrap_or(false))
             })
     }
+}
+
+#[test]
+fn shortcut_matches() {
+    let mut state = InputState::default();
+    state.key_down(Scancode::A);
+    state.key_down(Scancode::B);
+    state.controller_button_down(0, Button::DPadUp);
+
+    let shortcut = Shortcut::default().with_key(Scancode::A);
+    assert!(shortcut.matches(&state));
+    let shortcut = Shortcut::default()
+        .with_key(Scancode::A)
+        .with_key(Scancode::C);
+    assert!(!shortcut.matches(&state));
 }

@@ -1,6 +1,6 @@
 use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
-use crate::input::{BasicInputShortcut, InputState};
+use crate::input::{InputState, Shortcut};
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use sdl3::event::Event;
 use std::time::Instant;
@@ -8,7 +8,7 @@ use tracing::{debug, error, info, trace};
 
 pub mod menu;
 
-fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, BasicInputShortcut)> {
+fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, Shortcut)> {
     let settings = app.settings();
     settings
         .inner()
