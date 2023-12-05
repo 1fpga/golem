@@ -121,7 +121,10 @@ impl MappingSettings {
 fn serializes() {
     let settings = MappingSettings::default();
     let serialized = json5::to_string(&settings).unwrap();
-    assert_eq!(serialized, r#"{"show_menu":{"keys":["F12"]}}"#);
+    assert_eq!(
+        serialized,
+        r#"{"quit_core":{"keys":["F10"]},"reset_core":{"keys":["F11"]},"show_menu":{"keys":["F12"]},"take_screenshot":{"keys":["SysReq"]}}"#
+    );
 
     let new_settings = json5::from_str(&serialized).unwrap();
     assert_eq!(settings, new_settings);
