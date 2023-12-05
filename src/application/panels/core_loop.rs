@@ -13,8 +13,7 @@ fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, Basi
     settings
         .inner()
         .mappings()
-        .global_commands()
-        .chain(settings.inner().mappings().core_commands(core.name()))
+        .all_commands(core.name())
         .map(|(cmd, shortcut)| (cmd, shortcut.clone()))
         .collect::<Vec<_>>()
 }
@@ -54,7 +53,7 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
         }
 
         for ev in state.events() {
-            debug!(?ev, "Core loop event");
+            // debug!(?ev, "Core loop event");
             match ev {
                 Event::KeyDown {
                     scancode: Some(scancode),

@@ -1,61 +1,57 @@
 use crate::input::commands::ShortcutCommand;
 use crate::input::BasicInputShortcut;
 use mister_fpga::config_string::ConfigMenu;
-use sdl3::keyboard::Scancode;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+use std::str::FromStr;
 use tracing::info;
 
 #[derive(Debug, Clone, Hash, Serialize, Deserialize, PartialEq)]
 pub struct MappingSettings {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub show_menu: Option<BasicInputShortcut>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub reset_core: Option<BasicInputShortcut>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub quit_core: Option<BasicInputShortcut>,
-    // #[serde(default)]
-    // pub save_state: Option<()>,
-    // #[serde(default)]
-    // pub load_save_state: Option<()>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     cores: BTreeMap<String, BTreeMap<String, BasicInputShortcut>>,
+
+    #[serde(flatten)]
+    shortcuts: BTreeMap<String, BasicInputShortcut>,
 }
 
 impl Default for MappingSettings {
     fn default() -> Self {
+        let global_shortcuts = ShortcutCommand::globals();
+
         Self {
-            show_menu: Some(BasicInputShortcut::default().with_key(Scancode::F12)),
-            reset_core: None,
-            quit_core: None,
             cores: BTreeMap::new(),
+            shortcuts: global_shortcuts
+                .into_iter()
+                .filter_map(|k| {
+                    Some((k.setting_name().unwrap().to_string(), k.default_shortcut()?))
+                })
+                .collect(),
         }
     }
 }
 
 impl MappingSettings {
-    pub fn core_commands(
+    pub fn all_commands(
         &self,
         core_name: &str,
     ) -> impl Iterator<Item = (ShortcutCommand, &BasicInputShortcut)> {
-        self.cores.get(core_name).into_iter().flat_map(|core| {
-            core.iter().map(|(cmd, shortcut)| {
-                (
-                    ShortcutCommand::CoreSpecificCommand(ConfigMenu::id_from_str(cmd)),
-                    shortcut,
-                )
+        self.cores
+            .get(core_name)
+            .into_iter()
+            .flat_map(|core| {
+                core.iter().map(|(cmd, shortcut)| {
+                    (
+                        ShortcutCommand::CoreSpecificCommand(ConfigMenu::id_from_str(cmd)),
+                        shortcut,
+                    )
+                })
             })
-        })
-    }
-
-    pub fn global_commands(&self) -> impl Iterator<Item = (ShortcutCommand, &BasicInputShortcut)> {
-        vec![
-            (ShortcutCommand::ShowCoreMenu, self.show_menu.as_ref()),
-            (ShortcutCommand::ResetCore, self.reset_core.as_ref()),
-            (ShortcutCommand::QuitCore, self.quit_core.as_ref()),
-        ]
-        .into_iter()
-        .filter_map(|(cmd, shortcut)| shortcut.map(|s| (cmd, s)))
+            .chain(self.shortcuts.iter().filter_map(|(cmd, shortcut)| {
+                ShortcutCommand::from_str(cmd)
+                    .ok()
+                    .map(|cmd| (cmd, shortcut))
+            }))
     }
 
     fn find_core_command_for_id(
@@ -73,9 +69,6 @@ impl MappingSettings {
         command: ShortcutCommand,
     ) -> Option<&BasicInputShortcut> {
         match command {
-            ShortcutCommand::ShowCoreMenu => self.show_menu.as_ref(),
-            ShortcutCommand::ResetCore => self.reset_core.as_ref(),
-            ShortcutCommand::QuitCore => self.quit_core.as_ref(),
             ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
                     self.cores
@@ -85,14 +78,12 @@ impl MappingSettings {
                     None
                 }
             }
+            _ => self.shortcuts.get(command.setting_name()?),
         }
     }
 
     pub fn delete(&mut self, core: Option<&str>, command: ShortcutCommand) {
         match command {
-            ShortcutCommand::ShowCoreMenu => self.show_menu = None,
-            ShortcutCommand::ResetCore => self.reset_core = None,
-            ShortcutCommand::QuitCore => self.quit_core = None,
             ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
                     if let Some(core) = self.cores.get_mut(core) {
@@ -101,6 +92,11 @@ impl MappingSettings {
                             core.remove(&key);
                         }
                     }
+                }
+            }
+            other => {
+                if let Some(x) = other.setting_name() {
+                    self.shortcuts.remove(x);
                 }
             }
         }
@@ -118,11 +114,9 @@ impl MappingSettings {
     }
 
     pub fn set(&mut self, command: ShortcutCommand, shortcut: BasicInputShortcut) {
-        match command {
-            ShortcutCommand::ShowCoreMenu => self.show_menu = Some(shortcut),
-            ShortcutCommand::ResetCore => self.reset_core = Some(shortcut),
-            ShortcutCommand::QuitCore => self.quit_core = Some(shortcut),
-            _ => {}
+        info!("Setting global command {} to {:?}", command, shortcut);
+        if let Some(name) = command.setting_name() {
+            self.shortcuts.insert(name.to_string(), shortcut);
         }
     }
 }

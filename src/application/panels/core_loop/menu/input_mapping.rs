@@ -28,27 +28,25 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
     let mut state = None;
 
     loop {
-        let show_menu = app
-            .settings()
-            .inner()
-            .mappings()
-            .show_menu
-            .as_ref()
-            .map(|m| m.to_string());
-        let reset_core = app
-            .settings()
-            .inner()
-            .mappings()
-            .reset_core
-            .as_ref()
-            .map(|m| m.to_string());
-        let quit_core = app
-            .settings()
-            .inner()
-            .mappings()
-            .quit_core
-            .as_ref()
-            .map(|m| m.to_string());
+        let global_shortcuts = ShortcutCommand::globals()
+            .into_iter()
+            .filter_map(|command| {
+                Some((
+                    command.setting_name()?,
+                    app.settings()
+                        .inner()
+                        .mappings()
+                        .for_command(None, command)
+                        .map(|x| x.to_string())
+                        .unwrap_or_default(),
+                    MenuAction::Remap(command),
+                ))
+            })
+            .collect::<Vec<_>>();
+        let global_items = global_shortcuts
+            .iter()
+            .map(|(a, b, c)| (*a, b.as_str(), *c))
+            .collect::<Vec<_>>();
 
         let menu = if let Some(c) = core {
             let menu = c.menu_options();
@@ -85,36 +83,14 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
             app,
             "Input Mapping",
             items.as_slice(),
-            TextMenuOptions::default().with_state(state).with_prefix(&[
-                ("Global Shortcuts (all cores)", "", MenuAction::Unselectable),
-                (
-                    "Show Menu",
-                    if let Some(s) = show_menu.as_ref() {
-                        s.as_str()
-                    } else {
-                        ""
-                    },
-                    MenuAction::Remap(ShortcutCommand::ShowCoreMenu),
-                ),
-                (
-                    "Reset Core",
-                    if let Some(s) = reset_core.as_ref() {
-                        s.as_str()
-                    } else {
-                        ""
-                    },
-                    MenuAction::Remap(ShortcutCommand::QuitCore),
-                ),
-                (
-                    "Quit Core",
-                    if let Some(s) = quit_core.as_ref() {
-                        s.as_str()
-                    } else {
-                        ""
-                    },
-                    MenuAction::Remap(ShortcutCommand::QuitCore),
-                ),
-            ]),
+            TextMenuOptions::default().with_state(state).with_prefix(
+                [
+                    vec![("Global Shortcuts (all cores)", "", MenuAction::Unselectable)],
+                    global_items,
+                ]
+                .concat()
+                .as_slice(),
+            ),
         );
 
         state = Some(new_state);

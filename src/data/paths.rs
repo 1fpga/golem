@@ -18,6 +18,14 @@ pub fn config_root_path() -> PathBuf {
     p
 }
 
+pub fn screenshots_root() -> PathBuf {
+    let p = config_root_path().join("screenshots");
+    if !p.exists() {
+        std::fs::create_dir_all(&p).unwrap();
+    }
+    p
+}
+
 pub fn core_root_path() -> PathBuf {
     let p = config_root_path().join("cores");
     if !p.exists() {
