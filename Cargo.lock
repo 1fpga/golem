@@ -691,6 +691,9 @@ name = "either"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a26ae43d7bcc3b814de94796a5e736d4029efb0ee900c12e2d54c993ad1a1e07"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "embedded-graphics"
@@ -809,15 +812,6 @@ name = "fastrand"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25cbce373ec4653f1a01a31e8a5e5ec0c622dc27ff9c4e6606eefef5cbbed4a5"
-
-[[package]]
-name = "fdeflate"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64d6dafc854908ff5da46ff3f8f473c6984119a2876a383a860246dd7841a868"
-dependencies = [
- "simd-adler32",
-]
 
 [[package]]
 name = "filetime"
@@ -1555,6 +1549,7 @@ dependencies = [
  "datary",
  "debounce",
  "dirs",
+ "either",
  "embedded-graphics",
  "embedded-layout",
  "embedded-menu",
@@ -1565,7 +1560,7 @@ dependencies = [
  "humansize",
  "identity-hash",
  "image",
- "itertools 0.11.0",
+ "itertools 0.12.0",
  "json5",
  "json5format",
  "libc",
@@ -1577,7 +1572,6 @@ dependencies = [
  "num-traits",
  "once_cell",
  "ouroboros",
- "png 0.17.10",
  "qrcode",
  "regex",
  "reqwest",
@@ -1826,7 +1820,7 @@ dependencies = [
  "num-iter",
  "num-rational",
  "num-traits",
- "png 0.16.8",
+ "png",
  "scoped_threadpool",
  "tiff",
 ]
@@ -2113,7 +2107,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7810e0be55b428ada41041c41f32c9f1a42817901b4ccf45fa3d4b6561e74c7"
 dependencies = [
  "adler",
- "simd-adler32",
 ]
 
 [[package]]
@@ -2136,6 +2129,7 @@ dependencies = [
  "cyclone-v",
  "embedded-graphics",
  "fixed-map",
+ "image",
  "itertools 0.12.0",
  "json5",
  "libc",
@@ -2433,19 +2427,6 @@ dependencies = [
  "crc32fast",
  "deflate",
  "miniz_oxide 0.3.7",
-]
-
-[[package]]
-name = "png"
-version = "0.17.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd75bf2d8dd3702b9707cdbc56a5b9ef42cec752eb8b3bafc01234558442aa64"
-dependencies = [
- "bitflags 1.3.2",
- "crc32fast",
- "fdeflate",
- "flate2",
- "miniz_oxide 0.7.1",
 ]
 
 [[package]]
@@ -3081,12 +3062,6 @@ checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
 dependencies = [
  "libc",
 ]
-
-[[package]]
-name = "simd-adler32"
-version = "0.3.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d66dc143e6b11c1eddc06d5c423cfc97062865baf299914ab64caa38182078fe"
 
 [[package]]
 name = "slab"

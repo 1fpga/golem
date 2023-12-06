@@ -12,7 +12,7 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
-use sdl3::gamepad::Button;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use std::path::Path;
 use tracing::info;
@@ -53,6 +53,10 @@ impl Core for DummyCore {
         unreachable!()
     }
 
+    fn take_screenshot(&mut self) -> Result<image::DynamicImage, String> {
+        unreachable!()
+    }
+
     fn send_key(&mut self, key: Scancode) {
         info!("DummyCore::send_key({})", key);
     }
@@ -70,6 +74,13 @@ impl Core for DummyCore {
             "DummyCore::sdl_joy_button_up({}, {})",
             joystick_idx,
             button.string()
+        );
+    }
+
+    fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16) {
+        info!(
+            "DummyCore::sdl_axis_motion({}, {:?}, {})",
+            controller, axis, value
         );
     }
 }

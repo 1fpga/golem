@@ -1,12 +1,11 @@
 use crate::application::panels::core_loop::menu::core_menu;
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::input::BasicInputShortcut;
+use crate::input::shortcut::Shortcut;
 use crate::platform::Core;
+use image::GenericImageView;
 use sdl3::keyboard::Scancode;
 use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::io::BufWriter;
 use std::str::FromStr;
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
@@ -90,20 +89,12 @@ impl ShortcutCommand {
         }
     }
 
-    pub fn default_shortcut(&self) -> Option<BasicInputShortcut> {
+    pub fn default_shortcut(&self) -> Option<Shortcut> {
         match self {
-            ShortcutCommand::ShowCoreMenu => {
-                Some(BasicInputShortcut::default().with_key(Scancode::F12))
-            }
-            ShortcutCommand::ResetCore => {
-                Some(BasicInputShortcut::default().with_key(Scancode::F11))
-            }
-            ShortcutCommand::QuitCore => {
-                Some(BasicInputShortcut::default().with_key(Scancode::F10))
-            }
-            ShortcutCommand::TakeScreenshot => {
-                Some(BasicInputShortcut::default().with_key(Scancode::SysReq))
-            }
+            ShortcutCommand::ShowCoreMenu => Some(Shortcut::default().with_key(Scancode::F12)),
+            ShortcutCommand::ResetCore => Some(Shortcut::default().with_key(Scancode::F11)),
+            ShortcutCommand::QuitCore => Some(Shortcut::default().with_key(Scancode::F10)),
+            ShortcutCommand::TakeScreenshot => Some(Shortcut::default().with_key(Scancode::SysReq)),
             ShortcutCommand::CoreSpecificCommand(_) => None,
         }
     }
@@ -130,9 +121,12 @@ impl ShortcutCommand {
             ShortcutCommand::TakeScreenshot => {
                 debug!("Taking screenshot");
                 let start = Instant::now();
-                let img = mister_fpga::framebuffer::FpgaFramebuffer::default()
-                    .take_screenshot()
-                    .unwrap();
+                let img = match core.take_screenshot() {
+                    Ok(img) => img,
+                    Err(e) => {
+                        return CommandResult::Err(e);
+                    }
+                };
 
                 let core_name = core.name();
                 let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
@@ -142,20 +136,14 @@ impl ShortcutCommand {
                     timestamp
                 ));
 
-                let file = File::create(path.clone()).unwrap();
-                let ref mut w = BufWriter::new(file);
-
-                let mut encoder = png::Encoder::new(w, img.width, img.height);
-                encoder.set_color(png::ColorType::Rgb);
-                encoder.set_depth(png::BitDepth::Eight);
-                let mut writer = encoder.write_header().unwrap();
-                writer.write_image_data(&img.data).unwrap(); // Save
+                if let Err(e) = img.save(path.clone()) {
+                    return CommandResult::Err(format!("Error saving screenshot: {}", e));
+                }
 
                 let elapsed = start.elapsed().as_millis();
                 info!(
                     ?path,
-                    width = img.width,
-                    height = img.height,
+                    dimensions = ?img.dimensions(),
                     elapsed,
                     "Screenshot taken."
                 );

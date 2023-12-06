@@ -37,7 +37,18 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
                         .inner()
                         .mappings()
                         .for_command(None, command)
-                        .map(|x| x.to_string())
+                        .map(|x| {
+                            if x.len() > 1 {
+                                "Multiple".to_string()
+                            } else {
+                                let result = x.first().unwrap().to_string();
+                                if result.len() > 30 {
+                                    format!("{}...", &result[..30])
+                                } else {
+                                    result
+                                }
+                            }
+                        })
                         .unwrap_or_default(),
                     MenuAction::Remap(command),
                 ))
@@ -61,7 +72,12 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
                                 .inner()
                                 .mappings()
                                 .for_command(Some(c.name()), command)
-                                .map(|x| x.to_string())
+                                .map(|x| {
+                                    x.iter()
+                                        .map(|x| x.to_string())
+                                        .collect::<Vec<_>>()
+                                        .join(", ")
+                                })
                                 .unwrap_or_default(),
                             MenuAction::Remap(command),
                         ))

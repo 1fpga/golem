@@ -105,7 +105,6 @@ pub struct InnerSettings {
     toolbar_datetime_format: DateTimeFormat,
 
     #[serde(default)]
-    #[merge(strategy = merge::overwrite)]
     mappings: MappingSettings,
 
     #[serde(default)]
@@ -188,18 +187,7 @@ impl Drop for Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        let mut update = Bus::new(1);
-
-        let inner = Arc::new(RwLock::new(InnerSettings::default()));
-        let path = Arc::new(RwLock::new(PathBuf::new()));
-        let drop_send = create_settings_save_thread_(update.add_rx(), path.clone(), inner.clone());
-
-        Self {
-            path,
-            inner,
-            update: RefCell::new(update),
-            drop_send,
-        }
+        Self::default_with_inner(InnerSettings::default())
     }
 }
 
@@ -214,6 +202,21 @@ impl Merge for Settings {
 }
 
 impl Settings {
+    fn default_with_inner(inner: InnerSettings) -> Self {
+        let mut update = Bus::new(1);
+
+        let inner = Arc::new(RwLock::new(inner));
+        let path = Arc::new(RwLock::new(PathBuf::new()));
+        let drop_send = create_settings_save_thread_(update.add_rx(), path.clone(), inner.clone());
+
+        Self {
+            path,
+            inner,
+            update: RefCell::new(update),
+            drop_send,
+        }
+    }
+
     pub fn update(&self, other: InnerSettings) {
         if self.inner.write().unwrap().merge_check(other) {
             let _ = self.update.borrow_mut().try_broadcast(());
@@ -226,20 +229,41 @@ impl Settings {
 
     /// Load the settings from disk.
     pub fn new() -> Self {
-        let mut settings = Self::default();
+        let mut settings: Option<Self> = None;
 
         for path in paths::all_settings_paths() {
-            settings.load(path).unwrap();
+            if let Some(s) = settings.as_mut() {
+                let other = Self::load(&path).unwrap().inner_mut().clone();
+                eprintln!("1 Loaded settings from {:?}: {:#?}", path, other);
+                s.inner_mut().merge(other);
+            } else if let Ok(s) = Self::load(&path) {
+                eprintln!("2 Loaded settings from {:?}: {:#?}", path, s);
+                settings = Some(s);
+            }
         }
 
-        settings
+        debug!(?settings, "Settings loaded");
+        settings.unwrap_or_default()
     }
 
-    fn load(&mut self, path: impl AsRef<Path>) -> Result<(), std::io::Error> {
+    fn load(path: impl AsRef<Path>) -> Result<Self, std::io::Error> {
         let content = std::fs::read_to_string(path.as_ref())?;
-        let settings: InnerSettings = json5::from_str(&content).expect("Failed to parse settings");
-        self.inner.write().unwrap().merge(settings);
-        Ok(())
+        // Parsing errors are ignored.
+        match json5::from_str(&content) {
+            Ok(settings) => Ok(Self::default_with_inner(settings)),
+            Err(e) => {
+                error!(
+                    "Failed to parse settings at path {:?}: {}",
+                    path.as_ref(),
+                    e
+                );
+                error!("This is not an error, the settings file will be ignored.");
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Failed to parse settings",
+                ))
+            }
+        }
     }
 
     pub fn on_update(&self) -> BusReader<()> {
@@ -317,4 +341,21 @@ impl Settings {
             libc::reboot(libc::RB_AUTOBOOT);
         }
     }
+}
+
+#[test]
+fn serializes() {
+    let mut settings = InnerSettings::default();
+    let mut other_serialized = InnerSettings::default();
+    other_serialized.mappings.add(
+        crate::input::commands::ShortcutCommand::ShowCoreMenu,
+        crate::input::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
+    );
+
+    settings.merge(other_serialized);
+    let serialized = json5::to_string(&settings).unwrap();
+    assert_eq!(
+        serialized,
+        r#"{"show_fps":false,"invert_toolbar":true,"toolbar_datetime_format":"Default","mappings":{"quit_core":"'F10'","reset_core":"'F11'","show_menu":["'A'","'F12'"],"take_screenshot":"'SysReq'"},"language":null}"#
+    );
 }

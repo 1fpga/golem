@@ -44,6 +44,7 @@ cyclone-v = { path = "./cyclone_v", version = "0.1.0", features = ["std"] }
 datary = { version = "0.1.0" }
 debounce = "0.2.2"
 dirs = "5.0.1"
+either = { version = "1.9.0", features = ["serde"] }
 embedded-graphics = "0.8.1"
 embedded-layout = "0.4.1"
 embedded-menu = "0.5.4"
@@ -53,7 +54,7 @@ hex = "0.4.3"
 humansize = "2.1.3"
 identity-hash = { version = "0.1.0", features = ["std"] }
 image = "0.23.14"
-itertools = "0.11.0"
+itertools = "0.12.0"
 json5 = "0.4.1"
 json5format = "0.2.6"
 libc = { version = "0.2.150" }
@@ -66,7 +67,6 @@ num-integer = "0.1.45"
 num-traits = "0.2.15"
 once_cell = "1.18.0"
 ouroboros = "0.18.0"
-png = "0.17"
 qrcode = { version = "0.12.0", features = ["image"] }
 regex = "1.9.3"
 reqwest = { version = "0.11.22", features = ["blocking", "json", "rustls-tls"], default-features = false }

@@ -1,18 +1,11 @@
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use tracing::info;
+use image::{DynamicImage, RgbImage};
+use tracing::debug;
 
 pub const FB_PIXEL_COUNT: usize = 1920 * 1080;
 pub const FB_SIZE: usize = FB_PIXEL_COUNT * 4 * 3;
 pub const FB_BASE_ADDRESS: usize = 0x2000_0000;
 pub const BUFFER_SIZE: usize = 2048 * 1024 * 3;
-
-const DE10_PAGE_SIZE: usize = 4096;
-
-pub struct Image {
-    pub width: u32,
-    pub height: u32,
-    pub data: Vec<u8>,
-}
 
 #[derive(Debug)]
 #[repr(C)]
@@ -29,24 +22,24 @@ struct FbHeader {
 pub struct FpgaFramebuffer<M: MemoryMapper> {
     memory: M,
     header: FbHeader,
-    start: *const u8,
 }
 
 impl Default for FpgaFramebuffer<DevMemMemoryMapper> {
     fn default() -> Self {
-        let address = FB_BASE_ADDRESS; // - DE10_PAGE_SIZE;
+        // In MiSTer there is an alignment of the address to the page size.
+        // We know the page size in advance, so we don't need to calculate
+        // it.
+        let address = FB_BASE_ADDRESS;
         let size = BUFFER_SIZE;
-        let start = address & !(DE10_PAGE_SIZE - 1);
-        let offset = start - address;
         let mapper =
             DevMemMemoryMapper::create(address, size).expect("Could not mmap framebuffer.");
 
-        Self::new(mapper, offset).unwrap()
+        Self::new(mapper).unwrap()
     }
 }
 
 impl<M: MemoryMapper> FpgaFramebuffer<M> {
-    fn new(memory: M, offset: usize) -> Result<Self, &'static str> {
+    fn new(memory: M) -> Result<Self, &'static str> {
         let header: *const u8 = memory.as_ptr();
 
         let buffer = unsafe { std::slice::from_raw_parts(header, 16) };
@@ -65,37 +58,32 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         if header.magic != 0x0101 {
             return Err("Invalid framebuffer header.");
         }
-        info!("Header data: {:?}", header);
-        let start = unsafe { memory.as_ptr::<u8>().add(offset) };
+        debug!("Header data: {:?}", header);
 
-        Ok(Self {
-            memory,
-            header,
-            start,
-        })
+        Ok(Self { memory, header })
     }
 
-    pub fn take_screenshot(&mut self) -> Result<Image, String> {
+    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         let height = self.header.height as usize;
         let width = self.header.width as usize;
         let line = self.header.line as usize;
+        let start = self.memory.as_ptr::<u8>();
         let fb = unsafe {
             std::slice::from_raw_parts(
-                self.start.add(self.header.header_len as usize),
+                start.add(self.header.header_len as usize),
                 height * width * 3,
             )
         };
 
-        let mut data = vec![0; height * width * 3];
+        let mut img = RgbImage::new(width as u32, height as u32);
+
         for y in 0..height {
             let line = &fb[y * line..y * line + width * 3];
-            data[y * width * 3..y * width * 3 + width * 3].copy_from_slice(line)
+            img.get_mut(y * width * 3..y * width * 3 + width * 3)
+                .unwrap()
+                .copy_from_slice(line);
         }
 
-        return Ok(Image {
-            width: width as u32,
-            height: height as u32,
-            data,
-        });
+        return Ok(DynamicImage::ImageRgb8(img));
     }
 }

@@ -15,7 +15,6 @@ use sdl3::joystick::Joystick;
 use std::sync::{Arc, Mutex};
 use tracing::{info, warn};
 
-// mod icons;
 pub mod menu;
 
 pub mod panels;
@@ -31,8 +30,8 @@ pub struct GoLEmApp {
 
     render_toolbar: bool,
 
-    joysticks: [Option<Joystick>; 16],
-    gamepads: [Option<Gamepad>; 16],
+    joysticks: [Option<Joystick>; 32],
+    gamepads: [Option<Gamepad>; 32],
 
     pub platform: WindowManager,
     main_buffer: DrawBuffer<BinaryColor>,
@@ -56,11 +55,11 @@ impl GoLEmApp {
         // constant to work around this.
         let joysticks = {
             const NONE: Option<Joystick> = None;
-            [NONE; 16]
+            [NONE; 32]
         };
         let gamepads = {
             const NONE: Option<Gamepad> = None;
-            [NONE; 16]
+            [NONE; 32]
         };
 
         Self {

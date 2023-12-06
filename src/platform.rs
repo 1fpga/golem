@@ -11,15 +11,15 @@ use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::main_inner::Flags;
 use cfg_if::cfg_if;
-use embedded_graphics::geometry::{OriginDimensions, Size};
+use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
+use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
-use sdl3::gamepad::Button;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use std::path::Path;
-use tracing::trace;
 
 cfg_if! {
     if #[cfg(test)] {
@@ -56,44 +56,6 @@ mod sizes {
     pub const MAIN: Size = Size::new(256, 16 * 8);
 }
 
-#[derive(Default)]
-pub struct PlatformState {
-    events: Vec<Event>,
-    should_quit: bool,
-    target_size: Size,
-}
-
-impl PlatformState {
-    pub fn new(target_size: Size, events: Vec<Event>) -> Self {
-        Self {
-            target_size,
-            events,
-            ..Default::default()
-        }
-    }
-
-    pub fn new_frame(&mut self) {
-        self.should_quit = false;
-    }
-
-    pub fn should_quit(&mut self) -> bool {
-        self.should_quit
-    }
-
-    pub fn events(&self) -> impl Iterator<Item = &'_ Event> + '_ {
-        self.events.iter().map(|ev| {
-            trace!("Event: {:?}", ev);
-            ev
-        })
-    }
-}
-
-impl OriginDimensions for PlatformState {
-    fn size(&self) -> Size {
-        self.target_size
-    }
-}
-
 pub trait Core {
     fn name(&self) -> &str;
 
@@ -121,11 +83,15 @@ pub trait Core {
     }
     fn set_status_bits(&mut self, bits: StatusBitMap);
 
+    fn take_screenshot(&mut self) -> Result<DynamicImage, String>;
+
     fn send_key(&mut self, key: Scancode);
 
     fn sdl_button_down(&mut self, controller: u8, button: Button);
 
     fn sdl_button_up(&mut self, controller: u8, button: Button);
+
+    fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16);
 }
 
 pub trait CoreManager {

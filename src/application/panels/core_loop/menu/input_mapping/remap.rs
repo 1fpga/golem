@@ -1,7 +1,8 @@
 use crate::application::panels::alert::alert;
 use crate::application::GoLEmApp;
 use crate::input::commands::ShortcutCommand;
-use crate::input::{BasicInputShortcut, InputState};
+use crate::input::shortcut::Shortcut;
+use crate::input::InputState;
 use crate::platform::Core;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -22,7 +23,12 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
         .mappings()
         .for_command(core.map(|x| x.name()), command)
         .cloned();
-    let mapping_str = mapping.map(|m| m.to_string());
+    let mapping_str = mapping.map(|m| {
+        m.iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join("\n ")
+    });
 
     // First, ask if the user wants to remap the command, delete it or cancel.
     let choice = alert(
@@ -33,7 +39,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
         } else {
             "Currently unmapped."
         },
-        &["Remap", "Delete", "Back"],
+        &["Add New Mapping", "Clear", "Back"],
     );
 
     match choice {
@@ -44,7 +50,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
             app.settings()
                 .inner_mut()
                 .mappings_mut()
-                .delete(core.map(|x| x.name()), command);
+                .clear(core.map(|x| x.name()), command);
             app.settings().update_done();
             return;
         }
@@ -55,7 +61,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
 
     let bounds = app.main_buffer().bounding_box();
 
-    let mut input = BasicInputShortcut::default();
+    let mut input = Shortcut::default();
     let mut current = InputState::default();
     let mut has_been_set = false;
 
@@ -120,9 +126,8 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
                     if scancode == sdl3::keyboard::Scancode::Escape {
                         return Some(());
                     }
-                    input.add_key(scancode);
+                    has_been_set = input.add_key(scancode) || has_been_set;
                     current.key_down(scancode);
-                    has_been_set = true;
                 }
                 Event::KeyUp {
                     scancode: Some(scancode),
@@ -131,12 +136,17 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
                     current.key_up(scancode);
                 }
                 Event::ControllerButtonDown { which, button, .. } => {
-                    input.add_gamepad_button(button);
+                    has_been_set = input.add_gamepad_button(button) || has_been_set;
                     current.controller_button_down(which, button);
-                    has_been_set = true;
                 }
                 Event::ControllerButtonUp { which, button, .. } => {
                     current.controller_button_up(which, button);
+                }
+                Event::ControllerAxisMotion {
+                    which, axis, value, ..
+                } => {
+                    has_been_set = input.add_axis(axis, value) || has_been_set;
+                    current.controller_axis_motion(which, axis, value);
                 }
                 _ => {}
             }
@@ -158,7 +168,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
                         .find(|o| o.id() == Some(id))
                         .and_then(|o| o.label())
                     {
-                        app.settings().inner_mut().mappings_mut().set_core_specific(
+                        app.settings().inner_mut().mappings_mut().add_core_specific(
                             c.name(),
                             label,
                             input.clone(),
@@ -169,7 +179,7 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: S
                 app.settings()
                     .inner_mut()
                     .mappings_mut()
-                    .set(command, input.clone());
+                    .add(command, input.clone());
             }
             app.settings().update_done();
             return Some(());
