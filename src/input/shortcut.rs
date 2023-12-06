@@ -212,8 +212,6 @@ impl FromStr for Shortcut {
                 continue;
             }
 
-            eprintln!("..1 {}", shortcut);
-
             if (shortcut.starts_with('"') && shortcut.ends_with('"'))
                 || (shortcut.starts_with('\'') && shortcut.ends_with('\''))
             {
@@ -229,10 +227,6 @@ impl FromStr for Shortcut {
                 .find(|c: char| !c.is_alphanumeric())
                 .map(|i| shortcut.split_at(i))
             {
-                eprintln!("..2 {} {}", axis, value);
-                eprintln!("..3 {:?}", Axis::from_string(axis.trim()));
-                eprintln!("..4 {:?}", value.trim_end_matches(')').trim());
-                eprintln!("..4 {:?}", AxisValue::from_str(value.trim_end_matches(')')));
                 let axis = Axis::from_string(axis.trim()).ok_or_else(|| "Invalid axis name.")?;
                 let value = AxisValue::from_str(value.trim_end_matches(')'))
                     .map_err(|_| "Invalid axis value.")?;

@@ -12,8 +12,6 @@ fn load_config_string(#[files("tests/assets/config_string/*")] root: PathBuf) {
     assert!(config.is_ok(), "{:?}", config);
 
     let config = config.unwrap();
-    eprintln!("{config:#?}");
-
     if root.join("status_bit_mask").exists() {
         let map = config.status_bit_map_mask();
         let data = map.debug_string(true);

@@ -234,10 +234,8 @@ impl Settings {
         for path in paths::all_settings_paths() {
             if let Some(s) = settings.as_mut() {
                 let other = Self::load(&path).unwrap().inner_mut().clone();
-                eprintln!("1 Loaded settings from {:?}: {:#?}", path, other);
                 s.inner_mut().merge(other);
             } else if let Ok(s) = Self::load(&path) {
-                eprintln!("2 Loaded settings from {:?}: {:#?}", path, s);
                 settings = Some(s);
             }
         }
