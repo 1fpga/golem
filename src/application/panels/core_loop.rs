@@ -1,6 +1,7 @@
 use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
-use crate::input::{InputState, Shortcut};
+use crate::input::shortcut::Shortcut;
+use crate::input::InputState;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 use sdl3::event::Event;
 use std::time::Instant;
@@ -14,7 +15,7 @@ fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, Shor
         .inner()
         .mappings()
         .all_commands(core.name())
-        .map(|(cmd, shortcut)| (cmd, shortcut.clone()))
+        .flat_map(|(cmd, shortcut)| shortcut.into_iter().map(move |x| (cmd.clone(), x.clone())))
         .collect::<Vec<_>>()
 }
 
@@ -78,6 +79,12 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
                 Event::ControllerButtonUp { which, button, .. } => {
                     inputs.controller_button_up(which, button);
                     core.sdl_button_up((which - 1) as u8, button);
+                }
+                Event::ControllerAxisMotion {
+                    which, axis, value, ..
+                } => {
+                    inputs.controller_axis_motion(which, axis, value);
+                    core.sdl_axis_motion((which - 1) as u8, axis, value);
                 }
                 _ => {}
             }

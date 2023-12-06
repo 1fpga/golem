@@ -7,7 +7,7 @@ use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
-use sdl3::gamepad::Button;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use std::path::Path;
 
@@ -59,6 +59,10 @@ impl super::Core for NullCore {
     }
 
     fn sdl_button_up(&mut self, _joystick_idx: u8, _button: Button) {
+        unreachable!()
+    }
+
+    fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16) {
         unreachable!()
     }
 }

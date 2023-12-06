@@ -3,7 +3,7 @@ use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::types::StatusBitMap;
-use sdl3::gamepad::Button;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use std::path::Path;
 
@@ -86,5 +86,9 @@ impl Core for MisterFpgaCore {
 
     fn sdl_button_up(&mut self, controller: u8, button: Button) {
         self.gamepad_button_up(controller, button as u8)
+    }
+
+    fn sdl_axis_motion(&mut self, _controller: u8, _axis: Axis, _value: i16) {
+        // TODO: do this.
     }
 }

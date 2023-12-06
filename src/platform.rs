@@ -17,7 +17,7 @@ use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
-use sdl3::gamepad::Button;
+use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use std::path::Path;
 
@@ -90,6 +90,8 @@ pub trait Core {
     fn sdl_button_down(&mut self, controller: u8, button: Button);
 
     fn sdl_button_up(&mut self, controller: u8, button: Button);
+
+    fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16);
 }
 
 pub trait CoreManager {

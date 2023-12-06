@@ -1,7 +1,7 @@
 use crate::application::panels::core_loop::menu::core_menu;
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::input::Shortcut;
+use crate::input::shortcut::Shortcut;
 use crate::platform::Core;
 use image::GenericImageView;
 use sdl3::keyboard::Scancode;
