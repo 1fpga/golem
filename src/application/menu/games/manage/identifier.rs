@@ -75,9 +75,6 @@ pub fn create_games_from_retronomicon_(
         .map(|s| (s.sha1.to_vec(), s))
         .collect::<std::collections::HashMap<_, _>>();
 
-    eprintln!("system_to_core: {:?}", system_to_core);
-    eprintln!("games: {:?}", games);
-
     for g in games {
         info!("Creating game {}", g.name);
         let maybe_scan_found = g

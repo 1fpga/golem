@@ -151,10 +151,7 @@ impl ShortcutCommand {
                 CommandResult::Ok
             }
             ShortcutCommand::CoreSpecificCommand(id) => {
-                let menu = core.menu_options().iter().find(|m| {
-                    eprintln!("{:?} == {} ({:?})", m.id(), id, m.label());
-                    m.id() == Some(*id)
-                });
+                let menu = core.menu_options().iter().find(|m| m.id() == Some(*id));
                 let menu = menu.cloned();
                 debug!(
                     ?menu,

@@ -178,10 +178,6 @@ pub fn progress_bar(
             }
         }
 
-        for ev in state.events() {
-            eprintln!("eve: {ev:?}");
-        }
-
         None
     })
 }
