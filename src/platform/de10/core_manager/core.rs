@@ -1,4 +1,5 @@
 use crate::platform::Core;
+use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::types::StatusBitMap;
@@ -69,6 +70,10 @@ impl Core for MisterFpgaCore {
 
     fn set_status_bits(&mut self, bits: StatusBitMap) {
         self.send_status_bits(bits)
+    }
+
+    fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
+        self.take_screenshot()
     }
 
     fn send_key(&mut self, key: Scancode) {

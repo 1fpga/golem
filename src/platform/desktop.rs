@@ -53,6 +53,10 @@ impl Core for DummyCore {
         unreachable!()
     }
 
+    fn take_screenshot(&mut self) -> Result<image::DynamicImage, String> {
+        unreachable!()
+    }
+
     fn send_key(&mut self, key: Scancode) {
         info!("DummyCore::send_key({})", key);
     }

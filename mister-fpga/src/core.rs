@@ -4,6 +4,7 @@ use crate::core::buttons::ButtonMap;
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga, SpiCommands};
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+use image::DynamicImage;
 use sdl3::keyboard::Scancode;
 use std::ffi::OsStr;
 use std::fs::File;
@@ -248,6 +249,10 @@ impl MisterFpgaCore {
         if button_mask >> 16 == 0 {
             command.write((button_mask >> 16) as u16);
         }
+    }
+
+    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
+        crate::framebuffer::FpgaFramebuffer::default().take_screenshot()
     }
 
     fn send_file_to_memory_(

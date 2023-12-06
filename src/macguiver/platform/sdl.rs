@@ -47,6 +47,7 @@ pub struct SdlPlatform<C: PixelColor> {
     pub event_pump: Rc<RefCell<EventPump>>,
     pub joystick: Rc<RefCell<sdl3::JoystickSubsystem>>,
     pub gamepad: Rc<RefCell<sdl3::GamepadSubsystem>>,
+    pub video: Rc<RefCell<sdl3::VideoSubsystem>>,
 
     has_windows: bool,
     base_window: Option<Window<C>>,
@@ -80,14 +81,16 @@ where
     type Event = sdl3::event::Event;
 
     fn init(init_state: SdlInitState) -> Self {
-        let (joystick, gamepad, event_pump) = SDL_CONTEXT.with(|context| {
+        let (joystick, gamepad, event_pump, video) = SDL_CONTEXT.with(|context| {
             let ctx = context.borrow();
             // Initialize subsystems.
             let joystick = ctx.joystick().unwrap();
             joystick.set_joystick_events_enabled(true);
             let gamepad = ctx.game_controller().unwrap();
             let event_pump = ctx.event_pump().unwrap();
-            (joystick, gamepad, event_pump)
+            let video =ctx.video().unwrap();
+
+            (joystick, gamepad, event_pump, video)
         });
 
         Self {
@@ -95,6 +98,7 @@ where
             event_pump: Rc::new(RefCell::new(event_pump)),
             joystick: Rc::new(RefCell::new(joystick)),
             gamepad: Rc::new(RefCell::new(gamepad)),
+            video: Rc::new(RefCell::new(video)),
             has_windows: false,
             base_window: None,
             phantom: std::marker::PhantomData,

@@ -1,18 +1,11 @@
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use tracing::{debug, info};
+use image::{DynamicImage, RgbImage};
+use tracing::debug;
 
 pub const FB_PIXEL_COUNT: usize = 1920 * 1080;
 pub const FB_SIZE: usize = FB_PIXEL_COUNT * 4 * 3;
 pub const FB_BASE_ADDRESS: usize = 0x2000_0000;
 pub const BUFFER_SIZE: usize = 2048 * 1024 * 3;
-
-const DE10_PAGE_SIZE: usize = 4096;
-
-pub struct Image {
-    pub width: u32,
-    pub height: u32,
-    pub data: Vec<u8>,
-}
 
 #[derive(Debug)]
 #[repr(C)]
@@ -70,11 +63,11 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         Ok(Self { memory, header })
     }
 
-    pub fn take_screenshot(&mut self) -> Result<Image, String> {
+    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         let height = self.header.height as usize;
         let width = self.header.width as usize;
         let line = self.header.line as usize;
-        let start = unsafe { self.memory.as_ptr::<u8>() };
+        let start = self.memory.as_ptr::<u8>();
         let fb = unsafe {
             std::slice::from_raw_parts(
                 start.add(self.header.header_len as usize),
@@ -82,16 +75,15 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
             )
         };
 
-        let mut data = vec![0; height * width * 3];
+        let mut img = RgbImage::new(width as u32, height as u32);
+
         for y in 0..height {
             let line = &fb[y * line..y * line + width * 3];
-            data[y * width * 3..y * width * 3 + width * 3].copy_from_slice(line)
+            img.get_mut(y * width * 3..y * width * 3 + width * 3)
+                .unwrap()
+                .copy_from_slice(line);
         }
 
-        return Ok(Image {
-            width: width as u32,
-            height: height as u32,
-            data,
-        });
+        return Ok(DynamicImage::ImageRgb8(img));
     }
 }

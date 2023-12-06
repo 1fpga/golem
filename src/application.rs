@@ -15,7 +15,6 @@ use sdl3::joystick::Joystick;
 use std::sync::{Arc, Mutex};
 use tracing::{info, warn};
 
-// mod icons;
 pub mod menu;
 
 pub mod panels;

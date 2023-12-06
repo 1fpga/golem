@@ -3,6 +3,7 @@ use crate::macguiver::platform::sdl::SdlPlatform;
 use crate::platform::GoLEmPlatform;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
+use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
@@ -42,6 +43,10 @@ impl super::Core for NullCore {
     }
 
     fn set_status_bits(&mut self, _bits: StatusBitMap) {
+        unreachable!()
+    }
+
+    fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         unreachable!()
     }
 

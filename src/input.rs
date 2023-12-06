@@ -140,7 +140,7 @@ impl InputState {
     }
 
     pub fn mouse_move(&mut self, mouse: u32, x: i32, y: i32) {
-        let mut m = self.mice.entry(mouse).or_default();
+        let m = self.mice.entry(mouse).or_default();
         m.0 += x;
         m.1 += y;
     }
