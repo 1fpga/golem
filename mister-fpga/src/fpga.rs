@@ -219,25 +219,10 @@ pub struct MisterFpga {
 // OSD specific functions.
 impl MisterFpga {
     pub fn osd_enable(&mut self) {
-        // let _ = self.spi_mut().command(SpiCommands::OsdEnable);
-        extern "C" {
-            fn spi_osd_cmd(cmd: u8);
-        }
-
-        unsafe {
-            spi_osd_cmd(0x41 /* OSD_CMD_ENABLE */);
-        }
+        let _ = self.spi_mut().command(SpiCommands::OsdEnable);
     }
     pub fn osd_disable(&mut self) {
-        // let _ = self.spi_mut().command(SpiCommands::OsdDisable);
-
-        extern "C" {
-            fn spi_osd_cmd(cmd: u8);
-        }
-
-        unsafe {
-            spi_osd_cmd(0x40 /* OSD_CMD_ENABLE */);
-        }
+        let _ = self.spi_mut().command(SpiCommands::OsdDisable);
     }
 }
 

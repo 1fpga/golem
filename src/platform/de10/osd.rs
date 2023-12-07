@@ -2,8 +2,9 @@ use super::spi;
 use super::user_io;
 use std::ffi::{c_char, c_int, c_uchar, CStr, CString};
 
-const DISABLE_KEYBOARD: u8 = 0x02; // disable keyboard while OSD is active
-pub const OSD_INFO: u8 = 0x04; // display info
+/// Disable keyboard while OSD is active
+const DISABLE_KEYBOARD: u8 = 0x02;
+// pub const OSD_INFO: u8 = 0x04; // display info
 const OSD_MSG: u8 = 0x08; // display message window
 
 pub const OSD_CMD_WRITE: u8 = 0x20; // OSD write video data command
@@ -122,17 +123,7 @@ pub extern "C" fn OsdEnable(mut mode: u8) {
 }
 
 #[no_mangle]
-pub extern "C" fn InfoEnable(x: c_int, y: c_int, width: c_int, height: c_int) {
-    unsafe {
-        user_io::user_io_osd_key_enable(0);
-        spi::spi_osd_cmd_cont(OSD_CMD_ENABLE | OSD_INFO);
-        spi::spi_w(x as u16);
-        spi::spi_w(y as u16);
-        spi::spi_w(width as u16);
-        spi::spi_w(height as u16);
-        spi::DisableOsd();
-    }
-}
+pub extern "C" fn InfoEnable(_x: c_int, _y: c_int, _width: c_int, _height: c_int) {}
 
 #[no_mangle]
 pub extern "C" fn OsdRotation(rotate: u8) {
