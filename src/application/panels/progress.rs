@@ -145,7 +145,7 @@ pub fn progress_bar(
 
     let mut last_update = std::time::Instant::now();
 
-    app.event_loop(|app, state| {
+    app.event_loop(|app, _state| {
         let buffer = app.main_buffer();
         buffer.clear(BinaryColor::Off).unwrap();
         layout.draw(buffer).unwrap();

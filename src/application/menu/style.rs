@@ -43,6 +43,18 @@ pub enum SdlMenuAction<R> {
     ChangeSort,
 }
 
+impl<R> SdlMenuAction<R> {
+    pub fn transmute<R2>(&self) -> Option<SdlMenuAction<R2>> {
+        match self {
+            SdlMenuAction::Select(_) => None,
+            SdlMenuAction::ShowOptions => Some(SdlMenuAction::ShowOptions),
+            SdlMenuAction::KeyPress(kc) => Some(SdlMenuAction::KeyPress(*kc)),
+            SdlMenuAction::Back => Some(SdlMenuAction::Back),
+            SdlMenuAction::ChangeSort => Some(SdlMenuAction::ChangeSort),
+        }
+    }
+}
+
 /// Return the values for different menu actions.
 pub trait MenuReturn: Copy
 where

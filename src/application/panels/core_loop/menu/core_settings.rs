@@ -9,7 +9,7 @@ use mister_fpga::types::StatusBitMap;
 use std::convert::TryFrom;
 use tracing::info;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum CoreMenuAction {
     LoadFile(u8),
     Trigger(u8, bool),
@@ -24,7 +24,7 @@ impl MenuReturn for CoreMenuAction {
     }
 }
 
-fn into_text_menu_item<'a>(
+pub fn into_text_menu_item<'a>(
     item: &'a ConfigMenu,
     status: &StatusBitMap,
 ) -> Option<TextMenuItem<'a, CoreMenuAction>> {
@@ -97,12 +97,78 @@ fn into_text_menu_item<'a>(
                 CoreMenuAction::LoadFile(info.index),
             ))
         }
+        ConfigMenu::LoadFileAndRemember(info) => {
+            const DEFAULT_LABEL: &str = "Load File";
+            Some(TextMenuItem::navigation_item(
+                info.label.as_deref().unwrap_or(DEFAULT_LABEL),
+                info.marker.as_str(),
+                CoreMenuAction::LoadFile(info.index),
+            ))
+        }
         ConfigMenu::PageItem(_index, sub) => {
             // TODO: add full page support.
             into_text_menu_item(sub, status)
         }
         _ => None,
     }
+}
+
+pub fn execute_core_settings(
+    app: &mut GoLEmApp,
+    core: &mut impl Core,
+    action: CoreMenuAction,
+) -> Option<bool> {
+    match action {
+        CoreMenuAction::Back => {
+            return Some(false);
+        }
+        CoreMenuAction::ToggleOption(from, to, value, max) => {
+            let mut bits = core.status_bits();
+            bits.set_range(from..to, ((value + 1) % max) as u32);
+            core.set_status_bits(bits);
+        }
+        CoreMenuAction::Trigger(idx, close_osd) => {
+            core.status_pulse(idx as usize);
+            if close_osd {
+                return Some(true);
+            }
+        }
+        CoreMenuAction::LoadFile(index) => {
+            let maybe_info = core
+                .menu_options()
+                .iter()
+                .filter_map(|c| match c {
+                    ConfigMenu::LoadFile(info) if info.index == index => Some(info),
+                    ConfigMenu::LoadFileAndRemember(info) if info.index == index => Some(info),
+                    _ => None,
+                })
+                .next();
+            if maybe_info.is_none() {
+                return None;
+            }
+            let info = maybe_info.unwrap();
+
+            let path = select_file_path_menu(
+                app,
+                "Select File",
+                core_root_path(),
+                FilesystemMenuOptions::default()
+                    .with_allow_back(true)
+                    .with_extensions(info.extensions.iter().map(|x| x.to_string()).collect()),
+            )
+            .unwrap();
+
+            let p = match path {
+                None => return None,
+                Some(p) => p,
+            };
+            info!("Loading file {:?}", p);
+            core.load_file(&p, Some(info.as_ref().clone())).unwrap();
+            return Some(true);
+        }
+    }
+
+    None
 }
 
 /// The Core Settings menu. We cannot use `text_menu` here as we need to generate
@@ -126,50 +192,8 @@ pub fn core_settings(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
         );
         state = Some(new_state);
 
-        match action {
-            CoreMenuAction::Back => {
-                break false;
-            }
-            CoreMenuAction::ToggleOption(from, to, value, max) => {
-                let mut bits = core.status_bits();
-                bits.set_range(from..to, ((value + 1) % max) as u32);
-                core.set_status_bits(bits);
-            }
-            CoreMenuAction::Trigger(idx, close_osd) => {
-                core.status_pulse(idx as usize);
-                if close_osd {
-                    break true;
-                }
-            }
-            CoreMenuAction::LoadFile(index) => {
-                let info = core
-                    .menu_options()
-                    .iter()
-                    .filter_map(|c| match c {
-                        ConfigMenu::LoadFile(info) if info.index == index => Some(info),
-                        _ => None,
-                    })
-                    .next()
-                    .unwrap();
-
-                let path = select_file_path_menu(
-                    app,
-                    "Select File",
-                    core_root_path(),
-                    FilesystemMenuOptions::default()
-                        .with_allow_back(true)
-                        .with_extensions(info.extensions.iter().map(|x| x.to_string()).collect()),
-                )
-                .unwrap();
-
-                let p = match path {
-                    None => continue,
-                    Some(p) => p,
-                };
-                info!("Loading file {:?}", p);
-                core.load_file(&p, Some(info.as_ref().clone())).unwrap();
-                break true;
-            }
+        if let Some(x) = execute_core_settings(app, core, action) {
+            break x;
         }
     }
 }

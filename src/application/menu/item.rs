@@ -30,6 +30,28 @@ where
     pub line: MenuLine,
 }
 
+impl<T, D, M, R> SimpleMenuItem<T, D, M, R>
+where
+    T: AsRef<str>,
+    D: AsRef<str>,
+    M: AsRef<str>,
+{
+    pub fn map_action<F, R2>(self, f: F) -> SimpleMenuItem<T, D, M, R2>
+    where
+        F: Fn(R) -> R2,
+    {
+        SimpleMenuItem {
+            title_text: self.title_text,
+            details: self.details,
+            return_value: f(self.return_value),
+            marker: self.marker,
+            line: self.line,
+            selectable: self.selectable,
+            disabled: self.disabled,
+        }
+    }
+}
+
 impl<T, D, M, R> Marker for SimpleMenuItem<T, D, M, R>
 where
     T: AsRef<str>,
@@ -249,6 +271,38 @@ where
             TextMenuItem::MenuItem(item.disabled())
         } else {
             self
+        }
+    }
+}
+
+impl<'a, R1> TextMenuItem<'a, R1>
+where
+    R1: MenuReturn + Copy,
+{
+    pub fn map_action<F, R2>(self, f: F) -> TextMenuItem<'a, R2>
+    where
+        F: Fn(R1) -> R2,
+        R2: MenuReturn + Copy,
+    {
+        match self {
+            TextMenuItem::MenuItem(item @ SimpleMenuItem { return_value, .. }) => {
+                match return_value {
+                    SdlMenuAction::Select(x) => {
+                        TextMenuItem::MenuItem(item.map_action(|_| SdlMenuAction::Select(f(x))))
+                    }
+                    action => TextMenuItem::MenuItem(SimpleMenuItem {
+                        return_value: action.transmute().unwrap(),
+                        title_text: item.title_text,
+                        details: item.details,
+                        marker: item.marker,
+                        selectable: item.selectable,
+                        disabled: item.disabled,
+                        line: item.line,
+                    }),
+                }
+            }
+            TextMenuItem::Separator(item) => TextMenuItem::Separator(item),
+            TextMenuItem::Empty(p) => TextMenuItem::Empty(p),
         }
     }
 }
