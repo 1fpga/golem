@@ -1,5 +1,8 @@
 use crate::application::menu::style::MenuReturn;
-use crate::application::menu::{text_menu, TextMenuOptions};
+use crate::application::menu::{text_menu, IntoTextMenuItem, TextMenuOptions};
+use crate::application::panels::core_loop::menu::core_settings::{
+    execute_core_settings, into_text_menu_item,
+};
 use crate::application::GoLEmApp;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
 
@@ -8,10 +11,11 @@ mod core_settings;
 pub mod input_mapping;
 mod items;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum CoreMenuAction {
     Reset,
     CoreSettings,
+    CoreMenuAction(core_settings::CoreMenuAction),
     InputMapping,
     DebugMenu,
     Back,
@@ -38,16 +42,27 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
     let mut state = None;
 
     let result = loop {
+        let status = core.status_bits();
+        let mut additional_items = core
+            .menu_options()
+            .iter()
+            .filter(|o| o.as_load_file().is_some())
+            .filter_map(|i| into_text_menu_item(i, &status))
+            .map(|i| i.map_action(CoreMenuAction::CoreMenuAction))
+            .chain([
+                ("-", "", CoreMenuAction::Unselectable).to_menu_item(),
+                ("Input Mapping", "", CoreMenuAction::InputMapping).to_menu_item(),
+                ("Debug", "", CoreMenuAction::DebugMenu).to_menu_item(),
+            ])
+            .collect::<Vec<_>>();
+
         let version = core
             .version()
             .map(|s| ("Version", s, CoreMenuAction::Unselectable));
         let (result, new_state) = text_menu(
             app,
             "Core",
-            &[
-                ("Input Mapping", "", CoreMenuAction::InputMapping),
-                ("Debug", "", CoreMenuAction::DebugMenu),
-            ],
+            &mut additional_items,
             TextMenuOptions::default()
                 .with_state(state)
                 .with_prefix(&[
@@ -77,6 +92,11 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
             }
             CoreMenuAction::InputMapping => {
                 input_mapping::menu(app, &Some(core));
+            }
+            CoreMenuAction::CoreMenuAction(action) => {
+                if let Some(_) = execute_core_settings(app, core, action) {
+                    break false;
+                }
             }
             CoreMenuAction::Back => {
                 break false;

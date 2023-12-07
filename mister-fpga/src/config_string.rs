@@ -226,6 +226,18 @@ impl ConfigMenu {
         }
     }
 
+    pub fn as_load_file(&self) -> Option<&Self> {
+        match self {
+            ConfigMenu::LoadFile(_) => Some(self),
+            ConfigMenu::DisableIf(_, sub)
+            | ConfigMenu::DisableUnless(_, sub)
+            | ConfigMenu::HideIf(_, sub)
+            | ConfigMenu::HideUnless(_, sub)
+            | ConfigMenu::PageItem(_, sub) => sub.as_load_file(),
+            _ => None,
+        }
+    }
+
     pub fn label(&self) -> Option<&str> {
         match self {
             ConfigMenu::DisableIf(_, sub)
