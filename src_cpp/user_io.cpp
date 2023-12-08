@@ -27,7 +27,6 @@
 #include "sxmlc.h"
 #include "bootcore.h"
 #include "charrom.h"
-#include "scaler.h"
 #include "miniz.h"
 #include "cheats.h"
 #include "video.h"
@@ -3994,50 +3993,6 @@ static void print_imlib_load_error (Imlib_Load_Error err, const char *filepath) 
 
 bool user_io_screenshot(const char *pngname, int rescale)
 {
-	mister_scaler *ms = mister_scaler_init();
-	if (ms == NULL)
-	{
-		printf("problem with scaler, maybe not a new enough version\n");
-		Info("Scaler not compatible");
-		return false;
-	}
-	else
-	{
-		const char *basename = last_filename;
-		if( pngname && *pngname )
-			basename = pngname;
-		unsigned char *outputbuf = (unsigned char *)calloc(ms->width*ms->height * 4, 1);
-		// read the image into the outpubuf - RGBA format
-		mister_scaler_read_32(ms,outputbuf);
-		// using_data will keep a pointer and dispose of the outbuf
-		Imlib_Image im = imlib_create_image_using_data(ms->width,ms->height,(unsigned int *)outputbuf);
-		imlib_context_set_image(im);
-
-		static char filename[1024];
-		FileGenerateScreenshotName(basename, filename, 1024);
-
-		/* do we want to save a rescaled image? */
-		if (rescale)
-		{
-			Imlib_Image im_scaled=imlib_create_cropped_scaled_image(0,0,ms->width,ms->height,ms->output_width,ms->output_height);
-			imlib_free_image_and_decache();
-			imlib_context_set_image(im_scaled);
-		}
-		Imlib_Load_Error error;
-		imlib_save_image_with_error_return(getFullPath(filename),&error);
-		if (error != IMLIB_LOAD_ERROR_NONE)
-		{
-			print_imlib_load_error (error, filename);
-			Info("error in saving png");
-			return false;
-		}
-		imlib_free_image_and_decache();
-		mister_scaler_free(ms);
-		free(outputbuf);
-		char msg[1024];
-		snprintf(msg, 1024, "Screen saved to\n%s", filename + strlen(SCREENSHOT_DIR"/"));
-		Info(msg);
-	}
 	return true;
 }
 
