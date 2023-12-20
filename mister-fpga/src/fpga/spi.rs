@@ -1,130 +1,9 @@
+use crate::fpga::feature::SpiFeature;
 use cyclone_v::memory::MemoryMapper;
 use cyclone_v::SocFpga;
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
-use std::ops::{Add, AddAssign};
 use std::rc::Rc;
-use strum::EnumDiscriminants;
-
-#[derive(Debug, Copy, Clone, PartialEq, EnumDiscriminants)]
-#[repr(u16)]
-pub enum SpiCommands {
-    UserIoStatus = 0x00,
-    UserIoButtonSwitch = 0x01,
-
-    UserIoJoystick0 = 0x02,
-    UserIoJoystick1 = 0x03,
-    UserIoMouse = 0x04,
-    UserIoKeyboard = 0x05,
-    UserIoKeyboardOsd = 0x06,
-
-    UserIoJoystick2 = 0x10,
-    UserIoJoystick3 = 0x11,
-    UserIoJoystick4 = 0x12,
-    UserIoJoystick5 = 0x13,
-
-    UserIoGetString = 0x14,
-
-    SetStatus32Bits = 0x1e,
-
-    /// Write a line to the OSD. Lines are from `0..=8`.
-    OsdWriteLine(u8) = 0x20,
-
-    /// Update status from the core
-    GetStatusBits = 0x29,
-
-    /// Disable the OSD menu.
-    OsdDisable = 0x40,
-
-    /// Enable the OSD menu.
-    OsdEnable = 0x41,
-
-    FileIoFileTx = 0x53,
-    FileIoFileTxDat = 0x54,
-    FileIoFileIndex = 0x55,
-    FileIoFileInfo = 0x56,
-}
-
-impl From<SpiCommands> for u16 {
-    fn from(value: SpiCommands) -> Self {
-        use SpiCommands::*;
-
-        match value {
-            UserIoStatus => 0x00,
-            UserIoButtonSwitch => 0x01,
-
-            UserIoJoystick0 => 0x02,
-            UserIoJoystick1 => 0x03,
-            UserIoMouse => 0x04,
-            UserIoKeyboard => 0x05,
-            UserIoKeyboardOsd => 0x06,
-
-            UserIoJoystick2 => 0x10,
-            UserIoJoystick3 => 0x11,
-            UserIoJoystick4 => 0x12,
-            UserIoJoystick5 => 0x13,
-
-            UserIoGetString => 0x14,
-
-            SetStatus32Bits => 0x1e,
-            GetStatusBits => 0x29,
-
-            OsdWriteLine(line) => 0x20 + line as u16,
-            OsdDisable => 0x40,
-            OsdEnable => 0x41,
-
-            FileIoFileTx => 0x53,
-            FileIoFileTxDat => 0x54,
-            FileIoFileIndex => 0x55,
-            FileIoFileInfo => 0x56,
-        }
-    }
-}
-
-impl SpiCommands {
-    #[inline]
-    pub fn from_joystick_index(index: u8) -> Self {
-        match index {
-            0 => Self::UserIoJoystick0,
-            1 => Self::UserIoJoystick1,
-            2 => Self::UserIoJoystick2,
-            3 => Self::UserIoJoystick3,
-            4 => Self::UserIoJoystick4,
-            _ => Self::UserIoJoystick5,
-        }
-    }
-
-    #[inline]
-    pub fn is_user_io(&self) -> bool {
-        matches!(self, Self::UserIoKeyboard)
-    }
-
-    #[inline]
-    fn spi_feature(&self) -> SpiFeature {
-        match self {
-            Self::UserIoKeyboard
-            | Self::UserIoMouse
-            | Self::UserIoJoystick0
-            | Self::UserIoJoystick1
-            | Self::UserIoJoystick2
-            | Self::UserIoJoystick3
-            | Self::UserIoJoystick4
-            | Self::UserIoJoystick5
-            | Self::UserIoGetString
-            | Self::SetStatus32Bits
-            | Self::GetStatusBits => SpiFeature::IO,
-
-            Self::OsdWriteLine(_) | Self::OsdDisable | Self::OsdEnable => SpiFeature::OSD,
-
-            Self::FileIoFileIndex
-            | Self::FileIoFileInfo
-            | Self::FileIoFileTx
-            | Self::FileIoFileTxDat => SpiFeature::FPGA,
-
-            _ => SpiFeature::ALL,
-        }
-    }
-}
 
 /// SPI is a 16-bit data bus where the lowest 16 bits are the data and the highest 16-bits
 /// are the control bits.
@@ -144,129 +23,81 @@ const SSPI_OSD_FEATURE: u32 = 1 << 19;
 /// Feature for IO.
 const SSPI_IO_FEATURE: u32 = 1 << 20;
 
-/// Features to enable on the SPI bus.
-#[derive(Default, Clone, Copy, PartialEq)]
-pub struct SpiFeature(u32);
+pub mod feature;
+pub mod file_io;
+pub mod osd_io;
+pub mod user_io;
 
-impl Debug for SpiFeature {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut d = f.debug_tuple("SpiFeature");
-        if self.fpga() {
-            d.field(&"fpga");
-        }
-        if self.osd() {
-            d.field(&"osd");
-        }
-        if self.io() {
-            d.field(&"io");
-        }
-        d.finish()
+pub trait SpiCommandExt: Sized {
+    fn command(&mut self, command: impl IntoLowLevelSpiCommand) -> SpiCommandGuard<Self> {
+        self.command_read(command, &mut 0)
     }
+    fn command_read(
+        &mut self,
+        command: impl IntoLowLevelSpiCommand,
+        out: &mut u16,
+    ) -> SpiCommandGuard<Self>;
+    fn write(&mut self, word: impl Into<u16>) -> &mut Self;
+    fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self;
+    fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self;
+    fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self;
+    fn write_if(&mut self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> &mut Self;
+    fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self;
+    fn write_buffer_b(&mut self, buffer: &[u8]) -> &mut Self;
+    fn write_b(&mut self, byte: u8) -> &mut Self;
+    fn enable(&mut self, feature: SpiFeature) -> &mut Self;
+    fn disable(&mut self, feature: SpiFeature) -> &mut Self;
 }
 
-impl From<SpiFeature> for u32 {
-    fn from(value: SpiFeature) -> Self {
-        value.0
-    }
+pub trait IntoLowLevelSpiCommand {
+    fn into_ll_spi_command(self) -> (SpiFeature, u16);
 }
 
-impl From<u32> for SpiFeature {
-    fn from(value: u32) -> Self {
-        Self(value)
-    }
+pub trait SpiCommand {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String>;
 }
 
-impl Add<SpiFeature> for SpiFeature {
-    type Output = SpiFeature;
-
-    fn add(mut self, rhs: SpiFeature) -> Self::Output {
-        self.0 = self.0 | rhs.0;
-        self
-    }
-}
-
-impl AddAssign<SpiFeature> for SpiFeature {
-    fn add_assign(&mut self, rhs: SpiFeature) {
-        self.0 = self.0 | rhs.0;
-    }
-}
-
-impl SpiFeature {
-    pub const FPGA: Self = Self(0).with_fpga();
-    pub const OSD: Self = Self(0).with_osd();
-    pub const IO: Self = Self(0).with_io();
-    pub const ALL: Self = Self(0).with_fpga().with_osd().with_io();
-
-    pub const fn fpga(&self) -> bool {
-        self.0 & SSPI_FPGA_FEATURE != 0
-    }
-
-    pub const fn osd(&self) -> bool {
-        self.0 & SSPI_OSD_FEATURE != 0
-    }
-
-    pub const fn io(&self) -> bool {
-        self.0 & SSPI_IO_FEATURE != 0
-    }
-
-    pub fn set_fpga(&mut self, value: bool) {
-        self.0 = self.0 & !SSPI_FPGA_FEATURE | ((value as u32) << 18);
-    }
-
-    pub fn set_osd(&mut self, value: bool) {
-        self.0 = self.0 & !SSPI_OSD_FEATURE | ((value as u32) << 19);
-    }
-
-    pub fn set_io(&mut self, value: bool) {
-        self.0 = self.0 & !SSPI_IO_FEATURE | ((value as u32) << 20);
-    }
-
-    pub const fn with_fpga(mut self) -> Self {
-        self.0 = self.0 | SSPI_FPGA_FEATURE;
-        self
-    }
-    pub const fn with_osd(mut self) -> Self {
-        self.0 = self.0 | SSPI_OSD_FEATURE;
-        self
-    }
-    pub const fn with_io(mut self) -> Self {
-        self.0 = self.0 | SSPI_IO_FEATURE;
-        self
-    }
-}
-
-pub struct SpiCommand<'a, M: MemoryMapper> {
-    spi: &'a mut Spi<M>,
+pub struct SpiCommandGuard<'a, S: SpiCommandExt> {
+    spi: &'a mut S,
     feature: SpiFeature,
 }
 
-impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
+impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     #[inline]
-    pub fn new(spi: &'a mut Spi<M>, feature: SpiFeature) -> Self {
+    pub fn new(spi: &'a mut S, feature: SpiFeature) -> Self {
         Self { spi, feature }
     }
 
     #[inline]
-    pub fn enable(mut self, feature: SpiFeature) -> Self {
+    pub fn enable(&mut self, feature: SpiFeature) -> &mut Self {
         self.feature += feature;
         self.spi.enable(self.feature);
         self
     }
 
     #[inline]
-    pub fn write(self, word: impl Into<u16>) -> Self {
+    pub fn write(&mut self, word: impl Into<u16>) -> &mut Self {
         self.spi.write(word);
         self
     }
 
     #[inline]
-    pub fn write_read(self, word: impl Into<u16>, out: &mut u16) -> Self {
-        *out = self.spi.write(word);
+    pub fn write_nz(&mut self, word: impl Into<u16>) -> &mut Self {
+        let word = word.into();
+        if word != 0 {
+            self.spi.write(word);
+        }
         self
     }
 
     #[inline]
-    pub fn write_cond(self, cond: bool, word: impl Into<u16>) -> Self {
+    pub fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self {
+        self.spi.write_read(word, out);
+        self
+    }
+
+    #[inline]
+    pub fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
         if cond {
             self.spi.write(word);
         }
@@ -274,7 +105,7 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
-    pub fn write_if(self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> Self {
+    pub fn write_if(&mut self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> &mut Self {
         if cond() {
             self.spi.write(word);
         }
@@ -282,7 +113,7 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
-    pub fn write_buffer(self, buffer: &[u16]) -> Self {
+    pub fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self {
         for word in buffer {
             self.spi.write(*word);
         }
@@ -290,7 +121,17 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
-    pub fn write_buffer_b(self, buffer: &[u8]) -> Self {
+    pub fn write_buffer_cond(&mut self, cond: bool, buffer: &[u16]) -> &mut Self {
+        if cond {
+            for word in buffer {
+                self.spi.write(*word);
+            }
+        }
+        self
+    }
+
+    #[inline]
+    pub fn write_buffer_b(&mut self, buffer: &[u8]) -> &mut Self {
         for word in buffer {
             self.spi.write_b(*word);
         }
@@ -298,45 +139,26 @@ impl<'a, M: MemoryMapper> SpiCommand<'a, M> {
     }
 
     #[inline]
-    pub fn write_b(self, byte: u8) -> Self {
+    pub fn write_b(&mut self, byte: u8) -> &mut Self {
         self.write(byte)
     }
 
     #[inline]
-    pub fn write_store(self, word: impl Into<u16>, store: &mut u16) -> Self {
-        *store = self.spi.write(word);
+    pub fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self {
+        self.spi.write_read_b(byte, out);
+        self
+    }
+
+    #[inline]
+    pub fn write_store(&mut self, word: impl Into<u16>, store: &mut u16) -> &mut Self {
+        self.spi.write_read(word, store);
         self
     }
 }
 
-impl<'a, M: MemoryMapper> Drop for SpiCommand<'a, M> {
+impl<'a, S: SpiCommandExt> Drop for SpiCommandGuard<'a, S> {
     fn drop(&mut self) {
         self.spi.disable(self.feature);
-    }
-}
-
-impl<'a, M: MemoryMapper> std::io::Write for SpiCommand<'a, M> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if buf.is_empty() {
-            return Ok(0);
-        }
-
-        let regs = self.spi.soc_mut().regs_mut();
-        let gpo_h = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | 0x8000_0000;
-        let mut gpo = gpo_h;
-
-        buf.iter().for_each(|b| {
-            gpo = gpo_h | (*b as u32);
-            regs.set_gpo(gpo);
-            regs.set_gpo(gpo | SSPI_STROBE);
-        });
-        regs.set_gpo(gpo);
-
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
     }
 }
 
@@ -363,21 +185,24 @@ impl<M: MemoryMapper> Spi<M> {
         unsafe { &mut *self.soc.get() }
     }
 
-    // TODO: remove this.
     #[inline]
-    pub fn enable_u32(&mut self, mask: u32) {
+    pub fn execute(&mut self, mut command: impl SpiCommand) -> Result<(), String> {
+        command.execute(self)
+    }
+
+    #[inline]
+    pub(super) fn enable_u32(&mut self, mask: u32) {
         let regs = self.soc_mut().regs_mut();
 
-        let gpo = (regs.gpo() & SpiFeature::ALL.0) | 0x8000_0000;
+        let gpo = (regs.gpo() & SpiFeature::ALL.as_u32()) | 0x8000_0000;
         regs.set_gpo(gpo | mask);
     }
 
-    // TODO: remove this.
     #[inline]
-    pub fn disable_u32(&mut self, mask: u32) {
+    pub(super) fn disable_u32(&mut self, mask: u32) {
         let regs = self.soc_mut().regs_mut();
 
-        let gpo: u32 = (regs.gpo() & SpiFeature::ALL.0) | 0x8000_0000;
+        let gpo: u32 = (regs.gpo() & SpiFeature::ALL.as_u32()) | 0x8000_0000;
         regs.set_gpo(gpo & !mask);
     }
 
@@ -396,23 +221,14 @@ impl<M: MemoryMapper> Spi<M> {
     #[inline]
     pub fn config_string(&mut self) -> String {
         let mut str_builder = String::with_capacity(10240);
-        let feature = self.inner_command(SpiCommands::UserIoGetString, &mut 0);
-
-        loop {
-            let i = self.write_b(0);
-            if i == 0 || i > 127 {
-                break;
-            }
-            str_builder.push(i as char);
-        }
-        self.disable(feature);
-
+        self.execute(user_io::UserIoGetString(&mut str_builder))
+            .unwrap();
         str_builder
     }
 
     #[inline]
-    fn inner_command(&mut self, command: SpiCommands, out: &mut u16) -> SpiFeature {
-        let feature = command.spi_feature();
+    fn inner_command(&mut self, command: impl IntoLowLevelSpiCommand, out: &mut u16) -> SpiFeature {
+        let (feature, command) = command.into_ll_spi_command();
         self.enable(feature);
         *out = self.write(command);
         feature
@@ -420,18 +236,22 @@ impl<M: MemoryMapper> Spi<M> {
 
     #[inline]
     #[must_use]
-    pub fn command(&mut self, command: SpiCommands) -> SpiCommand<'_, M> {
+    pub fn command(&mut self, command: impl IntoLowLevelSpiCommand) -> SpiCommandGuard<'_, Self> {
         let feature = self.inner_command(command, &mut 0);
 
-        SpiCommand::new(self, feature)
+        SpiCommandGuard::new(self, feature)
     }
 
     #[inline]
     #[must_use]
-    pub fn command_read(&mut self, command: SpiCommands, out: &mut u16) -> SpiCommand<'_, M> {
+    pub fn command_read(
+        &mut self,
+        command: impl IntoLowLevelSpiCommand,
+        out: &mut u16,
+    ) -> SpiCommandGuard<'_, Self> {
         let feature = self.inner_command(command, out);
 
-        SpiCommand::new(self, feature)
+        SpiCommandGuard::new(self, feature)
     }
 
     /// Send a 16-bit word to the core. Returns the 16-bit word received from the core.
@@ -464,6 +284,26 @@ impl<M: MemoryMapper> Spi<M> {
     }
 
     #[inline]
+    pub fn write_block_8(&mut self, buffer: &[u8]) -> Result<usize, String> {
+        if buffer.is_empty() {
+            return Ok(0);
+        }
+
+        let regs = self.soc_mut().regs_mut();
+        let gpo_h = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | 0x8000_0000;
+        let mut gpo = gpo_h;
+
+        buffer.iter().for_each(|b| {
+            gpo = gpo_h | (*b as u32);
+            regs.set_gpo(gpo);
+            regs.set_gpo(gpo | SSPI_STROBE);
+        });
+        regs.set_gpo(gpo);
+
+        Ok(buffer.len())
+    }
+
+    #[inline]
     pub fn write_b(&mut self, byte: u8) -> u8 {
         self.write(byte) as u8
     }
@@ -484,5 +324,78 @@ impl<M: MemoryMapper> Spi<M> {
             regs.set_gpo(gpo | SSPI_STROBE);
         });
         regs.set_gpo(gpo);
+    }
+}
+
+impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
+    fn command_read(
+        &mut self,
+        command: impl IntoLowLevelSpiCommand,
+        out: &mut u16,
+    ) -> SpiCommandGuard<Self> {
+        self.command_read(command, out)
+    }
+
+    #[inline]
+    fn write(&mut self, word: impl Into<u16>) -> &mut Self {
+        self.write(word);
+        self
+    }
+
+    #[inline]
+    fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self {
+        *out = self.write(word);
+        self
+    }
+
+    fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self {
+        *out = self.write_b(byte);
+        self
+    }
+
+    #[inline]
+    fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
+        if cond {
+            self.write(word);
+        }
+        self
+    }
+
+    #[inline]
+    fn write_if(&mut self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> &mut Self {
+        if cond() {
+            self.write(word);
+        }
+        self
+    }
+
+    #[inline]
+    fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self {
+        self.write_block_16(buffer);
+        self
+    }
+
+    #[inline]
+    fn write_buffer_b(&mut self, buffer: &[u8]) -> &mut Self {
+        for word in buffer {
+            self.write_b(*word);
+        }
+        self
+    }
+
+    #[inline]
+    fn write_b(&mut self, byte: u8) -> &mut Self {
+        self.write(byte);
+        self
+    }
+
+    fn enable(&mut self, feature: SpiFeature) -> &mut Self {
+        self.enable(feature);
+        self
+    }
+
+    fn disable(&mut self, feature: SpiFeature) -> &mut Self {
+        self.disable(feature);
+        self
     }
 }

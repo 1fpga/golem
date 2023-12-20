@@ -8,6 +8,7 @@ description = "A Rust library to work with the MiSTer FPGA Cores API."
 
 [dependencies]
 bitvec = "1.0.1"
+chrono = "0.4.31"
 crc32fast = "1.3.2"
 cyclone-v = { path = "../cyclone_v", version = "0.1" }
 embedded-graphics = "0.8.1"

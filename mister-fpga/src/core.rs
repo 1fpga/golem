@@ -1,7 +1,14 @@
 use crate::config_string;
 use crate::config_string::{FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
-use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga, SpiCommands};
+use crate::fpga::file_io::{
+    FileIoFileExtension, FileIoFileIndex, FileIoFileTxData16Bits, FileIoFileTxData8Bits,
+    FileIoFileTxDisabled, FileIoFileTxEnabled,
+};
+use crate::fpga::user_io::{
+    GetStatusBits, SetStatusBits, UserIoJoystick, UserIoKeyboard, UserIoRtc,
+};
+use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -91,6 +98,11 @@ impl MisterFpgaCore {
         })
     }
 
+    pub fn send_rtc(&mut self) -> Result<(), String> {
+        self.fpga.spi_mut().execute(UserIoRtc::now())?;
+        Ok(())
+    }
+
     pub fn send_file(
         &mut self,
         path: &Path,
@@ -117,7 +129,6 @@ impl MisterFpgaCore {
                 trace!(?index, ?address, ?ext, ?size, "File info (memory)");
                 self.send_file_to_memory_(index, &ext, size, address, f)?;
             }
-            // MisterFpgaSendFileInfo::Memory { index, .. } |
             MisterFpgaSendFileInfo::Buffered { index } => {
                 let f = File::open(path).map_err(|e| e.to_string())?;
                 let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
@@ -132,46 +143,18 @@ impl MisterFpgaCore {
 
     fn start_send_file(&mut self, index: u8, ext: &str, size: u32) -> Result<(), String> {
         // Send index.
-        self.fpga
-            .spi_mut()
-            .command(SpiCommands::FileIoFileIndex)
-            .write_b(index);
+        self.fpga.spi_mut().execute(FileIoFileIndex::from(index))?;
 
-        // Send extension.
-        let ext_bytes = ext.as_bytes();
-        // Extend to 4 characters with the dot.
-        let ext: [u8; 4] = [
-            b'.',
-            ext_bytes.get(0).copied().unwrap_or(0),
-            ext_bytes.get(1).copied().unwrap_or(0),
-            ext_bytes.get(2).copied().unwrap_or(0),
-        ];
+        self.fpga.spi_mut().execute(FileIoFileExtension(ext))?;
 
-        self.fpga
-            .spi_mut()
-            .command(SpiCommands::FileIoFileInfo)
-            .write((ext[0] as u16) << 8 | ext[1] as u16)
-            .write((ext[2] as u16) << 8 | ext[3] as u16);
-
-        self.fpga
-            .spi_mut()
-            .command(SpiCommands::FileIoFileTx)
-            .write_b(0xff)
-            .write_cond(size != 0, size as u16)
-            .write_cond(size != 0, (size >> 16) as u16);
-
-        Ok(())
+        self.fpga.spi_mut().execute(FileIoFileTxEnabled::from(size))
     }
 
     fn end_send_file(&mut self) -> Result<(), String> {
         self.read_status_bits();
 
         // Disable download.
-        self.fpga
-            .spi_mut()
-            .command(SpiCommands::FileIoFileTx)
-            .write_b(0);
-        Ok(())
+        self.fpga.spi_mut().execute(FileIoFileTxDisabled)
     }
 
     pub fn config(&self) -> &config_string::Config {
@@ -183,72 +166,43 @@ impl MisterFpgaCore {
     }
 
     pub fn read_status_bits(&mut self) -> &StatusBitMap {
-        let mut bits = StatusBitMap::default();
-        {
-            let mut stchg = 0;
-            let mut command = self
-                .fpga
-                .spi_mut()
-                .command_read(SpiCommands::GetStatusBits, &mut stchg);
-
-            if ((stchg & 0xF0) == 0xA0) && (stchg & 0x0F) != 0 {
-                for word in bits.as_mut_raw_slice() {
-                    command = command.write_read(0u16, word);
-                }
-            }
-        }
-
-        bits.set(0, false);
-        self.status = bits;
+        self.fpga
+            .spi_mut()
+            .execute(GetStatusBits(&mut self.status))
+            .unwrap();
         &self.status
     }
 
     pub fn send_status_bits(&mut self, bits: StatusBitMap) {
         debug!(?bits, "Setting status bits");
-        let bits16 = bits.as_raw_slice();
-
-        let command = self
-            .fpga
-            .spi_mut()
-            .command(SpiCommands::SetStatus32Bits)
-            .write_buffer(&bits16[0..4]);
-        if bits.has_extra() {
-            command.write_buffer(&bits16[4..]);
-        }
+        self.fpga.spi_mut().execute(SetStatusBits(&bits)).unwrap();
         self.status = bits;
     }
 
     pub fn send_key_code(&mut self, keycode: Scancode) {
-        let key = keycode as u8;
-        debug!(?key, "Sending scan code");
+        debug!(?keycode, "Sending scan code");
         self.fpga
             .spi_mut()
-            .command(SpiCommands::UserIoKeyboard)
-            .write_b(key);
+            .execute(UserIoKeyboard::from(keycode))
+            .unwrap();
     }
 
     pub fn gamepad_button_down(&mut self, joystick_idx: u8, button: u8) {
-        let button_mask = self.map.down(button);
+        self.map.down(button);
 
-        let spi = self.fpga.spi_mut();
-        let command = spi
-            .command(SpiCommands::from_joystick_index(joystick_idx))
-            .write(button_mask as u16);
-        if button_mask >> 16 == 0 {
-            command.write((button_mask >> 16) as u16);
-        }
+        self.fpga
+            .spi_mut()
+            .execute(UserIoJoystick::from_joystick_index(joystick_idx, &self.map))
+            .unwrap();
     }
 
     pub fn gamepad_button_up(&mut self, joystick_idx: u8, button: u8) {
-        let button_mask = self.map.up(button);
+        self.map.up(button);
 
-        let spi = self.fpga.spi_mut();
-        let command = spi
-            .command(SpiCommands::from_joystick_index(joystick_idx))
-            .write(button_mask as u16);
-        if button_mask >> 16 == 0 {
-            command.write((button_mask >> 16) as u16);
-        }
+        self.fpga
+            .spi_mut()
+            .execute(UserIoJoystick::from_joystick_index(joystick_idx, &self.map))
+            .unwrap();
     }
 
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
@@ -315,10 +269,10 @@ impl MisterFpgaCore {
                         CoreInterfaceType::SpiBus8Bit => {
                             self.fpga
                                 .spi_mut()
-                                .command(SpiCommands::FileIoFileTxDat)
-                                .write_buffer_b(&buffer[..size]);
+                                .execute(FileIoFileTxData8Bits(&buffer[..size]))?;
                         }
                         CoreInterfaceType::SpiBus16Bit => {
+                            // This is safe since size cannot be larger than 4096.
                             let buf16 = unsafe {
                                 std::slice::from_raw_parts(
                                     buffer.as_ptr() as *const u16,
@@ -327,8 +281,7 @@ impl MisterFpgaCore {
                             };
                             self.fpga
                                 .spi_mut()
-                                .command(SpiCommands::FileIoFileTxDat)
-                                .write_buffer(buf16);
+                                .execute(FileIoFileTxData16Bits(&buf16[..size / 2]))?;
                         }
                     }
                 }

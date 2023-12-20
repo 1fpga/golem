@@ -22,6 +22,7 @@ pub mod uart;
 mod parser;
 
 mod types;
+use crate::fpga::user_io;
 pub use types::*;
 
 static LABELED_SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d*)(\([^)]*\))?").unwrap());
@@ -297,7 +298,9 @@ impl Config {
     /// Create a new config from the FPGA.
     /// This is disabled in Test as this module is still included in the test build.
     pub fn from_fpga(fpga: &mut crate::fpga::MisterFpga) -> Result<Self, String> {
-        let cfg_string = fpga.spi_mut().config_string();
+        let mut cfg_string = String::with_capacity(1024);
+        fpga.spi_mut()
+            .execute(user_io::UserIoGetString(&mut cfg_string))?;
         debug!(?cfg_string, "Config string from FPGA");
 
         Self::from_str(&cfg_string)

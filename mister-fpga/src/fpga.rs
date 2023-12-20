@@ -12,6 +12,7 @@ use tracing::{debug, error, info, trace};
 mod framebuffer;
 mod spi;
 
+use crate::fpga::osd_io::{OsdDisable, OsdEnable};
 pub use spi::*;
 
 extern "C" {
@@ -22,6 +23,7 @@ extern "C" {
 /// TODO: remove these when the fpga code from CPP is gone.
 pub mod ffi {
     use super::FPGA_SINGLETON;
+    use crate::fpga::feature::SpiFeature;
     use libc::{c_int, c_ulong};
     use tracing::error;
 
@@ -117,7 +119,7 @@ pub mod ffi {
             .as_mut()
             .unwrap()
             .spi_mut()
-            .disable(super::spi::SpiFeature::IO);
+            .disable(SpiFeature::IO);
     }
 
     #[no_mangle]
@@ -219,10 +221,10 @@ pub struct MisterFpga {
 // OSD specific functions.
 impl MisterFpga {
     pub fn osd_enable(&mut self) {
-        let _ = self.spi_mut().command(SpiCommands::OsdEnable);
+        let _ = self.spi_mut().execute(OsdEnable);
     }
     pub fn osd_disable(&mut self) {
-        let _ = self.spi_mut().command(SpiCommands::OsdDisable);
+        let _ = self.spi_mut().execute(OsdDisable);
     }
 }
 
