@@ -431,7 +431,7 @@ fn config_menu_line(line: u8) -> impl FnMut(Input) -> Result<ConfigMenu> {
 }
 
 pub fn parse_config_menu(input: Input) -> Result<(String, settings::Settings, Vec<ConfigMenu>)> {
-    let mut line = 0;
+    let mut line = 1;
     map(
         tuple((
             name,

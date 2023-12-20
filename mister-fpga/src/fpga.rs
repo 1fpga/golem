@@ -13,6 +13,7 @@ mod framebuffer;
 mod spi;
 
 use crate::fpga::osd_io::{OsdDisable, OsdEnable};
+use crate::fpga::user_io::UserIoRtc;
 pub use spi::*;
 
 extern "C" {

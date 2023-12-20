@@ -2315,7 +2315,8 @@ int user_io_use_cheats()
 	return use_cheats;
 }
 
-static void check_status_change()
+extern "C" void check_status_change();
+void check_status_change()
 {
 	static u_int8_t last_status_change = 0;
 	char stchg = spi_uio_cmd_cont(UIO_GET_STATUS);
@@ -2422,7 +2423,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 	}
 
 	/* transmit the entire file using one transfer */
-	printf("Selected file %s with %u bytes to send for index %d.%d\n", name, bytes2send, index & 0x3F, index >> 6);
+	fprintf(stderr, "Selected file %s with %u bytes to send for index %d.%d\n", name, bytes2send, index & 0x3F, index >> 6);
 	if(load_addr) printf("Load to address 0x%X\n", load_addr);
 
 	// set index byte (0=bios rom, 1-n=OSD entry index)
@@ -2456,7 +2457,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 			if (FileOpen(&fb, user_io_make_filepath(rom_path, "bsx_bios.rom")) ||
 				FileOpen(&fb, user_io_make_filepath(HomeDir(), "bsx_bios.rom")))
 			{
-				printf("Load BSX bios ROM.\n");
+				fprintf(stderr, "Load BSX bios ROM.\n");
 				uint8_t* buf = snes_get_header(&fb);
 				hexdump(buf, 16, 0);
 				user_io_file_tx_data(buf, 512);
@@ -2486,7 +2487,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 			}
 		}
 		else if ((index & 0x3F) == 1) {
-			printf("Load SPC ROM.\n");
+			fprintf(stderr, "Load SPC ROM.\n");
 			FileReadSec(&f, buf);
 			user_io_file_tx_data(buf, 256);
 
@@ -2498,7 +2499,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 			bytes2send = 64 * 1024;
 		}
 		else {
-			printf("Load SNES ROM.\n");
+			fprintf(stderr, "Load SNES ROM.\n");
 			uint8_t* buf = snes_get_header(&f);
 			hexdump(buf, 16, 0);
 			user_io_file_tx_data(buf, 512);
@@ -2562,11 +2563,14 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 		uint8_t *mem = (uint8_t *)shmem_map(fpga_mem(load_addr), map_size);
 		if (mem)
 		{
+fprintf(stderr, ".. Loading to %p (load_addr = %p)\n", mem, fpga_mem(load_addr));
 			while (bytes2send)
 			{
 				uint32_t gap = (is_snes() && (load_addr < 0x22000000) && (load_addr + size - bytes2send) >= 0x22000000) ? 0x800000 : 0;
 
 				uint32_t chunk = (bytes2send > (256 * 1024)) ? (256 * 1024) : bytes2send;
+
+fprintf(stderr, ".. FileReadAdv(&f, %p + %d - %d + %d (%p), %d);\n", mem, size, bytes2send, gap, mem + size - bytes2send + gap, chunk);
 				FileReadAdv(&f, mem + size - bytes2send + gap, chunk);
 
 				if(!is_snes()) file_crc = crc32(file_crc, mem + skip + size - bytes2send, chunk - skip);
@@ -2578,6 +2582,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 
 			shmem_unmap(mem, map_size);
 		}
+fprintf(stderr, ".. Done.\n");
 	}
 	else
 	{
@@ -2604,8 +2609,8 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 	// check if core requests some change while downloading
 	check_status_change();
 
-	printf("Done.\n");
-	printf("CRC32: %08X\n", file_crc);
+	fprintf(stderr, "Done.\n");
+	fprintf(stderr, "CRC32: %08X\n", file_crc);
 
 	FileClose(&f);
 
@@ -2617,7 +2622,7 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 
 	// signal end of transmission
 	user_io_set_download(0);
-	printf("\n");
+	fprintf(stderr, "\n");
 
 	if (is_zx81() && index)
 	{

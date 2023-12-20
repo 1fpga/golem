@@ -347,7 +347,7 @@ fn serializes() {
     let mut other_serialized = InnerSettings::default();
     other_serialized.mappings.add(
         crate::input::commands::ShortcutCommand::ShowCoreMenu,
-        crate::input::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
+        crate::input::shortcut::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
     );
 
     settings.merge(other_serialized);

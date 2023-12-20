@@ -176,7 +176,7 @@ impl SpiCommand for Timestamp {
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
         spi.command(UserIoCommands::UserIoRtc)
             .write(self.0.timestamp() as u16)
-            .write_nz((self.0.timestamp() >> 16) as u16);
+            .write((self.0.timestamp() >> 16) as u16);
 
         Ok(())
     }

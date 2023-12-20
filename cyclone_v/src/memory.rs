@@ -8,6 +8,23 @@ pub mod buffer;
 #[cfg(feature = "std")]
 pub use buffer::*;
 
+fn clamp_range(range: impl RangeBounds<usize>, max: usize) -> (usize, usize) {
+    let start = match range.start_bound() {
+        Bound::Included(start) => *start,
+        Bound::Excluded(start) => *start + 1,
+        Bound::Unbounded => 0,
+    }
+    .clamp(0, max);
+    let end = match range.end_bound() {
+        Bound::Included(end) => *end + 1,
+        Bound::Excluded(end) => *end,
+        Bound::Unbounded => max,
+    }
+    .min(max);
+
+    (start, end - start)
+}
+
 /// Maps a memory region to a pointer.
 pub trait MemoryMapper {
     /// Create a Mapper that maps the given physical address and size.
@@ -32,41 +49,14 @@ pub trait MemoryMapper {
 
     /// Creates an inner range of bytes.
     fn as_range(&self, range: impl RangeBounds<usize>) -> &[u8] {
-        let max = self.len();
-        let start = match range.start_bound() {
-            Bound::Included(start) => *start,
-            Bound::Excluded(start) => *start + 1,
-            Bound::Unbounded => 0,
-        }
-        .clamp(0, max);
-        let end = match range.end_bound() {
-            Bound::Included(end) => *end + 1,
-            Bound::Excluded(end) => *end,
-            Bound::Unbounded => max,
-        }
-        .min(max);
-
-        unsafe { std::slice::from_raw_parts(self.as_ptr::<u8>().add(start), end - start) }
+        let (start, len) = clamp_range(range, self.len());
+        unsafe { std::slice::from_raw_parts(self.as_ptr::<u8>().add(start), len) }
     }
 
     /// Creates an inner mutable range of bytes.
     fn as_mut_range(&mut self, range: impl RangeBounds<usize>) -> &mut [u8] {
-        let max = self.len();
-
-        let start = match range.start_bound() {
-            Bound::Included(start) => *start,
-            Bound::Excluded(start) => *start + 1,
-            Bound::Unbounded => 0,
-        }
-        .clamp(0, max);
-        let end = match range.end_bound() {
-            Bound::Included(end) => *end + 1,
-            Bound::Excluded(end) => *end,
-            Bound::Unbounded => max,
-        }
-        .min(max);
-
-        unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr::<u8>().add(start), end - start) }
+        let (start, len) = clamp_range(range, self.len());
+        unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr::<u8>().add(start), len) }
     }
 }
 
@@ -96,4 +86,17 @@ impl<'a> MemoryMapper for RegionMemoryMapper<'a> {
     fn as_mut_ptr<T>(&mut self) -> *mut T {
         self.region.as_mut_ptr() as *mut T
     }
+}
+
+#[test]
+fn range_works() {
+    let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    let mut data2 = data.clone();
+    let mut mapper = RegionMemoryMapper::new(&mut data2);
+    assert_eq!(mapper.as_range(..), &data);
+    assert_eq!(mapper.as_range(0..99), &data);
+    assert_eq!(mapper.as_range(5..8), &data[5..8]);
+
+    mapper.as_mut_range(5..8).copy_from_slice(&[0, 0, 0]);
+    assert_eq!(mapper.as_range(..), &[0, 1, 2, 3, 4, 0, 0, 0, 8, 9]);
 }

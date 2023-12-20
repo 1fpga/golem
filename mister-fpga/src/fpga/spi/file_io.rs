@@ -66,25 +66,19 @@ impl SpiCommand for FileIoFileExtension<'_> {
 }
 
 /// Send the File size to the FPGA.
-pub struct FileIoFileTxEnabled(u32);
+pub struct FileIoFileTxEnabled(pub Option<u32>);
 
 impl SpiCommand for FileIoFileTxEnabled {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        let size = self.0;
-        spi.command(FileIoCommands::FileIoFileTx)
-            .write_b(0xff)
-            .write(size as u16)
-            .write_cond(size != 0, (size >> 16) as u16);
+        let mut command = spi.command(FileIoCommands::FileIoFileTx);
+        command.write_b(0xff);
+
+        if let Some(size) = self.0 {
+            command.write(size as u16).write((size >> 16) as u16);
+        }
 
         Ok(())
-    }
-}
-
-impl From<u32> for FileIoFileTxEnabled {
-    #[inline]
-    fn from(value: u32) -> Self {
-        Self(value)
     }
 }
 
