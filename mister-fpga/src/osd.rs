@@ -4,7 +4,7 @@
 //! The OsdDisplay does not implement any Drawable, instead relying on the `send`
 //! method to send the data to the FPGA itself. It does not keep any internal
 //! buffers, and is light weigh.
-use crate::fpga::{MisterFpga, SpiCommands};
+use crate::fpga::{osd_io, MisterFpga};
 use embedded_graphics::image::GetPixel;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -59,10 +59,9 @@ impl OsdDisplay {
         // but it isn't needed and would add complexity.
         for line in self.line_iter() {
             let line_buffer = self.get_binary_line_array(buffer, line, size);
-
             fpga.spi_mut()
-                .command(SpiCommands::OsdWriteLine(line as u8))
-                .write_buffer_b(&line_buffer);
+                .execute(osd_io::OsdIoWriteLine(line as u8, &line_buffer))
+                .unwrap();
         }
     }
 }

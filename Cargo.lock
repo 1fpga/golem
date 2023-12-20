@@ -2144,6 +2144,7 @@ name = "mister-fpga"
 version = "0.1.0"
 dependencies = [
  "bitvec",
+ "chrono",
  "crc32fast",
  "cyclone-v",
  "embedded-graphics",
