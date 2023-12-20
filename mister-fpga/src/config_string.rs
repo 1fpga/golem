@@ -626,7 +626,9 @@ fn input_tester() {
 #[test]
 fn config_string_gba() {
     let config = Config::from_str(
-        "GBA;SS3E000000:80000;FS,GBA,Load,300C0000;-;\
+        "GBA;SS3E000000:80000;\
+        FS,GBA,Load,300C0000;\
+        -;\
         C,Cheats;\
         H1O[6],Cheats Enabled,Yes,No;\
         -;\

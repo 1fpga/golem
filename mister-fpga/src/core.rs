@@ -9,6 +9,7 @@ use crate::fpga::user_io::{
     GetStatusBits, SetStatusBits, UserIoJoystick, UserIoKeyboard, UserIoRtc,
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
+use crate::types::units::UnitConversion;
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -127,7 +128,7 @@ impl MisterFpgaCore {
                 let f = File::open(path).map_err(|e| e.to_string())?;
                 let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
                 trace!(?index, ?address, ?ext, ?size, "File info (memory)");
-                self.send_file_to_memory_(index, &ext, size, address, f)?;
+                self.send_file_to_memory_(path, index, &ext, size, address, f)?;
             }
             MisterFpgaSendFileInfo::Buffered { index } => {
                 let f = File::open(path).map_err(|e| e.to_string())?;
@@ -142,12 +143,9 @@ impl MisterFpgaCore {
     }
 
     fn start_send_file(&mut self, index: u8, ext: &str, size: u32) -> Result<(), String> {
-        // Send index.
         self.fpga.spi_mut().execute(FileIoFileIndex::from(index))?;
-
         self.fpga.spi_mut().execute(FileIoFileExtension(ext))?;
-
-        self.fpga.spi_mut().execute(FileIoFileTxEnabled::from(size))
+        self.fpga.spi_mut().execute(FileIoFileTxEnabled(Some(size)))
     }
 
     fn end_send_file(&mut self) -> Result<(), String> {
@@ -211,6 +209,7 @@ impl MisterFpgaCore {
 
     fn send_file_to_memory_(
         &mut self,
+        path: &Path,
         index: u8,
         ext: &str,
         size: u32,
@@ -221,23 +220,36 @@ impl MisterFpgaCore {
         if size >= 0x2000_0000 {
             return Err("File too large.".to_string());
         }
-        self.start_send_file(index, ext, size)?;
-
         let mut crc = crc32fast::Hasher::new();
         let mut mem = DevMemMemoryMapper::create(address.as_usize(), size as usize)?;
 
-        let now = std::time::Instant::now();
-        let sz = reader
-            .read(mem.as_mut_range(..))
-            .map_err(|e| e.to_string())?;
+        self.start_send_file(index, ext, size)?;
 
-        debug!("Read {} bytes", sz);
-        trace!("Took {}ms", now.elapsed().as_millis());
-        crc.update(mem.as_range(..sz));
+        let mut bytes2send = size;
+        while bytes2send > 0 {
+            // let start = (size - bytes2send) as usize;
+            // let len = (bytes2send.min(256u32.kibibytes())) as usize;
+            let sz = reader
+                // .read(mem.as_mut_range(start..start + len))
+                .read(mem.as_mut_range(..))
+                .map_err(|e| e.to_string())?;
+
+            // crc.update(mem.as_range(start..start + len));
+            bytes2send -= sz as u32;
+        }
+        crc.update(mem.as_range(..));
+        self.end_send_file()?;
+
+        // TODO: implement check_status_change into Rust.
+        extern "C" {
+            pub fn check_status_change();
+        }
+        unsafe {
+            check_status_change();
+        }
+
         let crc = crc.finalize();
         debug!("CRC: {:08X}", crc);
-
-        self.end_send_file()?;
         Ok(())
     }
 
@@ -255,7 +267,6 @@ impl MisterFpgaCore {
         self.start_send_file(index, ext, size)?;
 
         let mut crc = crc32fast::Hasher::new();
-
         let now = std::time::Instant::now();
 
         let mut buffer = [0u8; 4096];

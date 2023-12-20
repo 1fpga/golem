@@ -41,7 +41,6 @@ pub trait SpiCommandExt: Sized {
     fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self;
     fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self;
     fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self;
-    fn write_if(&mut self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> &mut Self;
     fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self;
     fn write_buffer_b(&mut self, buffer: &[u8]) -> &mut Self;
     fn write_b(&mut self, byte: u8) -> &mut Self;
@@ -69,13 +68,6 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
-    pub fn enable(&mut self, feature: SpiFeature) -> &mut Self {
-        self.feature += feature;
-        self.spi.enable(self.feature);
-        self
-    }
-
-    #[inline]
     pub fn write(&mut self, word: impl Into<u16>) -> &mut Self {
         self.spi.write(word);
         self
@@ -98,17 +90,7 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
 
     #[inline]
     pub fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
-        if cond {
-            self.spi.write(word);
-        }
-        self
-    }
-
-    #[inline]
-    pub fn write_if(&mut self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> &mut Self {
-        if cond() {
-            self.spi.write(word);
-        }
+        self.spi.write_cond(cond, word);
         self
     }
 
@@ -146,12 +128,6 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     #[inline]
     pub fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self {
         self.spi.write_read_b(byte, out);
-        self
-    }
-
-    #[inline]
-    pub fn write_store(&mut self, word: impl Into<u16>, store: &mut u16) -> &mut Self {
-        self.spi.write_read(word, store);
         self
     }
 }
@@ -356,14 +332,6 @@ impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
     #[inline]
     fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
         if cond {
-            self.write(word);
-        }
-        self
-    }
-
-    #[inline]
-    fn write_if(&mut self, cond: impl FnOnce() -> bool, word: impl Into<u16>) -> &mut Self {
-        if cond() {
             self.write(word);
         }
         self
