@@ -9,7 +9,6 @@ use crate::fpga::user_io::{
     GetStatusBits, SetStatusBits, UserIoJoystick, UserIoKeyboard, UserIoRtc,
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
-use crate::types::units::UnitConversion;
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -128,7 +127,7 @@ impl MisterFpgaCore {
                 let f = File::open(path).map_err(|e| e.to_string())?;
                 let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
                 trace!(?index, ?address, ?ext, ?size, "File info (memory)");
-                self.send_file_to_memory_(path, index, &ext, size, address, f)?;
+                self.send_file_to_memory_(index, &ext, size, address, f)?;
             }
             MisterFpgaSendFileInfo::Buffered { index } => {
                 let f = File::open(path).map_err(|e| e.to_string())?;
@@ -209,7 +208,6 @@ impl MisterFpgaCore {
 
     fn send_file_to_memory_(
         &mut self,
-        path: &Path,
         index: u8,
         ext: &str,
         size: u32,

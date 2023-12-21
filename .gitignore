@@ -28,6 +28,7 @@ host
 *.user
 .vs
 GoLEm*
+!golem/
 
 # Rust stuff
 target/

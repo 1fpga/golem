@@ -1,3 +1,4 @@
+use crate::fpga::osd_io::{OsdDisable, OsdEnable};
 use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
 use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
@@ -12,8 +13,6 @@ use tracing::{debug, error, info, trace};
 mod framebuffer;
 mod spi;
 
-use crate::fpga::osd_io::{OsdDisable, OsdEnable};
-use crate::fpga::user_io::UserIoRtc;
 pub use spi::*;
 
 extern "C" {
