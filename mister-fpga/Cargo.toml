@@ -30,7 +30,7 @@ static_assertions = "1.1.0"
 strum = { version = "0.25.0", features = ["derive"] }
 thiserror = "1.0.50"
 tracing = "0.1.40"
-validator = "0.16.1"
+validator = { version = "0.16.1", features = ["derive"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
