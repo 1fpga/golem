@@ -12,7 +12,6 @@ use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
-use sdl3::keyboard::Scancode;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::path::Path;
@@ -176,7 +175,8 @@ impl MisterFpgaCore {
         self.status = bits;
     }
 
-    pub fn send_key_code(&mut self, keycode: Scancode) {
+    pub fn send_key_code(&mut self, keycode: impl Into<u8>) {
+        let keycode = keycode.into();
         debug!(?keycode, "Sending scan code");
         self.fpga
             .spi_mut()

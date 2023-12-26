@@ -45,6 +45,8 @@ cfg_if! {
     }
 }
 
+// In tests, this is unused as there are no OSD.
+#[allow(unused)]
 mod sizes {
     use embedded_graphics::geometry::Size;
 

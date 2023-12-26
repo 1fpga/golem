@@ -1,6 +1,18 @@
 # GoLEm FPGA Firmware
 
-This repo is the main code repo for the GoLEm FPGA Firmware.
+This repo is the main code repo for the GoLEm FPGA Firmware and its companion libraries and binaries.
+
+## Crates
+
+This repo is a monorepo, containing multiple crates.
+The main crate is `GoLEm_firmware`, which is the actual firmware for GoLEm.
+It is meant as a drop-in replacement for MiSTer.
+
+This repo also contains the twin packages `senior` and `junior`, which are the client and server respectively.
+They are meant to be used together to replace the MiSTer firmware into a client/server architecture to help debug and develop cores and firmware features that don't require user interface.
+Basically, running `junior` on the DE10-Nano, it starts a webserver and does not provide an interactive interface. 
+The webserver provides a full REST API to interact with the FPGA, and the `senior` client can be used as a client CLI to interact with it (though not needed).
+For more details, see the `junior` and `senior` respective READMEs.
 
 ## FAQ
 
