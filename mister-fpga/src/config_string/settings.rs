@@ -15,14 +15,14 @@ pub struct Settings {
     pub midi_mode: Vec<midi::MidiSpeed>,
 
     /// The save state memory range of the core.
-    pub save_state: Option<Range<FpgaRamMemoryAddress>>,
+    pub save_state: Option<(FpgaRamMemoryAddress, usize)>,
 }
 
 impl Debug for Settings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let save_state = match self.save_state {
-            Some(ref x) => {
-                format!("0x{:08x}..0x{:08x}", x.start.as_u32(), x.end.as_u32())
+        let save_state = match &self.save_state {
+            Some((addr, size)) => {
+                format!("0x{:08x} ({})", addr.as_u32(), size)
             }
             None => "None".to_string(),
         };
@@ -36,16 +36,16 @@ impl Debug for Settings {
 }
 
 impl Settings {
-    fn parse_save_state(s: &str) -> Result<Range<FpgaRamMemoryAddress>, &'static str> {
+    fn parse_save_state(s: &str) -> Result<(FpgaRamMemoryAddress, usize), &'static str> {
         if let Some((base, size)) = s.split_once(':') {
             // Strip anything after a comma of size.
             let size = size.split(',').next().unwrap_or(size);
             let base = usize::from_str_radix(base, 16).map_err(|_| "Invalid base")?;
             let size = usize::from_str_radix(size, 16).map_err(|_| "Invalid size")?;
-            let end = base.checked_add(size).ok_or("Save state range overflow")?;
+            // Verify overflow.
+            let _end = base.checked_add(size).ok_or("Save state range overflow")?;
 
             let base = FpgaRamMemoryAddress::try_from(base)?;
-            let end = FpgaRamMemoryAddress::try_from(end)?;
             if size > 128.mebibytes() {
                 return Err("Save state size too large");
             }
@@ -53,7 +53,7 @@ impl Settings {
                 return Err("Save state size cannot be zero");
             }
 
-            Ok(base..end)
+            Ok((base, size))
         } else {
             Err("Could not parse save state range")
         }

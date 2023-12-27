@@ -91,7 +91,7 @@ impl<'a> MemoryMapper for RegionMemoryMapper<'a> {
 #[test]
 fn range_works() {
     let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    let mut data2 = data.clone();
+    let mut data2 = data;
     let mut mapper = RegionMemoryMapper::new(&mut data2);
     assert_eq!(mapper.as_range(..), &data);
     assert_eq!(mapper.as_range(0..99), &data);

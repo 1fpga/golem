@@ -11,6 +11,7 @@ use crate::fpga::user_io::{
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
+use crate::savestate::Savestate;
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -154,6 +155,8 @@ impl MisterFpgaCore {
         // Disable download.
         self.fpga.spi_mut().execute(FileIoFileTxDisabled)
     }
+
+    pub fn save_state(&mut self) -> Savestate {}
 
     pub fn config(&self) -> &config_string::Config {
         &self.config
