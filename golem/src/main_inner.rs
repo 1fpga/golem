@@ -47,9 +47,6 @@ pub fn main() -> Result<(), String> {
     println!(include_str!("../assets/header.txt"), v = v);
 
     let opts = Flags::parse();
-
-    tracing::debug!(?opts);
-
     // Initialize tracing.
     let subscriber = Subscriber::builder();
     let subscriber = match opts.verbose.log_level() {
@@ -63,6 +60,8 @@ pub fn main() -> Result<(), String> {
         .with_ansi(true)
         .with_writer(std::io::stderr)
         .init();
+
+    tracing::debug!(?opts);
 
     // Make sure we're in the right directory. Otherwise, relative paths
     // won't work. We set the current directory to be in the MiSTer

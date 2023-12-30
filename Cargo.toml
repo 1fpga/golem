@@ -3,7 +3,9 @@ members = [
     "cyclone_v",
     "golem-db",
     "golem",
+    "junior",
     "mister-fpga",
+    "senior",
 ]
 resolver = "2"
 

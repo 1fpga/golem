@@ -1,4 +1,6 @@
 use bitvec::prelude::*;
+use serde::ser::SerializeSeq;
+use serde::{Serialize, Serializer};
 use std::fmt::{Debug, Formatter};
 
 pub mod units;
@@ -6,6 +8,36 @@ pub mod units;
 /// A 128-bit status bit map, used by MiSTer cores to communicate options and triggers.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct StatusBitMap(BitArray<[u16; 8], Lsb0>);
+
+impl Serialize for StatusBitMap {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // If the format is human readable, use bits as a string instead.
+        if serializer.is_human_readable() {
+            return serializer.serialize_str(&self.to_string());
+        }
+
+        // Either serialize the first 4 words or the whole array.
+        let r = self.as_raw_slice();
+        let short = r.iter().skip(4).all(|x| *x == 0);
+
+        let mut seq = serializer.serialize_seq(Some(if short { 4 } else { 8 }))?;
+        seq.serialize_element(&r[0])?;
+        seq.serialize_element(&r[1])?;
+        seq.serialize_element(&r[2])?;
+        seq.serialize_element(&r[3])?;
+
+        if !short {
+            seq.serialize_element(&r[4])?;
+            seq.serialize_element(&r[5])?;
+            seq.serialize_element(&r[6])?;
+            seq.serialize_element(&r[7])?;
+        }
+        seq.end()
+    }
+}
 
 impl Debug for StatusBitMap {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

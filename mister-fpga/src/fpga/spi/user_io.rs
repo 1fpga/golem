@@ -3,7 +3,6 @@ use crate::fpga::feature::SpiFeature;
 use crate::fpga::{IntoLowLevelSpiCommand, SpiCommand, SpiCommandExt};
 use crate::types::StatusBitMap;
 use chrono::{Datelike, NaiveDateTime, Timelike};
-use sdl3::keyboard::Scancode;
 use std::time::SystemTime;
 
 /// User IO commands.
@@ -74,9 +73,9 @@ impl UserIoJoystick {
 
 pub struct UserIoKeyboard(u8);
 
-impl From<Scancode> for UserIoKeyboard {
-    fn from(value: Scancode) -> Self {
-        Self(value as u8)
+impl From<u8> for UserIoKeyboard {
+    fn from(value: u8) -> Self {
+        Self(value)
     }
 }
 

@@ -62,7 +62,7 @@ impl super::Core for NullCore {
         unreachable!()
     }
 
-    fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16) {
+    fn sdl_axis_motion(&mut self, _controller: u8, _axis: Axis, _value: i16) {
         unreachable!()
     }
 }

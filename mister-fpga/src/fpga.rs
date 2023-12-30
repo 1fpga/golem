@@ -208,6 +208,7 @@ pub enum CoreInterfaceType {
     SpiBus16Bit = 1,
 }
 
+#[cfg(feature = "mister-cpp")]
 extern "C" {
     static mut map_base: *mut u8;
 }
@@ -263,7 +264,10 @@ impl MisterFpga {
             let mut fpga = Self::new(soc.clone());
 
             // TODO: remove this when the fpga code from CPP is gone.
-            map_base = fpga.soc_mut().base_mut();
+            #[cfg(feature = "mister-cpp")]
+            {
+                map_base = fpga.soc_mut().base_mut();
+            }
             fpga.regs_mut().set_gpo(0);
 
             FPGA_SINGLETON = Some(fpga.clone());
