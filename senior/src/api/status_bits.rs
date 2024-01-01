@@ -1,4 +1,4 @@
-use crate::utils::get_core;
+use crate::guards::CoreGuard;
 use mister_fpga::types::StatusBitMap;
 use rocket::serde::json::Json;
 use rocket::{get, Route};
@@ -29,38 +29,37 @@ impl JsonSchema for StatusBitsResponse {
     }
 }
 
-#[openapi(tag = "Status Bits")]
+#[openapi(tag = "Status Bits", ignore = "core")]
 #[get("/status_bits")]
-async fn status_bits() -> Result<Json<StatusBitsResponse>, String> {
-    let mut core = get_core().await?;
-    let bits = *core.read_status_bits();
-    let mask = core.config().status_bit_map_mask();
+async fn status_bits(core: CoreGuard) -> Result<Json<StatusBitsResponse>, String> {
+    let (bits, mask) = {
+        let mut c = core.lock().await;
+        (*c.read_status_bits(), c.config().status_bit_map_mask())
+    };
 
     Ok(Json(StatusBitsResponse { bits, mask }))
 }
 
-#[openapi(tag = "Status Bits")]
+#[openapi(tag = "Status Bits", ignore = "core")]
 #[get("/status_bits/set/<bit>")]
-async fn status_bits_set(bit: u8) -> Result<Json<StatusBitsResponse>, String> {
-    let mut core = get_core().await?;
-    let mut bits = core.status_bits().clone();
+async fn status_bits_set(core: CoreGuard, bit: u8) -> Result<Json<StatusBitsResponse>, String> {
+    let mut bits = core.lock().await.status_bits().clone();
     bits.set(bit as usize, true);
-    core.send_status_bits(bits);
+    core.lock().await.send_status_bits(bits);
 
-    crate::api::status_bits()
+    status_bits(core).await
 }
 
-#[openapi(tag = "Status Bits")]
+#[openapi(tag = "Status Bits", ignore = "core")]
 #[get("/status_bits/pulse/<bit>")]
-async fn status_bits_pulse(bit: u8) -> Result<Json<StatusBitsResponse>, String> {
-    let mut core = get_core().await?;
-    let mut bits = core.status_bits().clone();
+async fn status_bits_pulse(core: CoreGuard, bit: u8) -> Result<Json<StatusBitsResponse>, String> {
+    let mut bits = core.lock().await.status_bits().clone();
     bits.set(bit as usize, true);
-    core.send_status_bits(bits);
+    core.lock().await.send_status_bits(bits);
     bits.set(bit as usize, false);
-    core.send_status_bits(bits);
+    core.lock().await.send_status_bits(bits);
 
-    crate::api::status_bits()
+    status_bits(core).await
 }
 
 pub(crate) fn routes() -> Vec<Route> {

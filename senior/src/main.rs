@@ -3,12 +3,12 @@ use clap_verbosity_flag::Verbosity;
 use rocket_okapi::rapidoc::{make_rapidoc, GeneralConfig, HideShowConfig, RapiDocConfig};
 use rocket_okapi::settings::UrlObject;
 use rocket_okapi::swagger_ui::{make_swagger_ui, SwaggerUIConfig};
-use std::path::PathBuf;
 use tracing_log::AsTrace;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
 mod api;
+mod guards;
 mod utils;
 
 #[derive(Parser, Debug)]

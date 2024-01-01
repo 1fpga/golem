@@ -4,8 +4,8 @@ use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
 use std::cell::UnsafeCell;
 use std::ffi::c_int;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 use strum::{Display, EnumIter, FromRepr};
 use tracing::{debug, error, info, trace};
@@ -215,9 +215,11 @@ extern "C" {
 
 #[derive(Debug, Clone)]
 pub struct MisterFpga {
-    soc: Rc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
-    spi: spi::Spi<DevMemMemoryMapper>,
+    soc: Arc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
+    spi: Spi<DevMemMemoryMapper>,
 }
+unsafe impl Send for MisterFpga {}
+unsafe impl Sync for MisterFpga {}
 
 // OSD specific functions.
 impl MisterFpga {
@@ -230,7 +232,7 @@ impl MisterFpga {
 }
 
 impl MisterFpga {
-    fn new(soc: Rc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>) -> Self {
+    fn new(soc: Arc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>) -> Self {
         Self {
             soc: soc.clone(),
             spi: spi::Spi::new(soc),
@@ -260,7 +262,7 @@ impl MisterFpga {
             info!("Initializing FPGA");
 
             let soc = cyclone_v::SocFpga::default();
-            let soc = Rc::new(UnsafeCell::new(soc));
+            let soc = Arc::new(UnsafeCell::new(soc));
             let mut fpga = Self::new(soc.clone());
 
             // TODO: remove this when the fpga code from CPP is gone.

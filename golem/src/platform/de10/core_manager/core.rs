@@ -77,7 +77,7 @@ impl Core for MisterFpgaCore {
     }
 
     fn send_key(&mut self, key: Scancode) {
-        self.send_key_code(key)
+        self.send_key_code(key as u8)
     }
 
     fn sdl_button_down(&mut self, controller: u8, button: Button) {

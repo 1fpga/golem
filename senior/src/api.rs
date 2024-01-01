@@ -1,5 +1,4 @@
-use rocket::{get, Route};
-use rocket_okapi::{openapi, openapi_get_routes};
+use rocket::Route;
 
 mod status_bits;
 

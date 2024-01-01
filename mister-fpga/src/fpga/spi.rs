@@ -3,7 +3,7 @@ use cyclone_v::memory::MemoryMapper;
 use cyclone_v::SocFpga;
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::sync::Arc;
 
 /// SPI is a 16-bit data bus where the lowest 16 bits are the data and the highest 16-bits
 /// are the control bits.
@@ -140,8 +140,10 @@ impl<'a, S: SpiCommandExt> Drop for SpiCommandGuard<'a, S> {
 
 #[derive(Debug)]
 pub struct Spi<M: MemoryMapper> {
-    soc: Rc<UnsafeCell<SocFpga<M>>>,
+    soc: Arc<UnsafeCell<SocFpga<M>>>,
 }
+unsafe impl<M: MemoryMapper> Send for Spi<M> {}
+unsafe impl<M: MemoryMapper> Sync for Spi<M> {}
 
 impl<M: MemoryMapper> Clone for Spi<M> {
     fn clone(&self) -> Self {
@@ -152,7 +154,7 @@ impl<M: MemoryMapper> Clone for Spi<M> {
 }
 
 impl<M: MemoryMapper> Spi<M> {
-    pub fn new(soc: Rc<UnsafeCell<SocFpga<M>>>) -> Self {
+    pub fn new(soc: Arc<UnsafeCell<SocFpga<M>>>) -> Self {
         Self { soc }
     }
 
