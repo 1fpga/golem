@@ -57,6 +57,7 @@ pub struct MisterFpgaCore {
     pub io_version: u8,
     config: config_string::Config,
 
+    save_states: Option<SaveStateManager<DevMemMemoryMapper>>,
     map: ButtonMap,
 
     status: StatusBitMap,
@@ -88,13 +89,15 @@ impl MisterFpgaCore {
         info!("Core config: {:#?}", config);
         fpga.wait_for_ready();
 
+        let save_states = SaveStateManager::from_config_string(&config);
+
         Ok(MisterFpgaCore {
             fpga,
             core_type,
             spi_type,
             io_version,
             config,
-            // mapping,
+            save_states,
             map,
             status: Default::default(),
         })
@@ -155,8 +158,6 @@ impl MisterFpgaCore {
         // Disable download.
         self.fpga.spi_mut().execute(FileIoFileTxDisabled)
     }
-
-    pub fn save_state(&mut self) -> Savestate {}
 
     pub fn config(&self) -> &config_string::Config {
         &self.config
