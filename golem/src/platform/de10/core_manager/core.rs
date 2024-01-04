@@ -76,8 +76,12 @@ impl Core for MisterFpgaCore {
         self.take_screenshot()
     }
 
-    fn send_key(&mut self, key: Scancode) {
-        self.send_key_code(key as u8)
+    fn key_down(&mut self, key: Scancode) {
+        self.key_down(key)
+    }
+
+    fn key_up(&mut self, key: Scancode) {
+        self.key_up(key)
     }
 
     fn sdl_button_down(&mut self, controller: u8, button: Button) {

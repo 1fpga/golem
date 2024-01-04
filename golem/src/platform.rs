@@ -87,7 +87,8 @@ pub trait Core {
 
     fn take_screenshot(&mut self) -> Result<DynamicImage, String>;
 
-    fn send_key(&mut self, key: Scancode);
+    fn key_down(&mut self, key: Scancode);
+    fn key_up(&mut self, key: Scancode);
 
     fn sdl_button_down(&mut self, controller: u8, button: Button);
 

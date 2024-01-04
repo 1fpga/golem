@@ -50,7 +50,7 @@ impl super::Core for NullCore {
         unreachable!()
     }
 
-    fn send_key(&mut self, _key: Scancode) {
+    fn key_down(&mut self, _key: Scancode) {
         unreachable!()
     }
 

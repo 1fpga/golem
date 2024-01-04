@@ -135,6 +135,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "array_map"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8918af69f2ecff99addb930228c0d8bff80afbcb95066f340edf9aeee60a76f"
+
+[[package]]
 name = "async-stream"
 version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2298,6 +2304,7 @@ dependencies = [
 name = "mister-fpga"
 version = "0.1.0"
 dependencies = [
+ "array_map",
  "bitvec",
  "chrono",
  "crc32fast",
@@ -2316,6 +2323,7 @@ dependencies = [
  "pretty_assertions",
  "regex",
  "rstest",
+ "sdl3",
  "serde",
  "serde_with 1.14.0",
  "static_assertions",
@@ -3305,9 +3313,9 @@ dependencies = [
 
 [[package]]
 name = "sdl3"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "defaf67374b4335d1e92544781ad38ecb7f6386a978eb7ab9e7adf92551c9172"
+checksum = "041ee515e152266b6d4ade22db39b0e09486076d06e0eb7ad5cc707d4856ca4f"
 dependencies = [
  "bitflags 1.3.2",
  "lazy_static",
@@ -3317,9 +3325,9 @@ dependencies = [
 
 [[package]]
 name = "sdl3-sys"
-version = "0.0.5+sdl3-dev-2023-06-04"
+version = "0.0.6+sdl3-dev-2023-07-31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "db37ff748dc3b771dce9b737e2ae71e99e595881f798611375f222e5caf6c4f6"
+checksum = "c9846a96256cb800f754bef64805689a4c75b2a1a6d855064c10321075034673"
 dependencies = [
  "cfg-if",
  "libc",

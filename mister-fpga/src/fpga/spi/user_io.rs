@@ -1,6 +1,7 @@
 use crate::core::buttons::ButtonMap;
 use crate::fpga::feature::SpiFeature;
 use crate::fpga::{IntoLowLevelSpiCommand, SpiCommand, SpiCommandExt};
+use crate::keyboard::Ps2Scancode;
 use crate::types::StatusBitMap;
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use std::time::SystemTime;
@@ -71,19 +72,52 @@ impl UserIoJoystick {
     }
 }
 
-pub struct UserIoKeyboard(u8);
+pub struct UserIoKeyboardKeyDown(u32);
 
-impl From<u8> for UserIoKeyboard {
-    fn from(value: u8) -> Self {
+impl From<Ps2Scancode> for UserIoKeyboardKeyDown {
+    fn from(value: Ps2Scancode) -> Self {
+        Self(value.as_u32())
+    }
+}
+
+impl From<u32> for UserIoKeyboardKeyDown {
+    fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl SpiCommand for UserIoKeyboard {
+impl SpiCommand for UserIoKeyboardKeyDown {
+    #[inline]
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        eprintln!("UserIoKeyboardKeyDown: {:08x}", self.0);
+        spi.command(UserIoCommands::UserIoKeyboard)
+            .write_cond_b(self.0 & 0x080000 != 0, 0xE0)
+            .write_b((self.0 & 0xFF) as u8);
+
+        Ok(())
+    }
+}
+
+pub struct UserIoKeyboardKeyUp(u32);
+
+impl From<Ps2Scancode> for UserIoKeyboardKeyUp {
+    fn from(value: Ps2Scancode) -> Self {
+        Self(value.as_u32())
+    }
+}
+
+impl From<u32> for UserIoKeyboardKeyUp {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
+impl SpiCommand for UserIoKeyboardKeyUp {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
         spi.command(UserIoCommands::UserIoKeyboard)
-            .write(self.0 as u16);
+            .write_b(0xF0)
+            .write_b(self.0 as u8);
 
         Ok(())
     }

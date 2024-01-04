@@ -6,9 +6,11 @@ use crate::fpga::file_io::{
     FileIoFileTxDisabled, FileIoFileTxEnabled,
 };
 use crate::fpga::user_io::{
-    GetStatusBits, SetStatusBits, UserIoJoystick, UserIoKeyboard, UserIoRtc,
+    GetStatusBits, SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp,
+    UserIoRtc,
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
+use crate::keyboard::Ps2Scancode;
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -175,12 +177,23 @@ impl MisterFpgaCore {
         self.status = bits;
     }
 
-    pub fn send_key_code(&mut self, keycode: impl Into<u8>) {
-        let keycode = keycode.into();
-        debug!(?keycode, "Sending scan code");
+    pub fn key_down(&mut self, keycode: sdl3::keyboard::Scancode) {
+        let scancode = Ps2Scancode::from(keycode);
+        debug!(?keycode, ?scancode, "Keydown");
+        if scancode != Ps2Scancode::None {
+            self.fpga
+                .spi_mut()
+                .execute(UserIoKeyboardKeyDown::from(scancode))
+                .unwrap();
+        }
+    }
+
+    pub fn key_up(&mut self, keycode: sdl3::keyboard::Scancode) {
+        let scancode = Ps2Scancode::from(keycode);
+        debug!(?keycode, ?scancode, "Keyup");
         self.fpga
             .spi_mut()
-            .execute(UserIoKeyboard::from(keycode))
+            .execute(UserIoKeyboardKeyUp::from(scancode))
             .unwrap();
     }
 
