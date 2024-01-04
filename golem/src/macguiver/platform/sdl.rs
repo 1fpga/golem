@@ -86,9 +86,9 @@ where
             // Initialize subsystems.
             let joystick = ctx.joystick().unwrap();
             joystick.set_joystick_events_enabled(true);
-            let gamepad = ctx.game_controller().unwrap();
+            let gamepad = ctx.gamepad().unwrap();
             let event_pump = ctx.event_pump().unwrap();
-            let video =ctx.video().unwrap();
+            let video = ctx.video().unwrap();
 
             (joystick, gamepad, event_pump, video)
         });

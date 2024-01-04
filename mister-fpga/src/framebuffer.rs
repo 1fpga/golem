@@ -69,10 +69,7 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         let line = self.header.line as usize;
         let start = self.memory.as_ptr::<u8>();
         let fb = unsafe {
-            std::slice::from_raw_parts(
-                start.add(self.header.header_len as usize),
-                height * width * 3,
-            )
+            std::slice::from_raw_parts(start.add(self.header.header_len as usize), line * width * 3)
         };
 
         let mut img = RgbImage::new(width as u32, height as u32);
@@ -84,6 +81,6 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
                 .copy_from_slice(line);
         }
 
-        return Ok(DynamicImage::ImageRgb8(img));
+        Ok(DynamicImage::ImageRgb8(img))
     }
 }

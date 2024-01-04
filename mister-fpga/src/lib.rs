@@ -6,3 +6,4 @@ pub mod fpga;
 pub mod framebuffer;
 pub mod osd;
 pub mod types;
+pub mod keyboard;

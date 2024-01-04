@@ -64,13 +64,14 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
                     if !repeat {
                         inputs.key_down(scancode);
                     }
-                    core.send_key(scancode);
+                    core.key_down(scancode);
                 }
                 Event::KeyUp {
                     scancode: Some(scancode),
                     ..
                 } => {
                     inputs.key_up(scancode);
+                    core.key_up(scancode);
                 }
                 Event::ControllerButtonDown { which, button, .. } => {
                     inputs.controller_button_down(which, button);
