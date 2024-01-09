@@ -1,3 +1,4 @@
+use crate::application::coordinator::GameStartInfo;
 use crate::application::menu::cores::download::cores_download_panel;
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
@@ -130,9 +131,11 @@ pub fn cores_menu_panel(app: &mut GoLEmApp) {
                 let path = &core.path;
                 info!("Loading core from path {:?}", path);
 
-                let manager = app.platform_mut().core_manager_mut();
-                match manager.load_core(std::path::Path::new(&path)) {
-                    Ok(core) => {
+                match app
+                    .coordinator_mut()
+                    .launch_game(app, GameStartInfo::default().with_core_id(core.id))
+                {
+                    Ok((_, core)) => {
                         run_core_loop(app, core, true);
                     }
                     Err(e) => {

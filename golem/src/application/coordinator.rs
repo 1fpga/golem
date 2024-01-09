@@ -1,6 +1,6 @@
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::platform::{Core, CoreManager, GoLEmPlatform};
+use crate::platform::{Core, CoreManager, GoLEmPlatform, SaveState};
 use golem_db::models::Core as DbCore;
 use golem_db::models::Game as DbGame;
 use golem_db::Connection;
@@ -72,18 +72,28 @@ impl CoordinatorInner {
         info!(?info, "Starting game");
         let mut database = self.database.lock().unwrap();
 
-        let core = match info.core_id {
-            Some(id) => DbCore::get(&mut database, id)
-                .map_err(|e| e.to_string())?
-                .ok_or("Core not found")?,
-            None => self.current_core.clone().ok_or("No core selected")?,
+        // Load the core if necessary. If it's the same core, we don't need to.
+        let (mut c, core) = match info.core_id {
+            Some(id) => {
+                let db_core = DbCore::get(&mut database, id)
+                    .map_err(|e| e.to_string())?
+                    .ok_or("Core not found")?;
+                (
+                    app.platform_mut()
+                        .core_manager_mut()
+                        .load_core(&db_core.path)?,
+                    db_core,
+                )
+            }
+            None => {
+                let db_core = self.current_core.clone().ok_or("No core selected")?;
+                (
+                    app.platform_mut().core_manager_mut().get_current_core()?,
+                    db_core,
+                )
+            }
         };
 
-        // Load the core
-        let mut c = app
-            .platform_mut()
-            .core_manager_mut()
-            .load_core(&core.path)?;
         self.current_core = Some(core);
         self.current_game = None;
         let mut should_show_menu = true;
@@ -111,7 +121,7 @@ impl CoordinatorInner {
 
                 for (db_state, state) in db_ss.iter().zip(core_ss.iter_mut()) {
                     let f = std::fs::File::open(&db_state.path).map_err(|e| e.to_string())?;
-                    state.read_from(f)?;
+                    SaveState::read_from(state, f)?;
                 }
             }
         }

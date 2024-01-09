@@ -27,7 +27,7 @@ impl crate::platform::SaveState for () {
         Ok(())
     }
 
-    fn read_from(&mut self, reader: impl Read) -> Result<(), String> {
+    fn read_from(&mut self, _reader: impl Read) -> Result<(), String> {
         Ok(())
     }
 }
@@ -117,6 +117,11 @@ impl CoreManager for DummyCoreManager {
 
     fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
         info!("DummyCoreManager::load_core({:?})", path.as_ref());
+        Ok(DummyCore)
+    }
+
+    fn get_current_core(&mut self) -> Result<Self::Core, String> {
+        info!("DummyCoreManager::get_current_core()");
         Ok(DummyCore)
     }
 
