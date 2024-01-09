@@ -131,7 +131,7 @@ pub fn cores_menu_panel(app: &mut GoLEmApp) {
                 info!("Loading core from path {:?}", path);
 
                 let manager = app.platform_mut().core_manager_mut();
-                match manager.load_program(std::path::Path::new(&path)) {
+                match manager.load_core(std::path::Path::new(&path)) {
                     Ok(core) => {
                         run_core_loop(app, core, true);
                     }
@@ -158,7 +158,7 @@ pub fn cores_menu_panel(app: &mut GoLEmApp) {
                 info!("Loading core from path {:?}", path);
 
                 if let Ok(Some(path)) = path {
-                    match app.platform_mut().core_manager_mut().load_program(&path) {
+                    match app.platform_mut().core_manager_mut().load_core(&path) {
                         Ok(core) => {
                             run_core_loop(app, core, true);
                         }

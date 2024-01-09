@@ -24,7 +24,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
+pub fn menu<C: Core + ?Sized>(app: &mut GoLEmApp, core: &Option<&mut C>) {
     let mut state = None;
 
     loop {
@@ -59,7 +59,7 @@ pub fn menu(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
             .map(|(a, b, c)| (*a, b.as_str(), *c))
             .collect::<Vec<_>>();
 
-        let menu = if let Some(c) = core {
+        let menu = if let Some(c) = &core {
             let menu = c.menu_options();
             menu.iter()
                 .filter_map(|config_menu| {

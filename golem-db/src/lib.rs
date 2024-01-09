@@ -1,5 +1,6 @@
 pub use diesel;
 use diesel::sqlite::Sqlite;
+use diesel::{sql_query, RunQueryDsl};
 
 pub mod models;
 pub mod schema;
@@ -10,6 +11,9 @@ pub fn establish_connection(
     database_url: &str,
 ) -> Result<Connection, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let mut conn = diesel::Connection::establish(database_url)?;
+
+    // Make sure we're in WAL mode.
+    sql_query("PRAGMA journal_mode=WAL;").execute(&mut conn)?;
 
     run_migrations(&mut conn)?;
     Ok(conn)

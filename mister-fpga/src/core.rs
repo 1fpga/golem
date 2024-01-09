@@ -11,7 +11,7 @@ use crate::fpga::user_io::{
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
-use crate::savestate::Savestate;
+use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -217,6 +217,14 @@ impl MisterFpgaCore {
             .spi_mut()
             .execute(UserIoJoystick::from_joystick_index(joystick_idx, &self.map))
             .unwrap();
+    }
+
+    pub fn save_states(&self) -> Option<&SaveStateManager<DevMemMemoryMapper>> {
+        self.save_states.as_ref()
+    }
+
+    pub fn save_states_mut(&mut self) -> Option<&mut SaveStateManager<DevMemMemoryMapper>> {
+        self.save_states.as_mut()
     }
 
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {

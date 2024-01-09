@@ -22,7 +22,7 @@ impl CoreManager {
         &mut self.fpga
     }
 
-    fn load(&mut self, program: &[u8]) -> Result<MisterFpgaCore, String> {
+    fn load(&mut self, program: &[u8]) -> Result<core::MisterFpgaCore, String> {
         let program = if &program[..6] != b"MiSTer" {
             program
         } else {
@@ -51,14 +51,14 @@ impl CoreManager {
                 std::ptr::null(),
             );
         }
-        Ok(core)
+        Ok(core::MisterFpgaCore::new(core))
     }
 }
 
 impl crate::platform::CoreManager for CoreManager {
-    type Core = MisterFpgaCore;
+    type Core = core::MisterFpgaCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<MisterFpgaCore, String> {
+    fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
         let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
         let core = self.load(&bytes)?;
         Ok(core)

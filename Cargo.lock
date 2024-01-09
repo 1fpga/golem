@@ -1706,6 +1706,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "ouroboros",
+ "parking_lot",
  "qrcode",
  "regex",
  "reqwest",

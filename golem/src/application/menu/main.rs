@@ -6,7 +6,6 @@ use crate::application::panels::alert::alert;
 use crate::application::panels::settings::settings_panel;
 use crate::application::panels::tools::tools_menu;
 use crate::application::GoLEmApp;
-use crate::platform;
 use golem_db::models;
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
@@ -53,7 +52,7 @@ pub fn main_menu(app: &mut GoLEmApp) {
         match result {
             MenuAction::Games => games_list(app),
             MenuAction::Cores => cores_menu_panel(app),
-            MenuAction::Settings => settings_panel(app, &None::<&mut dyn platform::Core>),
+            MenuAction::Settings => settings_panel(app, &None::<&mut crate::platform::CoreType>),
             MenuAction::Tools => tools_menu(app),
             MenuAction::About => {
                 alert(app, "About", "Not implemented", &["Okay"]);

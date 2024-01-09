@@ -1,12 +1,20 @@
 use crate::config_string::Config;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use std::io::{Read, Write};
+use std::ptr::NonNull;
+use std::slice;
 
 const DEFAULT_MISTER_SAVESTATE_SLOTS: u32 = 4;
 
 pub struct SaveStateManager<M: MemoryMapper> {
-    memory: M,
+    /// Memory Mapper. The Manager needs to own it to avoid it being dropped
+    /// prematurely.
+    _memory: M,
+
+    /// The number of savestate slots.
     nb_slots: u32,
+
+    /// The savestate slots.
     slots: Vec<SaveState>,
 }
 
@@ -17,11 +25,12 @@ impl SaveStateManager<DevMemMemoryMapper> {
 
         // The memory setup is:
         //   0x00: u32 change detector.     A value that changes when the savestate changes.
-        //   0x04: u32 size                 Save of the savestate, in bytes.
-        //   0x08..0x08+size                The savestate data.
+        //   0x04: u32 size                 Size of the savestate, in 32-bits words.
+        //   0x08..0x08 + (size * 4)        The savestate data.
 
         let mut memory =
             DevMemMemoryMapper::create(base.as_usize(), size * (nb_slots as usize)).unwrap();
+
         let slots = (0..nb_slots)
             .map(|i| {
                 let offset = (i as usize) * size;
@@ -31,104 +40,108 @@ impl SaveStateManager<DevMemMemoryMapper> {
 
         Some(Self {
             nb_slots,
-            memory,
+            _memory: memory,
             slots,
         })
     }
 }
 
 impl<M: MemoryMapper> SaveStateManager<M> {
-    pub fn iter(&self) -> impl Iterator<Item = &SaveState> {
-        self.slots.iter()
+    pub fn as_slice(&self) -> &[SaveState] {
+        &self.slots
     }
 
-    // pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut SaveState<'_>> + '_ {
-    //     // self.slots.iter_mut()
-    //     todo!()
-    // }
+    pub fn as_slice_mut(&mut self) -> &mut [SaveState] {
+        &mut self.slots
+    }
 
     pub fn nb_slots(&self) -> usize {
         self.nb_slots as usize
     }
 }
 
+#[repr(C)]
+struct SaveStateInner {
+    counter: u32,
+    size: u32,
+    data: [u8; 0],
+}
+
+impl SaveStateInner {
+    fn size_adjusted(&self) -> usize {
+        let size = self.size as usize;
+        (size + 2).checked_mul(4).unwrap()
+    }
+
+    fn counter(&self) -> u32 {
+        self.counter
+    }
+
+    fn all(&self) -> &[u8] {
+        unsafe {
+            let s = std::ptr::addr_of!(*self) as *const u8;
+            slice::from_raw_parts(s, self.size_adjusted())
+        }
+    }
+
+    fn all_mut(&mut self) -> &mut [u8] {
+        unsafe {
+            let s = std::ptr::addr_of!(*self) as *mut u8;
+            slice::from_raw_parts_mut(s, self.size_adjusted())
+        }
+    }
+
+    fn reset(&mut self) {
+        self.counter = 0xFFFFFFFF
+    }
+}
+
 pub struct SaveState {
-    change_detector: *mut u32,
-    size: *mut u32,
-    data: *mut u8,
+    /// The savestate data itself.
+    inner: NonNull<SaveStateInner>,
+
+    /// The last counter known, used to detect any changes to the savestate data.
+    counter: u32,
 }
 
 impl SaveState {
     fn from_base(memory: &mut impl MemoryMapper, offset: usize) -> Self {
-        let change_detector = unsafe { memory.as_mut_ptr::<u8>().add(offset) as _ };
-        let size: *mut u32 = unsafe { memory.as_mut_ptr::<u8>().add(offset + 4) as _ };
-        let data = unsafe { memory.as_mut_ptr::<u8>().add(offset + 8) };
+        let inner = unsafe { NonNull::new(memory.as_mut_ptr::<u8>().add(offset) as _).unwrap() };
 
         Self {
-            change_detector,
-            size,
-            data,
+            inner,
+            counter: unsafe { inner.as_ref() }.counter,
         }
     }
-}
 
-impl SaveState {
-    pub fn size(&self) -> usize {
-        unsafe { *self.size as usize }
+    fn inner(&self) -> &SaveStateInner {
+        unsafe { self.inner.as_ref() }
     }
 
-    pub fn change_detector(&self) -> u32 {
-        unsafe { *self.change_detector }
+    fn inner_mut(&mut self) -> &mut SaveStateInner {
+        unsafe { self.inner.as_mut() }
     }
 
-    pub(crate) fn reset_change_detector(&mut self) {
-        unsafe { *self.change_detector = 0xFFFFFFFF }
+    /// Whether the data has changed since it was last loaded/written.
+    #[inline]
+    pub fn is_dirty(&self) -> bool {
+        self.counter != self.inner().counter()
     }
 
-    pub fn data(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.data, self.size()) }
-    }
-
-    fn data_mut(&self) -> &mut [u8] {
-        unsafe { std::slice::from_raw_parts_mut(self.data, self.size()) }
-    }
-
-    pub fn save(&mut self, mut writer: impl Write) -> Result<(), String> {
-        let sz = self.size();
+    pub fn write_to(&mut self, mut writer: impl Write) -> Result<(), String> {
         writer
-            .write_all(&self.change_detector().to_be_bytes())
+            .write_all(self.inner().all())
             .map_err(|e| e.to_string())?;
-        writer
-            .write_all(&sz.to_be_bytes())
-            .map_err(|e| e.to_string())?;
-        writer
-            .write_all(&self.data()[..(sz as usize)])
-            .map_err(|e| e.to_string())?;
-        self.reset_change_detector();
+        self.counter = self.inner().counter;
         Ok(())
     }
 
-    pub fn load(&mut self, mut reader: impl Read) -> Result<(), String> {
-        let mut change_detector = [0u8; 4];
-        let mut sz = [0u8; 4];
+    pub fn read_from(&mut self, mut reader: impl Read) -> Result<(), String> {
         reader
-            .read_exact(&mut change_detector)
+            .read_exact(self.inner_mut().all_mut())
             .map_err(|e| e.to_string())?;
-        reader.read_exact(&mut sz).map_err(|e| e.to_string())?;
-        let sz = u32::from_be_bytes(sz);
-        if sz >= self.data().len() as u32 {
-            return Err("Save state too large".to_string());
-        }
-
-        unsafe {
-            *self.change_detector = u32::from_be_bytes(change_detector);
-            *self.size = sz;
-        }
-
-        reader
-            .read_exact(&mut self.data_mut()[..(self.size() as usize)])
-            .map_err(|e| e.to_string())?;
-        self.reset_change_detector();
+        self.inner_mut().reset();
+        self.counter = self.inner().counter;
         Ok(())
     }
 }

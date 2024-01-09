@@ -437,10 +437,6 @@ pub enum Ps2Scancode {
 
 impl From<SdlScancode> for Ps2Scancode {
     fn from(scancode: SdlScancode) -> Self {
-        eprintln!(
-            "scancode: {:?} {} SDL3_TO_PS2[scancode as u8]: {:?}",
-            scancode, scancode as u8, SDL3_TO_PS2[scancode as u8]
-        );
         SDL3_TO_PS2[scancode as u8].unwrap_or(Ps2Scancode::None)
     }
 }

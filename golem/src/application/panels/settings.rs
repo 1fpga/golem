@@ -20,7 +20,10 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn settings_panel(app: &mut GoLEmApp, core: &Option<&mut (impl Core + ?Sized)>) {
+pub fn settings_panel<C: Core + ?Sized>(app: &mut GoLEmApp, core: &Option<&mut C>)
+where
+    C: Sized,
+{
     let mut state = None;
     loop {
         let (result, new_state) = text_menu(

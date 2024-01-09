@@ -41,11 +41,28 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    savestates (id) {
+        id -> Integer,
+        name -> Nullable<Text>,
+        core_id -> Integer,
+        game_id -> Integer,
+        path -> Text,
+        screenshot_path -> Nullable<Text>,
+        favorite -> Bool,
+        created_at -> Timestamp,
+        last_played -> Nullable<Timestamp>,
+    }
+}
+
 diesel::joinable!(dat_files -> cores (core_id));
 diesel::joinable!(games -> cores (core_id));
+diesel::joinable!(savestates -> cores (core_id));
+diesel::joinable!(savestates -> games (game_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     cores,
     dat_files,
     games,
+    savestates,
 );

@@ -36,7 +36,7 @@ impl GameOrder {
     }
 }
 
-#[derive(Debug, Queryable, Selectable, Identifiable)]
+#[derive(Clone, Debug, Queryable, Selectable, Identifiable)]
 #[diesel(table_name = schema::games)]
 #[diesel(belongs_to(Core))]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]

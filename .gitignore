@@ -27,7 +27,8 @@ host
 *.map
 *.user
 .vs
-GoLEm*
+GoLEm_*
+GoLEm.zip
 !golem/
 
 # Rust stuff

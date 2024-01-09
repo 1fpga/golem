@@ -3,11 +3,11 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
 use crate::application::GoLEmApp;
 use crate::data::paths::core_root_path;
-use crate::platform::Core;
+use crate::platform::{Core, SaveState};
 use mister_fpga::config_string::ConfigMenu;
 use mister_fpga::types::StatusBitMap;
 use std::convert::TryFrom;
-use tracing::info;
+use tracing::{info, trace};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum CoreMenuAction {
@@ -146,7 +146,7 @@ pub fn execute_core_settings(
             if maybe_info.is_none() {
                 return None;
             }
-            let info = maybe_info.unwrap();
+            let info = maybe_info.unwrap().as_ref().clone();
 
             let path = select_file_path_menu(
                 app,
@@ -163,7 +163,27 @@ pub fn execute_core_settings(
                 Some(p) => p,
             };
             info!("Loading file {:?}", p);
-            core.load_file(&p, Some(info.as_ref().clone())).unwrap();
+            let index = info.index;
+            core.load_file(&p, Some(info)).unwrap();
+            if index == 0 {
+                // Load the savestates if any.
+                if let Some(savestates) = core.save_states() {
+                    if let Some(file_stem) = p.file_stem() {
+                        savestates.iter_mut().enumerate().for_each(|(i, ss)| {
+                            let path = core_root_path().join("savestates").join(format!(
+                                "{}_{}.ss",
+                                file_stem.to_string_lossy(),
+                                i,
+                            ));
+                            if path.exists() {
+                                trace!("Loading Savestate file {:?}", path);
+                                let f = std::fs::File::open(path).unwrap();
+                                ss.read_from(f).unwrap();
+                            }
+                        });
+                    }
+                }
+            }
             return Some(true);
         }
     }

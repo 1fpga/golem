@@ -39,7 +39,7 @@ cfg_if! {
     } else if #[cfg(feature = "platform_de10")] {
         pub mod de10;
         pub use de10::De10Platform as PlatformWindowManager;
-        pub use mister_fpga::core::MisterFpgaCore as CoreType;
+        pub use de10::core_manager::core::MisterFpgaCore as CoreType;
     } else {
         compile_error!("At least one platform must be enabled.");
     }
@@ -58,8 +58,20 @@ mod sizes {
     pub const MAIN: Size = Size::new(256, 16 * 8);
 }
 
+pub trait SaveState {
+    fn is_dirty(&self) -> bool;
+    fn write_to(&mut self, writer: impl std::io::Write) -> Result<(), String>;
+    fn read_from(&mut self, reader: impl std::io::Read) -> Result<(), String>;
+}
+
 pub trait Core {
+    type SaveState: SaveState;
+
     fn name(&self) -> &str;
+
+    fn current_game(&self) -> Option<&Path> {
+        None
+    }
 
     /// Send a file to the core. The file_info is implementation specific.
     fn load_file(&mut self, path: &Path, file_info: Option<LoadFileInfo>) -> Result<(), String>;
@@ -95,6 +107,8 @@ pub trait Core {
     fn sdl_button_up(&mut self, controller: u8, button: Button);
 
     fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16);
+
+    fn save_states(&mut self) -> Option<&mut [Self::SaveState]>;
 }
 
 pub trait CoreManager {
@@ -102,7 +116,17 @@ pub trait CoreManager {
 
     /// Load a core into the FPGA.
     // TODO: Change the error type to something more usable than string.
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
+    fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
+
+    fn load_game(
+        &mut self,
+        core_path: impl AsRef<Path>,
+        game_path: impl AsRef<Path>,
+    ) -> Result<Self::Core, String> {
+        let mut core = self.load_core(core_path)?;
+        core.load_file(game_path.as_ref(), None)?;
+        Ok(core)
+    }
 
     /// Load the main menu core.
     fn load_menu(&mut self) -> Result<Self::Core, String>;

@@ -3,7 +3,6 @@ use super::{midi, FpgaRamMemoryAddress};
 use crate::types::units::UnitConversion;
 use std::convert::TryFrom;
 use std::fmt::Debug;
-use std::ops::Range;
 use std::str::FromStr;
 
 #[derive(Default, Clone)]
