@@ -72,7 +72,7 @@ pub struct NullCoreManager;
 impl super::CoreManager for NullCoreManager {
     type Core = NullCore;
 
-    fn load_program(&mut self, _path: impl AsRef<Path>) -> Result<Self::Core, String> {
+    fn load_core(&mut self, _path: impl AsRef<Path>) -> Result<Self::Core, String> {
         unreachable!("Platform should never run in NULL.")
     }
 

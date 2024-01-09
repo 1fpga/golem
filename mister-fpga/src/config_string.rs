@@ -306,6 +306,10 @@ impl Config {
         Self::from_str(&cfg_string)
     }
 
+    pub fn settings(&self) -> &settings::Settings {
+        &self.settings
+    }
+
     pub fn status_bit_map_mask(&self) -> StatusBitMap {
         let mut arr = StatusBitMap::new();
         // First bit is always 1 for soft reset (reserved).

@@ -6,3 +6,6 @@ pub use games::*;
 
 mod dat_files;
 pub use dat_files::*;
+
+mod savestates;
+pub use savestates::*;

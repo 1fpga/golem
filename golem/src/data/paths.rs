@@ -34,6 +34,18 @@ pub fn core_root_path() -> PathBuf {
     p
 }
 
+pub fn savestates_root_path() -> PathBuf {
+    let p = config_root_path().join("savestates");
+    if !p.exists() {
+        std::fs::create_dir_all(&p).unwrap();
+    }
+    p
+}
+
+pub fn savestates_path(core_name: &str) -> PathBuf {
+    savestates_root_path().join(core_name)
+}
+
 pub fn core_root(core: &retronomicon_dto::cores::CoreListItem) -> PathBuf {
     core_root_path().join(&core.slug)
 }

@@ -14,12 +14,29 @@ use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
+use std::io::Read;
 use std::path::Path;
 use tracing::info;
+
+impl crate::platform::SaveState for () {
+    fn is_dirty(&self) -> bool {
+        false
+    }
+
+    fn write_to(&mut self, _write: impl std::io::Write) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn read_from(&mut self, reader: impl Read) -> Result<(), String> {
+        Ok(())
+    }
+}
 
 pub struct DummyCore;
 
 impl Core for DummyCore {
+    type SaveState = ();
+
     fn name(&self) -> &str {
         "DummyCore"
     }
@@ -57,8 +74,12 @@ impl Core for DummyCore {
         unreachable!()
     }
 
-    fn send_key(&mut self, key: Scancode) {
-        info!("DummyCore::send_key({})", key);
+    fn key_down(&mut self, key: Scancode) {
+        info!("DummyCore::key_down({})", key);
+    }
+
+    fn key_up(&mut self, key: Scancode) {
+        info!("DummyCore::key_up({})", key);
     }
 
     fn sdl_button_down(&mut self, joystick_idx: u8, button: Button) {
@@ -83,6 +104,10 @@ impl Core for DummyCore {
             controller, axis, value
         );
     }
+
+    fn save_states(&mut self) -> Option<&mut [()]> {
+        None
+    }
 }
 
 pub struct DummyCoreManager;
@@ -90,8 +115,8 @@ pub struct DummyCoreManager;
 impl CoreManager for DummyCoreManager {
     type Core = DummyCore;
 
-    fn load_program(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
-        info!("DummyCoreManager::load_program({:?})", path.as_ref());
+    fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
+        info!("DummyCoreManager::load_core({:?})", path.as_ref());
         Ok(DummyCore)
     }
 

@@ -89,7 +89,6 @@ impl From<u32> for UserIoKeyboardKeyDown {
 impl SpiCommand for UserIoKeyboardKeyDown {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        eprintln!("UserIoKeyboardKeyDown: {:08x}", self.0);
         spi.command(UserIoCommands::UserIoKeyboard)
             .write_cond_b(self.0 & 0x080000 != 0, 0xE0)
             .write_b((self.0 & 0xFF) as u8);

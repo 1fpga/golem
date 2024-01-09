@@ -1,3 +1,4 @@
+use crate::application::coordinator::Coordinator;
 use crate::application::menu::main_menu;
 use crate::application::toolbar::Toolbar;
 use crate::data::settings::Settings;
@@ -21,6 +22,8 @@ pub mod panels;
 mod toolbar;
 mod widgets;
 
+pub mod coordinator;
+
 use crate::data::paths;
 
 pub struct GoLEmApp {
@@ -28,12 +31,14 @@ pub struct GoLEmApp {
     settings: Arc<Settings>,
     database: Arc<Mutex<Connection>>,
 
+    coordinator: Coordinator,
+
     render_toolbar: bool,
 
     joysticks: [Option<Joystick>; 32],
     gamepads: [Option<Gamepad>; 32],
 
-    pub platform: WindowManager,
+    platform: WindowManager,
     main_buffer: DrawBuffer<BinaryColor>,
     toolbar_buffer: DrawBuffer<BinaryColor>,
 }
@@ -64,6 +69,7 @@ impl GoLEmApp {
 
         Self {
             toolbar: Toolbar::new(settings.clone(), database.clone()),
+            coordinator: Coordinator::new(database.clone()),
             render_toolbar: true,
             joysticks,
             gamepads,
@@ -104,6 +110,10 @@ impl GoLEmApp {
 
     pub fn show_toolbar(&mut self) {
         self.render_toolbar = true;
+    }
+
+    pub fn coordinator_mut(&mut self) -> Coordinator {
+        self.coordinator.clone()
     }
 
     pub fn event_loop<R>(

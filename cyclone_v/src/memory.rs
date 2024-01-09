@@ -47,7 +47,10 @@ pub trait MemoryMapper {
     /// Returns a mutable pointer to the mapped memory region.
     fn as_mut_ptr<T>(&mut self) -> *mut T;
 
-    /// Creates an inner range of bytes.
+    /// Creates an inner range of bytes. The offsets are relative to the base
+    /// of the mapped memory, e.g. `as_range(0..4)` will return the first 4
+    /// bytes of the mapped memory (a memory mapping to address 0x12340000 will
+    /// map 0x12340000..0x12340004).
     fn as_range(&self, range: impl RangeBounds<usize>) -> &[u8] {
         let (start, len) = clamp_range(range, self.len());
         unsafe { std::slice::from_raw_parts(self.as_ptr::<u8>().add(start), len) }
@@ -91,7 +94,7 @@ impl<'a> MemoryMapper for RegionMemoryMapper<'a> {
 #[test]
 fn range_works() {
     let data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-    let mut data2 = data.clone();
+    let mut data2 = data;
     let mut mapper = RegionMemoryMapper::new(&mut data2);
     assert_eq!(mapper.as_range(..), &data);
     assert_eq!(mapper.as_range(0..99), &data);

@@ -2,7 +2,7 @@ use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
-use crate::platform::{Core, CoreManager, GoLEmPlatform};
+use crate::platform::{Core, CoreManager, GoLEmPlatform, SaveState};
 use sdl3::event::Event;
 use std::time::Instant;
 use tracing::{debug, error, info, trace};
@@ -19,7 +19,7 @@ fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, Shor
         .collect::<Vec<_>>()
 }
 
-fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
+fn core_loop<S: SaveState>(app: &mut GoLEmApp, mut core: impl Core<SaveState = S>) {
     let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
@@ -28,6 +28,8 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
 
     let mut i = 0;
     let mut prev = Instant::now();
+
+    let mut should_check_savestates = core.save_states().map(|x| !x.is_empty()).unwrap_or(false);
 
     // This is a special loop that forwards everything to the core,
     // except for the menu button(s).
@@ -54,7 +56,6 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
         }
 
         for ev in state.events() {
-            // debug!(?ev, "Core loop event");
             match ev {
                 Event::KeyDown {
                     scancode: Some(scancode),
@@ -63,8 +64,8 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
                 } => {
                     if !repeat {
                         inputs.key_down(scancode);
+                        core.key_down(scancode);
                     }
-                    core.key_down(scancode);
                 }
                 Event::KeyUp {
                     scancode: Some(scancode),
@@ -111,6 +112,45 @@ fn core_loop(app: &mut GoLEmApp, mut core: impl Core) {
         }
         if update_commands {
             commands = commands_(app, &core);
+        }
+
+        // Check Savestate.
+        if should_check_savestates {
+            let should_save_savestates = core
+                .save_states()
+                .map(|x| x.iter().any(|x| x.is_dirty()))
+                .unwrap_or(false);
+
+            if should_save_savestates {
+                let screenshot = core.take_screenshot().ok();
+
+                if let Some(s) = core.save_states() {
+                    let start = Instant::now();
+                    let mut done_any = false;
+
+                    s.iter_mut()
+                        .enumerate()
+                        .filter(|(_, ss)| ss.is_dirty())
+                        .for_each(|(i, ss)| {
+                            match app
+                                .coordinator_mut()
+                                .create_savestate(i, screenshot.as_ref())
+                            {
+                                Ok(f) => ss.write_to(f).unwrap(),
+                                Err(err) => {
+                                    error!(?err, "Error creating savestate. Will stop trying.");
+                                    should_check_savestates = false;
+                                }
+                            }
+
+                            done_any = true;
+                        });
+
+                    if done_any {
+                        trace!("Saved save states in {}msec.", start.elapsed().as_millis());
+                    }
+                }
+            }
         }
 
         None

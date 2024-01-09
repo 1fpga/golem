@@ -11,6 +11,7 @@ use crate::fpga::user_io::{
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
+use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
@@ -56,6 +57,7 @@ pub struct MisterFpgaCore {
     pub io_version: u8,
     config: config_string::Config,
 
+    save_states: Option<SaveStateManager<DevMemMemoryMapper>>,
     map: ButtonMap,
 
     status: StatusBitMap,
@@ -87,13 +89,15 @@ impl MisterFpgaCore {
         info!("Core config: {:#?}", config);
         fpga.wait_for_ready();
 
+        let save_states = SaveStateManager::from_config_string(&config);
+
         Ok(MisterFpgaCore {
             fpga,
             core_type,
             spi_type,
             io_version,
             config,
-            // mapping,
+            save_states,
             map,
             status: Default::default(),
         })
@@ -213,6 +217,14 @@ impl MisterFpgaCore {
             .spi_mut()
             .execute(UserIoJoystick::from_joystick_index(joystick_idx, &self.map))
             .unwrap();
+    }
+
+    pub fn save_states(&self) -> Option<&SaveStateManager<DevMemMemoryMapper>> {
+        self.save_states.as_ref()
+    }
+
+    pub fn save_states_mut(&mut self) -> Option<&mut SaveStateManager<DevMemMemoryMapper>> {
+        self.save_states.as_mut()
     }
 
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {

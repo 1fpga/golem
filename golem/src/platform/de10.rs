@@ -16,7 +16,7 @@ use tracing::{debug, error};
 pub use mister_fpga::fpga;
 
 mod battery;
-mod core_manager;
+pub mod core_manager;
 mod input;
 mod offload;
 mod osd;
