@@ -1,13 +1,14 @@
+use crate::application::coordinator::GameStartInfo;
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
 use crate::application::GoLEmApp;
 use crate::data::paths::core_root_path;
-use crate::platform::{Core, SaveState};
+use crate::platform::Core;
 use mister_fpga::config_string::ConfigMenu;
 use mister_fpga::types::StatusBitMap;
 use std::convert::TryFrom;
-use tracing::{info, trace};
+use tracing::info;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum CoreMenuAction {
@@ -164,26 +165,27 @@ pub fn execute_core_settings(
             };
             info!("Loading file {:?}", p);
             let index = info.index;
-            core.load_file(&p, Some(info)).unwrap();
+            let mut should_load = true;
             if index == 0 {
-                // Load the savestates if any.
-                if let Some(savestates) = core.save_states() {
-                    if let Some(file_stem) = p.file_stem() {
-                        savestates.iter_mut().enumerate().for_each(|(i, ss)| {
-                            let path = core_root_path().join("savestates").join(format!(
-                                "{}_{}.ss",
-                                file_stem.to_string_lossy(),
-                                i,
-                            ));
-                            if path.exists() {
-                                trace!("Loading Savestate file {:?}", path);
-                                let f = std::fs::File::open(path).unwrap();
-                                ss.read_from(f).unwrap();
-                            }
-                        });
-                    }
+                let maybe_id = golem_db::models::Game::get_by_path(
+                    &mut app.database.lock().unwrap(),
+                    &p.to_string_lossy(),
+                )
+                .map_err(|e| e.to_string())
+                .unwrap_or(None)
+                .map(|g| g.id);
+                if let Some(game_id) = maybe_id {
+                    app.coordinator_mut()
+                        .launch_game(app, GameStartInfo::default().with_game_id(game_id))
+                        .unwrap();
+                    should_load = false;
                 }
             }
+
+            if should_load {
+                core.load_file(&p, Some(info)).unwrap();
+            }
+
             return Some(true);
         }
     }

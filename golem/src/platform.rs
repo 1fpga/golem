@@ -118,6 +118,8 @@ pub trait CoreManager {
     // TODO: Change the error type to something more usable than string.
     fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
 
+    fn get_current_core(&mut self) -> Result<Self::Core, String>;
+
     fn load_game(
         &mut self,
         core_path: impl AsRef<Path>,

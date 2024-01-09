@@ -22,6 +22,13 @@ impl CoreManager {
         &mut self.fpga
     }
 
+    /// Create a core for the current FPGA configuration.
+    fn create_core(&mut self) -> Result<core::MisterFpgaCore, String> {
+        let core = MisterFpgaCore::new(self.fpga.clone())
+            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
+        Ok(core::MisterFpgaCore::new(core))
+    }
+
     fn load(&mut self, program: &[u8]) -> Result<core::MisterFpgaCore, String> {
         let program = if &program[..6] != b"MiSTer" {
             program
@@ -39,8 +46,7 @@ impl CoreManager {
             .core_reset()
             .map_err(|_| "Could not reset the Core".to_string())?;
 
-        let core = MisterFpgaCore::new(self.fpga.clone())
-            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
+        let core = self.create_core()?;
 
         self.fpga_mut().osd_disable();
 
@@ -51,7 +57,7 @@ impl CoreManager {
                 std::ptr::null(),
             );
         }
-        Ok(core::MisterFpgaCore::new(core))
+        Ok(core)
     }
 }
 
@@ -62,6 +68,10 @@ impl crate::platform::CoreManager for CoreManager {
         let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
         let core = self.load(&bytes)?;
         Ok(core)
+    }
+
+    fn get_current_core(&mut self) -> Result<Self::Core, String> {
+        self.create_core()
     }
 
     fn load_menu(&mut self) -> Result<Self::Core, String> {

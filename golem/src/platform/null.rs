@@ -14,6 +14,8 @@ use std::path::Path;
 pub struct NullCore;
 
 impl super::Core for NullCore {
+    type SaveState = ();
+
     fn name(&self) -> &str {
         ""
     }
@@ -54,6 +56,10 @@ impl super::Core for NullCore {
         unreachable!()
     }
 
+    fn key_up(&mut self, key: Scancode) {
+        unreachable!()
+    }
+
     fn sdl_button_down(&mut self, _joystick_idx: u8, _button: Button) {
         unreachable!()
     }
@@ -65,6 +71,10 @@ impl super::Core for NullCore {
     fn sdl_axis_motion(&mut self, _controller: u8, _axis: Axis, _value: i16) {
         unreachable!()
     }
+
+    fn save_states(&mut self) -> Option<&mut [Self::SaveState]> {
+        unreachable!()
+    }
 }
 
 pub struct NullCoreManager;
@@ -73,6 +83,10 @@ impl super::CoreManager for NullCoreManager {
     type Core = NullCore;
 
     fn load_core(&mut self, _path: impl AsRef<Path>) -> Result<Self::Core, String> {
+        unreachable!("Platform should never run in NULL.")
+    }
+
+    fn get_current_core(&mut self) -> Result<Self::Core, String> {
         unreachable!("Platform should never run in NULL.")
     }
 

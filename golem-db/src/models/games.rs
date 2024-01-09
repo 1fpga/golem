@@ -87,6 +87,18 @@ impl Game {
             .optional()
     }
 
+    pub fn get_by_path(
+        conn: &mut crate::Connection,
+        path: &str,
+    ) -> Result<Option<Self>, diesel::result::Error> {
+        use schema::games::dsl;
+        schema::games::table
+            .select(schema::games::all_columns)
+            .filter(dsl::path.eq(path))
+            .first(conn)
+            .optional()
+    }
+
     pub fn count(conn: &mut crate::Connection) -> Result<i64, diesel::result::Error> {
         use schema::games::dsl::*;
         games.count().get_result(conn)
