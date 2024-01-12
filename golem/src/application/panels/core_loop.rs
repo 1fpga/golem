@@ -114,18 +114,19 @@ fn core_loop<S: SaveState>(app: &mut GoLEmApp, mut core: impl Core<SaveState = S
             commands = commands_(app, &core);
         }
 
-        // Check Savestate.
-        if should_check_savestates {
+        // Check Savestates and SD Card every 5 loop. This should still be under every
+        // frame, since we approximate 600fps.
+        if should_check_savestates && i % 5 == 0 {
             let should_save_savestates = core
                 .save_states()
                 .map(|x| x.iter().any(|x| x.is_dirty()))
                 .unwrap_or(false);
 
             if should_save_savestates {
+                let start = Instant::now();
                 let screenshot = core.take_screenshot().ok();
 
                 if let Some(s) = core.save_states() {
-                    let start = Instant::now();
                     let mut done_any = false;
 
                     s.iter_mut()

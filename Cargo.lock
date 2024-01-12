@@ -2306,6 +2306,7 @@ name = "mister-fpga"
 version = "0.1.0"
 dependencies = [
  "array_map",
+ "bitfield",
  "bitvec",
  "chrono",
  "crc32fast",

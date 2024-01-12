@@ -1,7 +1,9 @@
 use crate::application::GoLEmApp;
 use crate::data::paths;
+use crate::platform;
 use crate::platform::{Core, CoreManager, GoLEmPlatform, SaveState};
 use golem_db::models::Core as DbCore;
+use golem_db::models::CoreFile as DbCoreFile;
 use golem_db::models::Game as DbGame;
 use golem_db::Connection;
 use image::DynamicImage;
@@ -42,6 +44,7 @@ impl GameStartInfo {
 struct CoordinatorInner {
     current_core: Option<DbCore>,
     current_game: Option<DbGame>,
+    current_sav: Option<DbCoreFile>,
 
     database: Arc<Mutex<Connection>>,
 }
@@ -61,6 +64,7 @@ impl CoordinatorInner {
             database,
             current_core: None,
             current_game: None,
+            current_sav: None,
         }
     }
 
@@ -68,12 +72,12 @@ impl CoordinatorInner {
         &mut self,
         app: &mut GoLEmApp,
         info: GameStartInfo,
-    ) -> Result<(bool, impl Core), String> {
+    ) -> Result<(bool, platform::CoreType), String> {
         info!(?info, "Starting game");
         let mut database = self.database.lock().unwrap();
 
         // Load the core if necessary. If it's the same core, we don't need to.
-        let (mut c, core) = match info.core_id {
+        let (mut c, core): (platform::CoreType, DbCore) = match info.core_id {
             Some(id) => {
                 let db_core = DbCore::get(&mut database, id)
                     .map_err(|e| e.to_string())?
@@ -99,12 +103,40 @@ impl CoordinatorInner {
         let mut should_show_menu = true;
 
         // Load the game
-        if let Some(game) = info.game_id {
-            let mut game = DbGame::get(&mut database, game)
+        if let Some(game_id) = info.game_id {
+            let mut game = DbGame::get(&mut database, game_id)
                 .map_err(|e| e.to_string())?
                 .ok_or("Game not found")?;
-            let game_path = game.path.as_ref().ok_or("No file path for game")?;
-            c.load_file(Path::new(game_path), None)?;
+            let game_path = game
+                .path
+                .as_ref()
+                .ok_or("No file path for game")?
+                .to_string();
+            let core_file = golem_db::models::CoreFile::latest_for_game(&mut database, game_id)
+                .map_err(|e| e.to_string())?;
+
+            let should_sav = c
+                .menu_options()
+                .iter()
+                .filter_map(|x| x.as_load_file_info())
+                .any(|i| i.save_support);
+
+            c.load_file(Path::new(&game_path), None)?;
+            if should_sav {
+                // Mount the SAV file.
+                let game_name = game.name.clone();
+
+                if let Some(core_file) = core_file {
+                    c.mount_sav(Path::new(&core_file.path))?;
+                } else {
+                    info!("No SAV file found for game, creating one.");
+                    let path = paths::sav_path(&c.name()).join(format!("{}.sav", game_name));
+                    c.mount_sav(&path)?;
+                }
+            }
+            c.end_send_file()?;
+
+            c.check_sav()?;
 
             // Record in the Database the time we launched this game, ignoring
             // errors.
@@ -209,6 +241,10 @@ impl Coordinator {
 
     pub fn current_game(&self) -> Option<DbGame> {
         self.inner.lock().unwrap().current_game.clone()
+    }
+
+    pub fn current_sav(&self) -> Option<DbCoreFile> {
+        self.inner.lock().unwrap().current_sav.clone()
     }
 
     pub fn create_savestate(

@@ -1,9 +1,11 @@
-use crate::fpga::feature::SpiFeature;
+use crate::fpga::feature::{SpiFeature, SpiFeatureSet};
 use cyclone_v::memory::MemoryMapper;
 use cyclone_v::SocFpga;
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
+use std::ops::SubAssign;
 use std::sync::Arc;
+use tracing::trace;
 
 /// SPI is a 16-bit data bus where the lowest 16 bits are the data and the highest 16-bits
 /// are the control bits.
@@ -13,15 +15,6 @@ const SSPI_DATA_MASK: u32 = 0x0000_FFFF;
 const SSPI_STROBE: u32 = 1 << 17;
 /// This signal is received to indicate that the data was read.
 const SSPI_ACK: u32 = 1 << 17;
-
-/// Feature for FPGA.
-const SSPI_FPGA_FEATURE: u32 = 1 << 18;
-
-/// Feature for OSD.
-const SSPI_OSD_FEATURE: u32 = 1 << 19;
-
-/// Feature for IO.
-const SSPI_IO_FEATURE: u32 = 1 << 20;
 
 pub mod feature;
 pub mod file_io;
@@ -45,12 +38,12 @@ pub trait SpiCommandExt: Sized {
     fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self;
     fn write_buffer_b(&mut self, buffer: &[u8]) -> &mut Self;
     fn write_b(&mut self, byte: u8) -> &mut Self;
-    fn enable(&mut self, feature: SpiFeature) -> &mut Self;
-    fn disable(&mut self, feature: SpiFeature) -> &mut Self;
+    fn enable(&mut self, feature: SpiFeatureSet) -> &mut Self;
+    fn disable(&mut self, feature: SpiFeatureSet) -> &mut Self;
 }
 
 pub trait IntoLowLevelSpiCommand {
-    fn into_ll_spi_command(self) -> (SpiFeature, u16);
+    fn into_ll_spi_command(self) -> (SpiFeatureSet, u16);
 }
 
 pub trait SpiCommand {
@@ -59,13 +52,17 @@ pub trait SpiCommand {
 
 pub struct SpiCommandGuard<'a, S: SpiCommandExt> {
     spi: &'a mut S,
-    feature: SpiFeature,
+    feature: SpiFeatureSet,
 }
 
 impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     #[inline]
-    pub fn new(spi: &'a mut S, feature: SpiFeature) -> Self {
+    pub fn new(spi: &'a mut S, feature: SpiFeatureSet) -> Self {
         Self { spi, feature }
+    }
+
+    pub fn execute(&mut self, mut command: impl SpiCommand) -> Result<(), String> {
+        command.execute(self.spi)
     }
 
     #[inline]
@@ -90,6 +87,13 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
+    pub fn write_get(&mut self, word: impl Into<u16>) -> u16 {
+        let mut out = 0;
+        self.spi.write_read(word, &mut out);
+        out
+    }
+
+    #[inline]
     pub fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
         self.spi.write_cond(cond, word);
         self
@@ -102,7 +106,7 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
-    pub fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self {
+    pub fn write_buffer_w(&mut self, buffer: &[u16]) -> &mut Self {
         for word in buffer {
             self.spi.write(*word);
         }
@@ -110,7 +114,7 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
-    pub fn write_buffer_cond(&mut self, cond: bool, buffer: &[u16]) -> &mut Self {
+    pub fn write_buffer_cond_w(&mut self, cond: bool, buffer: &[u16]) -> &mut Self {
         if cond {
             for word in buffer {
                 self.spi.write(*word);
@@ -137,6 +141,22 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
         self.spi.write_read_b(byte, out);
         self
     }
+
+    #[inline]
+    pub fn read_buffer_w(&mut self, buffer: &mut [u16]) -> &mut Self {
+        for word in buffer {
+            self.spi.write_read(0u16, word);
+        }
+        self
+    }
+
+    #[inline]
+    pub fn read_buffer_b(&mut self, buffer: &mut [u8]) -> &mut Self {
+        for word in buffer {
+            self.spi.write_read_b(0u8, word);
+        }
+        self
+    }
 }
 
 impl<'a, S: SpiCommandExt> Drop for SpiCommandGuard<'a, S> {
@@ -148,6 +168,11 @@ impl<'a, S: SpiCommandExt> Drop for SpiCommandGuard<'a, S> {
 #[derive(Debug)]
 pub struct Spi<M: MemoryMapper> {
     soc: Arc<UnsafeCell<SocFpga<M>>>,
+
+    // Ref counting features to prevent double enable (performance) and double
+    // disable (error). We only actually enable if the refcount is 0, and disable
+    // if the refcount is 1.
+    features: fixed_map::Map<SpiFeature, u32>,
 }
 unsafe impl<M: MemoryMapper> Send for Spi<M> {}
 unsafe impl<M: MemoryMapper> Sync for Spi<M> {}
@@ -156,13 +181,17 @@ impl<M: MemoryMapper> Clone for Spi<M> {
     fn clone(&self) -> Self {
         Self {
             soc: self.soc.clone(),
+            features: self.features,
         }
     }
 }
 
 impl<M: MemoryMapper> Spi<M> {
     pub fn new(soc: Arc<UnsafeCell<SocFpga<M>>>) -> Self {
-        Self { soc }
+        Self {
+            soc,
+            features: Default::default(),
+        }
     }
 
     #[inline]
@@ -177,27 +206,53 @@ impl<M: MemoryMapper> Spi<M> {
 
     #[inline]
     pub(super) fn enable_u32(&mut self, mask: u32) {
-        let regs = self.soc_mut().regs_mut();
+        let mut new_mask = 0;
+        SpiFeatureSet::from(mask).iter().for_each(|feature| {
+            let count = self.features.entry(feature).or_default();
+            if *count == 0 {
+                new_mask |= feature.as_u32();
+            }
+            *count += 1;
+        });
+        if new_mask == 0 {
+            return;
+        }
 
-        let gpo = (regs.gpo() & SpiFeature::ALL.as_u32()) | 0x8000_0000;
-        regs.set_gpo(gpo | mask);
+        let regs = self.soc_mut().regs_mut();
+        let gpo = (regs.gpo() & SpiFeatureSet::ALL.as_u32()) | 0x8000_0000;
+        regs.set_gpo(gpo | new_mask);
     }
 
     #[inline]
     pub(super) fn disable_u32(&mut self, mask: u32) {
-        let regs = self.soc_mut().regs_mut();
+        let mut new_mask = 0;
+        SpiFeatureSet::from(mask).iter().for_each(|feature| {
+            let count = self.features.entry(feature).or_default();
+            if *count == 1 {
+                new_mask |= feature.as_u32();
+                *count = 0;
+            } else if *count == 0 {
+                trace!("double disable {:?}", feature);
+            } else {
+                *count -= 1;
+            }
+        });
+        if new_mask == 0 {
+            return;
+        }
 
-        let gpo: u32 = (regs.gpo() & SpiFeature::ALL.as_u32()) | 0x8000_0000;
-        regs.set_gpo(gpo & !mask);
+        let regs = self.soc_mut().regs_mut();
+        let gpo: u32 = (regs.gpo() & SpiFeatureSet::ALL.as_u32()) | 0x8000_0000;
+        regs.set_gpo(gpo & !new_mask);
     }
 
     #[inline]
-    pub fn enable(&mut self, feature: SpiFeature) {
+    pub fn enable(&mut self, feature: SpiFeatureSet) {
         self.enable_u32(feature.into());
     }
 
     #[inline]
-    pub fn disable(&mut self, feature: SpiFeature) {
+    pub fn disable(&mut self, feature: SpiFeatureSet) {
         self.disable_u32(feature.into());
     }
 
@@ -212,7 +267,11 @@ impl<M: MemoryMapper> Spi<M> {
     }
 
     #[inline]
-    fn inner_command(&mut self, command: impl IntoLowLevelSpiCommand, out: &mut u16) -> SpiFeature {
+    fn inner_command(
+        &mut self,
+        command: impl IntoLowLevelSpiCommand,
+        out: &mut u16,
+    ) -> SpiFeatureSet {
         let (feature, command) = command.into_ll_spi_command();
         self.enable(feature);
         *out = self.write(command);
@@ -373,13 +432,26 @@ impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
         self
     }
 
-    fn enable(&mut self, feature: SpiFeature) -> &mut Self {
+    fn enable(&mut self, feature: SpiFeatureSet) -> &mut Self {
         self.enable(feature);
         self
     }
 
-    fn disable(&mut self, feature: SpiFeature) -> &mut Self {
+    fn disable(&mut self, feature: SpiFeatureSet) -> &mut Self {
         self.disable(feature);
         self
     }
+}
+
+#[test]
+pub fn features_refcount() {
+    let soc = SocFpga::create_for_test();
+    let mut spi = Spi::new(Arc::new(UnsafeCell::new(soc)));
+
+    spi.enable(SpiFeatureSet::FPGA);
+    spi.enable(SpiFeatureSet::FPGA);
+    spi.disable(SpiFeatureSet::FPGA);
+    spi.disable(SpiFeatureSet::IO);
+
+    assert_eq!(spi.features.get(SpiFeature::Fpga), Some(&1));
 }

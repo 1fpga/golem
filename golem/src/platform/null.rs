@@ -9,12 +9,29 @@ use mister_fpga::types::StatusBitMap;
 use sdl3::event::Event;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
+use std::io::{Read, Write};
 use std::path::Path;
+
+pub struct NullSaveState;
+
+impl super::SaveState for NullSaveState {
+    fn is_dirty(&self) -> bool {
+        unreachable!()
+    }
+
+    fn write_to(&mut self, _writer: impl Write) -> Result<(), String> {
+        unreachable!()
+    }
+
+    fn read_from(&mut self, _reader: impl Read) -> Result<(), String> {
+        unreachable!()
+    }
+}
 
 pub struct NullCore;
 
 impl super::Core for NullCore {
-    type SaveState = ();
+    type SaveState = NullSaveState;
 
     fn name(&self) -> &str {
         ""
@@ -25,6 +42,14 @@ impl super::Core for NullCore {
     }
 
     fn version(&self) -> Option<&str> {
+        unreachable!()
+    }
+
+    fn mount_sav(&mut self, path: &Path) -> Result<(), String> {
+        unreachable!()
+    }
+
+    fn check_sav(&mut self) -> Result<(), String> {
         unreachable!()
     }
 
@@ -56,7 +81,7 @@ impl super::Core for NullCore {
         unreachable!()
     }
 
-    fn key_up(&mut self, key: Scancode) {
+    fn key_up(&mut self, _key: Scancode) {
         unreachable!()
     }
 

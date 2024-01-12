@@ -76,14 +76,27 @@ pub trait Core {
     /// Send a file to the core. The file_info is implementation specific.
     fn load_file(&mut self, path: &Path, file_info: Option<LoadFileInfo>) -> Result<(), String>;
 
+    fn end_send_file(&mut self) -> Result<(), String>;
+
     fn version(&self) -> Option<&str>;
 
+    /// TODO: remove this and use platform-independent hooks/traits instead.
+    fn mount_sav(&mut self, path: &Path) -> Result<(), String>;
+
+    fn check_sav(&mut self) -> Result<(), String>;
+
+    /// TODO: remove this and use platform-independent hooks/traits instead.
     fn menu_options(&self) -> &[ConfigMenu];
 
     /// Trigger a menu by its option. This will return `true` if the core can and
     /// did execute the command successfully. `false` will be returned if the core
     /// cannot execute the command (this is not an error).
     fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String>;
+
+    fn reset(&mut self) -> Result<(), String> {
+        self.status_pulse(0);
+        Ok(())
+    }
 
     fn status_mask(&self) -> StatusBitMap;
     fn status_bits(&self) -> StatusBitMap;

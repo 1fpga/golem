@@ -114,9 +114,9 @@ pub fn into_text_menu_item<'a>(
     }
 }
 
-pub fn execute_core_settings(
+pub fn execute_core_settings<C: Core>(
     app: &mut GoLEmApp,
-    core: &mut impl Core,
+    core: &mut C,
     action: CoreMenuAction,
 ) -> Option<bool> {
     match action {
