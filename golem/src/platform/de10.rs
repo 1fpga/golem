@@ -94,6 +94,7 @@ impl GoLEmPlatform for De10Platform {
         self.title_display
             .send(self.core_manager.fpga_mut(), &self.toolbar_buffer);
     }
+
     fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
         self.main_display.send(self.core_manager.fpga_mut(), buffer);
     }
@@ -115,13 +116,7 @@ impl GoLEmPlatform for De10Platform {
 
     fn start_loop(&mut self) {}
 
-    fn end_loop(&mut self) {
-        unsafe {
-            user_io::user_io_poll();
-            input::input_poll(0);
-            // menu::HandleUI();
-        }
-    }
+    fn end_loop(&mut self) {}
 
     fn core_manager_mut(&mut self) -> &mut Self::CoreManager {
         &mut self.core_manager

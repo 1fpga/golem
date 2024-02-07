@@ -144,3 +144,12 @@ impl Default for SocFpga<memory::DevMemMemoryMapper> {
         Self::new(memory)
     }
 }
+
+#[cfg(feature = "std")]
+impl SocFpga<memory::BufferMemoryMapper> {
+    pub fn create_for_test() -> Self {
+        let memory = memory::BufferMemoryMapper::new(sizes::BASE);
+
+        Self::new(memory)
+    }
+}

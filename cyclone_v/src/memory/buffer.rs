@@ -5,11 +5,11 @@ use std::pin::Pin;
 
 /// Maps a region of memory over a vector.
 /// Useful for testing.
-pub struct RegionMemoryMapper {
+pub struct BufferMemoryMapper {
     region: Pin<Box<[u8]>>,
 }
 
-impl RegionMemoryMapper {
+impl BufferMemoryMapper {
     pub fn new(size: usize) -> Self {
         Self {
             region: vec![0; size].into_boxed_slice().into(),
@@ -23,7 +23,7 @@ impl RegionMemoryMapper {
     }
 }
 
-impl MemoryMapper for RegionMemoryMapper {
+impl MemoryMapper for BufferMemoryMapper {
     fn create(_address: usize, _size: usize) -> Result<Self, &'static str>
     where
         Self: Sized,

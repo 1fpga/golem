@@ -1,6 +1,7 @@
 use crate::platform::Core;
 use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
+use mister_fpga::core::file::SdCard;
 use mister_fpga::types::StatusBitMap;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
@@ -48,7 +49,7 @@ impl Core for MisterFpgaCore {
 
     fn load_file(&mut self, path: &Path, file_info: Option<LoadFileInfo>) -> Result<(), String> {
         let update = file_info.as_ref().map(|l| l.index == 0).unwrap_or(true);
-        self.inner.send_file(path, file_info)?;
+        self.inner.load_file(path, file_info)?;
         if update {
             self.loaded_file = Some(path.to_path_buf());
         }
@@ -56,8 +57,22 @@ impl Core for MisterFpgaCore {
         Ok(())
     }
 
+    fn end_send_file(&mut self) -> Result<(), String> {
+        self.inner.end_send_file()
+    }
+
     fn version(&self) -> Option<&str> {
         self.inner.config().version()
+    }
+
+    fn mount_sav(&mut self, path: &Path) -> Result<(), String> {
+        self.inner.mount(SdCard::from_path(path)?, 0)?;
+        Ok(())
+    }
+
+    fn check_sav(&mut self) -> Result<(), String> {
+        while self.inner.poll_mounts()? {}
+        Ok(())
     }
 
     fn menu_options(&self) -> &[ConfigMenu] {

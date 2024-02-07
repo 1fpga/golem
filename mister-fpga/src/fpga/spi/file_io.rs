@@ -1,41 +1,41 @@
-use crate::fpga::feature::SpiFeature;
+use crate::fpga::feature::SpiFeatureSet;
 use crate::fpga::{IntoLowLevelSpiCommand, SpiCommand, SpiCommandExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, strum::Display)]
 #[repr(u16)]
-enum FileIoCommands {
-    FileIoFileTx = 0x53,
-    FileIoFileTxDat = 0x54,
-    FileIoFileIndex = 0x55,
-    FileIoFileInfo = 0x56,
+enum Commands {
+    FileTx = 0x53,
+    FileTxDat = 0x54,
+    FileIndex = 0x55,
+    FileInfo = 0x56,
 }
 
-impl IntoLowLevelSpiCommand for FileIoCommands {
-    fn into_ll_spi_command(self) -> (SpiFeature, u16) {
-        (SpiFeature::FPGA, self as u16)
+impl IntoLowLevelSpiCommand for Commands {
+    fn into_ll_spi_command(self) -> (SpiFeatureSet, u16) {
+        (SpiFeatureSet::FPGA, self as u16)
     }
 }
 
 /// Sends the File Index to the FPGA.
-pub struct FileIoFileIndex(u8);
+pub struct FileIndex(u8);
 
-impl SpiCommand for FileIoFileIndex {
+impl SpiCommand for FileIndex {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        spi.command(FileIoCommands::FileIoFileIndex).write_b(self.0);
+        spi.command(Commands::FileIndex).write_b(self.0);
 
         Ok(())
     }
 }
 
-impl From<u8> for FileIoFileIndex {
+impl From<u8> for FileIndex {
     #[inline]
     fn from(value: u8) -> Self {
         Self::new(value)
     }
 }
 
-impl FileIoFileIndex {
+impl FileIndex {
     #[inline]
     pub fn new(index: u8) -> Self {
         Self(index)
@@ -43,9 +43,9 @@ impl FileIoFileIndex {
 }
 
 /// Sends the File Info to the FPGA.
-pub struct FileIoFileExtension<'a>(pub &'a str);
+pub struct FileExtension<'a>(pub &'a str);
 
-impl SpiCommand for FileIoFileExtension<'_> {
+impl SpiCommand for FileExtension<'_> {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
         let ext_bytes = self.0.as_bytes();
@@ -57,7 +57,7 @@ impl SpiCommand for FileIoFileExtension<'_> {
             ext_bytes.get(2).copied().unwrap_or(0),
         ];
 
-        spi.command(FileIoCommands::FileIoFileInfo)
+        spi.command(Commands::FileInfo)
             .write((ext[0] as u16) << 8 | ext[1] as u16)
             .write((ext[2] as u16) << 8 | ext[3] as u16);
 
@@ -66,12 +66,12 @@ impl SpiCommand for FileIoFileExtension<'_> {
 }
 
 /// Send the File size to the FPGA.
-pub struct FileIoFileTxEnabled(pub Option<u32>);
+pub struct FileTxEnabled(pub Option<u32>);
 
-impl SpiCommand for FileIoFileTxEnabled {
+impl SpiCommand for FileTxEnabled {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        let mut command = spi.command(FileIoCommands::FileIoFileTx);
+        let mut command = spi.command(Commands::FileTx);
         command.write_b(0xff);
 
         if let Some(size) = self.0 {
@@ -83,37 +83,35 @@ impl SpiCommand for FileIoFileTxEnabled {
 }
 
 /// Send the File size to the FPGA.
-pub struct FileIoFileTxDisabled;
+pub struct FileTxDisabled;
 
-impl SpiCommand for FileIoFileTxDisabled {
+impl SpiCommand for FileTxDisabled {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        spi.command(FileIoCommands::FileIoFileTx).write_b(0);
+        spi.command(Commands::FileTx).write_b(0);
 
         Ok(())
     }
 }
 
-/// Send the File data to the FPGA on a 8 bits bus.
-pub struct FileIoFileTxData8Bits<'a>(pub &'a [u8]);
+/// Send the File data to the FPGA on 8 bits bus.
+pub struct FileTxData8Bits<'a>(pub &'a [u8]);
 
-impl SpiCommand for FileIoFileTxData8Bits<'_> {
+impl SpiCommand for FileTxData8Bits<'_> {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        spi.command(FileIoCommands::FileIoFileTxDat)
-            .write_buffer_b(self.0);
+        spi.command(Commands::FileTxDat).write_buffer_b(self.0);
         Ok(())
     }
 }
 
 /// Send the File data to the FPGA on a 16 bits bus.
-pub struct FileIoFileTxData16Bits<'a>(pub &'a [u16]);
+pub struct FileTxData16Bits<'a>(pub &'a [u16]);
 
-impl SpiCommand for FileIoFileTxData16Bits<'_> {
+impl SpiCommand for FileTxData16Bits<'_> {
     #[inline]
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        spi.command(FileIoCommands::FileIoFileTxDat)
-            .write_buffer(self.0);
+        spi.command(Commands::FileTxDat).write_buffer_w(self.0);
         Ok(())
     }
 }

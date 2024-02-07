@@ -5,6 +5,7 @@ use crate::application::panels::core_loop::menu::core_settings::{
 };
 use crate::application::GoLEmApp;
 use crate::platform::{Core, CoreManager, GoLEmPlatform};
+use tracing::error;
 
 mod core_debug;
 mod core_settings;
@@ -39,6 +40,15 @@ impl MenuReturn for CoreMenuAction {
 /// main MENU should be reloaded).
 pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
     app.platform_mut().core_manager_mut().show_menu();
+
+    // Update saves.
+    match core.check_sav() {
+        Ok(_) => {}
+        Err(e) => {
+            error!(?e, "Error updating the SD card.");
+        }
+    }
+
     let mut state = None;
 
     let result = loop {

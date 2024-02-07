@@ -1,6 +1,19 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
+    core_files (id) {
+        id -> Integer,
+        name -> Nullable<Text>,
+        core_id -> Integer,
+        core_index -> Integer,
+        game_id -> Integer,
+        path -> Text,
+        created_at -> Timestamp,
+        last_loaded -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     cores (id) {
         id -> Integer,
         name -> Text,
@@ -55,12 +68,15 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(core_files -> cores (core_id));
+diesel::joinable!(core_files -> games (game_id));
 diesel::joinable!(dat_files -> cores (core_id));
 diesel::joinable!(games -> cores (core_id));
 diesel::joinable!(savestates -> cores (core_id));
 diesel::joinable!(savestates -> games (game_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    core_files,
     cores,
     dat_files,
     games,

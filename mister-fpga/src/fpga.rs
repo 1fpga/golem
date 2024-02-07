@@ -23,7 +23,7 @@ extern "C" {
 /// TODO: remove these when the fpga code from CPP is gone.
 pub mod ffi {
     use super::FPGA_SINGLETON;
-    use crate::fpga::feature::SpiFeature;
+    use crate::fpga::feature::SpiFeatureSet;
     use libc::{c_int, c_ulong};
     use tracing::error;
 
@@ -119,7 +119,7 @@ pub mod ffi {
             .as_mut()
             .unwrap()
             .spi_mut()
-            .disable(SpiFeature::IO);
+            .disable(SpiFeatureSet::IO);
     }
 
     #[no_mangle]
@@ -177,13 +177,13 @@ pub enum CoreType {
     /// Core type value should be unlikely to be returned by broken cores.
     CoreTypeUnknown = 0x55,
 
-    /// Generic Core.
+    /// Generic Core. Called CORE_TYPE_8BIT in Main_MiSTer.
     CoreTypeGeneric = 0xA4,
 
     /// Sharp MZ Series.
     CoreTypeSharpMz = 0xA7,
 
-    /// Generic Core using dual SDRAM.
+    /// Generic Core using dual SDRAM. Called CORE_TYPE_8BIT2 in Main_MiSTer.
     CoreTypeGenericDualSdram = 0xA8,
 }
 
@@ -206,6 +206,12 @@ pub enum CoreInterfaceType {
 
     /// 16-bit SPI bus.
     SpiBus16Bit = 1,
+}
+
+impl CoreInterfaceType {
+    pub fn is_wide(&self) -> bool {
+        *self == CoreInterfaceType::SpiBus16Bit
+    }
 }
 
 #[cfg(feature = "mister-cpp")]
@@ -235,7 +241,7 @@ impl MisterFpga {
     fn new(soc: Arc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>) -> Self {
         Self {
             soc: soc.clone(),
-            spi: spi::Spi::new(soc),
+            spi: Spi::new(soc),
         }
     }
 
@@ -280,11 +286,11 @@ impl MisterFpga {
         }
     }
 
-    pub fn spi(&self) -> &spi::Spi<DevMemMemoryMapper> {
+    pub fn spi(&self) -> &Spi<DevMemMemoryMapper> {
         &self.spi
     }
 
-    pub fn spi_mut(&mut self) -> &mut spi::Spi<DevMemMemoryMapper> {
+    pub fn spi_mut(&mut self) -> &mut Spi<DevMemMemoryMapper> {
         &mut self.spi
     }
 
@@ -421,7 +427,7 @@ impl MisterFpga {
     }
 
     /// Set the data clock count register. Returns Ok if the register
-    /// was properly set, and Err if a timeout occured checking for
+    /// was properly set, and Err if a timeout occurred checking for
     /// the status.
     #[inline]
     pub fn set_dclkcnt(&mut self, value: u32) -> Result<(), FpgaError> {

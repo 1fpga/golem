@@ -1,13 +1,14 @@
 use crate::config_string;
 use crate::config_string::{FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
+use crate::core::file::SdCard;
 use crate::fpga::file_io::{
-    FileIoFileExtension, FileIoFileIndex, FileIoFileTxData16Bits, FileIoFileTxData8Bits,
-    FileIoFileTxDisabled, FileIoFileTxEnabled,
+    FileExtension, FileIndex, FileTxData16Bits, FileTxData8Bits, FileTxDisabled, FileTxEnabled,
 };
+use crate::fpga::osd_io::{OsdDisable, OsdEnable};
 use crate::fpga::user_io::{
-    GetStatusBits, SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp,
-    UserIoRtc,
+    GetSdStat, GetStatusBits, SdRead, SdStatOutput, SdWrite, SetSdConf, SetSdInfo, SetSdStat,
+    SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp, UserIoRtc,
 };
 use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
@@ -17,10 +18,12 @@ use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
 use std::ffi::OsStr;
 use std::fs::File;
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use tracing::{debug, info, trace};
 
 pub mod buttons;
+pub mod file;
 
 pub enum MisterFpgaSendFileInfo {
     Memory {
@@ -48,6 +51,13 @@ impl MisterFpgaSendFileInfo {
             .ok_or("Could not find info for extension")?;
         Self::from_file_info(info)
     }
+
+    pub fn index(&self) -> u8 {
+        match self {
+            Self::Memory { index, .. } => *index,
+            Self::Buffered { index } => *index,
+        }
+    }
 }
 
 pub struct MisterFpgaCore {
@@ -57,10 +67,14 @@ pub struct MisterFpgaCore {
     pub io_version: u8,
     config: config_string::Config,
 
+    // All the images that are mounted. Can only have 16 images at once.
+    cards: Box<[Option<SdCard>; 16]>,
+
     save_states: Option<SaveStateManager<DevMemMemoryMapper>>,
     map: ButtonMap,
 
     status: StatusBitMap,
+    status_counter: u8,
 }
 
 impl MisterFpgaCore {
@@ -90,6 +104,7 @@ impl MisterFpgaCore {
         fpga.wait_for_ready();
 
         let save_states = SaveStateManager::from_config_string(&config);
+        const NONE: Option<SdCard> = None;
 
         Ok(MisterFpgaCore {
             fpga,
@@ -97,18 +112,22 @@ impl MisterFpgaCore {
             spi_type,
             io_version,
             config,
+            cards: Box::new([NONE; 16]),
             save_states,
             map,
             status: Default::default(),
+            status_counter: 0,
         })
     }
 
+    /// Send the Real Time Clock to the core.
     pub fn send_rtc(&mut self) -> Result<(), String> {
         self.fpga.spi_mut().execute(UserIoRtc::now())?;
         Ok(())
     }
 
-    pub fn send_file(
+    /// Send a file (ROM or BIOS) to the core on an index.
+    pub fn load_file(
         &mut self,
         path: &Path,
         file_info: Option<LoadFileInfo>,
@@ -127,60 +146,72 @@ impl MisterFpgaCore {
 
         let now = std::time::Instant::now();
         debug!("Sending file {:?} to core", path);
+
+        let f = File::open(path).map_err(|e| e.to_string())?;
+        let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
+
+        self.start_send_file(info.index(), &ext, size)?;
         match info {
             MisterFpgaSendFileInfo::Memory { index, address } => {
-                let f = File::open(path).map_err(|e| e.to_string())?;
-                let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
                 trace!(?index, ?address, ?ext, ?size, "File info (memory)");
-                self.send_file_to_memory_(index, &ext, size, address, f)?;
+                self.send_file_to_sdram_(size, address, f)?;
             }
             MisterFpgaSendFileInfo::Buffered { index } => {
-                let f = File::open(path).map_err(|e| e.to_string())?;
-                let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
                 trace!(?index, ?ext, ?size, "File info (buffered)");
-                self.send_file_to_buffer_(index, &ext, size, f)?;
+                self.send_file_to_buffer_(size, f)?;
             }
         }
+        self.read_status_bits();
+
+        self.status.set(0, false);
+        self.send_status_bits(self.status);
+
+        // self.end_send_file()?;
         debug!("Done in {}ms", now.elapsed().as_millis());
 
         Ok(())
     }
 
     fn start_send_file(&mut self, index: u8, ext: &str, size: u32) -> Result<(), String> {
-        self.fpga.spi_mut().execute(FileIoFileIndex::from(index))?;
-        self.fpga.spi_mut().execute(FileIoFileExtension(ext))?;
-        self.fpga.spi_mut().execute(FileIoFileTxEnabled(Some(size)))
+        self.fpga.spi_mut().execute(FileIndex::from(index))?;
+        self.fpga.spi_mut().execute(FileExtension(ext))?;
+        self.fpga.spi_mut().execute(FileTxEnabled(Some(size)))
     }
 
-    fn end_send_file(&mut self) -> Result<(), String> {
-        self.read_status_bits();
-
+    pub fn end_send_file(&mut self) -> Result<(), String> {
         // Disable download.
-        self.fpga.spi_mut().execute(FileIoFileTxDisabled)
+        self.fpga.spi_mut().execute(FileTxDisabled)
     }
 
+    /// Return the core parsed config structure.
     pub fn config(&self) -> &config_string::Config {
         &self.config
     }
 
+    /// Return the core status bits. This is an internal cache of the
+    /// status bits. Use `[Core::read_status_bits()]` to read the status
+    /// from the core.
     pub fn status_bits(&self) -> &StatusBitMap {
         &self.status
     }
 
+    /// Update the internal cache and return it.
     pub fn read_status_bits(&mut self) -> &StatusBitMap {
         self.fpga
             .spi_mut()
-            .execute(GetStatusBits(&mut self.status))
+            .execute(GetStatusBits(&mut self.status, &mut self.status_counter))
             .unwrap();
         &self.status
     }
 
+    /// Send status bits to the core.
     pub fn send_status_bits(&mut self, bits: StatusBitMap) {
         debug!(?bits, "Setting status bits");
         self.fpga.spi_mut().execute(SetStatusBits(&bits)).unwrap();
         self.status = bits;
     }
 
+    /// Notify the core of a keyboard key down event.
     pub fn key_down(&mut self, keycode: sdl3::keyboard::Scancode) {
         let scancode = Ps2Scancode::from(keycode);
         debug!(?keycode, ?scancode, "Keydown");
@@ -192,6 +223,7 @@ impl MisterFpgaCore {
         }
     }
 
+    /// Notify the core of a keyboard key up event.
     pub fn key_up(&mut self, keycode: sdl3::keyboard::Scancode) {
         let scancode = Ps2Scancode::from(keycode);
         debug!(?keycode, ?scancode, "Keyup");
@@ -201,6 +233,7 @@ impl MisterFpgaCore {
             .unwrap();
     }
 
+    /// Notify the core of a gamepad button down event.
     pub fn gamepad_button_down(&mut self, joystick_idx: u8, button: u8) {
         self.map.down(button);
 
@@ -210,6 +243,7 @@ impl MisterFpgaCore {
             .unwrap();
     }
 
+    /// Notify the core of a gamepad button up event.
     pub fn gamepad_button_up(&mut self, joystick_idx: u8, button: u8) {
         self.map.up(button);
 
@@ -219,25 +253,99 @@ impl MisterFpgaCore {
             .unwrap();
     }
 
+    /// Access the internal save state manager, in readonly.
     pub fn save_states(&self) -> Option<&SaveStateManager<DevMemMemoryMapper>> {
         self.save_states.as_ref()
     }
 
+    /// Access the internal save state manager.
     pub fn save_states_mut(&mut self) -> Option<&mut SaveStateManager<DevMemMemoryMapper>> {
         self.save_states.as_mut()
     }
 
+    /// Take a screenshot and return the image in memory.
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         crate::framebuffer::FpgaFramebuffer::default().take_screenshot()
     }
 
-    fn send_file_to_memory_(
+    /// Mount an SD card to the core.
+    pub fn mount(&mut self, file: SdCard, index: u8) -> Result<(), String> {
+        self.fpga.spi_mut().execute(
+            SetSdConf::default()
+                .with_wide(self.spi_type.is_wide())
+                .with_size(file.size()),
+        )?;
+
+        self.fpga
+            .spi_mut()
+            .execute(SetSdInfo::from(&file).with_io_version(self.io_version))?;
+
+        // Notify the core of the SD card update.
+        self.fpga.spi_mut().execute(
+            SetSdStat::default()
+                .with_writable(file.writeable())
+                .with_index(index),
+        )?;
+
+        info!(?file, index, "Mounted SD Card");
+        self.cards[index as usize] = Some(file);
+
+        Ok(())
+    }
+
+    /// Check for updates (read/write) to SD cards. Returns true if any write/read
+    /// operations were requested by the core (which means there might be more).
+    pub fn poll_mounts(&mut self) -> Result<bool, String> {
+        let mut result = false;
+
+        for (_i, card) in self
+            .cards
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(i, c)| c.as_mut().map(|c| (i, c)))
+        {
+            let mut stat: SdStatOutput = Default::default();
+            self.fpga.spi_mut().execute(GetSdStat(&mut stat))?;
+            trace!(?stat, "SD stat");
+
+            if stat.op.is_write() {
+                result = true;
+                let mut buffer = vec![0; stat.size];
+
+                self.fpga.spi_mut().execute(SdWrite::new(
+                    &mut buffer,
+                    self.spi_type.is_wide(),
+                    stat.ack,
+                ))?;
+
+                let addr = stat.lba * stat.block_size as u64;
+                let io = card.as_io();
+                io.seek(SeekFrom::Start(addr)).map_err(|e| e.to_string())?;
+                io.write_all(&buffer).map_err(|e| e.to_string())?;
+            } else if stat.op.is_read() {
+                result = true;
+                let mut buffer = vec![0; stat.size];
+                let addr = stat.lba * stat.block_size as u64;
+                let io = card.as_io();
+                io.seek(SeekFrom::Start(addr)).map_err(|e| e.to_string())?;
+                io.read_exact(&mut buffer).map_err(|e| e.to_string())?;
+
+                // Blocks are now in memory, send them to the core.
+                self.fpga.spi_mut().execute(SdRead::new(
+                    &buffer,
+                    self.spi_type.is_wide(),
+                    stat.ack,
+                ))?;
+            }
+        }
+        Ok(result)
+    }
+
+    fn send_file_to_sdram_(
         &mut self,
-        index: u8,
-        ext: &str,
         size: u32,
         address: FpgaRamMemoryAddress,
-        mut reader: impl std::io::Read,
+        mut reader: impl Read,
     ) -> Result<(), String> {
         // Verify invariants.
         if size >= 0x2000_0000 {
@@ -246,14 +354,9 @@ impl MisterFpgaCore {
         let mut crc = crc32fast::Hasher::new();
         let mut mem = DevMemMemoryMapper::create(address.as_usize(), size as usize)?;
 
-        self.start_send_file(index, ext, size)?;
-
         let mut bytes2send = size;
         while bytes2send > 0 {
-            // let start = (size - bytes2send) as usize;
-            // let len = (bytes2send.min(256u32.kibibytes())) as usize;
             let sz = reader
-                // .read(mem.as_mut_range(start..start + len))
                 .read(mem.as_mut_range(..))
                 .map_err(|e| e.to_string())?;
 
@@ -261,15 +364,6 @@ impl MisterFpgaCore {
             bytes2send -= sz as u32;
         }
         crc.update(mem.as_range(..));
-        self.end_send_file()?;
-
-        // TODO: implement check_status_change into Rust.
-        extern "C" {
-            pub fn check_status_change();
-        }
-        unsafe {
-            check_status_change();
-        }
 
         let crc = crc.finalize();
         debug!("CRC: {:08X}", crc);
@@ -278,8 +372,6 @@ impl MisterFpgaCore {
 
     fn send_file_to_buffer_(
         &mut self,
-        index: u8,
-        ext: &str,
         size: u32,
         mut reader: impl std::io::Read,
     ) -> Result<(), String> {
@@ -287,7 +379,6 @@ impl MisterFpgaCore {
         if size >= 0x2000_0000 {
             return Err("File too large.".to_string());
         }
-        self.start_send_file(index, ext, size)?;
 
         let mut crc = crc32fast::Hasher::new();
         let now = std::time::Instant::now();
@@ -303,7 +394,7 @@ impl MisterFpgaCore {
                         CoreInterfaceType::SpiBus8Bit => {
                             self.fpga
                                 .spi_mut()
-                                .execute(FileIoFileTxData8Bits(&buffer[..size]))?;
+                                .execute(FileTxData8Bits(&buffer[..size]))?;
                         }
                         CoreInterfaceType::SpiBus16Bit => {
                             // This is safe since size cannot be larger than 4096.
@@ -315,12 +406,11 @@ impl MisterFpgaCore {
                             };
                             self.fpga
                                 .spi_mut()
-                                .execute(FileIoFileTxData16Bits(&buf16[..size / 2]))?;
+                                .execute(FileTxData16Bits(&buf16[..size / 2]))?;
                         }
                     }
                 }
                 Err(e) => {
-                    self.end_send_file()?;
                     return Err(e);
                 }
             }
@@ -331,7 +421,6 @@ impl MisterFpgaCore {
         let crc = crc.finalize();
         debug!("CRC: {:08X}", crc);
 
-        self.end_send_file()?;
         Ok(())
     }
 }
