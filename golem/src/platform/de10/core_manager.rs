@@ -1,4 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use mister_fpga::config::Config;
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::MisterFpga;
 use std::path::Path;
@@ -23,13 +24,18 @@ impl CoreManager {
     }
 
     /// Create a core for the current FPGA configuration.
-    fn create_core(&mut self) -> Result<core::MisterFpgaCore, String> {
-        let core = MisterFpgaCore::new(self.fpga.clone())
+    fn create_core(&mut self, is_menu: bool) -> Result<core::MisterFpgaCore, String> {
+        let mut core = MisterFpgaCore::new(self.fpga.clone())
             .map_err(|e| format!("Could not instantiate Core: {e}"))?;
+
+        core.init()?;
+        core.init_video(&Config::base().into_inner(), is_menu)?;
+        core.send_rtc()?;
+        // core.send_volume(5)?;
         Ok(core::MisterFpgaCore::new(core))
     }
 
-    fn load(&mut self, program: &[u8]) -> Result<core::MisterFpgaCore, String> {
+    fn load(&mut self, program: &[u8], is_menu: bool) -> Result<core::MisterFpgaCore, String> {
         let program = if &program[..6] != b"MiSTer" {
             program
         } else {
@@ -46,12 +52,9 @@ impl CoreManager {
             .core_reset()
             .map_err(|_| "Could not reset the Core".to_string())?;
 
-        let core = self.create_core()?;
-
-        self.fpga_mut().osd_disable();
+        let core = self.create_core(is_menu)?;
 
         unsafe {
-            crate::file_io::FindStorage();
             crate::platform::de10::user_io::user_io_init(
                 "\0".as_ptr() as *const _,
                 std::ptr::null(),
@@ -66,12 +69,14 @@ impl crate::platform::CoreManager for CoreManager {
 
     fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
         let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
-        let core = self.load(&bytes)?;
+        let core = self.load(&bytes, false)?;
         Ok(core)
     }
 
     fn get_current_core(&mut self) -> Result<Self::Core, String> {
-        self.create_core()
+        let core = MisterFpgaCore::new(self.fpga.clone())
+            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
+        Ok(core::MisterFpgaCore::new(core))
     }
 
     fn load_menu(&mut self) -> Result<Self::Core, String> {
@@ -80,7 +85,7 @@ impl crate::platform::CoreManager for CoreManager {
 
         let bytes = Aligned(include_bytes!("../../../assets/menu.rbf"));
 
-        let core = self.load(bytes.0)?;
+        let core = self.load(bytes.0, true)?;
         self.fpga_mut().osd_enable();
         Ok(core)
     }

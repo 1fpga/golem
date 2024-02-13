@@ -18,6 +18,7 @@ const EMU_SWITCH_2: u32 = 0x200000;
 const UPSTROKE: u32 = 0x400000;
 
 /// LUT from SDL3 scan code to PS/2.
+#[rustfmt::skip]
 const SDL3_TO_PS2: array_map::ArrayMap<u8, Option<Ps2Scancode>, 256> = array_map::ArrayMap::new([
     None,                          // SDL_SCANCODE_UNKNOWN = 0,
     None,                          // Unknown / Reserved
@@ -275,42 +276,42 @@ const SDL3_TO_PS2: array_map::ArrayMap<u8, Option<Ps2Scancode>, 256> = array_map
     None,                          // NOT MAPPED IN SDL3 253
     None,                          // NOT MAPPED IN SDL3 254
     None,                          // NOT MAPPED IN SDL3 255
-                                   // The following would make the map overflow, so we don't include them.
-                                   // None,                          // NOT MAPPED IN SDL3 256
-                                   // None,                          // SDL_SCANCODE_MODE = 257,
-                                   // None,                          // SDL_SCANCODE_AUDIONEXT = 258,
-                                   // None,                          // SDL_SCANCODE_AUDIOPREV = 259,
-                                   // None,                          // SDL_SCANCODE_AUDIOSTOP = 260,
-                                   // None,                          // SDL_SCANCODE_AUDIOPLAY = 261,
-                                   // None,                          // SDL_SCANCODE_AUDIOMUTE = 262,
-                                   // None,                          // SDL_SCANCODE_MEDIASELECT = 263,
-                                   // None,                          // SDL_SCANCODE_WWW = 264,
-                                   // None,                          // SDL_SCANCODE_MAIL = 265,
-                                   // None,                          // SDL_SCANCODE_CALCULATOR = 266,
-                                   // None,                          // SDL_SCANCODE_COMPUTER = 267,
-                                   // None,                          // SDL_SCANCODE_AC_SEARCH = 268,
-                                   // None,                          // SDL_SCANCODE_AC_HOME = 269,
-                                   // None,                          // SDL_SCANCODE_AC_BACK = 270,
-                                   // None,                          // SDL_SCANCODE_AC_FORWARD = 271,
-                                   // None,                          // SDL_SCANCODE_AC_STOP = 272,
-                                   // None,                          // SDL_SCANCODE_AC_REFRESH = 273,
-                                   // None,                          // SDL_SCANCODE_AC_BOOKMARKS = 274,
-                                   // None,                          // SDL_SCANCODE_BRIGHTNESSDOWN = 275,
-                                   // None,                          // SDL_SCANCODE_BRIGHTNESSUP = 276,
-                                   // None,                          // SDL_SCANCODE_DISPLAYSWITCH = 277,
-                                   // None,                          // SDL_SCANCODE_KBDILLUMTOGGLE = 278,
-                                   // None,                          // SDL_SCANCODE_KBDILLUMDOWN = 279,
-                                   // None,                          // SDL_SCANCODE_KBDILLUMUP = 280,
-                                   // None,                          // SDL_SCANCODE_EJECT = 281,
-                                   // None,                          // SDL_SCANCODE_SLEEP = 282,
-                                   // None,                          // SDL_SCANCODE_APP1 = 283,
-                                   // None,                          // SDL_SCANCODE_APP2 = 284,
-                                   // None,                          // SDL_SCANCODE_AUDIOREWIND = 285,
-                                   // None,                          // SDL_SCANCODE_AUDIOFASTFORWARD = 286,
-                                   // None,                          // SDL_SCANCODE_SOFTLEFT = 287,
-                                   // None,                          // SDL_SCANCODE_SOFTRIGHT = 288,
-                                   // None,                          // SDL_SCANCODE_CALL = 289,
-                                   // None,                          // SDL_SCANCODE_ENDCALL = 290,
+    // The following would make the map overflow, so we don't include them.
+    // None,                          // NOT MAPPED IN SDL3 256
+    // None,                          // SDL_SCANCODE_MODE = 257,
+    // None,                          // SDL_SCANCODE_AUDIONEXT = 258,
+    // None,                          // SDL_SCANCODE_AUDIOPREV = 259,
+    // None,                          // SDL_SCANCODE_AUDIOSTOP = 260,
+    // None,                          // SDL_SCANCODE_AUDIOPLAY = 261,
+    // None,                          // SDL_SCANCODE_AUDIOMUTE = 262,
+    // None,                          // SDL_SCANCODE_MEDIASELECT = 263,
+    // None,                          // SDL_SCANCODE_WWW = 264,
+    // None,                          // SDL_SCANCODE_MAIL = 265,
+    // None,                          // SDL_SCANCODE_CALCULATOR = 266,
+    // None,                          // SDL_SCANCODE_COMPUTER = 267,
+    // None,                          // SDL_SCANCODE_AC_SEARCH = 268,
+    // None,                          // SDL_SCANCODE_AC_HOME = 269,
+    // None,                          // SDL_SCANCODE_AC_BACK = 270,
+    // None,                          // SDL_SCANCODE_AC_FORWARD = 271,
+    // None,                          // SDL_SCANCODE_AC_STOP = 272,
+    // None,                          // SDL_SCANCODE_AC_REFRESH = 273,
+    // None,                          // SDL_SCANCODE_AC_BOOKMARKS = 274,
+    // None,                          // SDL_SCANCODE_BRIGHTNESSDOWN = 275,
+    // None,                          // SDL_SCANCODE_BRIGHTNESSUP = 276,
+    // None,                          // SDL_SCANCODE_DISPLAYSWITCH = 277,
+    // None,                          // SDL_SCANCODE_KBDILLUMTOGGLE = 278,
+    // None,                          // SDL_SCANCODE_KBDILLUMDOWN = 279,
+    // None,                          // SDL_SCANCODE_KBDILLUMUP = 280,
+    // None,                          // SDL_SCANCODE_EJECT = 281,
+    // None,                          // SDL_SCANCODE_SLEEP = 282,
+    // None,                          // SDL_SCANCODE_APP1 = 283,
+    // None,                          // SDL_SCANCODE_APP2 = 284,
+    // None,                          // SDL_SCANCODE_AUDIOREWIND = 285,
+    // None,                          // SDL_SCANCODE_AUDIOFASTFORWARD = 286,
+    // None,                          // SDL_SCANCODE_SOFTLEFT = 287,
+    // None,                          // SDL_SCANCODE_SOFTRIGHT = 288,
+    // None,                          // SDL_SCANCODE_CALL = 289,
+    // None,                          // SDL_SCANCODE_ENDCALL = 290,
 ]);
 
 /// PS/2 keyboard scancodes. This is the IBM PS/2 ports.

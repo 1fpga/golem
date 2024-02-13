@@ -20,3 +20,9 @@ impl Merge for HdmiLimitedConfig {
         }
     }
 }
+
+impl HdmiLimitedConfig {
+    pub fn is_limited(&self) -> bool {
+        *self != HdmiLimitedConfig::FullColorRange
+    }
+}

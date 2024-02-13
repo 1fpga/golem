@@ -24,3 +24,9 @@ impl Merge for HdrConfig {
         }
     }
 }
+
+impl HdrConfig {
+    pub fn is_enabled(&self) -> bool {
+        *self != HdrConfig::None
+    }
+}

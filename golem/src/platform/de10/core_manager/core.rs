@@ -125,6 +125,11 @@ impl Core for MisterFpgaCore {
         }
     }
 
+    fn reset(&mut self) -> Result<(), String> {
+        self.inner.soft_reset();
+        Ok(())
+    }
+
     fn status_mask(&self) -> StatusBitMap {
         self.inner.config().status_bit_map_mask()
     }

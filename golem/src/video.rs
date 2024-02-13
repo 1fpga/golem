@@ -75,7 +75,7 @@ impl VideoInfo {
         let res_changed = new_res != self.res || force;
         if new_res != self.res {
             self.res = new_res;
-            self.resolution = Resolution::new(read_u32(), read_u32());
+            self.resolution = Resolution::new(read_u32() as u16, read_u32() as u16);
             self.htime_ms = read_u32();
             self.vtime_ms = read_u32();
             self.ptime_ms = read_u32();
@@ -111,8 +111,8 @@ impl VideoInfo {
     pub unsafe fn set_cpp_info(&self, info: *mut ffi::VideoInfo) {
         let info = &mut *info;
 
-        info.width = self.resolution.width;
-        info.height = self.resolution.height;
+        info.width = self.resolution.width as u32;
+        info.height = self.resolution.height as u32;
         info.htime = self.htime_ms;
         info.vtime = self.vtime_ms;
         info.ptime = self.ptime_ms;
