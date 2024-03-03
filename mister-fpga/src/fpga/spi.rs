@@ -3,7 +3,6 @@ use cyclone_v::memory::MemoryMapper;
 use cyclone_v::SocFpga;
 use std::cell::UnsafeCell;
 use std::fmt::Debug;
-use std::ops::SubAssign;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -30,11 +29,11 @@ pub trait SpiCommandExt: Sized {
         command: impl IntoLowLevelSpiCommand,
         out: &mut u16,
     ) -> SpiCommandGuard<Self>;
-    fn write(&mut self, word: impl Into<u16>) -> &mut Self;
-    fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self;
+    fn write(&mut self, word: u16) -> &mut Self;
+    fn write_read(&mut self, word: u16, out: &mut u16) -> &mut Self;
     fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self;
-    fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self;
-    fn write_cond_b(&mut self, cond: bool, word: impl Into<u8>) -> &mut Self;
+    fn write_cond(&mut self, cond: bool, word: u16) -> &mut Self;
+    fn write_cond_b(&mut self, cond: bool, word: u8) -> &mut Self;
     fn write_buffer(&mut self, buffer: &[u16]) -> &mut Self;
     fn write_buffer_b(&mut self, buffer: &[u8]) -> &mut Self;
     fn write_b(&mut self, byte: u8) -> &mut Self;
@@ -66,13 +65,13 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
-    pub fn write(&mut self, word: impl Into<u16>) -> &mut Self {
+    pub fn write(&mut self, word: u16) -> &mut Self {
         self.spi.write(word);
         self
     }
 
     #[inline]
-    pub fn write_nz(&mut self, word: impl Into<u16>) -> &mut Self {
+    pub fn write_nz(&mut self, word: u16) -> &mut Self {
         let word = word.into();
         if word != 0 {
             self.spi.write(word);
@@ -81,26 +80,26 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
-    pub fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self {
+    pub fn write_read(&mut self, word: u16, out: &mut u16) -> &mut Self {
         self.spi.write_read(word, out);
         self
     }
 
     #[inline]
-    pub fn write_get(&mut self, word: impl Into<u16>) -> u16 {
+    pub fn write_get(&mut self, word: u16) -> u16 {
         let mut out = 0;
         self.spi.write_read(word, &mut out);
         out
     }
 
     #[inline]
-    pub fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
+    pub fn write_cond(&mut self, cond: bool, word: u16) -> &mut Self {
         self.spi.write_cond(cond, word);
         self
     }
 
     #[inline]
-    pub fn write_cond_b(&mut self, cond: bool, word: impl Into<u8>) -> &mut Self {
+    pub fn write_cond_b(&mut self, cond: bool, word: u8) -> &mut Self {
         self.spi.write_cond_b(cond, word);
         self
     }
@@ -132,8 +131,15 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
+    pub fn write_32(&mut self, word: u32) -> &mut Self {
+        self.spi.write(word as u16);
+        self.spi.write((word >> 16) as u16);
+        self
+    }
+
+    #[inline]
     pub fn write_b(&mut self, byte: u8) -> &mut Self {
-        self.write(byte)
+        self.write(byte as u16)
     }
 
     #[inline]
@@ -178,6 +184,7 @@ unsafe impl<M: MemoryMapper> Send for Spi<M> {}
 unsafe impl<M: MemoryMapper> Sync for Spi<M> {}
 
 impl<M: MemoryMapper> Clone for Spi<M> {
+    #[inline]
     fn clone(&self) -> Self {
         Self {
             soc: self.soc.clone(),
@@ -300,11 +307,11 @@ impl<M: MemoryMapper> Spi<M> {
 
     /// Send a 16-bit word to the core. Returns the 16-bit word received from the core.
     #[inline]
-    pub fn write(&mut self, word: impl Into<u16>) -> u16 {
+    pub fn write(&mut self, word: u16) -> u16 {
         let regs = self.soc_mut().regs_mut();
 
         // Remove the strobe bit and set the data bits.
-        let gpo = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | (word.into() as u32);
+        let gpo = (regs.gpo() & !(SSPI_DATA_MASK | SSPI_STROBE)) | (word as u32);
 
         regs.set_gpo(gpo);
         regs.set_gpo(gpo | SSPI_STROBE);
@@ -349,7 +356,7 @@ impl<M: MemoryMapper> Spi<M> {
 
     #[inline]
     pub fn write_b(&mut self, byte: u8) -> u8 {
-        self.write(byte) as u8
+        self.write(byte as u16) as u8
     }
 
     #[inline]
@@ -372,6 +379,7 @@ impl<M: MemoryMapper> Spi<M> {
 }
 
 impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
+    #[inline]
     fn command_read(
         &mut self,
         command: impl IntoLowLevelSpiCommand,
@@ -381,33 +389,35 @@ impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
     }
 
     #[inline]
-    fn write(&mut self, word: impl Into<u16>) -> &mut Self {
+    fn write(&mut self, word: u16) -> &mut Self {
         self.write(word);
         self
     }
 
     #[inline]
-    fn write_read(&mut self, word: impl Into<u16>, out: &mut u16) -> &mut Self {
+    fn write_read(&mut self, word: u16, out: &mut u16) -> &mut Self {
         *out = self.write(word);
         self
     }
 
+    #[inline]
     fn write_read_b(&mut self, byte: u8, out: &mut u8) -> &mut Self {
         *out = self.write_b(byte);
         self
     }
 
     #[inline]
-    fn write_cond(&mut self, cond: bool, word: impl Into<u16>) -> &mut Self {
+    fn write_cond(&mut self, cond: bool, word: u16) -> &mut Self {
         if cond {
             self.write(word);
         }
         self
     }
 
-    fn write_cond_b(&mut self, cond: bool, word: impl Into<u8>) -> &mut Self {
+    #[inline]
+    fn write_cond_b(&mut self, cond: bool, byte: u8) -> &mut Self {
         if cond {
-            self.write_b(word.into());
+            self.write_b(byte.into());
         }
         self
     }
@@ -428,15 +438,17 @@ impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
 
     #[inline]
     fn write_b(&mut self, byte: u8) -> &mut Self {
-        self.write(byte);
+        self.write(byte as u16);
         self
     }
 
+    #[inline]
     fn enable(&mut self, feature: SpiFeatureSet) -> &mut Self {
         self.enable(feature);
         self
     }
 
+    #[inline]
     fn disable(&mut self, feature: SpiFeatureSet) -> &mut Self {
         self.disable(feature);
         self

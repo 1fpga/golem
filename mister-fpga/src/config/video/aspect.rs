@@ -3,7 +3,7 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-fn gcd_(mut u: u32, mut v: u32) -> u32 {
+fn gcd_(mut u: u16, mut v: u16) -> u16 {
     if u == v {
         return u;
     }
@@ -57,17 +57,25 @@ fn gcd_(mut u: u32, mut v: u32) -> u32 {
     PartialEq,
 )]
 pub struct AspectRatio {
-    pub vertical: u32,
-    pub horizontal: u32,
+    pub vertical: u16,
+    pub horizontal: u16,
 }
 
 impl AspectRatio {
-    pub fn new(horizontal: u32, vertical: u32) -> Self {
+    pub fn new(horizontal: u16, vertical: u16) -> Self {
         let gcd = gcd_(vertical, horizontal);
         AspectRatio {
             vertical: vertical / gcd,
             horizontal: horizontal / gcd,
         }
+    }
+
+    pub fn square() -> Self {
+        Self::new(1, 1)
+    }
+
+    pub fn zero() -> Self {
+        Self::new(0, 0)
     }
 }
 
@@ -82,8 +90,8 @@ impl FromStr for AspectRatio {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((v, h)) = s.split_once(':') {
-            let horizontal = h.parse::<u32>().unwrap();
-            let vertical = v.parse::<u32>().unwrap();
+            let horizontal = h.parse::<u16>().unwrap();
+            let vertical = v.parse::<u16>().unwrap();
             Ok(AspectRatio::new(horizontal, vertical))
         } else {
             Err("Invalid aspect ratio: expected 'horizontal:vertical'")
@@ -91,9 +99,15 @@ impl FromStr for AspectRatio {
     }
 }
 
-impl From<(u32, u32)> for AspectRatio {
-    fn from((horizontal, vertical): (u32, u32)) -> Self {
+impl From<(u16, u16)> for AspectRatio {
+    fn from((horizontal, vertical): (u16, u16)) -> Self {
         Self::new(horizontal, vertical)
+    }
+}
+
+impl From<AspectRatio> for (u16, u16) {
+    fn from(ratio: AspectRatio) -> Self {
+        (ratio.horizontal, ratio.vertical)
     }
 }
 

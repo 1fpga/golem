@@ -1,4 +1,5 @@
 use merge::Merge;
+use num_traits::FloatConst;
 use serde::Deserialize;
 use serde_with::{serde_as, DeserializeFromStr, DurationSeconds};
 use std::collections::HashMap;
@@ -9,6 +10,8 @@ use std::str::FromStr;
 use std::time::Duration;
 use thiserror::Error;
 use validator::Validate;
+use video::aspect::AspectRatio;
+use video::resolution::Resolution;
 
 mod bootcore;
 mod fb_size;
@@ -32,8 +35,7 @@ pub use ntsc_mode::*;
 pub use osd_rotate::*;
 pub use reset_combo::*;
 pub use vga_mode::*;
-use video::aspect::AspectRatio;
-use video::resolution::Resolution;
+pub use video::*;
 pub use vrr_mode::*;
 pub use vscale_mode::*;
 pub use vsync_adjust::*;
@@ -330,7 +332,7 @@ pub struct MisterConfig {
 
     #[serde(alias = "ypbpr")]
     #[merge(strategy = merge::option::overwrite_some)]
-    vga_mode: Option<VgaModeConfig>,
+    vga_mode: Option<VgaMode>,
 
     #[merge(strategy = merge::option::overwrite_some)]
     ntsc_mode: Option<NtscModeConfig>,
@@ -463,7 +465,7 @@ pub struct MisterConfig {
     /// Set vertical border for TVs cutting the upper/bottom parts of screen (1-399)
     #[validate(range(min = 0, max = 399))]
     #[merge(strategy = merge::option::overwrite_some)]
-    vscale_border: Option<u16>,
+    pub vscale_border: Option<u16>,
 
     /// true - hides datecodes from rbf file names. Press F2 for quick temporary toggle
     #[serde(with = "mister_bool")]
@@ -483,7 +485,7 @@ pub struct MisterConfig {
 
     /// 0 - automatic, 1 - full size, 2 - 1/2 of resolution, 4 - 1/4 of resolution.
     #[merge(strategy = merge::option::overwrite_some)]
-    fb_size: Option<FramebufferSizeConfig>,
+    pub fb_size: Option<FramebufferSizeConfig>,
 
     /// TODO: figure this out.
     #[serde(with = "mister_bool")]
@@ -709,7 +711,7 @@ pub struct MisterConfig {
     video_hue: Option<u16>,
 
     #[merge(strategy = merge::option::overwrite_some)]
-    video_gain_offset: Option<String>,
+    video_gain_offset: Option<VideoGainOffsets>,
 
     #[merge(strategy = merge::option::overwrite_some)]
     hdr: Option<HdrConfig>,
@@ -755,7 +757,7 @@ impl MisterConfig {
         self.video_saturation.get_or_insert(100);
         self.video_hue.get_or_insert(0);
         self.video_gain_offset
-            .get_or_insert("1, 0, 1, 0, 1, 0".to_string());
+            .get_or_insert("1, 0, 1, 0, 1, 0".parse().unwrap());
     }
 
     pub fn custom_aspect_ratio(&self) -> Vec<AspectRatio> {
@@ -797,6 +799,110 @@ impl MisterConfig {
             self.player_controller.clone()
         }
     }
+
+    #[inline]
+    pub fn hdmi_limited(&self) -> HdmiLimitedConfig {
+        self.hdmi_limited.unwrap_or_default()
+    }
+
+    #[inline]
+    pub fn hdmi_game_mode(&self) -> bool {
+        self.hdmi_game_mode.unwrap_or_default()
+    }
+
+    #[inline]
+    pub fn hdr(&self) -> HdrConfig {
+        self.hdr.unwrap_or_default()
+    }
+
+    #[inline]
+    pub fn hdr_max_nits(&self) -> u16 {
+        self.hdr_max_nits.unwrap_or(1000)
+    }
+
+    #[inline]
+    pub fn hdr_avg_nits(&self) -> u16 {
+        self.hdr_avg_nits.unwrap_or(250)
+    }
+
+    #[inline]
+    pub fn dvi_mode(&self) -> bool {
+        self.dvi_mode.unwrap_or_default()
+    }
+
+    #[inline]
+    pub fn dvi_mode_raw(&self) -> Option<bool> {
+        self.dvi_mode
+    }
+
+    #[inline]
+    pub fn hdmi_audio_96k(&self) -> bool {
+        self.hdmi_audio_96k.unwrap_or_default()
+    }
+
+    /// The video brightness, between [-0.5..0.5]
+    #[inline]
+    pub fn video_brightness(&self) -> f32 {
+        (self.video_brightness.unwrap_or(50).clamp(0, 100) as f32 / 100.0) - 0.5
+    }
+
+    /// The video contrast, between [0..2]
+    #[inline]
+    pub fn video_contrast(&self) -> f32 {
+        ((self.video_contrast.unwrap_or(50).clamp(0, 100) as f32 / 100.0) - 0.5) * 2. + 1.
+    }
+
+    /// The video saturation, between [0..1]
+    #[inline]
+    pub fn video_saturation(&self) -> f32 {
+        self.video_saturation.unwrap_or(100).clamp(0, 100) as f32 / 100.
+    }
+
+    /// The video hue.
+    #[inline]
+    pub fn video_hue_radian(&self) -> f32 {
+        (self.video_hue.unwrap_or_default() as f32) * f32::PI() / 180.
+    }
+
+    /// The video gains and offets.
+    #[inline]
+    pub fn video_gain_offset(&self) -> VideoGainOffsets {
+        self.video_gain_offset.unwrap_or_default()
+    }
+
+    /// The VGA mode.
+    #[inline]
+    pub fn vga_mode(&self) -> VgaMode {
+        self.vga_mode.unwrap_or_default()
+    }
+
+    /// Direct Video?
+    #[inline]
+    pub fn direct_video(&self) -> bool {
+        self.direct_video.unwrap_or_default()
+    }
+
+    /// Whether to use vsync adjust.
+    #[inline]
+    pub fn vsync_adjust(&self) -> VsyncAdjustConfig {
+        if self.direct_video() {
+            VsyncAdjustConfig::Disabled
+        } else {
+            self.vsync_adjust.unwrap_or_default()
+        }
+    }
+
+    /// Whether to use PAL in the menu.
+    #[inline]
+    pub fn menu_pal(&self) -> bool {
+        self.menu_pal.unwrap_or_default()
+    }
+
+    /// Whether to force the scan doubler.
+    #[inline]
+    pub fn forced_scandoubler(&self) -> bool {
+        self.forced_scandoubler.unwrap_or_default()
+    }
 }
 
 #[cfg(test)]
@@ -837,6 +943,28 @@ impl Config {
 
         #[cfg(not(test))]
         PathBuf::from("/media/fat")
+    }
+
+    pub fn into_inner(self) -> MisterConfig {
+        self.mister
+    }
+
+    pub fn into_inner_with_overrides(self, overrides: &[&str]) -> MisterConfig {
+        let mut mister = self.mister;
+        for o in overrides {
+            if let Some(override_config) = self.overrides.get(&o.to_string()) {
+                mister.merge(override_config.clone());
+            }
+        }
+        mister
+    }
+
+    pub fn base() -> Self {
+        Self::load(Self::root().join("mister.ini")).unwrap_or_else(|_| {
+            let mut c = Self::default();
+            c.mister.set_defaults();
+            c
+        })
     }
 
     pub fn cores_root() -> PathBuf {
@@ -1098,7 +1226,10 @@ impl Config {
         dest.video_hue = m.video_hue.unwrap_or_default();
         copy_string(
             &mut dest.video_gain_offset,
-            &m.video_gain_offset.clone().unwrap_or_default(),
+            &match m.video_gain_offset.as_ref() {
+                Some(v) => v.to_string(),
+                None => "1, 0, 1, 0, 1, 0".to_string(),
+            },
         );
         dest.hdr = m.hdr.unwrap_or_default() as u8;
         dest.hdr_max_nits = m.hdr_max_nits.unwrap_or_default();

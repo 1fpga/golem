@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(strum::Display, Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[repr(u8)]
-pub enum VgaModeConfig {
+pub enum VgaMode {
     #[default]
     #[serde(alias = "0")]
     Rgb = 0,
@@ -18,9 +18,9 @@ pub enum VgaModeConfig {
     Unknown = 0xFF,
 }
 
-impl Merge for VgaModeConfig {
+impl Merge for VgaMode {
     fn merge(&mut self, other: Self) {
-        if other != VgaModeConfig::default() {
+        if other != VgaMode::default() {
             *self = other;
         }
     }

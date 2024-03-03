@@ -5,12 +5,12 @@ use std::str::FromStr;
 /// A Resolution.
 #[derive(Default, Debug, Clone, Copy, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub struct Resolution {
-    pub width: u32,
-    pub height: u32,
+    pub width: u16,
+    pub height: u16,
 }
 
 impl Resolution {
-    pub fn new(width: u32, height: u32) -> Self {
+    pub fn new(width: u16, height: u16) -> Self {
         Resolution { width, height }
     }
 
@@ -31,8 +31,8 @@ impl FromStr for Resolution {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some((w, h)) = s.split_once('x') {
-            let w = u32::from_str(w).map_err(|_| "Invalid width")?;
-            let h = u32::from_str(h).map_err(|_| "Invalid height")?;
+            let w = u16::from_str(w).map_err(|_| "Invalid width")?;
+            let h = u16::from_str(h).map_err(|_| "Invalid height")?;
             Ok(Resolution {
                 width: w,
                 height: h,

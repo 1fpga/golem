@@ -1273,39 +1273,39 @@ void user_io_init(const char *path, const char *xml)
 
 	OsdSetSize(8);
 
-	if (xml)
-	{
-		if (isXmlName(xml) == 1) is_arcade_type = 1;
-		arcade_pre_parse(xml);
-	}
+//	if (xml)
+//	{
+//		if (isXmlName(xml) == 1) is_arcade_type = 1;
+//		arcade_pre_parse(xml);
+//	}
+//
+//	if (core_type == CORE_TYPE_8BIT)
+//	{
+//		printf("Identified 8BIT core");
+//		spi_uio_cmd16(UIO_SET_MEMSZ, sdram_sz(-1));
+//
+//		// send a reset
+//		user_io_status_set("[0]", 1);
+//	}
+//	else if (core_type == CORE_TYPE_SHARPMZ)
+//	{
+//		user_io_set_core_name("sharpmz");
+//	}
 
-	if (core_type == CORE_TYPE_8BIT)
-	{
-		printf("Identified 8BIT core");
-		spi_uio_cmd16(UIO_SET_MEMSZ, sdram_sz(-1));
-
-		// send a reset
-		user_io_status_set("[0]", 1);
-	}
-	else if (core_type == CORE_TYPE_SHARPMZ)
-	{
-		user_io_set_core_name("sharpmz");
-	}
-
-	user_io_read_confstr();
-	user_io_read_core_name();
+//	user_io_read_confstr();
+//	user_io_read_core_name();
 
 	cfg_parse();
-	cfg_print();
-	while (cfg.waitmount[0] && !is_menu())
-	{
-		printf("> > > wait for %s mount < < <\n", cfg.waitmount);
-		static char str[256];
-		snprintf(str, sizeof(str), "exit $(mount | grep \"%s\" | wc -c)", cfg.waitmount);
-		int ret = system(str);
-		if (!(ret & 0xFF) && ret) break;
-		sleep(1);
-	}
+//	cfg_print();
+//	while (cfg.waitmount[0] && !is_menu())
+//	{
+//		printf("> > > wait for %s mount < < <\n", cfg.waitmount);
+//		static char str[256];
+//		snprintf(str, sizeof(str), "exit $(mount | grep \"%s\" | wc -c)", cfg.waitmount);
+//		int ret = system(str);
+//		if (!(ret & 0xFF) && ret) break;
+//		sleep(1);
+//	}
 
 	parse_config();
 	if (!xml && defmra[0] && FileExists(defmra))
@@ -1320,12 +1320,12 @@ void user_io_init(const char *path, const char *xml)
 		printf("Using default MRA: %s\n", xml);
 	}
 
-	if (cfg.log_file_entry) MakeFile("/tmp/STARTPATH", core_path);
+//	if (cfg.log_file_entry) MakeFile("/tmp/STARTPATH", core_path);
 
-	if (cfg.bootcore[0] != '\0')
-	{
-		bootcore_init(xml ? xml : path);
-	}
+//	if (cfg.bootcore[0] != '\0')
+//	{
+//		bootcore_init(xml ? xml : path);
+//	}
 	video_init();
 //	if (strlen(cfg.font)) LoadFont(cfg.font);
 	load_volume();

@@ -1,3 +1,4 @@
+use crate::config::edid::CustomVideoMode;
 use crate::core::buttons::ButtonMap;
 use crate::core::file::SdCard;
 use crate::fpga::feature::SpiFeatureSet;
@@ -6,9 +7,23 @@ use crate::keyboard::Ps2Scancode;
 use crate::types::StatusBitMap;
 use bitfield::bitfield;
 use chrono::{Datelike, NaiveDateTime, Timelike};
+use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use std::mem::transmute;
 use std::time::SystemTime;
-use tracing::trace;
+use tracing::{debug, trace, warn};
+
+// TODO: make this a proper type. Maybe in the Framebuffer module.
+// --  [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
+// --  [3]   : 0=16bits 565 1=16bits 1555
+// --  [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
+// --  [5]   : TBD
+const FB_FMT_565: u16 = 0b00100;
+const FB_FMT_1555: u16 = 0b01100;
+const FB_FMT_888: u16 = 0b00101;
+const FB_FMT_8888: u16 = 0b00110;
+const FB_FMT_PAL8: u16 = 0b00011;
+const FB_FMT_RXB: u16 = 0b10000;
+const FB_EN: u16 = 0x8000;
 
 /// User IO commands.
 #[derive(Debug, Clone, Copy, PartialEq, strum::Display)]
@@ -44,10 +59,25 @@ enum UserIoCommands {
 
     UserIoSetStatus32Bits = 0x1E,
 
+    UserIoSetVideo = 0x20,
+
     /// Transmit RTC (time struct, including seconds) to the core.
     UserIoRtc = 0x22,
 
+    // Digital volume as a number of bits to shift to the right
+    UserIoAudioVolume = 0x26,
+
     UserIoGetStatusBits = 0x29,
+
+    // Set frame buffer for HPS output
+    UserIoSetFramebuffer = 0x2F,
+
+    UserIoSetMemSz = 0x31,
+
+    // Enable/disable Gamma correction
+    UserIoSetGamma = 0x32,
+
+    UserIoSetArCust = 0x3A,
 }
 
 impl IntoLowLevelSpiCommand for UserIoCommands {
@@ -633,6 +663,202 @@ impl SpiCommand for SdWrite<'_> {
 impl<'a> SdWrite<'a> {
     pub fn new(data: &'a mut Vec<u8>, wide: bool, ack: u16) -> Self {
         Self { data, wide, ack }
+    }
+}
+
+pub struct SetMemorySize(pub u16);
+
+impl SpiCommand for SetMemorySize {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        spi.command(UserIoCommands::UserIoSetMemSz).write(self.0);
+        Ok(())
+    }
+}
+
+impl SetMemorySize {
+    pub const fn new(size: u16) -> Self {
+        Self(size)
+    }
+
+    pub fn from_fpga() -> Result<Self, &'static str> {
+        Self::from_memory(DevMemMemoryMapper::create(0x1FFFF000, 0x1000)?)
+    }
+
+    pub fn from_memory<M: MemoryMapper>(mut mapper: M) -> Result<Self, &'static str> {
+        let par = mapper.as_mut_range(0xF00..);
+
+        if par[0] == 0x12 && par[1] == 0x57 {
+            Ok(Self::new(
+                0x8000u16 | ((par[2] as u16) << 8) | par[3] as u16,
+            ))
+        } else {
+            debug!("SDRAM config not found.");
+            Ok(Self::new(0))
+        }
+    }
+}
+
+pub struct SetFramebufferToCore;
+
+impl SpiCommand for SetFramebufferToCore {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        spi.command(UserIoCommands::UserIoSetFramebuffer).write(0);
+        Ok(())
+    }
+}
+
+pub struct SetFramebufferToLinux {
+    pub n: usize,
+    pub xoff: u16,
+    pub yoff: u16,
+    pub height: u16,
+    pub width: u16,
+    pub hact: u16,
+    pub vact: u16,
+}
+
+impl SpiCommand for SetFramebufferToLinux {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        let mut out = 0;
+        let mut command = spi.command_read(UserIoCommands::UserIoSetFramebuffer, &mut out);
+
+        if out == 0 {
+            warn!("Core doesn't support HPS frame buffer");
+            return Ok(());
+        }
+
+        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
+
+        let fb_addr = (FB_BASE
+            + ((1920 * 1080) * 4 * self.n)
+            + if self.n == 0 { 4096usize } else { 0 }) as u32;
+
+        command.write(FB_EN | FB_FMT_RXB | FB_FMT_8888); // format, enable flag
+        command.write(fb_addr as u16); // base address low word
+        command.write((fb_addr >> 16) as u16); // base address high word
+
+        command.write(self.width); // frame width
+        command.write(self.height); // frame height
+        command.write(self.xoff);
+        command.write(self.xoff + self.hact - 1); // scaled right
+        command.write(self.yoff); // scaled top
+        command.write(self.yoff + self.vact - 1); // scaled bottom
+        command.write(self.width * 4); // stride
+
+        Ok(())
+    }
+}
+
+pub struct IsGammaSupported<'a>(pub &'a mut bool);
+
+impl SpiCommand for IsGammaSupported<'_> {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        let mut out = 0;
+        spi.command_read(UserIoCommands::UserIoSetGamma, &mut out);
+        *self.0 = out != 0;
+        Ok(())
+    }
+}
+
+pub struct DisableGamma;
+
+impl SpiCommand for DisableGamma {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        spi.command(UserIoCommands::UserIoSetGamma).write_b(0);
+        Ok(())
+    }
+}
+
+pub struct EnableGamma<'a>(pub &'a [(u8, u8, u8)]);
+
+impl SpiCommand for EnableGamma<'_> {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        let mut command = spi.command(UserIoCommands::UserIoSetGamma);
+
+        for (i, (r, g, b)) in self.0.iter().enumerate() {
+            command
+                .write(((i as u16) << 8) | *r as u16)
+                .write(((i as u16) << 8) | *g as u16)
+                .write(((i as u16) << 8) | *b as u16);
+        }
+
+        Ok(())
+    }
+}
+
+pub struct SetCustomAspectRatio(pub (u16, u16), pub (u16, u16));
+
+impl SetCustomAspectRatio {
+    pub fn new(horizontal: u16, vertical: u16) -> Self {
+        Self((horizontal, vertical), (0, 0))
+    }
+}
+
+impl From<(u16, u16)> for SetCustomAspectRatio {
+    fn from(value: (u16, u16)) -> Self {
+        Self::new(value.0, value.1)
+    }
+}
+
+impl SpiCommand for SetCustomAspectRatio {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        let mut command = spi.command(UserIoCommands::UserIoSetArCust);
+
+        command
+            .write(self.0 .0)
+            .write(self.0 .1)
+            .write(self.1 .0)
+            .write(self.1 .1);
+
+        Ok(())
+    }
+}
+
+pub struct SetVideoMode<'a>(pub &'a CustomVideoMode);
+
+impl SpiCommand for SetVideoMode<'_> {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        let mut command = spi.command(UserIoCommands::UserIoSetVideo);
+        let m = self.0;
+        let p = m.param;
+
+        debug!("Setting video mode: {:#?}", m);
+
+        let vrr: bool = m.vrr; // Enforce that `m.vrr` is a bool.
+
+        // 1
+        command.write(((!!p.pr as u16) << 15) | ((vrr as u16) << 14) | p.hact as u16);
+        command.write(p.hfp as u16);
+        command.write(((!!p.hpol as u16) << 15) | (p.hs as u16));
+        command.write(p.hbp as u16);
+
+        // 5
+        command.write(p.vact as u16);
+        command.write(p.vfp as u16);
+        command.write(((!!p.vpol as u16) << 15) | (p.vs as u16));
+        command.write(p.vbp as u16);
+
+        // PLL
+        for (i, p) in p.pll.iter().copied().enumerate() {
+            if i % 2 != 0 {
+                command.write(0x4000 | (p as u16));
+            } else {
+                command.write(p as u16).write((p >> 16) as u16);
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Set the audio volume as the number of bits to shift to the right.
+pub struct SetAudioVolume(pub u8);
+
+impl SpiCommand for SetAudioVolume {
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        spi.command(UserIoCommands::UserIoAudioVolume)
+            .write_b(self.0);
+        Ok(())
     }
 }
 

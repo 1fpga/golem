@@ -1,3 +1,4 @@
+use crate::config::MisterConfig;
 use crate::config_string;
 use crate::config_string::{FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
@@ -5,12 +6,11 @@ use crate::core::file::SdCard;
 use crate::fpga::file_io::{
     FileExtension, FileIndex, FileTxData16Bits, FileTxData8Bits, FileTxDisabled, FileTxEnabled,
 };
-use crate::fpga::osd_io::{OsdDisable, OsdEnable};
 use crate::fpga::user_io::{
     GetSdStat, GetStatusBits, SdRead, SdStatOutput, SdWrite, SetSdConf, SetSdInfo, SetSdStat,
     SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp, UserIoRtc,
 };
-use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga};
+use crate::fpga::{user_io, CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
@@ -24,6 +24,8 @@ use tracing::{debug, info, trace};
 
 pub mod buttons;
 pub mod file;
+
+mod video;
 
 pub enum MisterFpgaSendFileInfo {
     Memory {
@@ -75,6 +77,8 @@ pub struct MisterFpgaCore {
 
     status: StatusBitMap,
     status_counter: u8,
+
+    framebuffer: crate::framebuffer::FpgaFramebuffer<DevMemMemoryMapper>,
 }
 
 impl MisterFpgaCore {
@@ -117,7 +121,38 @@ impl MisterFpgaCore {
             map,
             status: Default::default(),
             status_counter: 0,
+            framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
         })
+    }
+
+    pub fn init(&mut self) -> Result<(), String> {
+        self.soft_reset();
+        self.fpga
+            .spi_mut()
+            .execute(user_io::SetMemorySize::from_fpga().unwrap())?;
+
+        // Initialize the framebuffer.
+        self.fpga.spi_mut().execute(user_io::SetFramebufferToCore)?;
+
+        Ok(())
+    }
+
+    // TODO: move this to a de10 platform and to the GoLEm code.
+    pub fn init_video(&mut self, config: &MisterConfig, is_menu: bool) -> Result<(), String> {
+        video::init(config);
+        video::init_mode(config, self, is_menu);
+        Ok(())
+    }
+
+    pub fn spi_mut(&mut self) -> &mut crate::fpga::Spi<DevMemMemoryMapper> {
+        self.fpga.spi_mut()
+    }
+
+    /// Perform a soft reset.
+    pub fn soft_reset(&mut self) {
+        self.read_status_bits();
+        self.status.set(0, true);
+        self.send_status_bits(self.status);
     }
 
     /// Send the Real Time Clock to the core.
@@ -265,7 +300,7 @@ impl MisterFpgaCore {
 
     /// Take a screenshot and return the image in memory.
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
-        crate::framebuffer::FpgaFramebuffer::default().take_screenshot()
+        self.framebuffer.take_screenshot()
     }
 
     /// Mount an SD card to the core.
@@ -370,11 +405,7 @@ impl MisterFpgaCore {
         Ok(())
     }
 
-    fn send_file_to_buffer_(
-        &mut self,
-        size: u32,
-        mut reader: impl std::io::Read,
-    ) -> Result<(), String> {
+    fn send_file_to_buffer_(&mut self, size: u32, mut reader: impl Read) -> Result<(), String> {
         // Verify invariants.
         if size >= 0x2000_0000 {
             return Err("File too large.".to_string());

@@ -21,7 +21,6 @@ struct FbHeader {
 
 pub struct FpgaFramebuffer<M: MemoryMapper> {
     memory: M,
-    header: FbHeader,
 }
 
 impl Default for FpgaFramebuffer<DevMemMemoryMapper> {
@@ -40,9 +39,11 @@ impl Default for FpgaFramebuffer<DevMemMemoryMapper> {
 
 impl<M: MemoryMapper> FpgaFramebuffer<M> {
     fn new(memory: M) -> Result<Self, &'static str> {
-        let header: *const u8 = memory.as_ptr();
+        Ok(Self { memory })
+    }
 
-        let buffer = unsafe { std::slice::from_raw_parts(header, 16) };
+    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
+        let buffer = self.memory.as_range(0..16);
 
         // Bytes are in big endian, but ARM is in little endian.
         let header = FbHeader {
@@ -56,20 +57,16 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         };
 
         if header.magic != 0x0101 {
-            return Err("Invalid framebuffer header.");
+            return Err("Invalid framebuffer header.".to_string());
         }
         debug!("Header data: {:?}", header);
 
-        Ok(Self { memory, header })
-    }
-
-    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
-        let height = self.header.height as usize;
-        let width = self.header.width as usize;
-        let line = self.header.line as usize;
+        let height = header.height as usize;
+        let width = header.width as usize;
+        let line = header.line as usize;
         let start = self.memory.as_ptr::<u8>();
         let fb = unsafe {
-            std::slice::from_raw_parts(start.add(self.header.header_len as usize), line * width * 3)
+            std::slice::from_raw_parts(start.add(header.header_len as usize), line * width * 3)
         };
 
         let mut img = RgbImage::new(width as u32, height as u32);

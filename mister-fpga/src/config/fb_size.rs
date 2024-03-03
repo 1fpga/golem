@@ -12,7 +12,7 @@ pub enum FramebufferSizeConfig {
     #[serde(alias = "1")]
     FullSize = 1,
 
-    #[serde(alias = "2")]
+    #[serde(alias = "2", alias = "3")]
     HalfSize = 2,
 
     #[serde(alias = "4")]
@@ -23,6 +23,17 @@ impl Merge for FramebufferSizeConfig {
     fn merge(&mut self, other: Self) {
         if other != FramebufferSizeConfig::default() {
             *self = other;
+        }
+    }
+}
+
+impl FramebufferSizeConfig {
+    pub fn as_scale(&self) -> u8 {
+        match self {
+            FramebufferSizeConfig::Automatic => 0,
+            FramebufferSizeConfig::FullSize => 1,
+            FramebufferSizeConfig::HalfSize => 2,
+            FramebufferSizeConfig::QuarterSize => 4,
         }
     }
 }

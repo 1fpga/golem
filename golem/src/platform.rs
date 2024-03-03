@@ -93,10 +93,7 @@ pub trait Core {
     /// cannot execute the command (this is not an error).
     fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String>;
 
-    fn reset(&mut self) -> Result<(), String> {
-        self.status_pulse(0);
-        Ok(())
-    }
+    fn reset(&mut self) -> Result<(), String>;
 
     fn status_mask(&self) -> StatusBitMap;
     fn status_bits(&self) -> StatusBitMap;
