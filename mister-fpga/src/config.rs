@@ -1250,18 +1250,6 @@ pub extern "C" fn rust_load_config() {
     let mut config = Config::load(p).unwrap();
     config.mister.set_defaults();
 
-    // Check the altcfg.
-    #[cfg(feature = "platform_de10")]
-    {
-        let alt = crate::platform::de10::user_io::altcfg(-1);
-        if alt != 0 {
-            let p = root.join(format!("MiSTer_{alt}.ini"));
-            if let Ok(alt_config) = Config::load(&p) {
-                config.merge(alt_config);
-            }
-        }
-    }
-
     unsafe {
         config.copy_to_cfg_cpp(&mut cfg);
     }

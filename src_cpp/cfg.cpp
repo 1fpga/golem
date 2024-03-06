@@ -549,11 +549,11 @@ extern "C" void cfg_parse_original() {
 	has_video_sections = false;
 	using_video_section = false;
 	cfg_error_count = 0;
-	ini_parse(altcfg(), video_get_core_mode_name(1));
+//	ini_parse(altcfg(), video_get_core_mode_name(1));
 	if (has_video_sections && !using_video_section)
 	{
 		// second pass to look for section without vrefresh
-		ini_parse(altcfg(), video_get_core_mode_name(0));
+//		ini_parse(altcfg(), video_get_core_mode_name(0));
 	}
 
 	if (strlen(cfg.vga_mode))

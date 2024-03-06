@@ -63,12 +63,6 @@ pub fn main() -> Result<(), String> {
 
     tracing::debug!(?opts);
 
-    // Make sure we're in the right directory. Otherwise, relative paths
-    // won't work. We set the current directory to be in the MiSTer
-    // executable.
-    // TODO: fix relative paths everywhere.
-    // std::env::set_current_dir(std::env::current_exe().unwrap().parent().unwrap()).unwrap();
-
     // Create the application and run it.
     let mut app = application::GoLEmApp::new(WindowManager::default());
     app.run(opts);

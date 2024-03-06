@@ -330,7 +330,7 @@ static void rom_finish(int send, uint32_t address, int index)
 
 			if (address)
 			{
-				shmem_put(fpga_mem(address), len, data);
+//				shmem_put(fpga_mem(address), len, data);
 			}
 			else
 			{

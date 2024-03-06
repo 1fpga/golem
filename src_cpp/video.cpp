@@ -3241,51 +3241,6 @@ static char *get_file_fromdir(const char* dir, int num, int *count)
 
 static Imlib_Image load_bg()
 {
-	const char* fname = "menu.png";
-	if (!FileExists(fname))
-	{
-		fname = "menu.jpg";
-		if (!FileExists(fname)) fname = 0;
-	}
-
-	if (!fname)
-	{
-		static char bgdir[128];
-		static char label[64];
-		int alt = altcfg();
-
-		const char* cfg_name = cfg_get_name(alt);
-		snprintf(label, sizeof(label), "%s", cfg_name + 6);
-		char *p = strrchr(label, '.');
-		if (p) *p = 0;
-
-		sprintf(bgdir, "wallpapers%s", label);
-		if (alt <= 0 || !cfg_name[0] || !PathIsDir(bgdir)) strcpy(bgdir, "wallpapers");
-
-		if (PathIsDir(bgdir))
-		{
-			int rndfd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
-			if (rndfd >= 0)
-			{
-				uint32_t rnd;
-				read(rndfd, &rnd, sizeof(rnd));
-				close(rndfd);
-
-				int count = 0;
-				get_file_fromdir(bgdir, -1, &count);
-				if (count > 0) fname = get_file_fromdir(bgdir, rnd % count, &count);
-			}
-		}
-	}
-
-	if (fname)
-	{
-		Imlib_Load_Error error = IMLIB_LOAD_ERROR_NONE;
-		Imlib_Image img = imlib_load_image_with_error_return(getFullPath(fname), &error);
-		if (img) return img;
-		printf("Image %s loading error %d\n", fname, error);
-	}
-
 	return NULL;
 }
 

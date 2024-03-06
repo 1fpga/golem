@@ -221,25 +221,15 @@ static uint32_t load_crom_to_mem(const char* path, const char* name, uint8_t ind
 		if (partsz > LOADBUF_SZ) partsz = LOADBUF_SZ;
 
 		//printf("partsz=%d, map_addr=0x%X\n", partsz, map_addr);
-		void *base = shmem_map(map_addr, partsz);
-		if (!base)
-		{
+//		void *base = shmem_map(map_addr, partsz);
+//		if (!base)
+//		{
 			FileClose(&f);
 			return 0;
-		}
+//		}
 
-		FileReadAdv(&f, loadbuf, partsz/2);
-		spr_convert_skp((uint16_t*)loadbuf, ((uint16_t*)base) + ((index ^ 1) & 1), partsz / 4);
-
-		ProgressMessage("Loading", name, size - (remain - partsz), size);
-
-		shmem_unmap(base, partsz);
-		remain -= partsz;
-		map_addr += partsz;
 	}
 
-	FileClose(&f);
-	ProgressMessage();
 
 	return map_addr - 0x38000000;
 }
@@ -283,43 +273,43 @@ static uint32_t load_rom_to_mem(const char* path, const char* name, uint8_t neo_
 		if (partszf > LOADBUF_SZ) partszf = LOADBUF_SZ;
 
 		//printf("partsz=%d, map_addr=0x%X\n", partsz, map_addr);
-		void *base = shmem_map(map_addr, partsz);
-		if (!base)
-		{
+//		void *base = shmem_map(map_addr, partsz);
+//		if (!base)
+//		{
 			FileClose(&f);
 			return 0;
-		}
-
-		if (neo_file_type == NEO_FILE_FIX)
-		{
-			memset(loadbuf, 0, partsz);
-			if (partszf) FileReadAdv(&f, loadbuf, partszf);
-			fix_convert(loadbuf, (uint8_t*)base, partsz);
-		}
-		else if (neo_file_type == NEO_FILE_SPR)
-		{
-			memset(loadbuf, 0, partsz);
-			if (partszf) FileReadAdv(&f, loadbuf, partszf);
-			if (swap) spr_bswap((uint32_t*)loadbuf, partsz / 4);
-			spr_convert_dbl((uint16_t*)loadbuf, (uint16_t*)base, partsz / 2);
-		}
-		else
-		{
-			memset(base, ((index>=16) && (index<64)) ? 8 : 0, partsz);
-			if (partszf) FileReadAdv(&f, base, partszf);
-		}
-
-		ProgressMessage("Loading", name, size - (remain - partsz), size);
-
-		shmem_unmap(base, partsz);
-		remain -= partsz;
-		map_addr += partsz;
+//		}
+//
+//		if (neo_file_type == NEO_FILE_FIX)
+//		{
+//			memset(loadbuf, 0, partsz);
+//			if (partszf) FileReadAdv(&f, loadbuf, partszf);
+//			fix_convert(loadbuf, (uint8_t*)base, partsz);
+//		}
+//		else if (neo_file_type == NEO_FILE_SPR)
+//		{
+//			memset(loadbuf, 0, partsz);
+//			if (partszf) FileReadAdv(&f, loadbuf, partszf);
+//			if (swap) spr_bswap((uint32_t*)loadbuf, partsz / 4);
+//			spr_convert_dbl((uint16_t*)loadbuf, (uint16_t*)base, partsz / 2);
+//		}
+//		else
+//		{
+//			memset(base, ((index>=16) && (index<64)) ? 8 : 0, partsz);
+//			if (partszf) FileReadAdv(&f, base, partszf);
+//		}
+//
+//		ProgressMessage("Loading", name, size - (remain - partsz), size);
+//
+//		shmem_unmap(base, partsz);
+//		remain -= partsz;
+//		map_addr += partsz;
 	}
-
-	FileClose(&f);
-	ProgressMessage();
-
-	return size;
+//
+//	FileClose(&f);
+//	ProgressMessage();
+//
+//	return size;
 }
 
 static uint32_t crom_sz_max = 0;

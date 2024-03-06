@@ -1130,28 +1130,28 @@ static int process_request(void *reqres_buffer)
 
 void x86_share_poll()
 {
-	if (!shmem)
-	{
-		shmem = (uint8_t *)shmem_map(SHMEM_ADDR, SHMEM_SIZE);
-		if (!shmem) shmem = (uint8_t *)-1;
-	}
-	else if (shmem != (uint8_t *)-1)
-	{
-		static uint32_t old_req_id = 0;
-		uint32_t req_id = *(uint32_t*)(shmem + REQUEST_FLG);
-
-		if ((uint16_t)old_req_id != (uint16_t)req_id)
-		{
-			dbg_print("\nnew req: %08X\n", req_id);
-			old_req_id = req_id;
-
-			if (((req_id >> 16) & 0xFFFF) == 0xA55A && ((req_id + 77) & 0xFF) == ((req_id >> 8) & 0xFF))
-			{
-				process_request(shmem + REQUEST_BUFFER);
-				*(uint16_t*)(shmem + REQUEST_FLG + 2) = (uint16_t)req_id;
-			}
-		}
-	}
+//	if (!shmem)
+//	{
+//		shmem = (uint8_t *)shmem_map(SHMEM_ADDR, SHMEM_SIZE);
+//		if (!shmem) shmem = (uint8_t *)-1;
+//	}
+//	else if (shmem != (uint8_t *)-1)
+//	{
+//		static uint32_t old_req_id = 0;
+//		uint32_t req_id = *(uint32_t*)(shmem + REQUEST_FLG);
+//
+//		if ((uint16_t)old_req_id != (uint16_t)req_id)
+//		{
+//			dbg_print("\nnew req: %08X\n", req_id);
+//			old_req_id = req_id;
+//
+//			if (((req_id >> 16) & 0xFFFF) == 0xA55A && ((req_id + 77) & 0xFF) == ((req_id >> 8) & 0xFF))
+//			{
+//				process_request(shmem + REQUEST_BUFFER);
+//				*(uint16_t*)(shmem + REQUEST_FLG + 2) = (uint16_t)req_id;
+//			}
+//		}
+//	}
 }
 
 void x86_share_reset()

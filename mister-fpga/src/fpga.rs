@@ -18,9 +18,7 @@ pub use spi::*;
 /// TODO: remove these when the fpga code from CPP is gone.
 pub mod ffi {
     use super::FPGA_SINGLETON;
-    use crate::fpga::feature::SpiFeatureSet;
     use libc::{c_int, c_ulong};
-    use tracing::error;
 
     #[no_mangle]
     extern "C" fn fpga_core_id() -> c_int {
@@ -30,10 +28,7 @@ pub mod ffi {
                 .unwrap()
                 .core_type()
                 .map(|v| v as c_int)
-                .unwrap_or_else(|| {
-                    error!("FPGA core type mismatch");
-                    -1
-                })
+                .unwrap_or_else(|| -1)
         }
     }
 
@@ -61,22 +56,11 @@ pub mod ffi {
     }
 
     #[no_mangle]
-    extern "C" fn fpga_wait_to_reset() {
-        unsafe {
-            FPGA_SINGLETON.as_mut().unwrap().wait_to_reset();
-        }
-    }
+    extern "C" fn fpga_wait_to_reset() {}
 
     #[no_mangle]
-    unsafe extern "C" fn fpgamgr_dclkcnt_set_rust(count: c_ulong) -> c_int {
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .set_dclkcnt(count as u32)
-            .map_or(
-                -3447, // aka -ETIMEOUT
-                |_| 0,
-            )
+    unsafe extern "C" fn fpgamgr_dclkcnt_set_rust(_count: c_ulong) -> c_int {
+        0
     }
 
     #[no_mangle]
@@ -85,13 +69,7 @@ pub mod ffi {
     }
 
     #[no_mangle]
-    unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {
-        if en != 0 {
-            FPGA_SINGLETON.as_mut().unwrap().spi_mut().enable_u32(mask);
-        } else {
-            FPGA_SINGLETON.as_mut().unwrap().spi_mut().disable_u32(mask);
-        }
-    }
+    unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {}
 
     #[no_mangle]
     pub unsafe extern "C" fn DisableIO() {}
@@ -213,6 +191,7 @@ impl MisterFpga {
     }
 
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     fn soc_mut(&self) -> &mut cyclone_v::SocFpga<DevMemMemoryMapper> {
         unsafe { &mut (*self.soc.get()) }
     }

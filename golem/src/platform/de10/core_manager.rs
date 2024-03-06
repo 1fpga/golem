@@ -4,6 +4,7 @@ use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};
 use mister_fpga::fpga::MisterFpga;
 use std::path::Path;
+use tracing::info;
 
 pub mod core;
 
@@ -68,21 +69,26 @@ impl CoreManager {
 
         core.spi_mut().execute(switches).unwrap();
 
-        unsafe {
-            crate::platform::de10::user_io::user_io_init(
-                "\0".as_ptr() as *const _,
-                std::ptr::null(),
-            );
-        }
+        let core_type = self.fpga_mut().core_type();
+        let fio_size = self.fpga_mut().core_interface_type();
+        let io_version = self.fpga_mut().core_io_version();
 
+        info!(?core_type, ?fio_size, ?io_version, "Core info");
         //
+        // unsafe {
+        //     crate::platform::de10::user_io::user_io_init(
+        //         "\0".as_ptr() as *const _,
+        //         std::ptr::null(),
+        //     );
+        // }
+
         // let mut bits = core.read_status_bits().clone();
         // bits.set(0, true);
         // bits.set(4, false);
         // bits.set_range(1..4, 0);
         // core.send_status_bits(bits);
         // core.read_status_bits();
-        // core.send_rtc()?;
+        core.send_rtc()?;
 
         Ok(core::MisterFpgaCore::new(core))
     }

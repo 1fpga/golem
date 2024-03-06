@@ -1192,36 +1192,39 @@ void ResetUART()
 
 uint16_t sdram_sz(int sz)
 {
-	int res = 0;
+fprintf(stderr, "!!!! sdram_sz(%d)\n", sz);
+return 0;
 
-	void* buf = shmem_map(0x1FFFF000, 0x1000);
-	if (!buf) return 0;
-
-	volatile uint8_t* par = (volatile uint8_t*)buf;
-	par += 0xF00;
-	if (sz >= 0)
-	{
-		*par++ = 0x12;
-		*par++ = 0x57;
-		*par++ = (uint8_t)(sz>>8);
-		*par++ = (uint8_t)sz;
-	}
-	else
-	{
-		if ((par[0] == 0x12) && (par[1] == 0x57))
-		{
-			res = 0x8000 | (par[2]<<8) | par[3];
-			if(res & 0x4000) printf("*** Debug phase: %d\n", (res & 0x100) ? (res & 0xFF) : -(res & 0xFF));
-			else printf("*** Found SDRAM config: %d\n", res & 7);
-		}
-		else if(!is_menu())
-		{
-			printf("*** SDRAM config not found\n");
-		}
-	}
-
-	shmem_unmap(buf, 0x1000);
-	return res;
+//	int res = 0;
+//
+//	void* buf = shmem_map(0x1FFFF000, 0x1000);
+//	if (!buf) return 0;
+//
+//	volatile uint8_t* par = (volatile uint8_t*)buf;
+//	par += 0xF00;
+//	if (sz >= 0)
+//	{
+//		*par++ = 0x12;
+//		*par++ = 0x57;
+//		*par++ = (uint8_t)(sz>>8);
+//		*par++ = (uint8_t)sz;
+//	}
+//	else
+//	{
+//		if ((par[0] == 0x12) && (par[1] == 0x57))
+//		{
+//			res = 0x8000 | (par[2]<<8) | par[3];
+//			if(res & 0x4000) printf("*** Debug phase: %d\n", (res & 0x100) ? (res & 0xFF) : -(res & 0xFF));
+//			else printf("*** Found SDRAM config: %d\n", res & 7);
+//		}
+//		else if(!is_menu())
+//		{
+//			printf("*** SDRAM config not found\n");
+//		}
+//	}
+//
+//	shmem_unmap(buf, 0x1000);
+//	return res;
 }
 
 int user_io_is_dualsdr()
@@ -1259,40 +1262,8 @@ void user_io_init(const char *path, const char *xml)
 		core_type = CORE_TYPE_8BIT;
 	}
 
-//	if ((core_type != CORE_TYPE_8BIT) &&
-//		(core_type != CORE_TYPE_SHARPMZ))
-//	{
-//		core_type = CORE_TYPE_UNKNOWN;
-//		fio_size = 0;
-//		io_ver = 0;
-//	}
-
-//	OsdSetSize(8);
-
-//	if (xml)
-//	{
-//		if (isXmlName(xml) == 1) is_arcade_type = 1;
-//		arcade_pre_parse(xml);
-//	}
-//
-//	if (core_type == CORE_TYPE_8BIT)
-//	{
-//		printf("Identified 8BIT core");
-//		spi_uio_cmd16(UIO_SET_MEMSZ, sdram_sz(-1));
-//
-//		// send a reset
-//		user_io_status_set("[0]", 1);
-//	}
-//	else if (core_type == CORE_TYPE_SHARPMZ)
-//	{
-//		user_io_set_core_name("sharpmz");
-//	}
-
-//	user_io_read_confstr();
-//	user_io_read_core_name();
-
-	cfg_parse();
-	parse_config();
+//	cfg_parse();
+//	parse_config();
 
 }
 
@@ -1456,110 +1427,111 @@ static void kbd_fifo_poll()
 
 int process_ss(const char *rom_name, int enable)
 {
-	static char ss_name[1024] = {};
-	static char *ss_sufx = 0;
-	static uint32_t ss_cnt[4] = {};
-	static void *base[4] = {};
-	static int enabled = 0;
+//	static char ss_name[1024] = {};
+//	static char *ss_sufx = 0;
+//	static uint32_t ss_cnt[4] = {};
+//	static void *base[4] = {};
+//	static int enabled = 0;
+//
+//	if (!ss_base) return 0;
+//
+//	if (rom_name)
+//	{
+//		enabled = enable;
+//		if (!enabled) return 0;
+//
+//		uint32_t len = ss_size;
+//		uint32_t map_addr = ss_base;
+//		fileTYPE f = {};
+//
+//		for (int i = 0; i < 4; i++)
+//		{
+//			if (!base[i]) base[i] = shmem_map(map_addr, len);
+//			if (!base[i])
+//			{
+//				printf("Unable to mmap (0x%X, %d)!\n", map_addr, len);
+//			}
+//			else
+//			{
+//				ss_cnt[i] = 0xFFFFFFFF;
+//				memset(base[i], 0, len);
+//
+//				if (!i)
+//				{
+//					FileGenerateSavestatePath(rom_name, ss_name, 1);
+//					printf("Base SavestatePath=%s\n", ss_name);
+//					if (!FileExists(ss_name)) FileGenerateSavestatePath(rom_name, ss_name, 0);
+//				}
+//				else
+//				{
+//					FileGenerateSavestatePath(rom_name, ss_name, i + 1);
+//				}
+//
+//				if (FileExists(ss_name))
+//				{
+//					if (!FileOpen(&f, ss_name))
+//					{
+//						printf("Unable to open file: %s\n", ss_name);
+//					}
+//					else
+//					{
+//						int ret = FileReadAdv(&f, base[i], len);
+//						FileClose(&f);
+//						printf("process_ss: read %d bytes from file: %s\n", ret, ss_name);
+//					}
+//				}
+//				*(uint32_t*)(base[i]) = 0xFFFFFFFF;
+//			}
+//
+//			map_addr += len;
+//		}
+//
+//		FileGenerateSavestatePath(rom_name, ss_name, 1);
+//		ss_sufx = ss_name + strlen(ss_name) - 4;
+//		return 1;
+//	}
+//
+//	if (!enabled) return 0;
+//
+//	static unsigned long ss_timer = 0;
+//	if (ss_timer && !CheckTimer(ss_timer)) return 0;
+//	ss_timer = GetTimer(1000);
+//
+//	fileTYPE f = {};
+//	for (int i = 0; i < 4; i++)
+//	{
+//		if (base[i])
+//		{
+//			uint32_t curcnt = ((uint32_t*)(base[i]))[0];
+//			uint32_t size = ((uint32_t*)(base[i]))[1];
+//
+//			if (curcnt != ss_cnt[i])
+//			{
+//				ss_cnt[i] = curcnt;
+//				if (size) size = (size + 2) * 4;
+//				if (size > 0 && size <= ss_size)
+//				{
+//					MenuHide();
+//					Info("Saving the state", 500);
+//
+//					*ss_sufx = i + '1';
+//					if (FileOpenEx(&f, ss_name, O_CREAT | O_TRUNC | O_RDWR | O_SYNC))
+//					{
+//						int ret = FileWriteAdv(&f, base[i], size);
+//						FileClose(&f);
+//						printf("Wrote %d bytes to file: %s\n", ret, ss_name);
+//					}
+//					else
+//					{
+//						printf("Unable to create file: %s\n", ss_name);
+//					}
+//				}
+//			}
+//		}
+//	}
 
-	if (!ss_base) return 0;
-
-	if (rom_name)
-	{
-		enabled = enable;
-		if (!enabled) return 0;
-
-		uint32_t len = ss_size;
-		uint32_t map_addr = ss_base;
-		fileTYPE f = {};
-
-		for (int i = 0; i < 4; i++)
-		{
-			if (!base[i]) base[i] = shmem_map(map_addr, len);
-			if (!base[i])
-			{
-				printf("Unable to mmap (0x%X, %d)!\n", map_addr, len);
-			}
-			else
-			{
-				ss_cnt[i] = 0xFFFFFFFF;
-				memset(base[i], 0, len);
-
-				if (!i)
-				{
-					FileGenerateSavestatePath(rom_name, ss_name, 1);
-					printf("Base SavestatePath=%s\n", ss_name);
-					if (!FileExists(ss_name)) FileGenerateSavestatePath(rom_name, ss_name, 0);
-				}
-				else
-				{
-					FileGenerateSavestatePath(rom_name, ss_name, i + 1);
-				}
-
-				if (FileExists(ss_name))
-				{
-					if (!FileOpen(&f, ss_name))
-					{
-						printf("Unable to open file: %s\n", ss_name);
-					}
-					else
-					{
-						int ret = FileReadAdv(&f, base[i], len);
-						FileClose(&f);
-						printf("process_ss: read %d bytes from file: %s\n", ret, ss_name);
-					}
-				}
-				*(uint32_t*)(base[i]) = 0xFFFFFFFF;
-			}
-
-			map_addr += len;
-		}
-
-		FileGenerateSavestatePath(rom_name, ss_name, 1);
-		ss_sufx = ss_name + strlen(ss_name) - 4;
-		return 1;
-	}
-
-	if (!enabled) return 0;
-
-	static unsigned long ss_timer = 0;
-	if (ss_timer && !CheckTimer(ss_timer)) return 0;
-	ss_timer = GetTimer(1000);
-
-	fileTYPE f = {};
-	for (int i = 0; i < 4; i++)
-	{
-		if (base[i])
-		{
-			uint32_t curcnt = ((uint32_t*)(base[i]))[0];
-			uint32_t size = ((uint32_t*)(base[i]))[1];
-
-			if (curcnt != ss_cnt[i])
-			{
-				ss_cnt[i] = curcnt;
-				if (size) size = (size + 2) * 4;
-				if (size > 0 && size <= ss_size)
-				{
-					MenuHide();
-					Info("Saving the state", 500);
-
-					*ss_sufx = i + '1';
-					if (FileOpenEx(&f, ss_name, O_CREAT | O_TRUNC | O_RDWR | O_SYNC))
-					{
-						int ret = FileWriteAdv(&f, base[i], size);
-						FileClose(&f);
-						printf("Wrote %d bytes to file: %s\n", ret, ss_name);
-					}
-					else
-					{
-						printf("Unable to create file: %s\n", ss_name);
-					}
-				}
-			}
-		}
-	}
-
-	return 1;
+//	return 1;
+	return 0;
 }
 
 void user_io_set_index(unsigned char index)
@@ -2295,86 +2267,86 @@ int user_io_file_tx(const char* name, unsigned char index, char opensave, char m
 		}
 	}
 
-	if (dosend && load_addr >= 0x20000000 && (load_addr + bytes2send) <= 0x40000000)
-	{
-		uint32_t map_size = bytes2send + ((is_snes() && load_addr < 0x22000000) ? 0x800000 : 0);
-		uint8_t *mem = (uint8_t *)shmem_map(fpga_mem(load_addr), map_size);
-		if (mem)
-		{
-fprintf(stderr, ".. Loading to %p (load_addr = %p)\n", mem, fpga_mem(load_addr));
-			while (bytes2send)
-			{
-				uint32_t gap = (is_snes() && (load_addr < 0x22000000) && (load_addr + size - bytes2send) >= 0x22000000) ? 0x800000 : 0;
-
-				uint32_t chunk = (bytes2send > (256 * 1024)) ? (256 * 1024) : bytes2send;
-
-fprintf(stderr, ".. FileReadAdv(&f, %p + %d - %d + %d (%p), %d);\n", mem, size, bytes2send, gap, mem + size - bytes2send + gap, chunk);
-				FileReadAdv(&f, mem + size - bytes2send + gap, chunk);
-
-				if(!is_snes()) file_crc = crc32(file_crc, mem + skip + size - bytes2send, chunk - skip);
-				skip = 0;
-
-				if (use_progress) ProgressMessage("Loading", f.name, size - bytes2send, size);
-				bytes2send -= chunk;
-			}
-
-			shmem_unmap(mem, map_size);
-		}
-fprintf(stderr, ".. Done.\n");
-	}
-	else
-	{
-		while (dosend && bytes2send)
-		{
-			uint32_t chunk = (bytes2send > sizeof(buf)) ? sizeof(buf) : bytes2send;
-
-			FileReadAdv(&f, buf, chunk);
-			if (is_snes() && is_snes_bs) snes_patch_bs_header(&f, buf);
-			user_io_file_tx_data(buf, chunk);
-
-			if (use_progress) ProgressMessage("Loading", f.name, size - bytes2send, size);
-			bytes2send -= chunk;
-
-			if (skip >= chunk) skip -= chunk;
-			else
-			{
-				file_crc = crc32(file_crc, buf + skip, chunk - skip);
-				skip = 0;
-			}
-		}
-	}
-
-	// check if core requests some change while downloading
-	check_status_change();
-
-	fprintf(stderr, "Done.\n");
-	fprintf(stderr, "CRC32: %08X\n", file_crc);
-
-	FileClose(&f);
-
-	if (opensave)
-	{
-		FileGenerateSavePath(name, (char*)buf);
-		user_io_file_mount((char*)buf, 0, 1);
-	}
-
-	// signal end of transmission
-	user_io_set_download(0);
-	fprintf(stderr, "\n");
-
-	if (is_zx81() && index)
-	{
-		send_pcolchr(name, (index & 0x1F) | 0x20, 0);
-		send_pcolchr(name, (index & 0x1F) | 0x60, 1);
-	}
-
-	ProgressMessage(0, 0, 0, 0);
-
-	if ((is_snes() || is_sgb()) && !load_addr)
-	{
-		// Setup MSU
-		snes_msu_init(name);
-	}
+//	if (dosend && load_addr >= 0x20000000 && (load_addr + bytes2send) <= 0x40000000)
+//	{
+//		uint32_t map_size = bytes2send + ((is_snes() && load_addr < 0x22000000) ? 0x800000 : 0);
+//		uint8_t *mem = (uint8_t *)shmem_map(fpga_mem(load_addr), map_size);
+//		if (mem)
+//		{
+//fprintf(stderr, ".. Loading to %p (load_addr = %p)\n", mem, fpga_mem(load_addr));
+//			while (bytes2send)
+//			{
+//				uint32_t gap = (is_snes() && (load_addr < 0x22000000) && (load_addr + size - bytes2send) >= 0x22000000) ? 0x800000 : 0;
+//
+//				uint32_t chunk = (bytes2send > (256 * 1024)) ? (256 * 1024) : bytes2send;
+//
+//fprintf(stderr, ".. FileReadAdv(&f, %p + %d - %d + %d (%p), %d);\n", mem, size, bytes2send, gap, mem + size - bytes2send + gap, chunk);
+//				FileReadAdv(&f, mem + size - bytes2send + gap, chunk);
+//
+//				if(!is_snes()) file_crc = crc32(file_crc, mem + skip + size - bytes2send, chunk - skip);
+//				skip = 0;
+//
+//				if (use_progress) ProgressMessage("Loading", f.name, size - bytes2send, size);
+//				bytes2send -= chunk;
+//			}
+//
+//			shmem_unmap(mem, map_size);
+//		}
+//fprintf(stderr, ".. Done.\n");
+//	}
+//	else
+//	{
+//		while (dosend && bytes2send)
+//		{
+//			uint32_t chunk = (bytes2send > sizeof(buf)) ? sizeof(buf) : bytes2send;
+//
+//			FileReadAdv(&f, buf, chunk);
+//			if (is_snes() && is_snes_bs) snes_patch_bs_header(&f, buf);
+//			user_io_file_tx_data(buf, chunk);
+//
+//			if (use_progress) ProgressMessage("Loading", f.name, size - bytes2send, size);
+//			bytes2send -= chunk;
+//
+//			if (skip >= chunk) skip -= chunk;
+//			else
+//			{
+//				file_crc = crc32(file_crc, buf + skip, chunk - skip);
+//				skip = 0;
+//			}
+//		}
+//	}
+//
+//	// check if core requests some change while downloading
+//	check_status_change();
+//
+//	fprintf(stderr, "Done.\n");
+//	fprintf(stderr, "CRC32: %08X\n", file_crc);
+//
+//	FileClose(&f);
+//
+//	if (opensave)
+//	{
+//		FileGenerateSavePath(name, (char*)buf);
+//		user_io_file_mount((char*)buf, 0, 1);
+//	}
+//
+//	// signal end of transmission
+//	user_io_set_download(0);
+//	fprintf(stderr, "\n");
+//
+//	if (is_zx81() && index)
+//	{
+//		send_pcolchr(name, (index & 0x1F) | 0x20, 0);
+//		send_pcolchr(name, (index & 0x1F) | 0x60, 1);
+//	}
+//
+//	ProgressMessage(0, 0, 0, 0);
+//
+//	if ((is_snes() || is_sgb()) && !load_addr)
+//	{
+//		// Setup MSU
+//		snes_msu_init(name);
+//	}
 
 	return 1;
 }
@@ -2518,20 +2490,6 @@ void user_io_set_kbd_reset(int reset)
 
 void user_io_set_ini(int ini_num)
 {
-	const char *name = rbf_path;
-	const char *xml = strcasecmp(rbf_path, core_path) ? core_path : NULL;
-
-	if (!name[0])
-	{
-		name = "menu.rbf";
-		xml = NULL;
-	}
-
-	if (FileExists(cfg_get_name(ini_num)))
-	{
-		altcfg(ini_num);
-		fpga_load_rbf(name, NULL, xml);
-	}
 }
 
 

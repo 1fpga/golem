@@ -303,14 +303,14 @@ static int load_bios(const char* name, uint8_t index)
 {
 	printf("BIOS: %s\n", name);
 
-	void *buf = shmem_map(SHMEM_ADDR + (index ? 0xC0000 : 0xF0000), BIOS_SIZE);
-	if (!buf) return 0;
-
-	memset(buf, 0, BIOS_SIZE);
-	FileLoad(name, buf, BIOS_SIZE);
-	shmem_unmap(buf, BIOS_SIZE);
-
-	return 1;
+//	void *buf = shmem_map(SHMEM_ADDR + (index ? 0xC0000 : 0xF0000), BIOS_SIZE);
+//	if (!buf) return 0;
+//
+//	memset(buf, 0, BIOS_SIZE);
+//	FileLoad(name, buf, BIOS_SIZE);
+//	shmem_unmap(buf, BIOS_SIZE);
+//
+	return 0;
 }
 
 #define FDD_TYPE_NONE 0
