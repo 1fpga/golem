@@ -2,7 +2,6 @@
 #![cfg(not(test))]
 
 // TODO: make all these modules test friendly.
-pub mod bootcore;
 pub mod hardware;
 pub mod scheduler;
 

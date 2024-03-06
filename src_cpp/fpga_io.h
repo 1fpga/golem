@@ -35,7 +35,7 @@ extern "C" int fpga_get_io_version();
 
 extern "C" int fpga_load_rbf(const char *name, const char *cfg = 0, const char *xml = 0);
 
-extern "C" void reboot(int cold);
+void reboot(int cold);
 void app_restart(const char *path, const char *xml = 0);
 char *getappname();
 

@@ -9,6 +9,7 @@ use bitfield::bitfield;
 use chrono::{Datelike, NaiveDateTime, Timelike};
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use std::mem::transmute;
+use std::ops::BitOrAssign;
 use std::time::SystemTime;
 use tracing::{debug, trace, warn};
 
@@ -29,7 +30,7 @@ const FB_EN: u16 = 0x8000;
 #[derive(Debug, Clone, Copy, PartialEq, strum::Display)]
 enum UserIoCommands {
     // UserIoStatus = 0x00,
-    // UserIoButtonSwitch = 0x01,
+    UserIoButtonSwitch = 0x01,
     UserIoJoystick0 = 0x02,
     UserIoJoystick1 = 0x03,
     // UserIoMouse = 0x04,
@@ -84,6 +85,55 @@ impl IntoLowLevelSpiCommand for UserIoCommands {
     #[inline]
     fn into_ll_spi_command(self) -> (SpiFeatureSet, u16) {
         (SpiFeatureSet::IO, self as u16)
+    }
+}
+
+pub enum ButtonSwitches {
+    Button1 = 0b0000000000000001,
+    Button2 = 0b0000000000000010,
+    VgaScaler = 0b0000000000000100,
+    CompositeSync = 0b0000000000001000,
+    ForcedScandoubler = 0b0000000000010000,
+    Ypbpr = 0b0000000000100000,
+    Audio96K = 0b0000000001000000,
+    Dvi = 0b0000000010000000,
+    HdmiLimited1 = 0b0000000100000000,
+    VgaSog = 0b0000001000000000,
+    DirectVideo = 0b0000010000000000,
+    HdmiLimited2 = 0b0000100000000000,
+    VgaFb = 0b0001000000000000,
+}
+
+#[derive(Default)]
+pub struct UserIoButtonSwitch(pub u16);
+
+impl BitOrAssign<ButtonSwitches> for UserIoButtonSwitch {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: ButtonSwitches) {
+        self.0 |= rhs as u16;
+    }
+}
+
+impl std::fmt::Debug for UserIoButtonSwitch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("UserIoButtonSwitch")
+            .field(&format_args!("{:016b}", self.0))
+            .finish()
+    }
+}
+
+impl UserIoButtonSwitch {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl SpiCommand for UserIoButtonSwitch {
+    #[inline]
+    fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        spi.command(UserIoCommands::UserIoButtonSwitch)
+            .write(self.0);
+        Ok(())
     }
 }
 

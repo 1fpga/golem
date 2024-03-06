@@ -3,7 +3,6 @@ use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
 use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
 use std::cell::UnsafeCell;
-use std::ffi::c_int;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -14,10 +13,6 @@ mod framebuffer;
 mod spi;
 
 pub use spi::*;
-
-extern "C" {
-    pub fn reboot(cold: c_int);
-}
 
 /// Functions made available to the C code.
 /// TODO: remove these when the fpga code from CPP is gone.
@@ -98,11 +93,6 @@ pub mod ffi {
     unsafe extern "C" fn fpga_spi(word: u16) -> u16 {
         FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
     }
-
-    // #[no_mangle]
-    // unsafe extern "C" fn spi_w(word: u16) -> u16 {
-    //     FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
-    // }
 
     #[no_mangle]
     unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {
@@ -371,9 +361,10 @@ impl MisterFpga {
             std::thread::sleep(Duration::from_millis(10));
         }
 
-        unsafe {
-            reboot(0);
-        }
+        // TODO: is this needed here?
+        // unsafe {
+        //     reboot(0);
+        // }
     }
 
     /// Wait for the FPGA to be ready. This requires a mutable reference if the

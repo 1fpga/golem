@@ -1,8 +1,3 @@
-use std::ffi::c_ulong;
-
-#[export_name = "rstval"]
-pub static mut RSTVAL: u8 = 0;
-
 // TODO: move this to a proper debugging module.
 #[no_mangle]
 pub extern "C" fn hexdump(data: *const u8, size: u16, offset: u16) {
@@ -40,36 +35,4 @@ pub extern "C" fn hexdump(data: *const u8, size: u16, offset: u16) {
         size -= b2c;
         n += b2c;
     }
-}
-
-#[no_mangle]
-pub extern "C" fn GetTimer(offset: c_ulong) -> c_ulong {
-    let mut tp = libc::timespec {
-        tv_sec: 0,
-        tv_nsec: 0,
-    };
-
-    unsafe {
-        libc::clock_gettime(libc::CLOCK_REALTIME, &mut tp);
-    }
-
-    let mut res = tp.tv_sec as c_ulong;
-    res *= 1000;
-    res += tp.tv_nsec as c_ulong / 1000000;
-    res + offset
-}
-
-#[no_mangle]
-pub extern "C" fn CheckTimer(time: c_ulong) -> c_ulong {
-    if time == 0 || GetTimer(0) >= time {
-        1
-    } else {
-        0
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn WaitTimer(t: c_ulong) {
-    let time = GetTimer(t);
-    while CheckTimer(time) == 0 {}
 }

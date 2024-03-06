@@ -39,7 +39,7 @@ fn video_fb_config(
     options: &config::MisterConfig,
     mode: &config::video::edid::CustomVideoMode,
     spi: &mut Spi<impl MemoryMapper>,
-    is_menu: bool,
+    _is_menu: bool,
 ) -> Result<(), String> {
     let mut fb_scale = options.fb_size.unwrap_or_default().as_scale() as u32;
 

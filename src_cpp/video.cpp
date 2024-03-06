@@ -2880,7 +2880,7 @@ extern "C" void fb_write_module_params_worker() {
 
 static void fb_write_module_params()
 {
-	offload_add_work(fb_write_module_params_worker);
+//	offload_add_work(fb_write_module_params_worker);
 }
 
 void video_fb_enable(int enable, int n)

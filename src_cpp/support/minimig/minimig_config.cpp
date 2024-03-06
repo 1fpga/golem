@@ -19,6 +19,9 @@
 #include "minimig_config.h"
 #include "minimig_share.h"
 
+uint8_t rstval = 0;
+
+
 const char *config_memory_chip_msg[] = { "512K", "1M",   "1.5M", "2M" };
 const char *config_memory_slow_msg[] = { "none", "512K", "1M",   "1.5M" };
 const char *config_memory_fast_msg[][8] = { { "none", "2M", "4M", "8M", "8M",    "8M",    "8M",   "8M" } ,

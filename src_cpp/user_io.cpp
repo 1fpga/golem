@@ -1263,15 +1263,15 @@ void user_io_init(const char *path, const char *xml)
 		core_type = CORE_TYPE_8BIT;
 	}
 
-	if ((core_type != CORE_TYPE_8BIT) &&
-		(core_type != CORE_TYPE_SHARPMZ))
-	{
-		core_type = CORE_TYPE_UNKNOWN;
-		fio_size = 0;
-		io_ver = 0;
-	}
+//	if ((core_type != CORE_TYPE_8BIT) &&
+//		(core_type != CORE_TYPE_SHARPMZ))
+//	{
+//		core_type = CORE_TYPE_UNKNOWN;
+//		fio_size = 0;
+//		io_ver = 0;
+//	}
 
-	OsdSetSize(8);
+//	OsdSetSize(8);
 
 //	if (xml)
 //	{
@@ -1308,17 +1308,17 @@ void user_io_init(const char *path, const char *xml)
 //	}
 
 	parse_config();
-	if (!xml && defmra[0] && FileExists(defmra))
-	{
-		// attn: FC option won't use name from defmra!
-		// attn: cfg is parsed before defmra, no defmra-name specifics possible in INI!
-		xml = (const char*)defmra;
-		strcpy(core_path, xml);
-		is_arcade_type = 1;
-		arcade_pre_parse(xml);
-		user_io_read_core_name();
-		printf("Using default MRA: %s\n", xml);
-	}
+//	if (!xml && defmra[0] && FileExists(defmra))
+//	{
+//		// attn: FC option won't use name from defmra!
+//		// attn: cfg is parsed before defmra, no defmra-name specifics possible in INI!
+//		xml = (const char*)defmra;
+//		strcpy(core_path, xml);
+//		is_arcade_type = 1;
+//		arcade_pre_parse(xml);
+//		user_io_read_core_name();
+//		printf("Using default MRA: %s\n", xml);
+//	}
 
 //	if (cfg.log_file_entry) MakeFile("/tmp/STARTPATH", core_path);
 
@@ -1326,236 +1326,239 @@ void user_io_init(const char *path, const char *xml)
 //	{
 //		bootcore_init(xml ? xml : path);
 //	}
-	video_init();
+//	video_init();
 //	if (strlen(cfg.font)) LoadFont(cfg.font);
-	load_volume();
+//	load_volume();
 
-	user_io_send_buttons(1);
-	if (xml && isXmlName(xml) == 2) mgl_parse(xml);
+//	user_io_send_buttons(1);
+//	if (xml && isXmlName(xml) == 2) mgl_parse(xml);
 
-	switch (core_type)
-	{
-	case CORE_TYPE_UNKNOWN:
-		printf("Unable to identify core (%x)!\n", core_type);
-		break;
+//	switch (core_type)
+//	{
+//	case CORE_TYPE_UNKNOWN:
+//		printf("Unable to identify core (%x)!\n", core_type);
+//		break;
+//
+//	case CORE_TYPE_SHARPMZ:
+//		printf("Identified Sharp MZ Series core");
+//		user_io_set_core_name("sharpmz");
+//		sharpmz_init();
+//		parse_buttons();
+//		break;
+//
+//	case CORE_TYPE_8BIT:
+//	    printf("Identified 8BIT core\n");
+//		// try to load config
+//		name = user_io_create_config_name(1);
+//		if (strlen(name) > 0)
+//		{
+//		    printf("Loading config %s\n", name);
+//			if (!is_st() && !is_minimig())
+//			{
+//				printf("Loading config %s\n", name);
+//				memset(cur_status, 0, sizeof(cur_status));
+//				if (FileLoadConfig(name, cur_status, sizeof(cur_status)))
+//				{
+//					printf("Found config:\n");
+//					hexdump(cur_status, sizeof(cur_status));
+//				}
+//				else
+//				{
+//					memset(cur_status, 0, sizeof(cur_status));
+//				}
+//
+//				user_io_status_set("[0]", 1);
+//			}
+//
+//			name = user_io_create_config_name();
+//			if (is_st())
+//			{
+//				tos_config_load(0);
+//				tos_upload(NULL);
+//			}
+//			else if (is_menu())
+//			{
+//			printf("blah blah\n");;
+//				user_io_status_set("[4]", (cfg.menu_pal) ? 1 : 0);
+//				if (cfg.fb_terminal) video_menu_bg(user_io_status_get("[3:1]"));
+//				else user_io_status_set("[3:1]", 0);
+//			}
+//			else
+//			{
+//				if (xml && isXmlName(xml) == 1)
+//				{
+//					arcade_send_rom(xml);
+//				}
+//				else if (is_minimig())
+//				{
+//					printf("Identified Minimig V2 core");
+//					BootInit();
+//				}
+//				else if (is_x86() || is_pcxt())
+//				{
+//					x86_config_load();
+//					x86_init();
+//				}
+//				else if (is_archie())
+//				{
+//					printf("Identified Archimedes core");
+//					archie_init();
+//				}
+//				else
+//				{
+//					const char *home = HomeDir();
+//
+//					if (!strlen(path) || !user_io_file_tx(path, 0, 0, 0, 1))
+//					{
+//						if (!is_cpc())
+//						{
+//							// check for multipart rom
+//							for (char i = 0; i < 4; i++)
+//							{
+//								sprintf(mainpath, "%s/boot%d.rom", home, i);
+//								user_io_file_tx(mainpath, i << 6);
+//							}
+//						}
+//
+//						// legacy style of rom
+//						sprintf(mainpath, "%s/boot.rom", home);
+//						if (!user_io_file_tx(mainpath))
+//						{
+//							strcpy(name + strlen(name) - 3, "ROM");
+//							sprintf(mainpath, "%s/%s", get_rbf_dir(), name);
+//							if (!get_rbf_dir()[0] || !user_io_file_tx(mainpath))
+//							{
+//								if (!user_io_file_tx(name))
+//								{
+//									sprintf(mainpath, "bootrom/%s", name);
+//									user_io_file_tx(mainpath);
+//								}
+//							}
+//						}
+//
+//						// cheats for boot file
+//						if (user_io_use_cheats()) cheats_init("", user_io_get_file_crc());
+//					}
+//
+//					if (is_cpc())
+//					{
+//						for (int m = 0; m < 3; m++)
+//						{
+//							const char *model = !m ? "" : (m == 1) ? "0" : "1";
+//							sprintf(mainpath, "%s/boot%s.eZZ", home, model);
+//							user_io_file_tx(mainpath, 0x40 * (m + 1), 0, 1);
+//							sprintf(mainpath, "%s/boot%s.eZ0", home, model);
+//							user_io_file_tx(mainpath, 0x40 * (m + 1), 0, 1);
+//							for (int i = 0; i < 256; i++)
+//							{
+//								sprintf(mainpath, "%s/boot%s.e%02X", home, model, i);
+//								user_io_file_tx(mainpath, 0x40 * (m + 1), 0, 1);
+//							}
+//						}
+//					}
+//
+//					// check if vhd present
+//					for (char i = 0; i < 4; i++)
+//					{
+//						sprintf(mainpath, "%s/boot%d.vhd", home, i);
+//						if (FileExists(mainpath))
+//						{
+//							user_io_set_index(i << 6);
+//							user_io_file_mount(mainpath, i);
+//						}
+//					}
+//
+//					sprintf(mainpath, "%s/boot.vhd", home);
+//					if (FileExists(mainpath))
+//					{
+//						user_io_set_index(0);
+//						user_io_file_mount(mainpath, 0);
+//					}
+//					else
+//					{
+//						strcpy(name + strlen(name) - 3, "VHD");
+//						sprintf(mainpath, "%s/%s", get_rbf_dir(), name);
+//						if (FileExists(mainpath))
+//						{
+//							user_io_set_index(0);
+//							user_io_file_mount(mainpath, 0);
+//						}
+//						else if (FileExists(name))
+//						{
+//							user_io_set_index(0);
+//							user_io_file_mount(name, 0);
+//						}
+//					}
+//				}
+//			}
+//
+//			parse_buttons();
+//		}
+//
+//		send_rtc(3);
+//
+//		// release reset
+//		if (!is_minimig() && !is_st()) user_io_status_set("[0]", 0);
+//		if (xml && isXmlName(xml) == 1) arcade_check_error();
+//
+//		char cfg_errs[512];
+//		if (cfg_check_errors(cfg_errs, sizeof(cfg_errs)))
+//		{
+//			Info(cfg_errs, 5000);
+//			sleep(5);
+//		}
+//		break;
+//	}
 
-	case CORE_TYPE_SHARPMZ:
-		printf("Identified Sharp MZ Series core");
-		user_io_set_core_name("sharpmz");
-		sharpmz_init();
-		parse_buttons();
-		break;
+//	OsdRotation((cfg.osd_rotate == 1) ? 3 : (cfg.osd_rotate == 2) ? 1 : 0);
 
-	case CORE_TYPE_8BIT:
-		// try to load config
-		name = user_io_create_config_name(1);
-		if (strlen(name) > 0)
-		{
-			if (!is_st() && !is_minimig())
-			{
-				printf("Loading config %s\n", name);
-				memset(cur_status, 0, sizeof(cur_status));
-				if (FileLoadConfig(name, cur_status, sizeof(cur_status)))
-				{
-					printf("Found config:\n");
-					hexdump(cur_status, sizeof(cur_status));
-				}
-				else
-				{
-					memset(cur_status, 0, sizeof(cur_status));
-				}
+//	uart_mode = spi_uio_cmd16(UIO_GETUARTFLG, 0) || uart_speeds[0];
+//	uint32_t mode = 0;
+//	if (uart_mode)
+//	{
+//		if (!uart_speeds[0])
+//		{
+//			uart_speeds[0] = is_st() ? 19200 : 115200;
+//			sprintf(uart_speed_labels[0], "%d", uart_speeds[0]);
+//
+//			if (!midi_speeds[0])
+//			{
+//				midi_speeds[0] = 31250;
+//				sprintf(midi_speed_labels[0], "%d", midi_speeds[0]);
+//			}
+//		}
+//
+//		sprintf(mainpath, "uartmode.%s", user_io_get_core_name());
+//		FileLoadConfig(mainpath, &mode, 4);
+//
+//		uint32_t speeds[3] = {};
+//		sprintf(mainpath, "uartspeed.%s", user_io_get_core_name());
+//		FileLoadConfig(mainpath, speeds, sizeof(speeds));
+//
+//		ValidateUARTbaud(1, speeds[0]);
+//		ValidateUARTbaud(3, speeds[1]);
+//		ValidateUARTbaud(4, speeds[2] ? speeds[2] : uart_speeds[0]);
+//
+//		printf("UART bauds: %d/%d/%d\n", GetUARTbaud(1), GetUARTbaud(3), GetUARTbaud(4));
+//	}
 
-				user_io_status_set("[0]", 1);
-			}
+//	SetUARTMode(0);
+//	int midilink = (mode >> 8) & 0xFF;
+//	int uartmode = mode & 0xFF;
+//	if (uartmode == 4 && (midilink < 4 || midilink>6)) midilink = 4;
+//	if (uartmode == 3 && midilink > 3) midilink = 0;
+//	if (uartmode < 3 || uartmode > 4) midilink = 0;
+//	SetMidiLinkMode(midilink);
+//	SetUARTMode(uartmode);
 
-			name = user_io_create_config_name();
-			if (is_st())
-			{
-				tos_config_load(0);
-				tos_upload(NULL);
-			}
-			else if (is_menu())
-			{
-				user_io_status_set("[4]", (cfg.menu_pal) ? 1 : 0);
-				if (cfg.fb_terminal) video_menu_bg(user_io_status_get("[3:1]"));
-				else user_io_status_set("[3:1]", 0);
-			}
-			else
-			{
-				if (xml && isXmlName(xml) == 1)
-				{
-					arcade_send_rom(xml);
-				}
-				else if (is_minimig())
-				{
-					printf("Identified Minimig V2 core");
-					BootInit();
-				}
-				else if (is_x86() || is_pcxt())
-				{
-					x86_config_load();
-					x86_init();
-				}
-				else if (is_archie())
-				{
-					printf("Identified Archimedes core");
-					archie_init();
-				}
-				else
-				{
-					const char *home = HomeDir();
-
-					if (!strlen(path) || !user_io_file_tx(path, 0, 0, 0, 1))
-					{
-						if (!is_cpc())
-						{
-							// check for multipart rom
-							for (char i = 0; i < 4; i++)
-							{
-								sprintf(mainpath, "%s/boot%d.rom", home, i);
-								user_io_file_tx(mainpath, i << 6);
-							}
-						}
-
-						// legacy style of rom
-						sprintf(mainpath, "%s/boot.rom", home);
-						if (!user_io_file_tx(mainpath))
-						{
-							strcpy(name + strlen(name) - 3, "ROM");
-							sprintf(mainpath, "%s/%s", get_rbf_dir(), name);
-							if (!get_rbf_dir()[0] || !user_io_file_tx(mainpath))
-							{
-								if (!user_io_file_tx(name))
-								{
-									sprintf(mainpath, "bootrom/%s", name);
-									user_io_file_tx(mainpath);
-								}
-							}
-						}
-
-						// cheats for boot file
-						if (user_io_use_cheats()) cheats_init("", user_io_get_file_crc());
-					}
-
-					if (is_cpc())
-					{
-						for (int m = 0; m < 3; m++)
-						{
-							const char *model = !m ? "" : (m == 1) ? "0" : "1";
-							sprintf(mainpath, "%s/boot%s.eZZ", home, model);
-							user_io_file_tx(mainpath, 0x40 * (m + 1), 0, 1);
-							sprintf(mainpath, "%s/boot%s.eZ0", home, model);
-							user_io_file_tx(mainpath, 0x40 * (m + 1), 0, 1);
-							for (int i = 0; i < 256; i++)
-							{
-								sprintf(mainpath, "%s/boot%s.e%02X", home, model, i);
-								user_io_file_tx(mainpath, 0x40 * (m + 1), 0, 1);
-							}
-						}
-					}
-
-					// check if vhd present
-					for (char i = 0; i < 4; i++)
-					{
-						sprintf(mainpath, "%s/boot%d.vhd", home, i);
-						if (FileExists(mainpath))
-						{
-							user_io_set_index(i << 6);
-							user_io_file_mount(mainpath, i);
-						}
-					}
-
-					sprintf(mainpath, "%s/boot.vhd", home);
-					if (FileExists(mainpath))
-					{
-						user_io_set_index(0);
-						user_io_file_mount(mainpath, 0);
-					}
-					else
-					{
-						strcpy(name + strlen(name) - 3, "VHD");
-						sprintf(mainpath, "%s/%s", get_rbf_dir(), name);
-						if (FileExists(mainpath))
-						{
-							user_io_set_index(0);
-							user_io_file_mount(mainpath, 0);
-						}
-						else if (FileExists(name))
-						{
-							user_io_set_index(0);
-							user_io_file_mount(name, 0);
-						}
-					}
-				}
-			}
-
-			parse_buttons();
-		}
-
-		send_rtc(3);
-
-		// release reset
-		if (!is_minimig() && !is_st()) user_io_status_set("[0]", 0);
-		if (xml && isXmlName(xml) == 1) arcade_check_error();
-
-		char cfg_errs[512];
-		if (cfg_check_errors(cfg_errs, sizeof(cfg_errs)))
-		{
-			Info(cfg_errs, 5000);
-			sleep(5);
-		}
-		break;
-	}
-
-	OsdRotation((cfg.osd_rotate == 1) ? 3 : (cfg.osd_rotate == 2) ? 1 : 0);
-
-	uart_mode = spi_uio_cmd16(UIO_GETUARTFLG, 0) || uart_speeds[0];
-	uint32_t mode = 0;
-	if (uart_mode)
-	{
-		if (!uart_speeds[0])
-		{
-			uart_speeds[0] = is_st() ? 19200 : 115200;
-			sprintf(uart_speed_labels[0], "%d", uart_speeds[0]);
-
-			if (!midi_speeds[0])
-			{
-				midi_speeds[0] = 31250;
-				sprintf(midi_speed_labels[0], "%d", midi_speeds[0]);
-			}
-		}
-
-		sprintf(mainpath, "uartmode.%s", user_io_get_core_name());
-		FileLoadConfig(mainpath, &mode, 4);
-
-		uint32_t speeds[3] = {};
-		sprintf(mainpath, "uartspeed.%s", user_io_get_core_name());
-		FileLoadConfig(mainpath, speeds, sizeof(speeds));
-
-		ValidateUARTbaud(1, speeds[0]);
-		ValidateUARTbaud(3, speeds[1]);
-		ValidateUARTbaud(4, speeds[2] ? speeds[2] : uart_speeds[0]);
-
-		printf("UART bauds: %d/%d/%d\n", GetUARTbaud(1), GetUARTbaud(3), GetUARTbaud(4));
-	}
-
-	SetUARTMode(0);
-	int midilink = (mode >> 8) & 0xFF;
-	int uartmode = mode & 0xFF;
-	if (uartmode == 4 && (midilink < 4 || midilink>6)) midilink = 4;
-	if (uartmode == 3 && midilink > 3) midilink = 0;
-	if (uartmode < 3 || uartmode > 4) midilink = 0;
-	SetMidiLinkMode(midilink);
-	SetUARTMode(uartmode);
-
-	if (!mgl_get()->count || is_menu() || is_st() || is_archie() || user_io_core_type() == CORE_TYPE_SHARPMZ)
-	{
-		mgl_get()->done = 1;
-	}
-	else
-	{
-		mgl_get()->timer = GetTimer(mgl_get()->item[0].delay * 1000);
-	}
+//	if (!mgl_get()->count || is_menu() || is_st() || is_archie() || user_io_core_type() == CORE_TYPE_SHARPMZ)
+//	{
+//		mgl_get()->done = 1;
+//	}
+//	else
+//	{
+//		mgl_get()->timer = GetTimer(mgl_get()->item[0].delay * 1000);
+//	}
 }
 
 static int joyswap = 0;
@@ -2746,6 +2749,8 @@ void user_io_send_buttons(char force)
 		//special reset for some cores
 		if (!user_io_osd_is_visible() && (key_map & BUTTON2) && !(map & BUTTON2))
 		{
+fprintf(stderr, "hello world");
+
 			if (is_minimig()) minimig_reset();
 			if (is_megacd()) mcd_reset();
 			if (is_neogeo_cd()) neocd_reset();
@@ -2758,6 +2763,9 @@ void user_io_send_buttons(char force)
 
 		key_map = map;
 		if (user_io_osd_is_visible()) map &= ~BUTTON2;
+
+		fprintf(stderr, "Sending keymap: %04X\n", map);
+
 		spi_uio_cmd16(UIO_BUT_SW, map);
 		printf("sending keymap: %X\n", map);
 	}

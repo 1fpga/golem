@@ -15,13 +15,8 @@ use tracing::{debug, error};
 
 pub use mister_fpga::fpga;
 
-mod battery;
 pub mod core_manager;
-mod input;
-mod offload;
-mod osd;
 mod shmem;
-mod smbus;
 pub mod spi;
 mod support;
 pub mod user_io;
@@ -82,10 +77,7 @@ impl GoLEmPlatform for De10Platform {
     type CoreManager = core_manager::CoreManager;
 
     fn init(&mut self, _flags: &Flags) {
-        unsafe {
-            offload::offload_start();
-            self.core_manager.load_menu().unwrap();
-        }
+        self.core_manager.load_menu().unwrap();
     }
 
     fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {

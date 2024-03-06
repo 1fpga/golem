@@ -161,6 +161,13 @@ impl MisterFpgaCore {
         Ok(())
     }
 
+    pub fn send_volume(&mut self, volume: u8) -> Result<(), String> {
+        self.fpga
+            .spi_mut()
+            .execute(user_io::SetAudioVolume(volume))?;
+        Ok(())
+    }
+
     /// Send a file (ROM or BIOS) to the core on an index.
     pub fn load_file(
         &mut self,

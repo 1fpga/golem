@@ -1,4 +1,4 @@
-// use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+// use cyclone-v::memory::{DevMemMemoryMapper, MemoryMapper};
 //
 // pub const FB_PIXEL_COUNT: usize = 1920 * 1080;
 // pub const FB_SIZE: usize = FB_PIXEL_COUNT * 4 * 3;

@@ -65,6 +65,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ide.h"
 #include "profiling.h"
 
+
+void OsdSetTitle(const char *s, int arrow ) {}
+void OsdSetArrow(int arrow) {}
+void OsdWrite(unsigned char n, const char *s, unsigned char inver, unsigned char stipple, char usebg , int maxinv , int mininv ) {}
+void OsdWriteOffset(unsigned char n, const char *s, unsigned char inver, unsigned char stipple, char offset, char leftchar, char usebg , int maxinv , int mininv ) {}
+void OsdClear() {}
+void OsdEnable(unsigned char mode) {}
+void InfoEnable(int x, int y, int width, int height) {}
+void OsdRotation(uint8_t rotate) {}
+void OsdDisable() {}
+void OsdMenuCtl(int en) {}
+void OsdUpdate() {}
+void OSD_PrintInfo(const char *message, int *width, int *height, int frame ) {}
+void OsdDrawLogo(int row) {}
+void ScrollText(char n, const char *str, int off, int len, int max_len, unsigned char invert, int idx ) {}
+void ScrollReset(int idx ) {}
+void StarsInit() {}
+void StarsUpdate() {}
+void OsdShiftDown(unsigned char n){}
+
+// get/set core currently loaded
+void OsdCoreNameSet(const char* str) {}
+const char* OsdCoreNameGet() {return "";}
+void OsdSetSize(int n){}
+int OsdGetSize() {return 8;}
+
 /*menu states*/
 enum MENU
 {
@@ -743,32 +769,6 @@ const char* get_rbf_name_bootcore(char *str)
 
 static void vga_nag()
 {
-	if (video_fb_state())
-	{
-		EnableOsd_on(OSD_VGA);
-		OsdSetSize(16);
-		OsdSetTitle("Information");
-		int n = 0;
-		OsdWrite(n++);
-		OsdWrite(n++);
-		OsdWrite(n++);
-		OsdWrite(n++);
-		OsdWrite(n++, "  If you see this, then you");
-		OsdWrite(n++, "  need to modify MiSTer.ini");
-		OsdWrite(n++);
-		OsdWrite(n++, " Either disable framebuffer:");
-		OsdWrite(n++, "       fb_terminal=0");
-		OsdWrite(n++);
-		OsdWrite(n++, "  or enable scaler on VGA:");
-		OsdWrite(n++, "       vga_scaler=1");
-		for (; n < OsdGetSize(); n++) OsdWrite(n);
-		OsdUpdate();
-		OsdEnable(OSD_MSG);
-		EnableOsd_on(OSD_HDMI);
-	}
-
-	OsdDisable();
-	EnableOsd_on(OSD_ALL);
 }
 
 void process_addon(char *ext, uint8_t idx)
@@ -903,13 +903,7 @@ void HandleUI(void)
 
 void open_joystick_setup()
 {
-	OsdSetSize(16);
-	menusub = 0;
-	OsdClear();
-	OsdEnable(DISABLE_KEYBOARD);
-	start_map_setting(joy_bcount ? joy_bcount + 4 : 8);
-	menustate = MENU_JOYDIGMAP;
-	joymap_first = 1;
+
 }
 
 void ScrollLongName(void)
@@ -1100,21 +1094,6 @@ static void set_text(const char *message, unsigned char code)
 
 void InfoMessage(const char *message, int timeout, const char *title)
 {
-	if (menustate <= MENU_INFO)
-	{
-		if (menustate != MENU_INFO)
-		{
-			OsdSetTitle(title, 0);
-			OsdEnable(OSD_MSG); // do not disable keyboard
-		}
-
-		set_text(message, 0);
-
-		menu_timer = GetTimer(timeout);
-		menustate = MENU_INFO;
-		HandleUI();
-		OsdUpdate();
-	}
 }
 
 void MenuHide()

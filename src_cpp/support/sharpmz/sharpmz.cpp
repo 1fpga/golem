@@ -2354,14 +2354,14 @@ void sharpmz_ui(int      idleState,    int      idle2State,    int        system
     // Idle2 state (MENU_NONE2) is our main hook, when the HandleUI state machine reaches this state, if the menu key is pressed,
     // we takeover control in this method.
     //
-    if(*menustate == (uint32_t)idle2State && menu)
-    {
-        OsdSetSize(16);
-        *menusub = 0;
-        OsdClear();
-        OsdEnable(DISABLE_KEYBOARD);
-        *menustate = MENU_SHARPMZ_MAIN1;
-    }
+//    if(*menustate == (uint32_t)idle2State && menu)
+//    {
+//        OsdSetSize(16);
+//        *menusub = 0;
+//        OsdClear();
+//        OsdEnable(DISABLE_KEYBOARD);
+//        *menustate = MENU_SHARPMZ_MAIN1;
+//    }
 
     // The menustate originates in the HandleUI method, if a value is not recognised in the main switch statement in HandleUI then
     // it is ignored. This method utilises this fact and operates on a set of states outside those used in HandleUI.

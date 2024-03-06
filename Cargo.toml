@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "cyclone_v",
+    "cyclone-v",
+    "de10-nano",
     "golem-db",
     "golem",
     "junior",
