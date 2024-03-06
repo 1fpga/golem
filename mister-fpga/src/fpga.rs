@@ -94,23 +94,10 @@ pub mod ffi {
     }
 
     #[no_mangle]
-    pub unsafe extern "C" fn DisableIO() {
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .spi_mut()
-            .disable(SpiFeatureSet::IO);
-    }
+    pub unsafe extern "C" fn DisableIO() {}
 
     #[no_mangle]
-    unsafe extern "C" fn fpga_spi_fast_block_write(data: *const u16, len: u32) {
-        let data = std::slice::from_raw_parts(data, len as usize);
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .spi_mut()
-            .write_block_16(data);
-    }
+    unsafe extern "C" fn fpga_spi_fast_block_write(data: *const u16, len: u32) {}
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -254,7 +241,7 @@ impl MisterFpga {
             // TODO: remove this when the fpga code from CPP is gone.
             #[cfg(feature = "mister-cpp")]
             {
-                map_base = fpga.soc_mut().base_mut();
+                // map_base = fpga.soc_mut().base_mut();
             }
             fpga.regs_mut().set_gpo(0);
 

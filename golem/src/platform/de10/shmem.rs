@@ -1,37 +1,8 @@
 #![cfg(feature = "platform_de10")]
-use cyclone_v::memory::MemoryMapper;
 use std::ffi::c_int;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use tracing::error;
-
-pub struct Mapper(cyclone_v::memory::DevMemMemoryMapper);
-
-impl Debug for Mapper {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Mapper").finish()
-    }
-}
-
-impl Mapper {
-    pub fn new(address: usize, size: usize) -> Self {
-        Self(cyclone_v::memory::DevMemMemoryMapper::create(address, size).unwrap())
-    }
-}
-
-impl Deref for Mapper {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        self.0.as_range(..)
-    }
-}
-
-impl DerefMut for Mapper {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut_range(..)
-    }
-}
 
 #[export_name = "shmem_map"]
 #[no_mangle]

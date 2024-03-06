@@ -75,13 +75,6 @@ impl CoreManager {
             );
         }
 
-        // extern "C" {
-        //     pub fn user_io_send_buttons(force: u8);
-        // }
-        //
-        // unsafe {
-        //     user_io_send_buttons(1);
-        // }
         //
         // let mut bits = core.read_status_bits().clone();
         // bits.set(0, true);

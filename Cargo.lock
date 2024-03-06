@@ -1690,7 +1690,6 @@ dependencies = [
  "crossbeam-channel",
  "crossbeam-queue",
  "crossbeam-utils",
- "cyclone-v",
  "datary",
  "de10-nano",
  "debounce",

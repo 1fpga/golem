@@ -17,8 +17,6 @@ pub use mister_fpga::fpga;
 
 pub mod core_manager;
 mod shmem;
-pub mod spi;
-mod support;
 pub mod user_io;
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
