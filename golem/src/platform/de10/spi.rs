@@ -2,9 +2,6 @@
 
 use std::ffi::c_int;
 
-pub const UIO_GET_VRES: u16 = 0x23;
-pub const UIO_GET_FB_PAR: u16 = 0x40;
-
 extern "C" {
     pub fn spi_osd_cmd(cmd: u8);
     pub fn spi_osd_cmd_cont(cmd: u8);

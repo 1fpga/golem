@@ -13,18 +13,21 @@ use std::ops::BitOrAssign;
 use std::time::SystemTime;
 use tracing::{debug, trace, warn};
 
-// TODO: make this a proper type. Maybe in the Framebuffer module.
-// --  [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
-// --  [3]   : 0=16bits 565 1=16bits 1555
-// --  [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
-// --  [5]   : TBD
-const FB_FMT_565: u16 = 0b00100;
-const FB_FMT_1555: u16 = 0b01100;
-const FB_FMT_888: u16 = 0b00101;
-const FB_FMT_8888: u16 = 0b00110;
-const FB_FMT_PAL8: u16 = 0b00011;
-const FB_FMT_RXB: u16 = 0b10000;
-const FB_EN: u16 = 0x8000;
+#[allow(dead_code)]
+mod fb_const {
+    // TODO: make this a proper type. Maybe in the Framebuffer module.
+    // --  [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
+    // --  [3]   : 0=16bits 565 1=16bits 1555
+    // --  [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
+    // --  [5]   : TBD
+    pub(super) const FB_FMT_565: u16 = 0b00100;
+    pub(super) const FB_FMT_1555: u16 = 0b01100;
+    pub(super) const FB_FMT_888: u16 = 0b00101;
+    pub(super) const FB_FMT_8888: u16 = 0b00110;
+    pub(super) const FB_FMT_PAL8: u16 = 0b00011;
+    pub(super) const FB_FMT_RXB: u16 = 0b10000;
+    pub(super) const FB_EN: u16 = 0x8000;
+}
 
 /// User IO commands.
 #[derive(Debug, Clone, Copy, PartialEq, strum::Display)]
@@ -783,7 +786,8 @@ impl SpiCommand for SetFramebufferToLinux {
             + ((1920 * 1080) * 4 * self.n)
             + if self.n == 0 { 4096usize } else { 0 }) as u32;
 
-        command.write(FB_EN | FB_FMT_RXB | FB_FMT_8888); // format, enable flag
+        // format, enable flag
+        command.write(fb_const::FB_EN | fb_const::FB_FMT_RXB | fb_const::FB_FMT_8888);
         command.write(fb_addr as u16); // base address low word
         command.write((fb_addr >> 16) as u16); // base address high word
 

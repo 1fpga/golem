@@ -1,23 +1,15 @@
 #![allow(clippy::missing_safety_doc)]
 
-use cfg_if::cfg_if;
-
-cfg_if! {
-    if #[cfg(not(test))] {
-        pub mod hardware;
-        pub mod scheduler;
-    }
-}
-
 pub mod data;
 mod main_inner;
+
+pub mod hardware;
 
 pub mod application;
 pub mod file_io;
 pub mod input;
 pub mod macguiver;
 pub mod platform;
-pub mod video;
 
 #[cfg(not(test))]
 #[cfg(feature = "platform_de10")]

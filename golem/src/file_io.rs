@@ -1,5 +1,5 @@
 #![cfg(feature = "platform_de10")]
-use std::ffi::{c_char, c_int, OsStr};
+use std::ffi::{c_char, OsStr};
 use std::path::PathBuf;
 
 #[cfg(feature = "platform_de10")]
@@ -20,11 +20,6 @@ pub fn get_root_dir() -> *const u8 {
 
         ROOT_DIR.as_ref().unwrap().as_ptr() as *const u8
     }
-}
-
-#[cfg(not(feature = "platform_de10"))]
-pub fn isXmlName(_path: *const c_char) -> c_int {
-    0
 }
 
 pub fn root_dir() -> PathBuf {

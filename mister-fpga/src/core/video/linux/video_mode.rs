@@ -11,6 +11,7 @@ use tracing::{debug, error};
 
 pub struct GammaConfiguration(Vec<(u8, u8, u8)>);
 
+#[allow(dead_code)]
 impl GammaConfiguration {
     pub fn new() -> Self {
         Self(Vec::new())

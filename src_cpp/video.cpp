@@ -2474,7 +2474,8 @@ extern "C" uint8_t get_video_info_rust(uint8_t force, VideoInfo *video_info);
 
 static bool get_video_info(bool force, VideoInfo *video_info)
 {
-    return !!get_video_info_rust(force, video_info);
+//    return !!get_video_info_rust(force, video_info);
+    return true;
 }
 
 static void video_core_description(const VideoInfo *vi, const vmode_custom_t */*vm*/, char *str, size_t len)

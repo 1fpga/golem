@@ -1192,7 +1192,7 @@ struct DirentComp
 #ifdef USE_SCHEDULER
 		if (++iterations % YieldIterations == 0)
 		{
-			scheduler_yield();
+//			scheduler_yield();
 		}
 #endif
 
@@ -1450,7 +1450,7 @@ int ScanDirectory(char* path, int mode, const char *extension, int options, cons
 #ifdef USE_SCHEDULER
 			if (0 < i && i % YieldIterations == 0)
 			{
-				scheduler_yield();
+//				scheduler_yield();
 			}
 #endif
 			struct dirent64 _de = {};

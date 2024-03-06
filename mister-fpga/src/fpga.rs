@@ -80,16 +80,6 @@ pub mod ffi {
     }
 
     #[no_mangle]
-    unsafe extern "C" fn fpgamgr_program_write_rust(rbf_data: *const u8, rbf_size: c_ulong) {
-        let program = std::slice::from_raw_parts(rbf_data, rbf_size as usize);
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .write_program(program)
-            .unwrap();
-    }
-
-    #[no_mangle]
     unsafe extern "C" fn fpga_spi(word: u16) -> u16 {
         FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
     }

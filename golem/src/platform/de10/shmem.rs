@@ -1,35 +1,21 @@
 #![cfg(feature = "platform_de10")]
-
+use cyclone_v::memory::MemoryMapper;
 use std::ffi::c_int;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, DerefMut};
 use tracing::error;
 
-#[derive(Eq, PartialEq)]
-pub struct Mapper(&'static mut [u8], (usize, usize));
+pub struct Mapper(cyclone_v::memory::DevMemMemoryMapper);
 
 impl Debug for Mapper {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Mapper")
-            .field(&format_args!(
-                "0x{:X}..0x{:X} ({} bytes) mapped to {:p}",
-                self.1 .0,
-                self.1 .1,
-                self.1 .1 - self.1 .0,
-                self.0
-            ))
-            .finish()
+        f.debug_tuple("Mapper").finish()
     }
 }
 
 impl Mapper {
     pub fn new(address: usize, size: usize) -> Self {
-        let ptr = unsafe { shmem_map_c(address as u32, size as u32) };
-
-        Self(
-            unsafe { std::slice::from_raw_parts_mut(ptr, size) },
-            (address, address + size),
-        )
+        Self(cyclone_v::memory::DevMemMemoryMapper::create(address, size).unwrap())
     }
 }
 
@@ -37,21 +23,13 @@ impl Deref for Mapper {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
-        self.0
+        self.0.as_range(..)
     }
 }
 
 impl DerefMut for Mapper {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0
-    }
-}
-
-impl Drop for Mapper {
-    fn drop(&mut self) {
-        unsafe {
-            shmem_unmap_c(self.0.as_ptr(), self.0.len() as u32);
-        }
+        self.0.as_mut_range(..)
     }
 }
 
