@@ -1,5 +1,5 @@
 @startuml
 
-box Mister;
+"GoLEm App" --|> "Core Manager"
 
 @enduml

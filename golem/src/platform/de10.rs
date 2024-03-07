@@ -16,7 +16,6 @@ use tracing::{debug, error};
 pub use mister_fpga::fpga;
 
 pub mod core_manager;
-pub mod user_io;
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";

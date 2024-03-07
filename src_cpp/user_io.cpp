@@ -1239,28 +1239,28 @@ int user_io_get_width()
 
 void user_io_init(const char *path, const char *xml)
 {
-	char *name;
-	static char mainpath[512];
-	core_name[0] = 0;
-	disable_osd = 0;
-
-	// we need to set the directory to where the XML file (MRA) is
-	// not the RBF. The RBF will be in arcade, which the user shouldn't
-	// browse
-	strcpy(core_path, xml ? xml : path);
-	strcpy(rbf_path, path);
-
-	memset(sd_image, 0, sizeof(sd_image));
-
-	core_type = (fpga_core_id() & 0xFF);
-	fio_size = fpga_get_fio_size();
-	io_ver = fpga_get_io_version();
-
-	if (core_type == CORE_TYPE_8BIT2)
-	{
-		dual_sdr = 1;
-		core_type = CORE_TYPE_8BIT;
-	}
+//	char *name;
+//	static char mainpath[512];
+//	core_name[0] = 0;
+//	disable_osd = 0;
+//
+//	// we need to set the directory to where the XML file (MRA) is
+//	// not the RBF. The RBF will be in arcade, which the user shouldn't
+//	// browse
+//	strcpy(core_path, xml ? xml : path);
+//	strcpy(rbf_path, path);
+//
+//	memset(sd_image, 0, sizeof(sd_image));
+//
+//	core_type = (fpga_core_id() & 0xFF);
+//	fio_size = fpga_get_fio_size();
+//	io_ver = fpga_get_io_version();
+//
+//	if (core_type == CORE_TYPE_8BIT2)
+//	{
+//		dual_sdr = 1;
+//		core_type = CORE_TYPE_8BIT;
+//	}
 
 //	cfg_parse();
 //	parse_config();
