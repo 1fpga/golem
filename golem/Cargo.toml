@@ -1,12 +1,8 @@
 [package]
 name = "golem"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2018"
 build = "build.rs"
-
-#[[bin]]
-#name = "golem"
-#path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.75"
