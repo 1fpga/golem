@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "cyclone_v",
+    "cyclone-v",
+    "de10-nano",
     "golem-db",
     "golem",
     "junior",
@@ -11,7 +12,6 @@ resolver = "2"
 
 [profile.release]
 lto = "fat"
-incremental = false
 overflow-checks = false
 panic = "abort"
 strip = "symbols"

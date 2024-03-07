@@ -2,9 +2,11 @@ use crate::config::MisterConfig;
 use crate::fpga::user_io::SetVideoMode;
 use crate::fpga::Spi;
 use cyclone_v::memory::MemoryMapper;
-use i2cdev::core::I2CDevice;
 use strum::FromRepr;
 use tracing::{debug, info, trace, warn};
+
+#[cfg(target_os = "linux")]
+use i2cdev::core::I2CDevice;
 
 pub struct Edid {
     inner: [u8; 256],
@@ -15,16 +17,50 @@ impl Edid {
         Edid { inner }
     }
 
+    pub fn into_inner(self) -> [u8; 256] {
+        self.inner
+    }
+
     #[cfg(target_os = "linux")]
     pub fn from_i2c() -> Result<Self, String> {
-        let inner = get_active_edid_()?;
-        Ok(Edid::new(inner))
+        let mut i2c = create_i2c("/dev/i2c-1", 0x39, false)?;
+
+        // Test if adv7513 senses hdmi clock. If not, don't bother with the edid query.
+        let hpd_state = i2c.smbus_read_byte_data(0x42).map_err(|e| e.to_string())?;
+        if hpd_state & 0x20 == 0 {
+            return Err("EDID: HDMI not connected.".to_string());
+        }
+
+        for _ in 0..10 {
+            i2c.smbus_write_byte_data(0xC9, 0x03)
+                .map_err(|e| e.to_string())?;
+            i2c.smbus_write_byte_data(0xC9, 0x13)
+                .map_err(|e| e.to_string())?;
+        }
+
+        let mut i2c = create_i2c("/dev/i2c-1", 0x3f, false)?;
+
+        // waiting for valid EDID
+        for _ in 0..20 {
+            let edid: [u8; 256] = (0..256)
+                .map(|i| i2c.smbus_read_byte_data(i as u8).map_err(|e| e.to_string()))
+                .collect::<Result<Vec<_>, String>>()?
+                .try_into()
+                .unwrap();
+
+            if is_edid_valid(&edid) {
+                info!("EDID Info:\n{}", hexdump(&edid));
+                return Ok(Self::new(edid));
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+
+        Err("EDID: No valid EDID header found.".to_string())
     }
 }
 
 fn is_edid_valid(edid: &[u8]) -> bool {
-    const MAGIC: &[u8] = &[0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00];
-    return &edid[..8] == MAGIC;
+    &edid[..8] == &[0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00]
 }
 
 #[cfg(target_os = "linux")]
@@ -38,11 +74,12 @@ fn create_i2c(
     if is_smbus {
         i2c.smbus_write_quick(false).map_err(|e| e.to_string())?;
     } else {
-        if i2c.smbus_read_byte().map_err(|e| e.to_string())? < 0 {
+        if let Err(e) = i2c.smbus_read_byte().map_err(|e| e.to_string()) {
             return Err(format!(
-                "Unable to detect I2C device on bus {:?}: {}",
+                "Unable to detect I2C device on bus {:?} (address 0x{:X}): {}",
                 path.as_ref(),
-                address
+                address,
+                e
             ));
         }
     }
@@ -50,46 +87,16 @@ fn create_i2c(
     Ok(i2c)
 }
 
-#[cfg(not(target_os = "linux"))]
 fn get_active_edid_() -> Result<[u8; 256], String> {
-    return Err("EDID: Not supported on this platform.".to_string());
-}
-
-#[cfg(target_os = "linux")]
-fn get_active_edid_() -> Result<[u8; 256], String> {
-    let mut i2c = create_i2c("/dev/i2c-1", 0x39, false)?;
-
-    // Test if adv7513 senses hdmi clock. If not, don't bother with the edid query.
-    let hpd_state = i2c.smbus_read_byte_data(0x42).map_err(|e| e.to_string())?;
-    if hpd_state & 0x20 == 0 {
-        return Err("EDID: HDMI not connected.".to_string());
+    #[cfg(target_os = "linux")]
+    {
+        Edid::from_i2c().map(|edid| edid.into_inner())
     }
 
-    for _ in 0..10 {
-        i2c.smbus_write_byte_data(0xC9, 0x03)
-            .map_err(|e| e.to_string())?;
-        i2c.smbus_write_byte_data(0xC9, 0x13)
-            .map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "linux"))]
+    {
+        Err("EDID: Not supported on this platform.".to_string())
     }
-
-    let mut i2c = create_i2c("/dev/i2c-1", 0x3f, false)?;
-
-    // waiting for valid EDID
-    for _ in 0..20 {
-        let edid: [u8; 256] = (0..256)
-            .map(|i| i2c.smbus_read_byte_data(i as u8).map_err(|e| e.to_string()))
-            .collect::<Result<Vec<_>, String>>()?
-            .try_into()
-            .unwrap();
-
-        if is_edid_valid(&edid) {
-            info!("EDID Info:\n{}", hexdump(&edid));
-            return Ok(edid);
-        }
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    }
-
-    Err("EDID: No valid EDID header found.".to_string())
 }
 
 fn get_edid_vmode_(options: &MisterConfig) -> Option<CustomVideoMode> {
@@ -146,12 +153,12 @@ pub fn hdmi_config_set_spd(val: bool) -> Result<(), String> {
 }
 
 #[cfg(not(target_os = "linux"))]
-pub fn hdmi_config_set_spd(val: bool) -> Result<(), String> {
+pub fn hdmi_config_set_spd(_val: bool) -> Result<(), String> {
     Ok(())
 }
 
 #[cfg(not(target_os = "linux"))]
-pub fn hdmi_config_set_spare(packet: bool, enabled: bool) -> Result<(), String> {
+pub fn hdmi_config_set_spare(_packet: bool, _enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
@@ -333,7 +340,7 @@ fn find_pll_once_(f_out: f64, mut c: u32) -> Option<Pll> {
         c += 1;
     }
 
-    let mut fvco = f_out * c as f64;
+    let fvco = f_out * c as f64;
     let m = (fvco / 50.) as u32;
     let ko = (fvco / 50.) - m as f64;
 

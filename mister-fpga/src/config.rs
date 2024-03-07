@@ -132,12 +132,6 @@ mod cpp {
 }
 
 extern "C" {
-    pub fn cfg_bootcore_timeout() -> u16;
-    pub fn cfg_set_bootcore_timeout(timeout: u16);
-    pub fn cfg_bootcore() -> *const c_char;
-    pub fn cfg_set_bootcore(path: *const c_char);
-    pub fn cfg_parse_original();
-
     pub static mut cfg: cpp::CppCfg;
 }
 
@@ -328,28 +322,28 @@ mod validate {
 #[serde(default)]
 pub struct MisterConfig {
     #[merge(strategy = merge::option::overwrite_some)]
-    bootcore: Option<BootCoreConfig>,
+    pub bootcore: Option<BootCoreConfig>,
 
     #[serde(alias = "ypbpr")]
     #[merge(strategy = merge::option::overwrite_some)]
-    vga_mode: Option<VgaMode>,
+    pub vga_mode: Option<VgaMode>,
 
     #[merge(strategy = merge::option::overwrite_some)]
-    ntsc_mode: Option<NtscModeConfig>,
+    pub ntsc_mode: Option<NtscModeConfig>,
 
     #[merge(strategy = merge::option::overwrite_some)]
-    reset_combo: Option<ResetComboConfig>,
+    pub reset_combo: Option<ResetComboConfig>,
 
     #[merge(strategy = merge::option::overwrite_some)]
-    hdmi_limited: Option<HdmiLimitedConfig>,
+    pub hdmi_limited: Option<HdmiLimitedConfig>,
 
     #[merge(strategy = merge::option::overwrite_some)]
     #[validate(range(max = 100))]
-    mouse_throttle: Option<u8>,
+    pub mouse_throttle: Option<u8>,
 
     #[serde(with = "mister_hexa")]
     #[merge(strategy = merge::option::overwrite_some)]
-    keyrah_mode: Option<u32>,
+    pub keyrah_mode: Option<u32>,
 
     /// Specify a custom aspect ratio in the format `a:b`. This can be repeated.
     /// They are applied in order, so the first one matching will be the one used.
@@ -359,65 +353,65 @@ pub struct MisterConfig {
     /// Specify a custom aspect ratio, allowing for backward compatibility with older
     /// MiSTer config files. We only need 2 as that's what the previous version supported.
     #[merge(strategy = merge::option::overwrite_some)]
-    custom_aspect_ratio_1: Option<AspectRatio>,
+    pub custom_aspect_ratio_1: Option<AspectRatio>,
 
     /// Specify a custom aspect ratio, allowing for backward compatibility with older
     /// MiSTer config files. We only need 2 as that's what the previous version supported.
     #[merge(strategy = merge::option::overwrite_some)]
-    custom_aspect_ratio_2: Option<AspectRatio>,
+    pub custom_aspect_ratio_2: Option<AspectRatio>,
 
     /// Set to 1 to run scandoubler on VGA output always (depends on core).
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    forced_scandoubler: Option<bool>,
+    pub forced_scandoubler: Option<bool>,
 
     /// Set to true to make the MENU key map to RGUI in Minimig (e.g. for Right Amiga).
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    key_menu_as_rgui: Option<bool>,
+    pub key_menu_as_rgui: Option<bool>,
 
     /// Set to true for composite sync on HSync signal of VGA output.
-    #[serde(with = "mister_bool")]
+    #[serde(with = "mister_bool", alias = "csync")]
     #[merge(strategy = merge::option::overwrite_some)]
-    composite_sync: Option<bool>,
+    pub composite_sync: Option<bool>,
 
     /// Set to true to connect VGA to scaler output.
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    vga_scaler: Option<bool>,
+    pub vga_scaler: Option<bool>,
 
     /// Set to true to enable sync on green (needs analog I/O board v6.0 or newer).
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    vga_sog: Option<bool>,
+    pub vga_sog: Option<bool>,
 
     /// Set to true for 96khz/16bit HDMI audio (48khz/16bit otherwise)
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    hdmi_audio_96k: Option<bool>,
+    pub hdmi_audio_96k: Option<bool>,
 
     /// Set to true for DVI mode. Audio won't be transmitted through HDMI in DVI mode.
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    dvi_mode: Option<bool>,
+    pub dvi_mode: Option<bool>,
 
     /// Set to true to enable core video timing over HDMI, use only with VGA converters.
     #[serde(with = "mister_bool")]
     #[merge(strategy = merge::option::overwrite_some)]
-    direct_video: Option<bool>,
+    pub direct_video: Option<bool>,
 
     /// Set to 0-10 (seconds) to display video info on startup/change
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[merge(strategy = merge::option::overwrite_some)]
     #[validate(custom = "validate::video_info")]
-    video_info: Option<Duration>,
+    pub video_info: Option<Duration>,
 
     /// 1-10 (seconds) to display controller's button map upon first time key press
     /// 0 - disable
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[validate(custom = "validate::controller_info")]
     #[merge(strategy = merge::option::overwrite_some)]
-    controller_info: Option<Duration>,
+    pub controller_info: Option<Duration>,
 
     /// If you monitor doesn't support either very low (NTSC monitors may not support PAL) or
     /// very high (PAL monitors may not support NTSC) then you can set refresh_min and/or refresh_max
@@ -425,7 +419,7 @@ pub struct MisterConfig {
     /// These parameters are valid only when vsync_adjust is non-zero.
     #[validate(range(min = 0.0, max = 150.0))]
     #[merge(strategy = merge::option::overwrite_some)]
-    refresh_min: Option<f32>,
+    pub refresh_min: Option<f32>,
 
     /// If you monitor doesn't support either very low (NTSC monitors may not support PAL) or
     /// very high (PAL monitors may not support NTSC) then you can set refresh_min and/or refresh_max
@@ -979,11 +973,6 @@ impl Config {
         std::fs::read_to_string(Self::config_root().join("lastcore.dat")).ok()
     }
 
-    pub fn bootcore() -> BootCoreConfig {
-        let bootcore = unsafe { std::ffi::CStr::from_ptr(cfg_bootcore()).to_str().unwrap() };
-        bootcore.parse().unwrap()
-    }
-
     pub fn merge_core_override(&mut self, corename: &str) {
         if let Some(o) = self.overrides.get(corename) {
             self.mister.merge(o.clone());
@@ -1260,18 +1249,6 @@ pub extern "C" fn rust_load_config() {
     tracing::debug!("Loading config from {p:?}");
     let mut config = Config::load(p).unwrap();
     config.mister.set_defaults();
-
-    // Check the altcfg.
-    #[cfg(feature = "platform_de10")]
-    {
-        let alt = crate::platform::de10::user_io::altcfg(-1);
-        if alt != 0 {
-            let p = root.join(format!("MiSTer_{alt}.ini"));
-            if let Ok(alt_config) = Config::load(&p) {
-                config.merge(alt_config);
-            }
-        }
-    }
 
     unsafe {
         config.copy_to_cfg_cpp(&mut cfg);

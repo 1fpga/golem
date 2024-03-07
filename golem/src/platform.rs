@@ -9,7 +9,7 @@
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::SdlPlatform;
-use crate::main_inner::Flags;
+use crate::Flags;
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};

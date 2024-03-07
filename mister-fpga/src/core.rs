@@ -83,11 +83,8 @@ pub struct MisterFpgaCore {
 
 impl MisterFpgaCore {
     pub fn new(mut fpga: MisterFpga) -> Result<Self, String> {
-        let core_type = fpga.core_type().ok_or("Could not get core type.")?;
-        let spi_type = fpga
-            .core_interface_type()
-            .ok_or("Could not get SPI type.")?;
-        let io_version = fpga.core_io_version().ok_or("Could not get IO version.")?;
+        fpga.wait_for_ready();
+
         let config = config_string::Config::from_fpga(&mut fpga)?;
 
         let mut map = ButtonMap::default();
@@ -99,13 +96,18 @@ impl MisterFpgaCore {
         }
         info!(?map);
 
-        info!(?core_type, ?spi_type, io_version, "Core loaded");
         info!(
             "Status bit map (mask):\n{}",
             config.status_bit_map_mask().debug_string(true)
         );
         info!("Core config: {:#?}", config);
-        fpga.wait_for_ready();
+
+        let core_type = fpga.core_type().ok_or("Could not get core type.")?;
+        let spi_type = fpga
+            .core_interface_type()
+            .ok_or("Could not get SPI type.")?;
+        let io_version = fpga.core_io_version().ok_or("Could not get IO version.")?;
+        info!(?core_type, ?spi_type, io_version, "Core loaded");
 
         let save_states = SaveStateManager::from_config_string(&config);
         const NONE: Option<SdCard> = None;
@@ -158,6 +160,13 @@ impl MisterFpgaCore {
     /// Send the Real Time Clock to the core.
     pub fn send_rtc(&mut self) -> Result<(), String> {
         self.fpga.spi_mut().execute(UserIoRtc::now())?;
+        Ok(())
+    }
+
+    pub fn send_volume(&mut self, volume: u8) -> Result<(), String> {
+        self.fpga
+            .spi_mut()
+            .execute(user_io::SetAudioVolume(volume))?;
         Ok(())
     }
 
@@ -221,6 +230,16 @@ impl MisterFpgaCore {
     /// Return the core parsed config structure.
     pub fn config(&self) -> &config_string::Config {
         &self.config
+    }
+
+    // TODO: rethink how framebuffers are handled.
+    pub fn send_to_menu_framebuffer(&mut self, bytes: &[u8]) -> Result<(), String> {
+        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
+
+        let fb_addr = FB_BASE + (1920 * 1080) * 4;
+        let mut mapper = DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4).unwrap();
+        mapper.as_mut_range(..bytes.len()).copy_from_slice(bytes);
+        Ok(())
     }
 
     /// Return the core status bits. This is an internal cache of the

@@ -3,7 +3,6 @@ use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
 use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
 use std::cell::UnsafeCell;
-use std::ffi::c_int;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -14,124 +13,6 @@ mod framebuffer;
 mod spi;
 
 pub use spi::*;
-
-extern "C" {
-    pub fn reboot(cold: c_int);
-}
-
-/// Functions made available to the C code.
-/// TODO: remove these when the fpga code from CPP is gone.
-pub mod ffi {
-    use super::FPGA_SINGLETON;
-    use crate::fpga::feature::SpiFeatureSet;
-    use libc::{c_int, c_ulong};
-    use tracing::error;
-
-    #[no_mangle]
-    extern "C" fn fpga_core_id() -> c_int {
-        unsafe {
-            FPGA_SINGLETON
-                .as_mut()
-                .unwrap()
-                .core_type()
-                .map(|v| v as c_int)
-                .unwrap_or_else(|| {
-                    error!("FPGA core type mismatch");
-                    -1
-                })
-        }
-    }
-
-    #[no_mangle]
-    extern "C" fn fpga_get_fio_size() -> c_int {
-        unsafe {
-            match FPGA_SINGLETON.as_mut().unwrap().core_interface_type() {
-                Some(super::CoreInterfaceType::SpiBus8Bit) => 0,
-                Some(super::CoreInterfaceType::SpiBus16Bit) => 1,
-                _ => -1,
-            }
-        }
-    }
-
-    #[no_mangle]
-    extern "C" fn fpga_get_io_version() -> c_int {
-        unsafe {
-            FPGA_SINGLETON
-                .as_mut()
-                .unwrap()
-                .core_io_version()
-                .map(|v| v as c_int)
-                .unwrap_or(-1)
-        }
-    }
-
-    #[no_mangle]
-    extern "C" fn fpga_wait_to_reset() {
-        unsafe {
-            FPGA_SINGLETON.as_mut().unwrap().wait_to_reset();
-        }
-    }
-
-    #[no_mangle]
-    unsafe extern "C" fn fpgamgr_dclkcnt_set_rust(count: c_ulong) -> c_int {
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .set_dclkcnt(count as u32)
-            .map_or(
-                -3447, // aka -ETIMEOUT
-                |_| 0,
-            )
-    }
-
-    #[no_mangle]
-    unsafe extern "C" fn fpgamgr_program_write_rust(rbf_data: *const u8, rbf_size: c_ulong) {
-        let program = std::slice::from_raw_parts(rbf_data, rbf_size as usize);
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .write_program(program)
-            .unwrap();
-    }
-
-    #[no_mangle]
-    unsafe extern "C" fn fpga_spi(word: u16) -> u16 {
-        FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
-    }
-
-    // #[no_mangle]
-    // unsafe extern "C" fn spi_w(word: u16) -> u16 {
-    //     FPGA_SINGLETON.as_mut().unwrap().spi_mut().write(word)
-    // }
-
-    #[no_mangle]
-    unsafe extern "C" fn fpga_spi_en(mask: u32, en: u32) {
-        if en != 0 {
-            FPGA_SINGLETON.as_mut().unwrap().spi_mut().enable_u32(mask);
-        } else {
-            FPGA_SINGLETON.as_mut().unwrap().spi_mut().disable_u32(mask);
-        }
-    }
-
-    #[no_mangle]
-    pub unsafe extern "C" fn DisableIO() {
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .spi_mut()
-            .disable(SpiFeatureSet::IO);
-    }
-
-    #[no_mangle]
-    unsafe extern "C" fn fpga_spi_fast_block_write(data: *const u16, len: u32) {
-        let data = std::slice::from_raw_parts(data, len as usize);
-        FPGA_SINGLETON
-            .as_mut()
-            .unwrap()
-            .spi_mut()
-            .write_block_16(data);
-    }
-}
 
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
@@ -246,6 +127,7 @@ impl MisterFpga {
     }
 
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     fn soc_mut(&self) -> &mut cyclone_v::SocFpga<DevMemMemoryMapper> {
         unsafe { &mut (*self.soc.get()) }
     }
@@ -274,7 +156,7 @@ impl MisterFpga {
             // TODO: remove this when the fpga code from CPP is gone.
             #[cfg(feature = "mister-cpp")]
             {
-                map_base = fpga.soc_mut().base_mut();
+                // map_base = fpga.soc_mut().base_mut();
             }
             fpga.regs_mut().set_gpo(0);
 
@@ -371,9 +253,10 @@ impl MisterFpga {
             std::thread::sleep(Duration::from_millis(10));
         }
 
-        unsafe {
-            reboot(0);
-        }
+        // TODO: is this needed here?
+        // unsafe {
+        //     reboot(0);
+        // }
     }
 
     /// Wait for the FPGA to be ready. This requires a mutable reference if the

@@ -1,30 +1,19 @@
 #![cfg(feature = "platform_de10")]
-
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
-use crate::main_inner::Flags;
 use crate::platform::{sizes, CoreManager, GoLEmPlatform};
+use crate::Flags;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
+use mister_fpga::fpga;
 use mister_fpga::osd::OsdDisplay;
 use sdl3::event::Event;
 use tracing::{debug, error};
 
-pub use mister_fpga::fpga;
-
-mod battery;
 pub mod core_manager;
-mod input;
-mod offload;
-mod osd;
-mod shmem;
-mod smbus;
-pub mod spi;
-mod support;
-pub mod user_io;
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
@@ -82,10 +71,7 @@ impl GoLEmPlatform for De10Platform {
     type CoreManager = core_manager::CoreManager;
 
     fn init(&mut self, _flags: &Flags) {
-        unsafe {
-            offload::offload_start();
-            self.core_manager.load_menu().unwrap();
-        }
+        self.core_manager.load_menu().unwrap();
     }
 
     fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {

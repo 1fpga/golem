@@ -1,6 +1,8 @@
 use byteorder::{LittleEndian, ReadBytesExt};
-use mister_fpga::config::Config;
+use image::GenericImage;
+use mister_fpga::config::{Config, HdmiLimitedConfig, VgaMode};
 use mister_fpga::core::MisterFpgaCore;
+use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};
 use mister_fpga::fpga::MisterFpga;
 use std::path::Path;
 
@@ -28,10 +30,46 @@ impl CoreManager {
         let mut core = MisterFpgaCore::new(self.fpga.clone())
             .map_err(|e| format!("Could not instantiate Core: {e}"))?;
 
+        let options = Config::base().into_inner();
+
         core.init()?;
-        core.init_video(&Config::base().into_inner(), is_menu)?;
+        core.init_video(&options, is_menu)?;
+        core.send_volume(0)?;
+
+        let mut switches = UserIoButtonSwitch::new();
+        if options.vga_scaler == Some(true) {
+            switches |= ButtonSwitches::VgaScaler;
+        }
+        if options.vga_sog == Some(true) {
+            switches |= ButtonSwitches::VgaSog;
+        }
+        if options.composite_sync == Some(true) {
+            switches |= ButtonSwitches::CompositeSync;
+        }
+        if options.vga_mode() == VgaMode::Ypbpr {
+            switches |= ButtonSwitches::Ypbpr;
+        }
+        if options.forced_scandoubler() {
+            switches |= ButtonSwitches::ForcedScandoubler;
+        }
+        if options.hdmi_audio_96k() {
+            switches |= ButtonSwitches::Audio96K;
+        }
+        if options.dvi_mode() {
+            switches |= ButtonSwitches::Dvi;
+        }
+        match options.hdmi_limited() {
+            HdmiLimitedConfig::Limited => switches |= ButtonSwitches::HdmiLimited1,
+            HdmiLimitedConfig::LimitedForVgaConverters => switches |= ButtonSwitches::HdmiLimited2,
+            _ => {}
+        }
+        if options.direct_video() {
+            switches |= ButtonSwitches::DirectVideo;
+        }
+
+        core.spi_mut().execute(switches).unwrap();
         core.send_rtc()?;
-        // core.send_volume(5)?;
+
         Ok(core::MisterFpgaCore::new(core))
     }
 
@@ -54,12 +92,6 @@ impl CoreManager {
 
         let core = self.create_core(is_menu)?;
 
-        unsafe {
-            crate::platform::de10::user_io::user_io_init(
-                "\0".as_ptr() as *const _,
-                std::ptr::null(),
-            );
-        }
         Ok(core)
     }
 }
@@ -85,7 +117,21 @@ impl crate::platform::CoreManager for CoreManager {
 
         let bytes = Aligned(include_bytes!("../../../assets/menu.rbf"));
 
-        let core = self.load(bytes.0, true)?;
+        let mut core = self.load(bytes.0, true)?;
+
+        // Send the logo to the framebuffer.
+        let logo = include_bytes!("../../../../logo.png");
+        let image = image::load_from_memory_with_format(logo, image::ImageFormat::Png)
+            .map_err(|e| format!("Could not load logo: {e}"))?;
+
+        let mut fullframe = image::DynamicImage::new_rgba8(1920, 1080);
+        let rgba8 = fullframe.as_mut_rgba8().unwrap();
+        rgba8
+            .pixels_mut()
+            .for_each(|p| *p = image::Rgba([64, 64, 64, 0]));
+        image::imageops::overlay(&mut fullframe, &image, 32, 32);
+        core.send_to_framebuffer(fullframe.as_bytes())?;
+
         self.fpga_mut().osd_enable();
         Ok(core)
     }

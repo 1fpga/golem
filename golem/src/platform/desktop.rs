@@ -1,12 +1,11 @@
 #![cfg(feature = "platform_desktop")]
-
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::settings::OutputSettingsBuilder;
 use crate::macguiver::platform::sdl::theme::BinaryColorTheme;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::{Platform, PlatformWindow};
-use crate::main_inner::Flags;
 use crate::platform::{sizes, Core, CoreManager, GoLEmPlatform};
+use crate::Flags;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
@@ -46,16 +45,32 @@ impl Core for DummyCore {
         Ok(())
     }
 
+    fn end_send_file(&mut self) -> Result<(), String> {
+        unreachable!()
+    }
+
     fn version(&self) -> Option<&str> {
         None
     }
 
+    fn mount_sav(&mut self, path: &Path) -> Result<(), String> {
+        unreachable!()
+    }
+
+    fn check_sav(&mut self) -> Result<(), String> {
+        unreachable!()
+    }
+
     fn menu_options(&self) -> &[ConfigMenu] {
-        todo!()
+        unreachable!()
     }
 
     fn trigger_menu(&mut self, _menu: &ConfigMenu) -> Result<bool, String> {
         unreachable!()
+    }
+
+    fn reset(&mut self) -> Result<(), String> {
+        todo!()
     }
 
     fn status_mask(&self) -> StatusBitMap {

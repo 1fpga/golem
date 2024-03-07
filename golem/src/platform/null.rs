@@ -135,7 +135,7 @@ impl GoLEmPlatform for NullPlatform {
     type Color = BinaryColor;
     type CoreManager = NullCoreManager;
 
-    fn init(&mut self, _flags: &crate::main_inner::Flags) {
+    fn init(&mut self, _flags: &crate::Flags) {
         unreachable!("Platform should never run in NULL.")
     }
 
