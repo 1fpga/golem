@@ -42,6 +42,13 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         Ok(Self { memory })
     }
 
+    pub fn write(&mut self, data: &[u8]) -> Result<(), String> {
+        self.memory
+            .as_mut_range(16..16 + data.len())
+            .copy_from_slice(data);
+        Ok(())
+    }
+
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         let buffer = self.memory.as_range(0..16);
 

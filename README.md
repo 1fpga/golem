@@ -78,13 +78,13 @@ Then, you can build the firmware with the following command:
 cross build --bin golem --target=armv7-unknown-linux-gnueabihf --no-default-features --features=platform_de10 --release
 ```
 
-If everything goes well, this will output the executable in `./target/arm-unknown-linux-gnueabihf/release/golem`. Simply copy that binary to your device and execute it.
+If everything goes well, this will output the executable in `./target/armv7-unknown-linux-gnueabihf/release/golem`. Simply copy that binary to your device and execute it.
 
 The following commands can help:
 
 ```bash
 ssh root@$MISTER_IP 'killall MiSTer GoLEm_firmware' # Make sure MiSTer (and GoLEm) is not running
-scp ./target/arm-unknown-linux-gnueabihf/release/golem root@$MISTER_IP:/media/fat/GoLEm_firmware # Copy the binary to the device
+scp ./target/armv7-unknown-linux-gnueabihf/release/golem root@$MISTER_IP:/media/fat/GoLEm_firmware # Copy the binary to the device
 ssh root@$MISTER_IP 'sync; PATH=/media/fat:$PATH; GoLEm_firmware' # Restart the firmware
 ```
 

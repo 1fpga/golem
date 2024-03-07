@@ -1,4 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt};
+use image::GenericImage;
 use mister_fpga::config::{Config, HdmiLimitedConfig, VgaMode};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};
@@ -116,7 +117,21 @@ impl crate::platform::CoreManager for CoreManager {
 
         let bytes = Aligned(include_bytes!("../../../assets/menu.rbf"));
 
-        let core = self.load(bytes.0, true)?;
+        let mut core = self.load(bytes.0, true)?;
+
+        // Send the logo to the framebuffer.
+        let logo = include_bytes!("../../../../logo.png");
+        let image = image::load_from_memory_with_format(logo, image::ImageFormat::Png)
+            .map_err(|e| format!("Could not load logo: {e}"))?;
+
+        let mut fullframe = image::DynamicImage::new_rgba8(1920, 1080);
+        let rgba8 = fullframe.as_mut_rgba8().unwrap();
+        rgba8
+            .pixels_mut()
+            .for_each(|p| *p = image::Rgba([64, 64, 64, 0]));
+        image::imageops::overlay(&mut fullframe, &image, 32, 32);
+        core.send_to_framebuffer(fullframe.as_bytes())?;
+
         self.fpga_mut().osd_enable();
         Ok(core)
     }

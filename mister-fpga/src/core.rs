@@ -232,6 +232,16 @@ impl MisterFpgaCore {
         &self.config
     }
 
+    // TODO: rethink how framebuffers are handled.
+    pub fn send_to_menu_framebuffer(&mut self, bytes: &[u8]) -> Result<(), String> {
+        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
+
+        let fb_addr = FB_BASE + (1920 * 1080) * 4;
+        let mut mapper = DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4).unwrap();
+        mapper.as_mut_range(..bytes.len()).copy_from_slice(bytes);
+        Ok(())
+    }
+
     /// Return the core status bits. This is an internal cache of the
     /// status bits. Use `[Core::read_status_bits()]` to read the status
     /// from the core.

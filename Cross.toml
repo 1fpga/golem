@@ -1,0 +1,6 @@
+[build]
+# Install dependencies
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get --assume-yes install libsqlite3-dev:$CROSS_DEB_ARCH",
+]

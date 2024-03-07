@@ -36,6 +36,16 @@ impl crate::platform::SaveState for mister_fpga::savestate::SaveState {
     }
 }
 
+impl MisterFpgaCore {
+    pub(crate) fn send_to_framebuffer(
+        &mut self,
+        image_raw: impl AsRef<[u8]>,
+    ) -> Result<(), String> {
+        self.inner.send_to_menu_framebuffer(image_raw.as_ref())?;
+        Ok(())
+    }
+}
+
 impl Core for MisterFpgaCore {
     type SaveState = mister_fpga::savestate::SaveState;
 

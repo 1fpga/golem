@@ -1,12 +1,11 @@
 #![cfg(feature = "platform_desktop")]
-
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::settings::OutputSettingsBuilder;
 use crate::macguiver::platform::sdl::theme::BinaryColorTheme;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::{Platform, PlatformWindow};
-use crate::main_inner::Flags;
 use crate::platform::{sizes, Core, CoreManager, GoLEmPlatform};
+use crate::Flags;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::BinaryColor;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};

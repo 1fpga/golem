@@ -1,19 +1,17 @@
 #![cfg(feature = "platform_de10")]
-
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
-use crate::main_inner::Flags;
 use crate::platform::{sizes, CoreManager, GoLEmPlatform};
+use crate::Flags;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::Drawable;
+use mister_fpga::fpga;
 use mister_fpga::osd::OsdDisplay;
 use sdl3::event::Event;
 use tracing::{debug, error};
-
-pub use mister_fpga::fpga;
 
 pub mod core_manager;
 
