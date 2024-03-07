@@ -1,17 +1,11 @@
-// We don't want to build the binary in test mode.
-#![cfg(not(test))]
-
-// TODO: make all these modules test friendly.
-pub mod hardware;
-
 mod application;
 mod data;
+mod file_io;
+mod hardware;
+mod input;
+mod macguiver;
 mod main_inner;
-
-pub mod file_io;
-pub mod input;
-pub mod macguiver;
-pub mod platform;
+mod platform;
 
 fn main() {
     if let Err(e) = main_inner::main() {

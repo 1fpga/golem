@@ -46,16 +46,32 @@ impl Core for DummyCore {
         Ok(())
     }
 
+    fn end_send_file(&mut self) -> Result<(), String> {
+        unreachable!()
+    }
+
     fn version(&self) -> Option<&str> {
         None
     }
 
+    fn mount_sav(&mut self, path: &Path) -> Result<(), String> {
+        unreachable!()
+    }
+
+    fn check_sav(&mut self) -> Result<(), String> {
+        unreachable!()
+    }
+
     fn menu_options(&self) -> &[ConfigMenu] {
-        todo!()
+        unreachable!()
     }
 
     fn trigger_menu(&mut self, _menu: &ConfigMenu) -> Result<bool, String> {
         unreachable!()
+    }
+
+    fn reset(&mut self) -> Result<(), String> {
+        todo!()
     }
 
     fn status_mask(&self) -> StatusBitMap {

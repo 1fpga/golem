@@ -4,13 +4,9 @@ version = "0.1.8"
 edition = "2018"
 build = "build.rs"
 
-[lib]
-crate-type = ["staticlib"] # to generate a `lib<package_name>.a`
-path = "src/lib.rs"
-
-[[bin]]
-name = "golem"
-path = "src/main.rs"
+#[[bin]]
+#name = "golem"
+#path = "src/main.rs"
 
 [dependencies]
 anyhow = "1.0.75"
