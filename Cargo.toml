@@ -18,4 +18,7 @@ strip = true
 debug = false
 
 [profile.dev]
+overflow-checks = false
 debug = 0
+panic = "abort"
+
