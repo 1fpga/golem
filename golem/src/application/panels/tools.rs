@@ -12,7 +12,7 @@ mod menu_tester;
 mod progress_tester;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-enum Menu {
+enum ToolMenuReturn {
     InputTester,
     MenuTester,
     MenuTesterBinNes,
@@ -21,9 +21,9 @@ enum Menu {
     Back,
 }
 
-impl MenuReturn for Menu {
+impl MenuReturn for ToolMenuReturn {
     fn back() -> Option<Self> {
-        Some(Menu::Back)
+        Some(ToolMenuReturn::Back)
     }
 }
 
@@ -35,21 +35,25 @@ pub fn tools_menu(app: &mut GoLEmApp) {
             app,
             "Tools",
             &[
-                ("Input Tester", "", Menu::InputTester),
-                ("Menu Tester", "", Menu::MenuTester),
-                ("Menu Tester (bin, nes)", "", Menu::MenuTesterBinNes),
-                ("Progress Tester", "", Menu::ProgressTester),
-                ("Error Tester", "", Menu::ErrorTester),
+                ("Input Tester", "", ToolMenuReturn::InputTester),
+                ("Menu Tester", "", ToolMenuReturn::MenuTester),
+                (
+                    "Menu Tester (bin, nes)",
+                    "",
+                    ToolMenuReturn::MenuTesterBinNes,
+                ),
+                ("Progress Tester", "", ToolMenuReturn::ProgressTester),
+                ("Error Tester", "", ToolMenuReturn::ErrorTester),
             ],
             TextMenuOptions::default().with_state(state),
         );
         state = Some(new_state);
 
         match result {
-            Menu::InputTester => input_tester(app),
-            Menu::MenuTester => menu_tester::menu_tester(app),
-            Menu::ProgressTester => progress_tester::progress_tester(app),
-            Menu::MenuTesterBinNes => {
+            ToolMenuReturn::InputTester => input_tester(app),
+            ToolMenuReturn::MenuTester => menu_tester::menu_tester(app),
+            ToolMenuReturn::ProgressTester => progress_tester::progress_tester(app),
+            ToolMenuReturn::MenuTesterBinNes => {
                 let p = select_file_path_menu(
                     app,
                     "Select a file",
@@ -60,13 +64,13 @@ pub fn tools_menu(app: &mut GoLEmApp) {
                 );
                 alert(app, "Selected", &format!("Selected: {:?}", p), &["Okay"]);
             }
-            Menu::ErrorTester => show_error(
+            ToolMenuReturn::ErrorTester => show_error(
                 app,
                 anyhow!("Test Error. This is a test error. Please do not report this.")
                     .as_dyn_error(),
                 true,
             ),
-            Menu::Back => break,
+            ToolMenuReturn::Back => break,
         }
     }
 }

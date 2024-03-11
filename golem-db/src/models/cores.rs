@@ -107,9 +107,9 @@ impl Core {
                 path.eq(file_path.as_ref().to_str().unwrap()),
                 author.eq(&core.owner_team.slug),
                 description.eq(&""),
-                released_at.eq(
-                    chrono::NaiveDateTime::from_timestamp_opt(release.date_released, 0).unwrap(),
-                ),
+                released_at.eq(chrono::DateTime::from_timestamp(release.date_released, 0)
+                    .unwrap()
+                    .naive_utc()),
                 downloaded_at.eq(chrono::Utc::now().naive_utc()),
             ))
             .execute(conn)?;

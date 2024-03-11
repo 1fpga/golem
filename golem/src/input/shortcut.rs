@@ -9,7 +9,7 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AxisValue {
     /// At the end of the axis.
     HighPositive,
@@ -25,35 +25,6 @@ pub enum AxisValue {
 
     /// At the end of the axis.
     HighNegative,
-}
-
-impl PartialOrd<Self> for AxisValue {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(match (self, other) {
-            (Self::HighNegative, Self::HighNegative) => Ordering::Equal,
-            (Self::HighPositive, Self::HighPositive) => Ordering::Equal,
-            (Self::LowNegative, Self::LowNegative) => Ordering::Equal,
-            (Self::LowPositive, Self::LowPositive) => Ordering::Equal,
-            (Self::Idle, Self::Idle) => Ordering::Equal,
-
-            (Self::HighNegative, _) => Ordering::Less,
-            (Self::HighPositive, _) => Ordering::Greater,
-            (_, Self::HighNegative) => Ordering::Greater,
-            (_, Self::HighPositive) => Ordering::Less,
-
-            (Self::LowNegative, _) => Ordering::Less,
-            (_, Self::LowNegative) => Ordering::Greater,
-
-            (Self::LowPositive, _) => Ordering::Greater,
-            (_, Self::LowPositive) => Ordering::Less,
-        })
-    }
-}
-
-impl Ord for AxisValue {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
 }
 
 impl Display for AxisValue {
@@ -102,11 +73,11 @@ impl From<i16> for AxisValue {
 impl AxisValue {
     pub fn matches(&self, value: i16) -> bool {
         match self {
-            AxisValue::Idle => value >= -10 && value < 10,
-            AxisValue::LowPositive => value >= i16::MAX / 4 && value < i16::MAX / 2,
-            AxisValue::HighPositive => value >= i16::MAX / 2,
-            AxisValue::LowNegative => value <= i16::MIN / 4 && value > i16::MIN / 2,
-            AxisValue::HighNegative => value <= i16::MIN / 2,
+            AxisValue::Idle => (-10..10).contains(&value),
+            AxisValue::LowPositive => ((i16::MAX / 4)..(i16::MAX / 2)).contains(&value),
+            AxisValue::HighPositive => ((i16::MAX / 2)..).contains(&value),
+            AxisValue::LowNegative => (i16::MIN / 4..i16::MIN / 2).contains(&value),
+            AxisValue::HighNegative => (..(i16::MIN / 2)).contains(&value),
         }
     }
 
@@ -207,7 +178,7 @@ impl FromStr for Shortcut {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut result = Self::default();
-        for shortcut in s.split("+").map(|x| x.trim()) {
+        for shortcut in s.split('+').map(|x| x.trim()) {
             if shortcut.is_empty() {
                 continue;
             }
@@ -227,7 +198,7 @@ impl FromStr for Shortcut {
                 .find(|c: char| !c.is_alphanumeric())
                 .map(|i| shortcut.split_at(i))
             {
-                let axis = Axis::from_string(axis.trim()).ok_or_else(|| "Invalid axis name.")?;
+                let axis = Axis::from_string(axis.trim()).ok_or("Invalid axis name.")?;
                 let value = AxisValue::from_str(value.trim_end_matches(')'))
                     .map_err(|_| "Invalid axis value.")?;
                 result.add_axis(axis, value);

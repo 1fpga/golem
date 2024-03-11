@@ -11,7 +11,14 @@ members = [
 resolver = "2"
 
 [profile.release]
-lto = "fat"
+lto = true
 overflow-checks = false
 panic = "abort"
-strip = "symbols"
+strip = true
+debug = false
+
+[profile.dev]
+overflow-checks = false
+debug = 0
+panic = "abort"
+

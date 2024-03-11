@@ -112,7 +112,7 @@ impl MappingSettings {
             .chain(self.shortcuts.iter().filter_map(|(cmd, shortcut)| {
                 ShortcutCommand::from_str(cmd)
                     .ok()
-                    .map(|cmd| (cmd, shortcut.into_iter().collect::<Vec<_>>()))
+                    .map(|cmd| (cmd, shortcut.iter().collect::<Vec<_>>()))
             }))
     }
 

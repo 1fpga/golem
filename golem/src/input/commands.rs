@@ -132,7 +132,7 @@ impl ShortcutCommand {
                 let timestamp = chrono::Local::now().format("%Y-%m-%d_%H-%M-%S");
                 let path = paths::screenshots_root().join(format!(
                     "{}_{}.png",
-                    core_name.replace(" ", "_"),
+                    core_name.replace(' ', "_"),
                     timestamp
                 ));
 

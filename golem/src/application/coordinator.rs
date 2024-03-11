@@ -197,7 +197,7 @@ impl CoordinatorInner {
         trace!(?savestate_path, ?screenshot_path, "Saving save state");
 
         if let Some(s) = screenshot {
-            s.save(&screenshot_path.clone().unwrap())
+            s.save(screenshot_path.clone().unwrap())
                 .map_err(|e| e.to_string())?;
         }
 
@@ -210,7 +210,7 @@ impl CoordinatorInner {
         )
         .map_err(|e| e.to_string())?;
 
-        let f = std::fs::File::create(&ss.path).map_err(|e| e.to_string())?;
+        let f = std::fs::File::create(ss.path).map_err(|e| e.to_string())?;
         Ok(f)
     }
 }

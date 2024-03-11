@@ -6,7 +6,7 @@ use crate::fpga::{IntoLowLevelSpiCommand, SpiCommand, SpiCommandExt};
 use crate::keyboard::Ps2Scancode;
 use crate::types::StatusBitMap;
 use bitfield::bitfield;
-use chrono::{Datelike, NaiveDateTime, Timelike};
+use chrono::{DateTime, Datelike, NaiveDateTime, Timelike};
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use std::mem::transmute;
 use std::ops::BitOrAssign;
@@ -141,7 +141,7 @@ impl SpiCommand for UserIoButtonSwitch {
 }
 
 enum UserIoSectorRead {
-    /// Read a sector including a ACK.
+    /// Read a sector including an ACK.
     Read(u16),
 
     /// Write a sector.
@@ -276,9 +276,7 @@ impl From<NaiveDateTime> for UserIoRtc {
 
 impl From<SystemTime> for UserIoRtc {
     fn from(value: SystemTime) -> Self {
-        let t = value.duration_since(std::time::UNIX_EPOCH).unwrap();
-        let t = NaiveDateTime::from_timestamp_opt(t.as_secs() as i64, t.subsec_nanos()).unwrap();
-        t.into()
+        Self(DateTime::<chrono::Utc>::from(value).naive_utc())
     }
 }
 
@@ -286,7 +284,7 @@ impl SpiCommand for UserIoRtc {
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
         // MSM6242B layout, with 4 bits per digit of sec, min, hour, day, month, year (2 digits),
         // and the weekday.
-        let mut rtc = [
+        let rtc = [
             ((self.0.second() % 10) | (self.0.second() / 10) << 4) as u8,
             ((self.0.minute() % 10) | (self.0.minute() / 10) << 4) as u8,
             ((self.0.hour() % 10) | (self.0.hour() / 10) << 4) as u8,
@@ -297,8 +295,7 @@ impl SpiCommand for UserIoRtc {
             0x40,
         ];
 
-        spi.command(UserIoCommands::UserIoRtc)
-            .write_buffer_b(&mut rtc);
+        spi.command(UserIoCommands::UserIoRtc).write_buffer_b(&rtc);
 
         Ok(())
     }
@@ -321,17 +318,16 @@ impl From<NaiveDateTime> for Timestamp {
 
 impl From<SystemTime> for Timestamp {
     fn from(value: SystemTime) -> Self {
-        let t = value.duration_since(std::time::UNIX_EPOCH).unwrap();
-        let t = NaiveDateTime::from_timestamp_opt(t.as_secs() as i64, t.subsec_nanos()).unwrap();
-        t.into()
+        Self(chrono::DateTime::<chrono::Local>::from(value).naive_utc())
     }
 }
 
 impl SpiCommand for Timestamp {
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        let timestamp = self.0.and_utc().timestamp();
         spi.command(UserIoCommands::UserIoRtc)
-            .write(self.0.timestamp() as u16)
-            .write((self.0.timestamp() >> 16) as u16);
+            .write(timestamp as u16)
+            .write((timestamp >> 16) as u16);
 
         Ok(())
     }
