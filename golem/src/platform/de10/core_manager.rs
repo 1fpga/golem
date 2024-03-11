@@ -1,5 +1,4 @@
 use byteorder::{LittleEndian, ReadBytesExt};
-use image::GenericImage;
 use mister_fpga::config::{Config, HdmiLimitedConfig, VgaMode};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};

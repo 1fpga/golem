@@ -95,11 +95,6 @@ impl CoreInterfaceType {
     }
 }
 
-#[cfg(feature = "mister-cpp")]
-extern "C" {
-    static mut map_base: *mut u8;
-}
-
 #[derive(Debug, Clone)]
 pub struct MisterFpga {
     soc: Arc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
@@ -153,11 +148,6 @@ impl MisterFpga {
             let soc = Arc::new(UnsafeCell::new(soc));
             let mut fpga = Self::new(soc.clone());
 
-            // TODO: remove this when the fpga code from CPP is gone.
-            #[cfg(feature = "mister-cpp")]
-            {
-                // map_base = fpga.soc_mut().base_mut();
-            }
             fpga.regs_mut().set_gpo(0);
 
             FPGA_SINGLETON = Some(fpga.clone());

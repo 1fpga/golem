@@ -40,7 +40,9 @@ pub struct Flags {
 fn main() {
     let cores = core_affinity::get_core_ids().unwrap();
     // Always use the second core available, or the first one if there is only one.
-    let core = cores.get(1).unwrap_or(cores.get(0).unwrap());
+    let core = cores
+        .get(1)
+        .unwrap_or(cores.first().expect("Could not find a CPU?!"));
     core_affinity::set_for_current(*core);
 
     let v = format!(

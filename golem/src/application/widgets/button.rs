@@ -86,10 +86,7 @@ impl<'l> Drawable for Button<'l> {
             PrimitiveStyle::with_stroke(color, 1)
         };
 
-        self.rectangle
-            .clone()
-            .into_styled(button_style)
-            .draw(display)?;
+        self.rectangle.into_styled(button_style).draw(display)?;
 
         Text::new(
             self.label,

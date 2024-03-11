@@ -130,7 +130,7 @@ impl InputState {
     }
 
     pub fn controller_axis_motion(&mut self, controller: u32, axis: Axis, value: i16) {
-        if value >= -10 && value < 10 {
+        if (-10..10).contains(&value) {
             self.axis.entry(controller).or_default().remove(&axis);
         } else {
             self.axis.entry(controller).or_default().insert(axis, value);

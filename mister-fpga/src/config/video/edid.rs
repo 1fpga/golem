@@ -663,7 +663,7 @@ pub fn select_video_mode(options: &MisterConfig) -> Result<VideoModeDef, String>
             (true, true) => DefaultVideoMode::Pal31k,
         };
 
-        let mut vpar: CustomVideoMode = mode.clone().into();
+        let mut vpar: CustomVideoMode = mode.into();
         vpar.set_pll(mode.f_pix());
 
         Ok(VideoModeDef {

@@ -368,7 +368,7 @@ impl<const N: usize> KeycodeMap<N> {
         self.codes = [Keycode::None; N];
     }
 
-    pub fn to_array(&self) -> [Keycode; N] {
+    pub fn as_array(&self) -> [Keycode; N] {
         self.codes
     }
 

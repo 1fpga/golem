@@ -1071,6 +1071,9 @@ impl Config {
     }
 
     /// Copy this configuration to the C++ side.
+    ///
+    /// # Safety
+    /// This function is unsafe because it writes to a C++ struct.
     pub unsafe fn copy_to_cfg_cpp(self, dest: &mut cpp::CppCfg) {
         unsafe fn copy_string<const N: usize>(dest: &mut [c_char; N], src: &str) {
             let src = src.as_bytes();

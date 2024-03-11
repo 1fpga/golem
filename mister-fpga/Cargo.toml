@@ -47,7 +47,3 @@ tempdir = "0.3.7"
 
 [features]
 default = []
-
-# This feature adds interaction with the mister-cpp library.
-# TODO: remove this when all the legacy CPP is removed.
-mister-cpp = []
