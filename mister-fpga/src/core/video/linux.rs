@@ -3,6 +3,7 @@ use crate::config::{video, HdmiLimitedConfig, HdrConfig, MisterConfig, VgaMode};
 use glam::Mat4;
 use i2cdev::core::I2CDevice;
 use i2cdev::linux::LinuxI2CDevice;
+use std::num::Wrapping;
 use tracing::{debug, error};
 
 mod video_mode;
@@ -495,7 +496,7 @@ fn hdmi_config_set_hdr(device: &mut LinuxI2CDevice, options: &MisterConfig) -> R
     ];
 
     // now we calculate the checksum for this packet (2s complement sum)
-    hdr_data[3] = !(hdr_data.iter().copied().sum::<u8>()) + 1;
+    hdr_data[3] = !(hdr_data.iter().copied().fold(0u8, |a, i| a.wrapping_add(i))) + 1;
 
     fn hdmi_config_set_spare(i2c: &mut LinuxI2CDevice, enabled: bool) -> Result<(), String> {
         let mask = 0x02;
