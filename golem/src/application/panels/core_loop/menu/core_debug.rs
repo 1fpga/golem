@@ -1,8 +1,8 @@
 use crate::application::panels::alert::alert;
 use crate::application::GoLEmApp;
-use crate::platform::Core;
+use golem_core::GolemCore;
 
-pub fn debug_menu(app: &mut GoLEmApp, core: &mut impl Core) {
+pub fn debug_menu(app: &mut GoLEmApp, core: &mut GolemCore) {
     let mask = core.status_mask().debug_string(true);
     let value = core.status_bits().debug_string(false);
     let message = format!(

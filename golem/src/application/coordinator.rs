@@ -1,7 +1,7 @@
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::platform;
-use crate::platform::{Core, CoreManager, GoLEmPlatform, SaveState};
+use crate::platform::GoLEmPlatform;
+use golem_core::GolemCore;
 use golem_db::models::Core as DbCore;
 use golem_db::models::CoreFile as DbCoreFile;
 use golem_db::models::Game as DbGame;
@@ -72,12 +72,12 @@ impl CoordinatorInner {
         &mut self,
         app: &mut GoLEmApp,
         info: GameStartInfo,
-    ) -> Result<(bool, platform::CoreType), String> {
+    ) -> Result<(bool, GolemCore), String> {
         info!(?info, "Starting game");
         let mut database = self.database.lock().unwrap();
 
         // Load the core if necessary. If it's the same core, we don't need to.
-        let (mut c, core): (platform::CoreType, DbCore) = match info.core_id {
+        let (mut c, core): (GolemCore, DbCore) = match info.core_id {
             Some(id) => {
                 let db_core = DbCore::get(&mut database, id)
                     .map_err(|e| e.to_string())?
@@ -153,7 +153,7 @@ impl CoordinatorInner {
 
                 for (db_state, state) in db_ss.iter().zip(core_ss.iter_mut()) {
                     let f = std::fs::File::open(&db_state.path).map_err(|e| e.to_string())?;
-                    SaveState::read_from(state, f)?;
+                    golem_core::SaveState::read_from(state, f)?;
                 }
             }
         }
@@ -231,7 +231,7 @@ impl Coordinator {
         &mut self,
         app: &mut GoLEmApp,
         info: GameStartInfo,
-    ) -> Result<(bool, impl Core), String> {
+    ) -> Result<(bool, GolemCore), String> {
         self.inner.lock().unwrap().launch_game(app, info)
     }
 

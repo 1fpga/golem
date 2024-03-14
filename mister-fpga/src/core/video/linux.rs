@@ -3,7 +3,6 @@ use crate::config::{video, HdmiLimitedConfig, HdrConfig, MisterConfig, VgaMode};
 use glam::Mat4;
 use i2cdev::core::I2CDevice;
 use i2cdev::linux::LinuxI2CDevice;
-use std::num::Wrapping;
 use tracing::{debug, error};
 
 mod video_mode;

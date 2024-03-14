@@ -52,7 +52,7 @@ pub fn main_menu(app: &mut GoLEmApp) {
         match result {
             MenuAction::Games => games_list(app),
             MenuAction::Cores => cores_menu_panel(app),
-            MenuAction::Settings => settings_panel(app, &None::<&mut crate::platform::CoreType>),
+            MenuAction::Settings => settings_panel(app, &None),
             MenuAction::Tools => tools_menu(app),
             MenuAction::About => {
                 alert(app, "About", "Not implemented", &["Okay"]);

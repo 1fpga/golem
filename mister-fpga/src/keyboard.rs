@@ -1,5 +1,3 @@
-use sdl3::keyboard::Scancode as SdlScancode;
-
 const LCTRL: u32 = 0x000100;
 const LSHIFT: u32 = 0x000200;
 const LALT: u32 = 0x000400;
@@ -436,8 +434,9 @@ pub enum Ps2Scancode {
     RightShift = RSHIFT + 0x59,       //54  KEY_RIGHTSHIFT
 }
 
-impl From<SdlScancode> for Ps2Scancode {
-    fn from(scancode: SdlScancode) -> Self {
+#[cfg(feature = "sdl3")]
+impl From<sdl3::keyboard::Scancode> for Ps2Scancode {
+    fn from(scancode: sdl3::keyboard::Scancode) -> Self {
         SDL3_TO_PS2[scancode as u8].unwrap_or(Ps2Scancode::None)
     }
 }

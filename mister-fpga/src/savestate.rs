@@ -47,14 +47,17 @@ impl SaveStateManager<DevMemMemoryMapper> {
 }
 
 impl<M: MemoryMapper> SaveStateManager<M> {
-    pub fn as_slice(&self) -> &[SaveState] {
-        &self.slots
+    #[inline]
+    pub fn slots(&self) -> &[SaveState] {
+        &self.slots[..(self.nb_slots as usize)]
     }
 
-    pub fn as_slice_mut(&mut self) -> &mut [SaveState] {
-        &mut self.slots
+    #[inline]
+    pub fn slots_mut(&mut self) -> &mut [SaveState] {
+        &mut self.slots[..(self.nb_slots as usize)]
     }
 
+    #[inline]
     pub fn nb_slots(&self) -> usize {
         self.nb_slots as usize
     }
@@ -69,12 +72,13 @@ struct SaveStateInner {
 
 impl SaveStateInner {
     fn size_adjusted(&self) -> usize {
-        let size = self.size as usize;
+        let size: usize =
+            unsafe { core::ptr::read_volatile(core::ptr::addr_of!(self.size)) } as usize;
         (size + 2).checked_mul(4).unwrap()
     }
 
     fn counter(&self) -> u32 {
-        self.counter
+        unsafe { core::ptr::read_volatile(core::ptr::addr_of!(self.counter)) }
     }
 
     fn all(&self) -> &[u8] {
@@ -126,6 +130,11 @@ impl SaveState {
     #[inline]
     pub fn is_dirty(&self) -> bool {
         self.counter != self.inner().counter()
+    }
+
+    #[inline]
+    pub fn live_counter(&self) -> u32 {
+        self.inner().counter()
     }
 
     pub fn write_to(&mut self, mut writer: impl Write) -> Result<(), String> {

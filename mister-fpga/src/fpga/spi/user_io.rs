@@ -31,7 +31,7 @@ mod fb_const {
 
 /// User IO commands.
 #[derive(Debug, Clone, Copy, PartialEq, strum::Display)]
-enum UserIoCommands {
+pub(crate) enum UserIoCommands {
     // UserIoStatus = 0x00,
     UserIoButtonSwitch = 0x01,
     UserIoJoystick0 = 0x02,
@@ -68,20 +68,28 @@ enum UserIoCommands {
     /// Transmit RTC (time struct, including seconds) to the core.
     UserIoRtc = 0x22,
 
-    // Digital volume as a number of bits to shift to the right
+    /// Get the video resolution and other info.
+    UserIoGetVres = 0x23,
+
+    /// Digital volume as a number of bits to shift to the right
     UserIoAudioVolume = 0x26,
 
     UserIoGetStatusBits = 0x29,
 
-    // Set frame buffer for HPS output
+    /// Set frame buffer for HPS output
     UserIoSetFramebuffer = 0x2F,
 
     UserIoSetMemSz = 0x31,
 
-    // Enable/disable Gamma correction
+    /// Enable/disable Gamma correction
     UserIoSetGamma = 0x32,
 
+    /// Get the info line from the core to show.
+    UserIoGetInfo = 0x36,
+
     UserIoSetArCust = 0x3A,
+
+    UserIoGetFbParams = 0x40,
 }
 
 impl IntoLowLevelSpiCommand for UserIoCommands {

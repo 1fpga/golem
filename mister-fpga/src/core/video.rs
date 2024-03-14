@@ -1,9 +1,15 @@
 use crate::config;
+use cyclone_v::memory::MemoryMapper;
+use std::time::Duration;
 use tracing::{error, warn};
 
 #[cfg(target_os = "linux")]
 mod linux;
 
+use crate::config::aspect::AspectRatio;
+use crate::config::resolution::Resolution;
+use crate::fpga::user_io::UserIoCommands;
+use crate::fpga::Spi;
 #[cfg(target_os = "linux")]
 use linux as private;
 
@@ -53,7 +59,6 @@ pub fn init_mode(
     }
 }
 
-/*
 #[derive(Debug, Default)]
 pub struct VideoInfo {
     resolution: Resolution,
@@ -66,14 +71,14 @@ pub struct VideoInfo {
     ctime_ms: u32,
     vtimeh: u32,
 
-    arx: u32,
-    ary: u32,
-    arxy: u32,
-    fb_en: u32,
-    fb_fmt: u32,
-    fb_resolution: u32,
-    fb_width: u32,
-    fb_height: u32,
+    arx: u16,
+    ary: u16,
+    arxy: u16,
+    fb_en: u16,
+    fb_fmt: u16,
+    fb_resolution: u16,
+    fb_width: u16,
+    fb_height: u16,
 
     interlaced: bool,
     rotated: bool,
@@ -86,55 +91,60 @@ pub const UIO_GET_VRES: u16 = 0x23;
 pub const UIO_GET_FB_PAR: u16 = 0x40;
 
 impl VideoInfo {
-    /// Update the video info from the FPGA. Returns true if the video info changed.
-    #[cfg(all(not(test), feature = "platform_de10"))]
-    pub fn update(&mut self, force: bool) -> bool {
-        use crate::platform::de10::spi;
+    /// Create a video info from the FPGA.
+    pub(crate) fn create(spi: &mut Spi<impl MemoryMapper>) -> Result<Self, String> {
+        let mut result = VideoInfo::default();
 
-        fn read_u32() -> u32 {
-            spi::spi_w(0) as u32 | ((spi::spi_w(0) as u32) << 16)
-        }
-        fn read_u16() -> u32 {
-            spi::spi_w(0) as u32
-        }
+        {
+            let mut command = spi.command(UserIoCommands::UserIoGetVres);
+            let mut new_res = 0;
+            command.write_read(0, &mut new_res);
+            let mut read_u32 = || {
+                let mut high: u16 = 0;
+                let mut low: u16 = 0;
+                command.write_read(0, &mut low).write_read(0, &mut high);
+                (high as u32) << 16 | (low as u32)
+            };
 
-        unsafe {
-            spi::spi_uio_cmd_cont(spi::UIO_GET_VRES);
-        }
-
-        let new_res = spi::spi_w(0);
-        let res_changed = new_res != self.res || force;
-        if new_res != self.res {
-            self.res = new_res;
-            self.resolution = Resolution::new(read_u32() as u16, read_u32() as u16);
-            self.htime_ms = read_u32();
-            self.vtime_ms = read_u32();
-            self.ptime_ms = read_u32();
-            self.vtimeh = read_u32();
-            self.ctime_ms = read_u32();
-            self.interlaced = (new_res & 0x100) != 0;
-            self.rotated = (new_res & 0x200) != 0;
+            result.res = new_res;
+            result.resolution = Resolution::new(read_u32() as u16, read_u32() as u16);
+            result.htime_ms = read_u32();
+            result.vtime_ms = read_u32();
+            result.ptime_ms = read_u32();
+            result.vtimeh = read_u32();
+            result.ctime_ms = read_u32();
+            result.interlaced = (new_res & 0x100) != 0;
+            result.rotated = (new_res & 0x200) != 0;
         }
 
-        unsafe {
-            crate::platform::de10::fpga::ffi::DisableIO();
-        }
+        {
+            let mut crc: u16 = 0;
+            let mut command = spi.command_read(UserIoCommands::UserIoGetFbParams, &mut crc);
 
-        let crc = unsafe { spi::spi_uio_cmd_cont(spi::UIO_GET_FB_PAR) };
-        let fb_changed = self.fb_crc != crc;
-        if fb_changed || res_changed {
-            self.fb_crc = crc;
-            self.arx = read_u16();
-            self.arxy = !!(self.arx & 0x1000);
-            self.arx &= 0xFFF;
-            self.ary = read_u16() & 0xFFF;
-            self.fb_fmt = read_u16();
-            self.fb_width = read_u16();
-            self.fb_height = read_u16();
-            self.fb_en = !!(self.fb_fmt & 0x40);
-        }
+            result.fb_crc = crc;
+            command.write_read(0, &mut result.arx);
+            result.arxy = !!(result.arx & 0x1000);
+            result.arx &= 0xFFF;
+            command.write_read(0, &mut result.ary);
+            result.ary &= 0xFFF;
 
-        res_changed || fb_changed
+            command.write_read(0, &mut result.fb_fmt);
+            command.write_read(0, &mut result.fb_width);
+            command.write_read(0, &mut result.fb_height);
+            result.fb_en = !!(result.fb_fmt & 0x40);
+        }
+        Ok(result)
+    }
+
+    pub fn resolution(&self) -> Resolution {
+        self.resolution
+    }
+
+    pub fn aspect_ratio(&self) -> AspectRatio {
+        self.aspect_ratio
+    }
+
+    pub fn vtime(&self) -> Duration {
+        Duration::from_nanos(self.vtime_ms as u64 * 10)
     }
 }
-*/

@@ -58,12 +58,12 @@ pub enum MisterFpgaButtons {
 
 /// A pressed button map. This receives SDL button index and create a bits
 /// array of pressed buttons that can be sent to MiSTer.
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct ButtonMap {
-    /// The map of SDL Button Index (`u8`) to MisterFpgaButtons..
-    /// Since there's only 256 buttons, we can use a 256 bytes to store
+    /// The map of SDL Button Index (`u8`) to MisterFpgaButtons.
+    /// Since there's only 256 buttons, we can use 256 bytes to store
     /// the mapping.
-    map: Box<[MisterFpgaButtons; 256]>,
+    map: [MisterFpgaButtons; 256],
 
     /// The map of MisterFpgaButtons to indices in the core (`u8`).
     core_map: fixed_map::Map<MisterFpgaButtons, u8>,
@@ -95,7 +95,7 @@ impl Default for ButtonMap {
 impl ButtonMap {
     pub fn new() -> Self {
         let mut this = Self {
-            map: Box::new([MisterFpgaButtons::NoMapping; 256]),
+            map: [MisterFpgaButtons::NoMapping; 256],
             // The default SNES -> Core map is simply i => i.
             core_map: MisterFpgaButtons::iter()
                 .filter(|x| x != &MisterFpgaButtons::NoMapping)
@@ -157,6 +157,21 @@ impl ButtonMap {
         self.core_map.get(snes_btn).copied()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.bits.is_empty()
+    }
+
+    pub fn clear(&mut self) {
+        self.bits.fill(false);
+    }
+
+    pub fn press(&mut self, button: MisterFpgaButtons) {
+        if button != MisterFpgaButtons::NoMapping {
+            self.bits
+                .set(*self.core_map.get(button).unwrap() as usize, true);
+        }
+    }
+
     pub fn down(&mut self, sdl_btn: u8) -> u32 {
         let index = self.map(sdl_btn);
         if let Some(i) = index {
@@ -166,7 +181,7 @@ impl ButtonMap {
         if tracing::enabled!(tracing::Level::TRACE) {
             let mask = format!("0b{:016b}", self.value());
             let snes = self.map[sdl_btn as usize];
-            trace!(?sdl_btn, ?snes, ?index, ?mask, "button down");
+            trace!(?sdl_btn, ?snes, ?index, ?mask, "Button down");
         }
 
         self.value()

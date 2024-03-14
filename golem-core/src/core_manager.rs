@@ -5,8 +5,6 @@ use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};
 use mister_fpga::fpga::MisterFpga;
 use std::path::Path;
 
-pub mod core;
-
 pub struct CoreManager {
     fpga: MisterFpga,
 }
@@ -25,7 +23,7 @@ impl CoreManager {
     }
 
     /// Create a core for the current FPGA configuration.
-    fn create_core(&mut self, is_menu: bool) -> Result<core::MisterFpgaCore, String> {
+    fn create_core(&mut self, is_menu: bool) -> Result<crate::GolemCore, String> {
         let mut core = MisterFpgaCore::new(self.fpga.clone())
             .map_err(|e| format!("Could not instantiate Core: {e}"))?;
 
@@ -69,10 +67,10 @@ impl CoreManager {
         core.spi_mut().execute(switches).unwrap();
         core.send_rtc()?;
 
-        Ok(core::MisterFpgaCore::new(core))
+        Ok(crate::GolemCore::new(core))
     }
 
-    fn load(&mut self, program: &[u8], is_menu: bool) -> Result<core::MisterFpgaCore, String> {
+    pub fn load(&mut self, program: &[u8], is_menu: bool) -> Result<crate::GolemCore, String> {
         let program = if &program[..6] != b"MiSTer" {
             program
         } else {
@@ -83,7 +81,7 @@ impl CoreManager {
 
         self.fpga.wait_for_ready();
         self.fpga
-            .load_rbf(program)
+            .load(program)
             .map_err(|e| format!("Could not load program: {e:?}"))?;
         self.fpga
             .core_reset()
@@ -93,33 +91,14 @@ impl CoreManager {
 
         Ok(core)
     }
-}
 
-impl crate::platform::CoreManager for CoreManager {
-    type Core = core::MisterFpgaCore;
+    pub fn load_menu(&mut self) -> Result<crate::GolemCore, String> {
+        let bytes = include_bytes!("../assets/menu.rbf");
 
-    fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String> {
-        let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
-        let core = self.load(&bytes, false)?;
-        Ok(core)
-    }
-
-    fn get_current_core(&mut self) -> Result<Self::Core, String> {
-        let core = MisterFpgaCore::new(self.fpga.clone())
-            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
-        Ok(core::MisterFpgaCore::new(core))
-    }
-
-    fn load_menu(&mut self) -> Result<Self::Core, String> {
-        #[repr(align(4))]
-        struct Aligned<T: ?Sized>(T);
-
-        let bytes = Aligned(include_bytes!("../../../assets/menu.rbf"));
-
-        let mut core = self.load(bytes.0, true)?;
+        let mut core = self.load(bytes, true)?;
 
         // Send the logo to the framebuffer.
-        let logo = include_bytes!("../../../../logo.png");
+        let logo = include_bytes!("../../logo.png");
         let image = image::load_from_memory_with_format(logo, image::ImageFormat::Png)
             .map_err(|e| format!("Could not load logo: {e}"))?;
 
@@ -135,11 +114,23 @@ impl crate::platform::CoreManager for CoreManager {
         Ok(core)
     }
 
-    fn show_menu(&mut self) {
+    pub fn load_core(&mut self, path: impl AsRef<Path>) -> Result<crate::GolemCore, String> {
+        let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
+        let core = self.load(&bytes, false)?;
+        Ok(core)
+    }
+
+    pub fn get_current_core(&mut self) -> Result<crate::GolemCore, String> {
+        let core = MisterFpgaCore::new(self.fpga.clone())
+            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
+        Ok(crate::GolemCore::new(core))
+    }
+
+    pub fn show_menu(&mut self) {
         self.fpga_mut().osd_enable();
     }
 
-    fn hide_menu(&mut self) {
+    pub fn hide_menu(&mut self) {
         self.fpga_mut().osd_disable();
     }
 }

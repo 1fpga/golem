@@ -3,6 +3,8 @@ use crate::config_string;
 use crate::config_string::{FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
 use crate::core::file::SdCard;
+use crate::core::video::VideoInfo;
+use crate::core::volume::IntoVolume;
 use crate::fpga::file_io::{
     FileExtension, FileIndex, FileTxData16Bits, FileTxData8Bits, FileTxDisabled, FileTxEnabled,
 };
@@ -17,6 +19,7 @@ use crate::types::StatusBitMap;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
 use std::ffi::OsStr;
+use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -24,6 +27,7 @@ use tracing::{debug, info, trace};
 
 pub mod buttons;
 pub mod file;
+pub mod volume;
 
 mod video;
 
@@ -73,7 +77,7 @@ pub struct MisterFpgaCore {
     cards: Box<[Option<SdCard>; 16]>,
 
     save_states: Option<SaveStateManager<DevMemMemoryMapper>>,
-    map: ButtonMap,
+    gamepads: [ButtonMap; 6],
 
     status: StatusBitMap,
     status_counter: u8,
@@ -120,7 +124,7 @@ impl MisterFpgaCore {
             config,
             cards: Box::new([NONE; 16]),
             save_states,
-            map,
+            gamepads: [map; 6],
             status: Default::default(),
             status_counter: 0,
             framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
@@ -155,6 +159,8 @@ impl MisterFpgaCore {
         self.read_status_bits();
         self.status.set(0, true);
         self.send_status_bits(self.status);
+        self.status.set(0, false);
+        self.send_status_bits(self.status);
     }
 
     /// Send the Real Time Clock to the core.
@@ -163,10 +169,10 @@ impl MisterFpgaCore {
         Ok(())
     }
 
-    pub fn send_volume(&mut self, volume: u8) -> Result<(), String> {
-        self.fpga
-            .spi_mut()
-            .execute(user_io::SetAudioVolume(volume))?;
+    pub fn send_volume(&mut self, volume: impl IntoVolume) -> Result<(), String> {
+        let volume = volume.into_volume();
+        debug!(?volume, "Setting volume");
+        self.fpga.spi_mut().execute(volume.into_user_io())?;
         Ok(())
     }
 
@@ -232,6 +238,11 @@ impl MisterFpgaCore {
         &self.config
     }
 
+    /// Return the video info of the core.
+    pub fn video_info(&mut self) -> Result<VideoInfo, String> {
+        VideoInfo::create(self.spi_mut())
+    }
+
     // TODO: rethink how framebuffers are handled.
     pub fn send_to_menu_framebuffer(&mut self, bytes: &[u8]) -> Result<(), String> {
         const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
@@ -266,8 +277,8 @@ impl MisterFpgaCore {
     }
 
     /// Notify the core of a keyboard key down event.
-    pub fn key_down(&mut self, keycode: sdl3::keyboard::Scancode) {
-        let scancode = Ps2Scancode::from(keycode);
+    pub fn key_down(&mut self, keycode: impl Into<Ps2Scancode> + Debug + Copy) {
+        let scancode = keycode.into();
         debug!(?keycode, ?scancode, "Keydown");
         if scancode != Ps2Scancode::None {
             self.fpga
@@ -278,32 +289,56 @@ impl MisterFpgaCore {
     }
 
     /// Notify the core of a keyboard key up event.
-    pub fn key_up(&mut self, keycode: sdl3::keyboard::Scancode) {
-        let scancode = Ps2Scancode::from(keycode);
+    pub fn key_up(&mut self, keycode: impl Into<Ps2Scancode> + Debug + Copy) {
+        let scancode = keycode.into();
         debug!(?keycode, ?scancode, "Keyup");
+        if scancode != Ps2Scancode::None {
+            self.fpga
+                .spi_mut()
+                .execute(UserIoKeyboardKeyUp::from(scancode))
+                .unwrap();
+        }
+    }
+
+    pub fn gamepad(&self, idx: u8) -> Option<&ButtonMap> {
+        self.gamepads.get(idx as usize)
+    }
+
+    pub fn gamepad_mut(&mut self, idx: u8) -> Option<&mut ButtonMap> {
+        self.gamepads.get_mut(idx as usize)
+    }
+
+    pub fn send_gamepad(&mut self, idx: u8, map: ButtonMap) {
+        if idx > 5 {
+            return;
+        }
+
         self.fpga
             .spi_mut()
-            .execute(UserIoKeyboardKeyUp::from(scancode))
+            .execute(UserIoJoystick::from_joystick_index(idx, &map))
             .unwrap();
+        self.gamepads[idx as usize] = map;
     }
 
     /// Notify the core of a gamepad button down event.
     pub fn gamepad_button_down(&mut self, joystick_idx: u8, button: u8) {
-        self.map.down(button);
+        let g = &mut self.gamepads[joystick_idx as usize];
+        g.down(button);
 
         self.fpga
             .spi_mut()
-            .execute(UserIoJoystick::from_joystick_index(joystick_idx, &self.map))
+            .execute(UserIoJoystick::from_joystick_index(joystick_idx, g))
             .unwrap();
     }
 
     /// Notify the core of a gamepad button up event.
     pub fn gamepad_button_up(&mut self, joystick_idx: u8, button: u8) {
-        self.map.up(button);
+        let g = &mut self.gamepads[joystick_idx as usize];
+        g.down(button);
 
         self.fpga
             .spi_mut()
-            .execute(UserIoJoystick::from_joystick_index(joystick_idx, &self.map))
+            .execute(UserIoJoystick::from_joystick_index(joystick_idx, g))
             .unwrap();
     }
 

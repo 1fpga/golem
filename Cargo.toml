@@ -1,11 +1,15 @@
 [workspace]
 members = [
+    "bk2-format",
     "cyclone-v",
     "de10-nano",
-    "golem-db",
+    "fce-movie-format",
     "golem",
+    "golem-core",
+    "golem-db",
     "junior",
     "mister-fpga",
+    "superscope",
     "senior",
 ]
 resolver = "2"
