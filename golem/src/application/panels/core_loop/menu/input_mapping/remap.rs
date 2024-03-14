@@ -3,7 +3,6 @@ use crate::application::GoLEmApp;
 use crate::input::commands::ShortcutCommand;
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
-use crate::platform::Core;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -13,10 +12,11 @@ use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
+use golem_core::GolemCore;
 use sdl3::event::Event;
 use tracing::info;
 
-pub fn remap(app: &mut GoLEmApp, core: Option<&(impl Core + ?Sized)>, command: ShortcutCommand) {
+pub fn remap(app: &mut GoLEmApp, core: Option<&GolemCore>, command: ShortcutCommand) {
     let mapping = app
         .settings()
         .inner()

@@ -4,7 +4,8 @@ use crate::application::panels::core_loop::menu::core_settings::{
     execute_core_settings, into_text_menu_item,
 };
 use crate::application::GoLEmApp;
-use crate::platform::{Core, CoreManager, GoLEmPlatform};
+use crate::platform::GoLEmPlatform;
+use golem_core::GolemCore;
 use tracing::error;
 
 mod core_debug;
@@ -38,7 +39,7 @@ impl MenuReturn for CoreMenuAction {
 /// Shows the core menu and interact with it.
 /// This will return `true` if the user decided to quit the core (in which case the
 /// main MENU should be reloaded).
-pub fn core_menu(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
+pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
     app.platform_mut().core_manager_mut().show_menu();
 
     // Update saves.

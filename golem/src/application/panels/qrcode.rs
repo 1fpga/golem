@@ -34,7 +34,7 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     let display_area = app.main_buffer().bounding_box();
     let qrcode = qrcode::QrCode::new(url).unwrap();
     let pixmap = qrcode
-        .render()
+        .render::<image::Luma<u8>>()
         .dark_color(image::Luma([0u8; 1]))
         .light_color(image::Luma([255; 1]))
         .quiet_zone(false) // disable quiet zone (white border)

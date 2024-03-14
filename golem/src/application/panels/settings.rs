@@ -2,7 +2,7 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::alert;
 use crate::application::GoLEmApp;
-use crate::platform::Core;
+use golem_core::GolemCore;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum MenuAction {
@@ -20,10 +20,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn settings_panel<C: Core + ?Sized>(app: &mut GoLEmApp, core: &Option<&mut C>)
-where
-    C: Sized,
-{
+pub fn settings_panel(app: &mut GoLEmApp, core: &Option<&mut GolemCore>) {
     let mut state = None;
     loop {
         let (result, new_state) = text_menu(

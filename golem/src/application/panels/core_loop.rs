@@ -2,14 +2,15 @@ use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
-use crate::platform::{Core, CoreManager, GoLEmPlatform, SaveState};
+use crate::platform::GoLEmPlatform;
+use golem_core::GolemCore;
 use sdl3::event::Event;
 use std::time::Instant;
 use tracing::{debug, error, info, trace};
 
 pub mod menu;
 
-fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, Shortcut)> {
+fn commands_(app: &mut GoLEmApp, core: &GolemCore) -> Vec<(ShortcutCommand, Shortcut)> {
     let settings = app.settings();
     settings
         .inner()
@@ -19,7 +20,7 @@ fn commands_(app: &mut GoLEmApp, core: &impl Core) -> Vec<(ShortcutCommand, Shor
         .collect::<Vec<_>>()
 }
 
-fn core_loop<S: SaveState>(app: &mut GoLEmApp, mut core: impl Core<SaveState = S>) {
+fn core_loop(app: &mut GoLEmApp, mut core: GolemCore) {
     let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
@@ -159,7 +160,7 @@ fn core_loop<S: SaveState>(app: &mut GoLEmApp, mut core: impl Core<SaveState = S
 }
 
 /// Run the core loop and send events to the core.
-pub fn run_core_loop(app: &mut GoLEmApp, mut core: impl Core, should_show_menu: bool) {
+pub fn run_core_loop(app: &mut GoLEmApp, mut core: GolemCore, should_show_menu: bool) {
     let mut should_run_loop = true;
     debug!("Starting core loop...");
 

@@ -1,7 +1,7 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::input::commands::ShortcutCommand;
-use crate::platform::Core;
+use golem_core::GolemCore;
 use mister_fpga::config_string::ConfigMenu;
 
 mod remap;
@@ -24,7 +24,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn menu<C: Core + ?Sized>(app: &mut GoLEmApp, core: &Option<&mut C>) {
+pub fn menu(app: &mut GoLEmApp, core: &Option<&mut GolemCore>) {
     let mut state = None;
 
     loop {

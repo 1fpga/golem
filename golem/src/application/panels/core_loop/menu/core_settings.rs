@@ -4,7 +4,7 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
 use crate::application::GoLEmApp;
 use crate::data::paths::core_root_path;
-use crate::platform::Core;
+use golem_core::GolemCore;
 use mister_fpga::config_string::ConfigMenu;
 use mister_fpga::types::StatusBitMap;
 use std::convert::TryFrom;
@@ -114,9 +114,9 @@ pub fn into_text_menu_item<'a>(
     }
 }
 
-pub fn execute_core_settings<C: Core>(
+pub fn execute_core_settings(
     app: &mut GoLEmApp,
-    core: &mut C,
+    core: &mut GolemCore,
     action: CoreMenuAction,
 ) -> Option<bool> {
     match action {
@@ -196,7 +196,7 @@ pub fn execute_core_settings<C: Core>(
 /// The Core Settings menu. We cannot use `text_menu` here as we need to generate
 /// custom menu lines for some items.
 /// Returns whether we should close the OSD or not.
-pub fn core_settings(app: &mut GoLEmApp, core: &mut impl Core) -> bool {
+pub fn core_settings(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
     let mut state = None;
     loop {
         let status = core.status_bits();

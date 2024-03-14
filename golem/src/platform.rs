@@ -13,19 +13,13 @@ use crate::Flags;
 use cfg_if::cfg_if;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
-use image::DynamicImage;
-use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
-use mister_fpga::types::StatusBitMap;
+use golem_core::CoreManager;
 use sdl3::event::Event;
-use sdl3::gamepad::{Axis, Button};
-use sdl3::keyboard::Scancode;
-use std::path::Path;
 
 cfg_if! {
     if #[cfg(test)] {
         mod null;
         pub use null::NullPlatform as PlatformWindowManager;
-        pub use null::NullCore as CoreType;
     } else if #[cfg(any(
         all(feature = "platform_de10", feature = "platform_desktop"),
         all(feature = "platform_de10", test),
@@ -35,11 +29,9 @@ cfg_if! {
     } else if #[cfg(feature = "platform_desktop")] {
         mod desktop;
         pub use desktop::DesktopPlatform as PlatformWindowManager;
-        pub use desktop::DummyCore as CoreType;
     } else if #[cfg(feature = "platform_de10")] {
         pub mod de10;
         pub use de10::De10Platform as PlatformWindowManager;
-        pub use de10::core_manager::core::MisterFpgaCore as CoreType;
     } else {
         compile_error!("At least one platform must be enabled.");
     }
@@ -58,100 +50,8 @@ mod sizes {
     pub const MAIN: Size = Size::new(256, 16 * 8);
 }
 
-pub trait SaveState {
-    fn is_dirty(&self) -> bool;
-    fn write_to(&mut self, writer: impl std::io::Write) -> Result<(), String>;
-    fn read_from(&mut self, reader: impl std::io::Read) -> Result<(), String>;
-}
-
-pub trait Core {
-    type SaveState: SaveState;
-
-    fn name(&self) -> &str;
-
-    fn current_game(&self) -> Option<&Path> {
-        None
-    }
-
-    /// Send a file to the core. The file_info is implementation specific.
-    fn load_file(&mut self, path: &Path, file_info: Option<LoadFileInfo>) -> Result<(), String>;
-
-    fn end_send_file(&mut self) -> Result<(), String>;
-
-    fn version(&self) -> Option<&str>;
-
-    /// TODO: remove this and use platform-independent hooks/traits instead.
-    fn mount_sav(&mut self, path: &Path) -> Result<(), String>;
-
-    fn check_sav(&mut self) -> Result<(), String>;
-
-    /// TODO: remove this and use platform-independent hooks/traits instead.
-    fn menu_options(&self) -> &[ConfigMenu];
-
-    /// Trigger a menu by its option. This will return `true` if the core can and
-    /// did execute the command successfully. `false` will be returned if the core
-    /// cannot execute the command (this is not an error).
-    fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String>;
-
-    fn reset(&mut self) -> Result<(), String>;
-
-    fn status_mask(&self) -> StatusBitMap;
-    fn status_bits(&self) -> StatusBitMap;
-    fn status_pulse(&mut self, bit: usize) {
-        let mut bits = self.status_bits();
-        bits.set(bit, true);
-        self.set_status_bits(bits);
-
-        bits.set(bit, false);
-        self.set_status_bits(bits);
-    }
-    fn set_status_bits(&mut self, bits: StatusBitMap);
-
-    fn take_screenshot(&mut self) -> Result<DynamicImage, String>;
-
-    fn key_down(&mut self, key: Scancode);
-    fn key_up(&mut self, key: Scancode);
-
-    fn sdl_button_down(&mut self, controller: u8, button: Button);
-
-    fn sdl_button_up(&mut self, controller: u8, button: Button);
-
-    fn sdl_axis_motion(&mut self, controller: u8, axis: Axis, value: i16);
-
-    fn save_states(&mut self) -> Option<&mut [Self::SaveState]>;
-}
-
-pub trait CoreManager {
-    type Core: Core;
-
-    /// Load a core into the FPGA.
-    // TODO: Change the error type to something more usable than string.
-    fn load_core(&mut self, path: impl AsRef<Path>) -> Result<Self::Core, String>;
-
-    fn get_current_core(&mut self) -> Result<Self::Core, String>;
-
-    fn load_game(
-        &mut self,
-        core_path: impl AsRef<Path>,
-        game_path: impl AsRef<Path>,
-    ) -> Result<Self::Core, String> {
-        let mut core = self.load_core(core_path)?;
-        core.load_file(game_path.as_ref(), None)?;
-        Ok(core)
-    }
-
-    /// Load the main menu core.
-    fn load_menu(&mut self) -> Result<Self::Core, String>;
-
-    /// Show the menu (OSD).
-    fn show_menu(&mut self);
-    /// Hide the menu (OSD).
-    fn hide_menu(&mut self);
-}
-
 pub trait GoLEmPlatform {
     type Color: PixelColor;
-    type CoreManager: CoreManager;
 
     fn init(&mut self, flags: &Flags);
 
@@ -168,7 +68,7 @@ pub trait GoLEmPlatform {
     fn start_loop(&mut self);
     fn end_loop(&mut self);
 
-    fn core_manager_mut(&mut self) -> &mut Self::CoreManager;
+    fn core_manager_mut(&mut self) -> &mut CoreManager;
 }
 
 /// The [WindowManager] structure is responsible for managing and holding the state
@@ -190,7 +90,6 @@ impl WindowManager {}
 
 impl GoLEmPlatform for WindowManager {
     type Color = <PlatformWindowManager as GoLEmPlatform>::Color;
-    type CoreManager = <PlatformWindowManager as GoLEmPlatform>::CoreManager;
 
     fn init(&mut self, flags: &Flags) {
         self.inner.init(flags);
@@ -226,7 +125,7 @@ impl GoLEmPlatform for WindowManager {
         self.inner.end_loop();
     }
 
-    fn core_manager_mut(&mut self) -> &mut Self::CoreManager {
+    fn core_manager_mut(&mut self) -> &mut CoreManager {
         self.inner.core_manager_mut()
     }
 }

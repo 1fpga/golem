@@ -2,7 +2,6 @@ use crate::application::panels::core_loop::menu::core_menu;
 use crate::application::GoLEmApp;
 use crate::data::paths;
 use crate::input::shortcut::Shortcut;
-use crate::platform::Core;
 use image::GenericImageView;
 use sdl3::keyboard::Scancode;
 use std::fmt::{Display, Formatter};
@@ -99,7 +98,7 @@ impl ShortcutCommand {
         }
     }
 
-    pub fn execute(&self, app: &mut GoLEmApp, core: &mut impl Core) -> CommandResult {
+    pub fn execute(&self, app: &mut GoLEmApp, core: &mut golem_core::GolemCore) -> CommandResult {
         match self {
             ShortcutCommand::ShowCoreMenu => {
                 debug!("Opening core menu");

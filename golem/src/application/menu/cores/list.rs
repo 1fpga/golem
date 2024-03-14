@@ -7,7 +7,7 @@ use crate::application::menu::TextMenuOptions;
 use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::core_loop::run_core_loop;
 use crate::application::GoLEmApp;
-use crate::platform::{CoreManager, GoLEmPlatform};
+use crate::platform::GoLEmPlatform;
 use anyhow::anyhow;
 use golem_db::models;
 use golem_db::models::CoreOrder;
@@ -31,27 +31,24 @@ impl MenuReturn for MenuAction {
         Some(MenuAction::Back)
     }
 
-    fn sort() -> Option<Self> {
-        Some(Self::ChangeSort)
-    }
-
     fn into_details(self) -> Option<Self> {
         match self {
             MenuAction::ExecuteCore(i) => Some(MenuAction::ShowCoreDetails(i)),
             _ => None,
         }
     }
+
+    fn sort() -> Option<Self> {
+        Some(Self::ChangeSort)
+    }
 }
 
 fn build_cores_items_(database: &mut golem_db::Connection, order: CoreOrder) -> Vec<models::Core> {
     let all_cores = models::Core::list(database, 0, 1000, order);
-    match all_cores {
-        Ok(all_cores) => all_cores,
-        Err(e) => {
-            error!("Database error: {e}");
-            Vec::new()
-        }
-    }
+    all_cores.unwrap_or_else(|e| {
+        error!("Database error: {e}");
+        Vec::new()
+    })
 }
 
 pub fn select_core(app: &mut GoLEmApp, title: &str) -> Option<models::Core> {

@@ -3,6 +3,7 @@ use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
 use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
 use cyclone_v::memory::DevMemMemoryMapper;
 use std::cell::UnsafeCell;
+use std::io::Read;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -10,8 +11,10 @@ use strum::{Display, EnumIter, FromRepr};
 use tracing::{debug, error, info, trace};
 
 mod framebuffer;
+mod program;
 mod spi;
 
+pub use program::Program;
 pub use spi::*;
 
 #[derive(Debug, Copy, Clone)]
@@ -23,6 +26,7 @@ pub enum FpgaError {
     CouldNotConfigure,
     CouldNotEnterInitPhase,
     CouldNotEnterUserMode,
+    IoError,
 }
 
 impl From<FpgaError> for &'static str {
@@ -40,6 +44,7 @@ impl From<&FpgaError> for &'static str {
             FpgaError::CouldNotConfigure => "Could not configure FPGA",
             FpgaError::CouldNotEnterInitPhase => "Could not enter init phase",
             FpgaError::CouldNotEnterUserMode => "Could not enter user mode",
+            FpgaError::IoError => "I/O Error",
         }
     }
 }
@@ -135,11 +140,12 @@ impl MisterFpga {
         self.soc_mut().regs_mut()
     }
 
-    pub fn init() -> Result<Self, ()> {
+    pub fn init() -> Result<Self, &'static str> {
         unsafe {
             if INITIALIZED.load(Ordering::Relaxed) {
-                error!("FPGA already initialized. This is an error.");
-                return Err(());
+                const MSG: &'static str = "FPGA already initialized. This is an error.";
+                error!("{}", MSG);
+                return Err(MSG);
             }
 
             info!("Initializing FPGA");
@@ -153,7 +159,6 @@ impl MisterFpga {
             FPGA_SINGLETON = Some(fpga.clone());
 
             INITIALIZED.store(true, Ordering::Relaxed);
-
             Ok(fpga)
         }
     }
@@ -324,7 +329,11 @@ impl MisterFpga {
         .map_err(|_| FpgaError::Timeout)
     }
 
-    pub fn load_rbf(&mut self, program: &[u8]) -> Result<(), FpgaError> {
+    pub fn load(&mut self, program: impl Program) -> Result<(), FpgaError> {
+        program.load(self)
+    }
+
+    pub(crate) fn load_rbf_bytes(&mut self, bytes: &[u8]) -> Result<(), FpgaError> {
         let start = Instant::now();
         self.disable_bridge();
 
@@ -332,7 +341,7 @@ impl MisterFpga {
         self.init_program()?;
         debug!("Writing program...");
         let now = Instant::now();
-        self.write_program(program)?;
+        self.write_program(bytes)?;
         trace!("Program written in {}ms", now.elapsed().as_millis());
 
         debug!("Configuration and initialization.");
@@ -400,57 +409,16 @@ impl MisterFpga {
 
     /// Write the RBF program to the FPGA.
     #[inline(never)]
-    pub fn write_program(&mut self, program: &[u8]) -> Result<(), FpgaError> {
+    pub fn write_program(&mut self, program: impl Read) -> Result<(), FpgaError> {
+        let program = program
+            .bytes()
+            .collect::<Result<Vec<u8>, _>>()
+            .map_err(|_err| FpgaError::IoError)?;
         if program.is_empty() {
             return Ok(());
         }
 
         let data = self.soc_mut().data_mut() as *mut u32;
-
-        // This code is copied from u-boot from [here](
-        // https://github.com/u-boot/u-boot/blob/master/drivers/fpga/socfpga.c#L44), converted to
-        // Rust. The original code is licensed under the GPL-2.0+.
-        //
-        // In our case, we also changed the registers used for the load/store as LLVM reserves
-        // the r6 register for internal use (stack frames, etc.). We could not compile it while
-        // using r6.
-        //
-        // This requires the ARM architecture to be enabled.
-        #[cfg(target_arch = "arm")]
-        unsafe {
-            let src: u32 = program.as_ptr() as u32;
-            let loops32: u32 = program.len() as u32 / 32;
-
-            // Number of loops for 4-byte long copying + trailing bytes.
-            let loops4: u32 = {
-                let n = (program.len() as u32) % 32;
-                let d = 4;
-                (n + d - 1) / d
-            };
-
-            core::arch::asm!(
-            "1: ldmia   {0}!,    {{r0-r5,r7-r8}}",
-            "   stmia   {1}!,    {{r0-r5,r7-r8}}",
-            "   sub     {1},     #32",
-            "   subs    {2}, #1",
-            "   bne     1b",
-            "   cmp     {3},  #0",
-            "   beq     3f",
-            "2: ldr     {2}, [{0}],   #4",
-            "   str     {2}, [{1}]",
-            "   subs    {3},  #1",
-            "   bne     2b",
-            "3: nop",
-            in(reg) src,
-            in(reg) data,
-            in(reg) loops32,
-            in(reg) loops4,
-            out("r0") _, out("r1") _, out("r2") _, out("r3") _,
-            out("r4") _, out("r5") _, out("r7") _, out("r8") _
-            );
-        }
-
-        #[cfg(not(target_arch = "arm"))]
         unsafe {
             let (prefix, shorts, suffix) = program.align_to::<u32>();
 

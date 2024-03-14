@@ -1,63 +1,43 @@
-use crate::platform::Core;
 use image::DynamicImage;
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::core::file::SdCard;
 use mister_fpga::types::StatusBitMap;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
-use std::io::Read;
 use std::path::{Path, PathBuf};
 
-pub struct MisterFpgaCore {
+/// A core that be used in the Golem platform.
+pub struct GolemCore {
     inner: mister_fpga::core::MisterFpgaCore,
     loaded_file: Option<PathBuf>,
 }
 
-impl MisterFpgaCore {
+impl GolemCore {
     pub fn new(inner: mister_fpga::core::MisterFpgaCore) -> Self {
         Self {
             inner,
             loaded_file: None,
         }
     }
-}
 
-impl crate::platform::SaveState for mister_fpga::savestate::SaveState {
-    fn is_dirty(&self) -> bool {
-        self.is_dirty()
-    }
-
-    fn write_to(&mut self, writer: impl std::io::Write) -> Result<(), String> {
-        self.write_to(writer).map_err(|e| e.to_string())
-    }
-
-    fn read_from(&mut self, reader: impl Read) -> Result<(), String> {
-        self.read_from(reader).map_err(|e| e.to_string())
-    }
-}
-
-impl MisterFpgaCore {
-    pub(crate) fn send_to_framebuffer(
-        &mut self,
-        image_raw: impl AsRef<[u8]>,
-    ) -> Result<(), String> {
+    pub fn send_to_framebuffer(&mut self, image_raw: impl AsRef<[u8]>) -> Result<(), String> {
         self.inner.send_to_menu_framebuffer(image_raw.as_ref())?;
         Ok(())
     }
-}
 
-impl Core for MisterFpgaCore {
-    type SaveState = mister_fpga::savestate::SaveState;
-
-    fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.inner.config().name
     }
 
-    fn current_game(&self) -> Option<&Path> {
+    pub fn current_game(&self) -> Option<&Path> {
         self.loaded_file.as_deref()
     }
 
-    fn load_file(&mut self, path: &Path, file_info: Option<LoadFileInfo>) -> Result<(), String> {
+    pub fn load_file(
+        &mut self,
+        path: &Path,
+        file_info: Option<LoadFileInfo>,
+    ) -> Result<(), String> {
         let update = file_info.as_ref().map(|l| l.index == 0).unwrap_or(true);
         self.inner.load_file(path, file_info)?;
         if update {
@@ -67,29 +47,29 @@ impl Core for MisterFpgaCore {
         Ok(())
     }
 
-    fn end_send_file(&mut self) -> Result<(), String> {
+    pub fn end_send_file(&mut self) -> Result<(), String> {
         self.inner.end_send_file()
     }
 
-    fn version(&self) -> Option<&str> {
+    pub fn version(&self) -> Option<&str> {
         self.inner.config().version()
     }
 
-    fn mount_sav(&mut self, path: &Path) -> Result<(), String> {
+    pub fn mount_sav(&mut self, path: &Path) -> Result<(), String> {
         self.inner.mount(SdCard::from_path(path)?, 0)?;
         Ok(())
     }
 
-    fn check_sav(&mut self) -> Result<(), String> {
+    pub fn check_sav(&mut self) -> Result<(), String> {
         while self.inner.poll_mounts()? {}
         Ok(())
     }
 
-    fn menu_options(&self) -> &[ConfigMenu] {
+    pub fn menu_options(&self) -> &[ConfigMenu] {
         self.inner.config().menu.as_slice()
     }
 
-    fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String> {
+    pub fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String> {
         match menu {
             ConfigMenu::HideIf(cond, sub) | ConfigMenu::DisableIf(cond, sub) => {
                 if self
@@ -135,50 +115,59 @@ impl Core for MisterFpgaCore {
         }
     }
 
-    fn reset(&mut self) -> Result<(), String> {
+    pub fn reset(&mut self) -> Result<(), String> {
         self.inner.soft_reset();
         Ok(())
     }
 
-    fn status_mask(&self) -> StatusBitMap {
+    pub fn status_mask(&self) -> StatusBitMap {
         self.inner.config().status_bit_map_mask()
     }
 
-    fn status_bits(&self) -> StatusBitMap {
+    pub fn status_bits(&self) -> StatusBitMap {
         *self.inner.status_bits()
     }
 
-    fn set_status_bits(&mut self, bits: StatusBitMap) {
+    pub fn set_status_bits(&mut self, bits: StatusBitMap) {
         self.inner.send_status_bits(bits)
     }
 
-    fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
+    pub fn status_pulse(&mut self, bit: usize) {
+        let mut bits = self.status_bits();
+        bits.set(bit, true);
+        self.set_status_bits(bits);
+
+        bits.set(bit, false);
+        self.set_status_bits(bits);
+    }
+
+    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         self.inner.take_screenshot()
     }
 
-    fn key_down(&mut self, key: Scancode) {
+    pub fn key_down(&mut self, key: Scancode) {
         self.inner.key_down(key)
     }
 
-    fn key_up(&mut self, key: Scancode) {
+    pub fn key_up(&mut self, key: Scancode) {
         self.inner.key_up(key)
     }
 
-    fn sdl_button_down(&mut self, controller: u8, button: Button) {
+    pub fn sdl_button_down(&mut self, controller: u8, button: Button) {
         self.inner.gamepad_button_down(controller, button as u8)
     }
 
-    fn sdl_button_up(&mut self, controller: u8, button: Button) {
+    pub fn sdl_button_up(&mut self, controller: u8, button: Button) {
         self.inner.gamepad_button_up(controller, button as u8)
     }
 
-    fn sdl_axis_motion(&mut self, _controller: u8, _axis: Axis, _value: i16) {
+    pub fn sdl_axis_motion(&mut self, _controller: u8, _axis: Axis, _value: i16) {
         // TODO: do this.
     }
 
-    fn save_states(&mut self) -> Option<&mut [Self::SaveState]> {
+    pub fn save_states(&mut self) -> Option<&mut [mister_fpga::savestate::SaveState]> {
         self.inner
             .save_states_mut()
-            .map(|manager| manager.as_slice_mut())
+            .map(|manager| manager.slots_mut())
     }
 }
