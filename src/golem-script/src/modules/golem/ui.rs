@@ -1,19 +1,21 @@
 use crate::utils::JsVec;
 use boa_engine::object::builtins::JsArray;
 use boa_engine::{
-    js_string, Context, Finalize, JsArgs, JsData, JsError, JsNativeError, JsResult, JsString,
-    JsValue, Module, Trace,
+    js_string, Context, Finalize, JsData, JsError, JsNativeError, JsResult, JsString, JsValue,
+    Module, Trace,
 };
 use boa_macros::TryFromJs;
 use golem_ui::application::menu::style::MenuReturn;
-use golem_ui::application::menu::{text_menu, IntoTextMenuItem, TextMenuItem, TextMenuOptions};
+use golem_ui::application::menu::{
+    text_menu, GolemMenuState, IntoTextMenuItem, TextMenuItem, TextMenuOptions,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum MenuAction {
-    Select(i32),
-    Details(i32),
+    Select(usize),
+    Details(usize),
     Sort,
     Idle,
     Back,
@@ -41,7 +43,8 @@ pub struct MenuItem {
     label: String,
     marker: Option<String>,
     selectable: bool,
-    id: Option<i32>,
+    id: JsValue,
+    index: usize,
 }
 
 impl boa_engine::value::TryFromJs for MenuItem {
@@ -53,7 +56,8 @@ impl boa_engine::value::TryFromJs for MenuItem {
                     label: s.to_std_string().unwrap(),
                     marker: None,
                     selectable: true,
-                    id: None,
+                    id: JsValue::undefined(),
+                    index: 0,
                 });
             }
             _ => {
@@ -68,24 +72,26 @@ impl boa_engine::value::TryFromJs for MenuItem {
             .to_string(context)?
             .to_std_string()
             .unwrap();
-        let marker = object
-            .get(js_string!("marker"), context)?
-            .to_string(context)
-            .ok()
-            .map(|s| s.to_std_string().unwrap());
+        let marker = object.get(js_string!("marker"), context)?;
+        let marker = if marker.is_undefined() {
+            None
+        } else {
+            Some(marker.to_string(context).unwrap().to_std_string_escaped())
+        };
+
         let selectable = object
             .get(js_string!("selectable"), context)?
             .as_boolean()
             .unwrap_or(true);
 
         let id = object.get(js_string!("id"), context)?;
-        let id = id.to_i32(context).ok();
 
         Ok(Self {
             label,
             marker,
             selectable,
             id,
+            index: 0,
         })
     }
 }
@@ -98,7 +104,7 @@ impl<'a> IntoTextMenuItem<'a, MenuAction> for MenuItem {
             TextMenuItem::navigation_item(
                 self.label.as_str(),
                 self.marker.as_ref().map(|m| m.as_str()).unwrap_or_default(),
-                MenuAction::Select(self.id.unwrap_or(0)),
+                MenuAction::Select(self.index),
             )
         }
     }
@@ -108,6 +114,7 @@ impl<'a> IntoTextMenuItem<'a, MenuAction> for MenuItem {
 #[derive(Debug, Trace, Finalize, JsData, TryFromJs)]
 struct UiMenuOptions {
     title: String,
+    back: bool,
     items: JsVec<MenuItem>,
 }
 
@@ -117,36 +124,37 @@ fn menu(
     ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
-    let options = args.get_or_undefined(0);
-    if options.is_undefined() {
+    let Some(options) = args.get(0) else {
         return Err(JsError::from_opaque(
             js_string!("No options provided").into(),
         ));
-    }
+    };
 
     let mut options = options.try_js_into::<UiMenuOptions>(ctx)?;
     // Replace missing IDs by their index.
     for (i, item) in options.items.0.iter_mut().enumerate() {
-        if item.id.is_none() {
-            item.id = Some(i as i32);
-        }
+        item.index = i;
     }
 
+    let mut state = GolemMenuState::default();
     loop {
+        let menu_options: TextMenuOptions<MenuAction> =
+            TextMenuOptions::default().with_back_menu(options.back);
+
         let (result, new_state) = text_menu(
             app,
             &options.title,
             options.items.0.as_slice(),
-            TextMenuOptions::default(),
+            menu_options,
         );
+        state = new_state;
 
         match result {
             MenuAction::Select(i) => {
-                return Ok(JsArray::from_iter(
-                    [JsValue::from(js_string!("select")), JsValue::new(i)],
-                    ctx,
-                )
-                .into());
+                let value: JsValue = options.items.0[i].id.clone();
+                return Ok(
+                    JsArray::from_iter([JsValue::from(js_string!("select")), value], ctx).into(),
+                );
             }
             MenuAction::Details(i) => {
                 return Ok(JsArray::from_iter(
@@ -169,7 +177,7 @@ fn menu(
 pub fn create_module(
     context: &mut Context,
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
-) -> Result<(JsString, Module), Box<dyn std::error::Error>> {
+) -> JsResult<(JsString, Module)> {
     let menu = boa_engine::object::FunctionObjectBuilder::new(
         context.realm(),
         boa_engine::NativeFunction::from_copy_closure({

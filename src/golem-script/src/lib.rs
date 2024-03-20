@@ -1,5 +1,4 @@
 use crate::module_loader::GolemModuleLoader;
-use crate::modules::ui;
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsString, JsValue, Module, Source};
@@ -38,9 +37,7 @@ pub fn run(
         )
         .expect("The console object shouldn't exist yet");
 
-    let (name, ui_module) = ui::create_module(&mut context, app.clone())?;
-    let module_name = JsString::concat(&js_string!("golem/"), &name);
-    loader.insert_named(module_name, ui_module);
+    modules::register_modules(loader.clone(), &mut context, app.clone())?;
 
     let source = Source::from_reader(std::fs::File::open(script_path)?, Some(script_path));
 
