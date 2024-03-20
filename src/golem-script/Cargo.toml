@@ -1,0 +1,15 @@
+[package]
+name = "golem-script"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+boa_engine = "0.18.0"
+boa_gc = "0.18.0"
+boa_macros = "0.18.0"
+boa_runtime = "0.18.0"
+golem-ui = { path = "../golem-ui" }
+rustc-hash = "1.1.0"
+tracing = "0.1.40"

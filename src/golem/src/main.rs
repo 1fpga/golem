@@ -1,17 +1,12 @@
-use crate::platform::WindowManager;
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::{LogLevel, Verbosity};
-use tracing::Level;
+use golem_ui::application;
+use std::cell::RefCell;
+use std::path::PathBuf;
+use std::rc::Rc;
+use tracing::{info, Level};
 use tracing_subscriber::fmt::Subscriber;
-
-mod application;
-mod data;
-mod file_io;
-mod hardware;
-mod input;
-mod macguiver;
-mod platform;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct NoneLevel;
@@ -25,13 +20,10 @@ impl LogLevel for NoneLevel {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Flags {
-    /// Path to the core to load instantly.
-    #[clap(default_value = "")]
-    pub core: String,
-
-    /// Path to the XML configuration file for the core.
-    #[clap()]
-    pub xml: Option<String>,
+    /// Path to root script to run instead of the embedded one.
+    /// The script will be run without safeguards.
+    #[clap(long)]
+    pub script: Option<PathBuf>,
 
     #[command(flatten)]
     pub verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
@@ -70,6 +62,10 @@ fn main() {
     tracing::debug!(?opts);
 
     // Create the application and run it.
-    let mut app = application::GoLEmApp::new(WindowManager::default());
-    app.run(opts);
+    let start = std::time::Instant::now();
+    info!("Starting application...");
+    let app = Rc::new(RefCell::new(application::GoLEmApp::new()));
+    golem_script::run(opts.script.as_ref(), app).expect("Failed to run script");
+    let elapsed = start.elapsed();
+    info!(?elapsed, "Done");
 }

@@ -1,3 +1,2 @@
-[build]
-target = "armv7-unknown-linux-gnueabihf"
+[target.armv7-unknown-linux-gnueabihf]
 rustflags = ["-C", "target-feature=+v7,+vfp3,+neon"]

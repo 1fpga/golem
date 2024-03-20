@@ -7,10 +7,11 @@ members = [
     "src/golem",
     "src/golem-core",
     "src/golem-db",
+    "src/golem-script",
     "src/junior",
     "src/mister-fpga",
     "src/superscope",
-    "src/senior",
+    "src/senior", "src/golem-ui",
 ]
 resolver = "2"
 
