@@ -2,8 +2,14 @@ use boa_engine::value::TryFromJs;
 use boa_engine::{js_string, Context, JsNativeError, JsResult, JsValue};
 use boa_macros::{Finalize, Trace};
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Trace, Finalize)]
+#[derive(Debug, Default, Trace, Finalize, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct JsVec<T>(pub Vec<T>);
+
+impl<T> JsVec<T> {
+    pub fn iter(&self) -> std::slice::Iter<T> {
+        self.0.iter()
+    }
+}
 
 impl<T: TryFromJs> TryFromJs for JsVec<T> {
     fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {

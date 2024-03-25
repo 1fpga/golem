@@ -4,6 +4,7 @@ use golem_ui::application::GoLEmApp;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+pub mod core;
 pub mod db;
 pub mod ui;
 

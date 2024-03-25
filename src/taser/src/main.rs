@@ -11,7 +11,7 @@ use std::process;
 use tracing::{debug, error, info, trace, Level};
 use tracing_subscriber::fmt::Subscriber;
 
-/// `superscope` is a simple command-line interface to the GoLEm Mister core
+/// `taser` is a simple command-line interface to the GoLEm Mister core
 /// library. It is intended to be used as a standalone application, or as a
 /// testbed for cores.
 #[derive(Parser, Debug)]

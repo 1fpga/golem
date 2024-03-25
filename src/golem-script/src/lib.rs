@@ -1,7 +1,7 @@
 use crate::module_loader::GolemModuleLoader;
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::property::Attribute;
-use boa_engine::{js_string, Context, JsError, JsString, JsValue, Module, Source};
+use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
