@@ -1,16 +1,41 @@
-use boa_engine::{
-    js_string, Context, JsArgs, JsError, JsObject, JsResult, JsString, JsValue, Module,
-};
+use boa_engine::{js_string, Context, JsError, JsResult, JsString, JsValue, Module};
+use boa_macros::{Finalize, JsData, Trace, TryFromJs};
+use golem_core::runner::CoreLauncher;
+use golem_ui::application::panels::core_loop::run_core_loop;
+use golem_ui::platform::GoLEmPlatform;
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
+
+#[derive(Debug, Trace, Finalize, JsData, TryFromJs)]
+struct RunOptions {
+    core: String,
+    game: String,
+}
 
 pub fn run(
     _this: &JsValue,
     args: &[JsValue],
-    _ctx: &mut Context,
+    ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
-    eprintln!("run called");
+    eprintln!("Running core");
+    let Some(options) = args.get(0) else {
+        return Err(JsError::from_opaque(
+            js_string!("No options provided").into(),
+        ));
+    };
+
+    eprintln!("Options: {}", options.display());
+    let options = options.try_js_into::<RunOptions>(ctx)?;
+    let core_options =
+        CoreLauncher::rbf(PathBuf::from(&options.core)).with_file(PathBuf::from(&options.game));
+
+    eprintln!("Launching core: {:?}", core_options);
+    let core = core_options
+        .launch(app.platform_mut().core_manager_mut())
+        .unwrap();
+    run_core_loop(app, core, true);
     Ok(JsValue::undefined())
 }
 
@@ -18,7 +43,7 @@ pub fn create_module(
     context: &mut Context,
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<(JsString, Module)> {
-    let menu = boa_engine::object::FunctionObjectBuilder::new(
+    let run = boa_engine::object::FunctionObjectBuilder::new(
         context.realm(),
         boa_engine::NativeFunction::from_copy_closure({
             let app = Rc::downgrade(&app).as_ptr();
@@ -41,7 +66,7 @@ pub fn create_module(
 
                     Ok(())
                 },
-                (menu,),
+                (run,),
             ),
             None,
             context,

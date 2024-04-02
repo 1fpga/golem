@@ -1,5 +1,51 @@
-import * as ui from "golem/ui";
+import * as core from "golem/core";
 import * as db from "golem/db";
+import * as ui from "golem/ui";
+
+function start_game(game_id) {
+    console.log(game_id);
+    const db_game = db.get("SELECT * FROM games WHERE id = ?", [game_id]);
+    const db_core = db.get("SELECT * from cores WHERE id = ?", [db_game.core_id]);
+
+    const g = db_game;
+    const c = db_core;
+
+    if (!g || !c) {
+        ui.alert("Game not found", `Could not find the game with id ${game_id} or a core for it.`);
+        return;
+    }
+
+    core.run({
+        core: c.path,
+        game: g.path,
+    })
+}
+
+function test_menu() {
+    const [action, id] = ui.menu({
+        title: "Test",
+        back: true,
+        items: [
+            {label: "Test 1", id: "test1"},
+            {label: "Test 2", id: "test2"},
+        ],
+    });
+
+    switch (action) {
+        case "select":
+            switch (id) {
+                case "test1":
+                    ui.alert("Test 1", "Test 2");
+                    break;
+                case "test2":
+                    ui.alert("Test 2");
+                    break;
+            }
+            break;
+        case "back":
+            break;
+    }
+}
 
 function main_menu() {
     const nb_games = db.query("SELECT COUNT(*) as count FROM games")?.[0]?.count;
@@ -12,13 +58,14 @@ function main_menu() {
         title: "",
         back: false,
         items: [
-            {label: "Games...", id: "games", marker: games_lbl},
+            {label: "Games...", id: games_menu, marker: games_lbl},
             {label: "Cores...", id: "cores", marker: cores_lbl},
             "---",
             {label: "Settings...", id: "settings"},
             {label: "Downloads...", id: "downloads"},
             "---",
             {label: "About", id: "about"},
+            {label: "Test", id: test_menu},
             "---",
             {label: "Exit", id: "exit"},
         ],
@@ -29,9 +76,8 @@ function main_menu() {
             switch (id) {
                 case "exit":
                     return false;
-                case "games":
-                    games_menu();
-                    break;
+                default:
+                    id();
             }
             break;
         case "back":
@@ -51,6 +97,8 @@ function games_menu() {
     switch (action) {
         case "back":
             return;
+        default:
+            start_game(id);
     }
 }
 

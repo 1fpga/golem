@@ -9,7 +9,7 @@ use diesel::deserialize::FromSql;
 use diesel::query_builder::{BoxedSqlQuery, SqlQuery};
 use diesel::row::{Field, Row};
 use diesel::sqlite::SqliteType;
-use diesel::SqliteConnection;
+use diesel::{Connection, SqliteConnection};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -25,7 +25,8 @@ fn build_query_<'a>(
         .get(1)
         .cloned()
         .unwrap_or_else(|| JsArray::new(ctx).into());
-    let bindings = JsVec::<JsValue>::try_from_js(&bindings, ctx)?;
+    let bindings = JsVec::<JsValue>::try_from_js(&bindings, ctx);
+    let bindings = bindings?;
 
     let mut q = diesel::sql_query(&query).into_boxed();
 
@@ -62,6 +63,70 @@ fn build_query_<'a>(
     Ok(q)
 }
 
+fn create_row_object<'a>(
+    row: impl Row<'a, diesel::sqlite::Sqlite>,
+    ctx: &mut Context,
+) -> JsResult<JsObject> {
+    let row_result = JsObject::with_null_proto();
+
+    for i in 0..row.field_count() {
+        let Some(field) = row.get(i) else {
+            continue;
+        };
+        let name = field.field_name();
+
+        let Some(value) = field.value() else {
+            row_result.set(i, JsValue::undefined(), false, ctx)?;
+            continue;
+        };
+
+        let value = match value.value_type() {
+            Some(SqliteType::Binary) => {
+                let i = bool::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                i.into()
+            }
+            Some(SqliteType::SmallInt) => {
+                let i = i16::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                i.into()
+            }
+            Some(SqliteType::Integer) => {
+                let i = i32::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                i.into()
+            }
+            Some(SqliteType::Long) => {
+                let i = i64::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                i.into()
+            }
+            Some(SqliteType::Float) => {
+                let f = f32::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                f.into()
+            }
+            Some(SqliteType::Double) => {
+                let f = f64::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                f.into()
+            }
+            Some(SqliteType::Text) => {
+                let s: String = FromSql::<diesel::sql_types::Text, _>::from_sql(value)
+                    .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+                JsString::from(s).into()
+            }
+            _ => JsValue::undefined(),
+        };
+
+        if let Some(name) = name {
+            row_result.set(JsString::from(name), value, false, ctx)?;
+        }
+    }
+
+    Ok(row_result)
+}
+
 fn query(
     _this: &JsValue,
     args: &[JsValue],
@@ -79,62 +144,8 @@ fn query(
     let result = JsArray::new(ctx);
     for row in rows {
         let row = row.map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-        let row_result = JsObject::with_null_proto();
 
-        for i in 0..row.field_count() {
-            let Some(field) = row.get(i) else {
-                continue;
-            };
-            let name = field.field_name();
-
-            let Some(value) = field.value() else {
-                row_result.set(i, JsValue::undefined(), false, ctx)?;
-                continue;
-            };
-
-            let value = match value.value_type() {
-                Some(SqliteType::Binary) => {
-                    let i = bool::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    i.into()
-                }
-                Some(SqliteType::SmallInt) => {
-                    let i = i16::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    i.into()
-                }
-                Some(SqliteType::Integer) => {
-                    let i = i32::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    i.into()
-                }
-                Some(SqliteType::Long) => {
-                    let i = i64::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    i.into()
-                }
-                Some(SqliteType::Float) => {
-                    let f = f32::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    f.into()
-                }
-                Some(SqliteType::Double) => {
-                    let f = f64::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    f.into()
-                }
-                Some(SqliteType::Text) => {
-                    let s: String = FromSql::<diesel::sql_types::Text, _>::from_sql(value)
-                        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-                    JsString::from(s).into()
-                }
-                _ => JsValue::undefined(),
-            };
-
-            if let Some(name) = name {
-                row_result.set(JsString::from(name), value, false, ctx)?;
-            }
-        }
+        let row_result = create_row_object(row, ctx)?;
 
         result.push(row_result, ctx)?;
     }
@@ -142,11 +153,76 @@ fn query(
     Ok(result.into())
 }
 
+fn execute(
+    _this: &JsValue,
+    args: &[JsValue],
+    ctx: &mut Context,
+    app: &mut golem_ui::application::GoLEmApp,
+) -> JsResult<JsValue> {
+    let query = build_query_(args, ctx)?;
+
+    let db = app.database();
+    let mut db = db.lock().unwrap();
+    let result = db
+        .execute_returning_count(&query)
+        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
+
+    Ok(JsValue::from(result))
+}
+
+fn get(
+    _this: &JsValue,
+    args: &[JsValue],
+    ctx: &mut Context,
+    app: &mut golem_ui::application::GoLEmApp,
+) -> JsResult<JsValue> {
+    let query = build_query_(args, ctx)?;
+
+    let db = app.database();
+    let mut db = db.lock().unwrap();
+    let mut row: <SqliteConnection as LoadConnection<_>>::Cursor<'_, '_> =
+        db.load(query).map_err(|err| {
+            JsError::from_opaque(
+                JsString::from(format!("Database error: {}", err.to_string())).into(),
+            )
+        })?;
+
+    let result = match row.next() {
+        Some(Ok(row)) => Ok(JsValue::from(create_row_object(row, ctx)?)),
+        Some(Err(err)) => Err(JsError::from_opaque(
+            JsString::from(format!("Database error: {}", err.to_string())).into(),
+        )),
+        None => Ok(JsValue::undefined()),
+    };
+
+    result
+}
+
 pub fn create_module(
     context: &mut Context,
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<(JsString, Module)> {
-    let menu = boa_engine::object::FunctionObjectBuilder::new(
+    let execute = boa_engine::object::FunctionObjectBuilder::new(
+        context.realm(),
+        boa_engine::NativeFunction::from_copy_closure({
+            let app = Rc::downgrade(&app).as_ptr();
+            move |_this, args, ctx| execute(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
+        }),
+    )
+    .name(js_string!("execute"))
+    .build();
+
+    let get = boa_engine::object::FunctionObjectBuilder::new(
+        context.realm(),
+        boa_engine::NativeFunction::from_copy_closure({
+            let app = Rc::downgrade(&app).as_ptr();
+            move |_this, args, ctx| get(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
+        }),
+    )
+    .name(js_string!("get"))
+    .build();
+
+    let query = boa_engine::object::FunctionObjectBuilder::new(
         context.realm(),
         boa_engine::NativeFunction::from_copy_closure({
             let app = Rc::downgrade(&app).as_ptr();
@@ -160,16 +236,22 @@ pub fn create_module(
         js_string!("db"),
         Module::synthetic(
             // Make sure to list all exports beforehand.
-            &[js_string!("query")],
+            &[
+                js_string!("execute"),
+                js_string!("get"),
+                js_string!("query"),
+            ],
             // The initializer is evaluated every time a module imports this synthetic module,
             // so we avoid creating duplicate objects by capturing and cloning them instead.
             boa_engine::module::SyntheticModuleInitializer::from_copy_closure_with_captures(
-                |module, fns, _| {
-                    module.set_export(&js_string!("query"), fns.0.clone().into())?;
+                |module, (execute, get, query), _| {
+                    module.set_export(&js_string!("execute"), execute.clone().into())?;
+                    module.set_export(&js_string!("get"), get.clone().into())?;
+                    module.set_export(&js_string!("query"), query.clone().into())?;
 
                     Ok(())
                 },
-                (menu,),
+                (execute, get, query),
             ),
             None,
             context,

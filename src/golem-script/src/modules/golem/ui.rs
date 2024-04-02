@@ -138,8 +138,9 @@ fn menu(
 
     let mut state = GolemMenuState::default();
     loop {
-        let menu_options: TextMenuOptions<MenuAction> =
-            TextMenuOptions::default().with_back_menu(options.back);
+        let menu_options: TextMenuOptions<MenuAction> = TextMenuOptions::default()
+            .with_back_menu(options.back)
+            .with_state(Some(state));
 
         let (result, new_state) = text_menu(
             app,
@@ -174,6 +175,25 @@ fn menu(
     }
 }
 
+fn alert(
+    _this: &JsValue,
+    args: &[JsValue],
+    ctx: &mut Context,
+    app: &mut golem_ui::application::GoLEmApp,
+) -> JsResult<JsValue> {
+    let title = args
+        .get(0)
+        .ok_or_else(|| JsError::from_opaque(js_string!("No title provided").into()))?;
+    let title = title.to_string(ctx)?.to_std_string().unwrap();
+    let message = args
+        .get(0)
+        .ok_or_else(|| JsError::from_opaque(js_string!("No message provided").into()))?;
+    let message = message.to_string(ctx)?.to_std_string().unwrap();
+    golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
+
+    Ok(JsValue::undefined())
+}
+
 pub fn create_module(
     context: &mut Context,
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
@@ -187,21 +207,30 @@ pub fn create_module(
     )
     .name(js_string!("menu"))
     .build();
+    let alert = boa_engine::object::FunctionObjectBuilder::new(
+        context.realm(),
+        boa_engine::NativeFunction::from_copy_closure({
+            let app = Rc::downgrade(&app).as_ptr();
+            move |_this, args, ctx| alert(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
+        }),
+    )
+    .name(js_string!("menu"))
+    .build();
 
     Ok((
         js_string!("ui"),
         Module::synthetic(
             // Make sure to list all exports beforehand.
-            &[js_string!("menu")],
+            &[js_string!("menu"), js_string!("alert")],
             // The initializer is evaluated every time a module imports this synthetic module,
             // so we avoid creating duplicate objects by capturing and cloning them instead.
             boa_engine::module::SyntheticModuleInitializer::from_copy_closure_with_captures(
                 |module, fns, _| {
                     module.set_export(&js_string!("menu"), fns.0.clone().into())?;
-
+                    module.set_export(&js_string!("alert"), fns.1.clone().into())?;
                     Ok(())
                 },
-                (menu,),
+                (menu, alert),
             ),
             None,
             context,

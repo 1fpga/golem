@@ -13,7 +13,7 @@ pub(super) fn register_modules(
     context: &mut Context,
     app: Rc<RefCell<GoLEmApp>>,
 ) -> JsResult<()> {
-    for create_fn in [db::create_module, ui::create_module] {
+    for create_fn in [core::create_module, db::create_module, ui::create_module] {
         let (name, module) = create_fn(context, app.clone())?;
         let module_name = JsString::concat(&js_string!("golem/"), &name);
         loader.insert_named(module_name, module);

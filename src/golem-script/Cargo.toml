@@ -11,6 +11,7 @@ boa_gc = "0.18.0"
 boa_macros = "0.18.0"
 boa_runtime = "0.18.0"
 diesel = { version = "2.1.5", features = ["sqlite"] }
+golem-core = { path = "../golem-core" }
 golem-ui = { path = "../golem-ui" }
 rustc-hash = "1.1.0"
 tracing = "0.1.40"

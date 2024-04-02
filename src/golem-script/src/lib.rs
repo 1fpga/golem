@@ -5,6 +5,7 @@ use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+use tracing::{error, info};
 
 mod module_loader;
 
@@ -46,19 +47,24 @@ pub fn run(
 
     let promise_result = module.load_link_evaluate(&mut context);
 
-    // Very important to push forward the job queue after queueing promises.
-    context.run_jobs();
+    let result = loop {
+        // Very important to push forward the job queue after queueing promises.
+        context.run_jobs();
 
-    // Checking if the final promise didn't return an error.
-    match promise_result.state() {
-        PromiseState::Pending => return Err("module didn't execute!".into()),
-        PromiseState::Fulfilled(v) => {
-            assert_eq!(v, JsValue::undefined());
+        // Checking if the final promise didn't return an error.
+        match promise_result.state() {
+            PromiseState::Pending => {}
+            PromiseState::Fulfilled(v) => {
+                break v;
+            }
+            PromiseState::Rejected(err) => {
+                error!("Javascript Error: {}", err.display());
+                return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
+            }
         }
-        PromiseState::Rejected(err) => {
-            return Err(JsError::from_opaque(err).try_native(&mut context)?.into())
-        }
-    }
+    };
+
+    info!(?result, "Script executed successfully.");
 
     Ok(())
 }
