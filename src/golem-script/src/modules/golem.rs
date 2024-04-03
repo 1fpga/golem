@@ -1,8 +1,11 @@
-use crate::module_loader::GolemModuleLoader;
-use boa_engine::{js_string, Context, JsResult, JsString};
-use golem_ui::application::GoLEmApp;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use boa_engine::{Context, js_string, JsResult, JsString};
+
+use golem_ui::application::GoLEmApp;
+
+use crate::module_loader::GolemModuleLoader;
 
 pub mod core;
 pub mod db;

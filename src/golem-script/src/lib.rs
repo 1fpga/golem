@@ -1,11 +1,13 @@
-use crate::module_loader::GolemModuleLoader;
-use boa_engine::builtins::promise::PromiseState;
-use boa_engine::property::Attribute;
-use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use std::cell::RefCell;
 use std::path::Path;
 use std::rc::Rc;
+
+use boa_engine::{Context, js_string, JsError, Module, Source};
+use boa_engine::builtins::promise::PromiseState;
+use boa_engine::property::Attribute;
 use tracing::{error, info};
+
+use crate::module_loader::GolemModuleLoader;
 
 mod module_loader;
 
@@ -16,8 +18,10 @@ mod utils;
 
 pub fn run(
     script: Option<&impl AsRef<Path>>,
-    app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
+    app: golem_ui::application::GoLEmApp,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let app = Rc::new(RefCell::new(app));
+
     let script_path = script.expect("No script provided").as_ref();
     let dir = script_path.parent().unwrap();
 

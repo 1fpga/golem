@@ -1,12 +1,14 @@
-use clap::Parser;
-use clap_verbosity_flag::Level as VerbosityLevel;
-use clap_verbosity_flag::{LogLevel, Verbosity};
-use golem_ui::application;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
+
+use clap::Parser;
+use clap_verbosity_flag::{LogLevel, Verbosity};
+use clap_verbosity_flag::Level as VerbosityLevel;
 use tracing::{info, Level};
 use tracing_subscriber::fmt::Subscriber;
+
+use golem_ui::application;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct NoneLevel;
@@ -64,8 +66,7 @@ fn main() {
     // Create the application and run it.
     let start = std::time::Instant::now();
     info!("Starting application...");
-    let app = Rc::new(RefCell::new(application::GoLEmApp::new()));
-    golem_script::run(opts.script.as_ref(), app).expect("Failed to run script");
+    golem_script::run(opts.script.as_ref(), application::GoLEmApp::new()).expect("Failed to run script");
     let elapsed = start.elapsed();
     info!(?elapsed, "Done");
 }

@@ -1,31 +1,26 @@
-use crate::utils::JsVec;
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use boa_engine::{
+    Context, js_string, JsError, JsObject, JsResult, JsString, JsValue, Module,
+};
 use boa_engine::object::builtins::JsArray;
 use boa_engine::value::TryFromJs;
-use boa_engine::{
-    js_string, Context, JsArgs, JsError, JsObject, JsResult, JsString, JsValue, Module,
-};
+use boa_interop::{IntoJsFunctionUnsafe, IntoJsModule};
+use diesel::{Connection, SqliteConnection};
 use diesel::connection::LoadConnection;
 use diesel::deserialize::FromSql;
 use diesel::query_builder::{BoxedSqlQuery, SqlQuery};
 use diesel::row::{Field, Row};
 use diesel::sqlite::SqliteType;
-use diesel::{Connection, SqliteConnection};
-use std::cell::RefCell;
-use std::rc::Rc;
 
 fn build_query_<'a>(
-    args: &[JsValue],
+    query: String,
+    bindings: Option<JsArray>,
     ctx: &mut Context,
 ) -> JsResult<BoxedSqlQuery<'a, diesel::sqlite::Sqlite, SqlQuery>> {
-    let query = args
-        .get_or_undefined(0)
-        .to_string(ctx)?
-        .to_std_string_escaped();
-    let bindings = args
-        .get(1)
-        .cloned()
-        .unwrap_or_else(|| JsArray::new(ctx).into());
-    let bindings = JsVec::<JsValue>::try_from_js(&bindings, ctx);
+    let bindings = bindings.unwrap_or_else(|| JsArray::new(ctx));
+    let bindings = Vec::<JsValue>::try_from_js(&bindings.into(), ctx);
     let bindings = bindings?;
 
     let mut q = diesel::sql_query(&query).into_boxed();
@@ -45,17 +40,17 @@ fn build_query_<'a>(
             JsValue::BigInt(_) => {
                 return Err(JsError::from_opaque(
                     JsString::from("BigInt bindings are not supported").into(),
-                ))
+                ));
             }
             JsValue::Object(_) => {
                 return Err(JsError::from_opaque(
                     JsString::from("Object bindings are not supported").into(),
-                ))
+                ));
             }
             JsValue::Symbol(_) => {
                 return Err(JsError::from_opaque(
                     JsString::from("Symbol bindings are not supported").into(),
-                ))
+                ));
             }
         }
     }
@@ -127,13 +122,13 @@ fn create_row_object<'a>(
     Ok(row_result)
 }
 
-fn query(
-    _this: &JsValue,
-    args: &[JsValue],
+fn query_(
+    query: String,
+    bindings: Option<JsArray>,
     ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
-    let query = build_query_(args, ctx)?;
+    let query = build_query_(query, bindings, ctx)?;
 
     let db = app.database();
     let mut db = db.lock().unwrap();
@@ -154,12 +149,12 @@ fn query(
 }
 
 fn execute(
-    _this: &JsValue,
-    args: &[JsValue],
+    query: String,
+    bindings: Option<JsArray>,
     ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
-    let query = build_query_(args, ctx)?;
+    let query = build_query_(query, bindings, ctx)?;
 
     let db = app.database();
     let mut db = db.lock().unwrap();
@@ -171,12 +166,12 @@ fn execute(
 }
 
 fn get(
-    _this: &JsValue,
-    args: &[JsValue],
+    query: String,
+    bindings: Option<JsArray>,
     ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
-    let query = build_query_(args, ctx)?;
+    let query = build_query_(query, bindings, ctx)?;
 
     let db = app.database();
     let mut db = db.lock().unwrap();
@@ -202,59 +197,34 @@ pub fn create_module(
     context: &mut Context,
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<(JsString, Module)> {
-    let execute = boa_engine::object::FunctionObjectBuilder::new(
-        context.realm(),
-        boa_engine::NativeFunction::from_copy_closure({
-            let app = Rc::downgrade(&app).as_ptr();
-            move |_this, args, ctx| execute(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
-        }),
-    )
-    .name(js_string!("execute"))
-    .build();
+    unsafe {
+        let execute = {
+            let app = app.clone();
+            move |query: JsString, bindings| {
+                execute(query.to_std_string_escaped(), bindings, context, &mut app.borrow_mut()).unwrap()
+            }
+        }.into_js_function_unsafe(context);
 
-    let get = boa_engine::object::FunctionObjectBuilder::new(
-        context.realm(),
-        boa_engine::NativeFunction::from_copy_closure({
-            let app = Rc::downgrade(&app).as_ptr();
-            move |_this, args, ctx| get(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
-        }),
-    )
-    .name(js_string!("get"))
-    .build();
+        let get = {
+            let app = app.clone();
+            move |query: JsString, bindings| {
+                get(query.to_std_string_escaped(), bindings, context, &mut app.borrow_mut()).unwrap()
+            }
+        }.into_js_function_unsafe(context);
 
-    let query = boa_engine::object::FunctionObjectBuilder::new(
-        context.realm(),
-        boa_engine::NativeFunction::from_copy_closure({
-            let app = Rc::downgrade(&app).as_ptr();
-            move |_this, args, ctx| query(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
-        }),
-    )
-    .name(js_string!("query"))
-    .build();
+        let query = {
+            let app = app.clone();
+            move |query: JsString, bindings| {
+                query_(query.to_std_string_escaped(), bindings, context, &mut app.borrow_mut()).unwrap()
+            }
+        }.into_js_function_unsafe(context);
 
-    Ok((
-        js_string!("db"),
-        Module::synthetic(
-            // Make sure to list all exports beforehand.
-            &[
-                js_string!("execute"),
-                js_string!("get"),
-                js_string!("query"),
-            ],
-            // The initializer is evaluated every time a module imports this synthetic module,
-            // so we avoid creating duplicate objects by capturing and cloning them instead.
-            boa_engine::module::SyntheticModuleInitializer::from_copy_closure_with_captures(
-                |module, (execute, get, query), _| {
-                    module.set_export(&js_string!("execute"), execute.clone().into())?;
-                    module.set_export(&js_string!("get"), get.clone().into())?;
-                    module.set_export(&js_string!("query"), query.clone().into())?;
+        let module = [
+            (js_string!("execute"), execute),
+            (js_string!("get"), get),
+            (js_string!("query"), query),
+        ].into_js_module(context);
 
-                    Ok(())
-                },
-                (execute, get, query),
-            ),
-            None,
-            context,
-        ),
-    ))
+        Ok((js_string!("db"), module))
+    }
 }

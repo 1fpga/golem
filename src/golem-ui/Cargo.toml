@@ -73,4 +73,4 @@ tempdir = "0.3.7"
 default = ["platform_de10"]
 # Support for the DE10-Nano board.
 platform_de10 = ["de10-nano", "golem-core"]
-
+platform_desktop = []

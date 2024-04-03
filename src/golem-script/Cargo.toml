@@ -6,12 +6,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-boa_engine = "0.18.0"
-boa_gc = "0.18.0"
-boa_macros = "0.18.0"
-boa_runtime = "0.18.0"
+boa_engine = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_gc = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 diesel = { version = "2.1.5", features = ["sqlite"] }
 golem-core = { path = "../golem-core" }
-golem-ui = { path = "../golem-ui" }
+golem-ui = { path = "../golem-ui", default-features = false }
 rustc-hash = "1.1.0"
 tracing = "0.1.40"
+
+[features]
+platform_de10 = ["golem-ui/platform_de10"]

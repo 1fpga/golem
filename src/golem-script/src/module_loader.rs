@@ -1,15 +1,16 @@
-use boa_engine::module::{ModuleLoader, Referrer};
-use boa_engine::{js_string, Context, JsError, JsNativeError, JsResult, JsString, Module, Source};
-use boa_gc::GcRefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+
+use boa_engine::{Context, js_string, JsError, JsNativeError, JsResult, JsString, Module, Source};
+use boa_engine::module::{ModuleLoader, Referrer};
+use boa_gc::GcRefCell;
 
 /// A module loader that also understands "free-standing" modules and
 /// special resolution.
 pub struct GolemModuleLoader {
     root: PathBuf,
     named_module_map: GcRefCell<HashMap<JsString, Module>>,
-    module_map: GcRefCell<HashMap<PathBuf, Module>>,
+    cache: GcRefCell<HashMap<PathBuf, Module>>,
 }
 
 impl GolemModuleLoader {
@@ -19,7 +20,7 @@ impl GolemModuleLoader {
         Self {
             root,
             named_module_map: GcRefCell::default(),
-            module_map: GcRefCell::default(),
+            cache: GcRefCell::default(),
         }
     }
 
@@ -37,20 +38,20 @@ impl GolemModuleLoader {
     /// Inserts a new module onto the module map.
     #[inline]
     pub fn insert(&self, path: PathBuf, module: Module) {
-        self.module_map.borrow_mut().insert(path, module);
+        self.cache.borrow_mut().insert(path, module);
     }
 
     /// Gets a module from its original path.
     #[inline]
     pub fn get(&self, path: &PathBuf) -> Option<Module> {
-        self.module_map.borrow().get(path).cloned()
+        self.cache.borrow().get(path).cloned()
     }
 }
 
 impl ModuleLoader for GolemModuleLoader {
     fn load_imported_module(
         &self,
-        _referrer: Referrer,
+        referrer: Referrer,
         specifier: JsString,
         finish_load: Box<dyn FnOnce(JsResult<Module>, &mut Context)>,
         context: &mut Context,
@@ -65,6 +66,10 @@ impl ModuleLoader for GolemModuleLoader {
             let path = specifier
                 .to_std_string()
                 .map_err(|err| JsNativeError::typ().with_message(err.to_string()))?;
+            let path = boa_interop::loaders::predicate::predicates::path_resolver(
+                self.root.clone(),
+            )(referrer.path(), js_string!(path))?
+                .to_std_string_escaped();
             let short_path = Path::new(&path);
             let path = self.root.join(short_path);
             let path = path.canonicalize().map_err(|err| {
@@ -78,6 +83,7 @@ impl ModuleLoader for GolemModuleLoader {
             if let Some(module) = self.get(&path) {
                 return Ok(module);
             }
+
             let source = Source::from_filepath(&path).map_err(|err| {
                 JsNativeError::typ()
                     .with_message(format!("could not open file `{}`", short_path.display()))

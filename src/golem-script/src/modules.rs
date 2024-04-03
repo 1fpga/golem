@@ -1,7 +1,9 @@
-use crate::module_loader::GolemModuleLoader;
-use boa_engine::JsResult;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use boa_engine::JsResult;
+
+use crate::module_loader::GolemModuleLoader;
 
 mod golem;
 

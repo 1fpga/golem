@@ -1,25 +1,7 @@
-import * as core from "golem/core";
 import * as db from "golem/db";
 import * as ui from "golem/ui";
 
-function start_game(game_id) {
-    console.log(game_id);
-    const db_game = db.get("SELECT * FROM games WHERE id = ?", [game_id]);
-    const db_core = db.get("SELECT * from cores WHERE id = ?", [db_game.core_id]);
-
-    const g = db_game;
-    const c = db_core;
-
-    if (!g || !c) {
-        ui.alert("Game not found", `Could not find the game with id ${game_id} or a core for it.`);
-        return;
-    }
-
-    core.run({
-        core: c.path,
-        game: g.path,
-    })
-}
+import {games_menu} from "./games.mjs";
 
 function test_menu() {
     const [action, id] = ui.menu({
@@ -59,7 +41,7 @@ function main_menu() {
         back: false,
         items: [
             {label: "Games...", id: games_menu, marker: games_lbl},
-            {label: "Cores...", id: "cores", marker: cores_lbl},
+            {label: "Cores...", id: cores_menu, marker: cores_lbl},
             "---",
             {label: "Settings...", id: "settings"},
             {label: "Downloads...", id: "downloads"},
@@ -87,20 +69,11 @@ function main_menu() {
     return true;
 }
 
-function games_menu() {
-    const games = db.query("SELECT games.id as id, games.name as name, cores.system_slug as system FROM games LEFT JOIN cores ON games.core_id = cores.id");
-    const [action, id] = ui.menu({
-        title: "Games",
-        back: true,
-        items: games.map(game => ({label: game.name, id: game.id, marker: game.system})),
-    });
-    switch (action) {
-        case "back":
-            return;
-        default:
-            start_game(id);
+while (true) {
+    try {
+        main_menu();
+    } catch (e) {
+        console.error(e);
+        ui.alert("Error", e.message);
     }
-}
-
-while (main_menu()) {
 }

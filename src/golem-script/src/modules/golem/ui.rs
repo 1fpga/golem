@@ -1,16 +1,21 @@
-use crate::utils::JsVec;
-use boa_engine::object::builtins::JsArray;
+use std::cell::RefCell;
+use std::ops::DerefMut;
+use std::rc::Rc;
+
 use boa_engine::{
-    js_string, Context, Finalize, JsData, JsError, JsNativeError, JsResult, JsString, JsValue,
+    Context, Finalize, js_string, JsData, JsNativeError, JsResult, JsString, JsValue,
     Module, Trace,
 };
+use boa_engine::object::builtins::JsArray;
+use boa_interop::{IntoJsFunctionUnsafe, IntoJsModule};
 use boa_macros::TryFromJs;
-use golem_ui::application::menu::style::MenuReturn;
+
 use golem_ui::application::menu::{
-    text_menu, GolemMenuState, IntoTextMenuItem, TextMenuItem, TextMenuOptions,
+    GolemMenuState, IntoTextMenuItem, text_menu, TextMenuItem, TextMenuOptions,
 };
-use std::cell::RefCell;
-use std::rc::Rc;
+use golem_ui::application::menu::style::MenuReturn;
+
+use crate::utils::JsVec;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum MenuAction {
@@ -63,7 +68,7 @@ impl boa_engine::value::TryFromJs for MenuItem {
             _ => {
                 return Err(JsNativeError::typ()
                     .with_message("cannot convert value to a MenuItem")
-                    .into())
+                    .into());
             }
         };
 
@@ -114,23 +119,15 @@ impl<'a> IntoTextMenuItem<'a, MenuAction> for MenuItem {
 #[derive(Debug, Trace, Finalize, JsData, TryFromJs)]
 struct UiMenuOptions {
     title: String,
-    back: bool,
+    back: Option<bool>,
     items: JsVec<MenuItem>,
 }
 
 fn menu(
-    _this: &JsValue,
-    args: &[JsValue],
+    mut options: UiMenuOptions,
     ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
-) -> JsResult<JsValue> {
-    let Some(options) = args.get(0) else {
-        return Err(JsError::from_opaque(
-            js_string!("No options provided").into(),
-        ));
-    };
-
-    let mut options = options.try_js_into::<UiMenuOptions>(ctx)?;
+) -> JsValue {
     // Replace missing IDs by their index.
     for (i, item) in options.items.0.iter_mut().enumerate() {
         item.index = i;
@@ -139,7 +136,7 @@ fn menu(
     let mut state = GolemMenuState::default();
     loop {
         let menu_options: TextMenuOptions<MenuAction> = TextMenuOptions::default()
-            .with_back_menu(options.back)
+            .with_back_menu(options.back.unwrap_or(true))
             .with_state(Some(state));
 
         let (result, new_state) = text_menu(
@@ -153,22 +150,25 @@ fn menu(
         match result {
             MenuAction::Select(i) => {
                 let value: JsValue = options.items.0[i].id.clone();
-                return Ok(
-                    JsArray::from_iter([JsValue::from(js_string!("select")), value], ctx).into(),
-                );
+                return
+                    JsArray::from_iter([JsValue::from(js_string!("select")), value], ctx).into();
             }
             MenuAction::Details(i) => {
-                return Ok(JsArray::from_iter(
+                return JsArray::from_iter(
                     [JsValue::from(js_string!("details")), JsValue::new(i)],
                     ctx,
                 )
-                .into());
+                    .into();
             }
             MenuAction::Sort => {
-                return Ok(JsValue::from(js_string!("sort")));
+                return JsArray::from_iter([JsValue::from(js_string!("sort"))], ctx).into();
             }
             MenuAction::Back => {
-                return Ok(JsValue::from(js_string!("back")));
+                return JsArray::from_iter(
+                    [JsValue::from(js_string!("back"))],
+                    ctx,
+                )
+                    .into();
             }
             _ => {}
         }
@@ -176,64 +176,47 @@ fn menu(
 }
 
 fn alert(
-    _this: &JsValue,
-    args: &[JsValue],
-    ctx: &mut Context,
+    message: JsString,
+    title: Option<JsString>,
+    _ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
-) -> JsResult<JsValue> {
-    let title = args
-        .get(0)
-        .ok_or_else(|| JsError::from_opaque(js_string!("No title provided").into()))?;
-    let title = title.to_string(ctx)?.to_std_string().unwrap();
-    let message = args
-        .get(0)
-        .ok_or_else(|| JsError::from_opaque(js_string!("No message provided").into()))?;
-    let message = message.to_string(ctx)?.to_std_string().unwrap();
-    golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
+) {
+    // Swap title and message if title is specified.
+    let (message, title) = if let Some(t) = title {
+        (t.to_std_string_escaped(), message.to_std_string_escaped())
+    } else {
+        (message.to_std_string_escaped(), "".to_string())
+    };
 
-    Ok(JsValue::undefined())
+    golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
 }
 
 pub fn create_module(
     context: &mut Context,
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<(JsString, Module)> {
-    let menu = boa_engine::object::FunctionObjectBuilder::new(
-        context.realm(),
-        boa_engine::NativeFunction::from_copy_closure({
-            let app = Rc::downgrade(&app).as_ptr();
-            move |_this, args, ctx| menu(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
-        }),
-    )
-    .name(js_string!("menu"))
-    .build();
-    let alert = boa_engine::object::FunctionObjectBuilder::new(
-        context.realm(),
-        boa_engine::NativeFunction::from_copy_closure({
-            let app = Rc::downgrade(&app).as_ptr();
-            move |_this, args, ctx| alert(_this, args, ctx, unsafe { &mut (*app).borrow_mut() })
-        }),
-    )
-    .name(js_string!("menu"))
-    .build();
+    unsafe {
+        let menu = {
+            let app = app.clone();
+            move |options: UiMenuOptions, context: &mut Context| {
+                menu(options, context, app.borrow_mut().deref_mut())
+            }
+        }.into_js_function_unsafe(context);
 
-    Ok((
-        js_string!("ui"),
-        Module::synthetic(
-            // Make sure to list all exports beforehand.
-            &[js_string!("menu"), js_string!("alert")],
-            // The initializer is evaluated every time a module imports this synthetic module,
-            // so we avoid creating duplicate objects by capturing and cloning them instead.
-            boa_engine::module::SyntheticModuleInitializer::from_copy_closure_with_captures(
-                |module, fns, _| {
-                    module.set_export(&js_string!("menu"), fns.0.clone().into())?;
-                    module.set_export(&js_string!("alert"), fns.1.clone().into())?;
-                    Ok(())
-                },
-                (menu, alert),
-            ),
-            None,
-            context,
-        ),
-    ))
+        let alert = {
+            let app = app.clone();
+            move |title, message| {
+                alert(title, message, context, &mut app.borrow_mut());
+                JsValue::undefined()
+            }
+        }.into_js_function_unsafe(context);
+
+        Ok((
+            js_string!("ui"),
+            [
+                (js_string!("menu"), menu),
+                (js_string!("alert"), alert),
+            ].into_js_module(context),
+        ))
+    }
 }
