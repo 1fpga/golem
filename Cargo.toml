@@ -7,7 +7,7 @@ members = [
     "src/golem",
     "src/golem-core",
     "src/golem-db",
-    "src/golem-script",
+    "src/golem-script-host",
     "src/golem-ui",
     "src/junior",
     "src/mister-fpga",

@@ -14,12 +14,11 @@ mod module_loader;
 mod console;
 mod modules;
 
-mod utils;
-
 pub fn run(
     script: Option<&impl AsRef<Path>>,
-    app: golem_ui::application::GoLEmApp,
+    mut app: golem_ui::application::GoLEmApp,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    app.init_platform();
     let app = Rc::new(RefCell::new(app));
 
     let script_path = script.expect("No script provided").as_ref();

@@ -1,13 +1,15 @@
+use anyhow::anyhow;
+use thiserror::__private::AsDynError;
+
+use golem_db::models::GameOrder;
+
 use crate::application::coordinator::GameStartInfo;
+use crate::application::GoLEmApp;
+use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::menu::games::manage::manage_games;
 use crate::application::menu::style::MenuReturn;
-use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::show_error;
 use crate::application::panels::core_loop::run_core_loop;
-use crate::application::GoLEmApp;
-use anyhow::anyhow;
-use golem_db::models::GameOrder;
-use thiserror::__private::AsDynError;
 
 mod details;
 mod manage;
@@ -79,7 +81,7 @@ pub fn games_list(app: &mut GoLEmApp) {
             MenuAction::LoadGame(i) => {
                 let game = &mut all_games[i];
 
-                let (should_show_menu, core) = match app.coordinator_mut().launch_game(
+                let (should_show_menu, mut core) = match app.coordinator_mut().launch_game(
                     app,
                     GameStartInfo::default()
                         .with_maybe_core_id(game.core_id)
@@ -97,7 +99,7 @@ pub fn games_list(app: &mut GoLEmApp) {
                 };
 
                 // Run the core loop.
-                run_core_loop(app, core, should_show_menu);
+                run_core_loop(app, &mut core, should_show_menu);
             }
             MenuAction::ShowDetails(i) => {
                 let game = &mut all_games[i];

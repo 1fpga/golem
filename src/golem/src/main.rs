@@ -1,6 +1,4 @@
-use std::cell::RefCell;
 use std::path::PathBuf;
-use std::rc::Rc;
 
 use clap::Parser;
 use clap_verbosity_flag::{LogLevel, Verbosity};
@@ -66,7 +64,7 @@ fn main() {
     // Create the application and run it.
     let start = std::time::Instant::now();
     info!("Starting application...");
-    golem_script::run(opts.script.as_ref(), application::GoLEmApp::new()).expect("Failed to run script");
+    golem_script_host::run(opts.script.as_ref(), application::GoLEmApp::new()).expect("Failed to run script");
     let elapsed = start.elapsed();
     info!(?elapsed, "Done");
 }

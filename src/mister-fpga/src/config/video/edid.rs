@@ -1,12 +1,15 @@
-use crate::config::MisterConfig;
-use crate::fpga::user_io::SetVideoMode;
-use crate::fpga::Spi;
-use cyclone_v::memory::MemoryMapper;
-use strum::FromRepr;
-use tracing::{debug, info, trace, warn};
+#![allow(unused)]
 
 #[cfg(target_os = "linux")]
 use i2cdev::core::I2CDevice;
+use strum::FromRepr;
+use tracing::{debug, info, trace, warn};
+
+use cyclone_v::memory::MemoryMapper;
+
+use crate::config::MisterConfig;
+use crate::fpga::Spi;
+use crate::fpga::user_io::SetVideoMode;
 
 pub struct Edid {
     inner: [u8; 256],
@@ -398,27 +401,27 @@ impl DefaultVideoMode {
     pub fn v_param(&self) -> &'static [u32; 8] {
         #[rustfmt::skip]
         const V_PARAM_DEFAULT_MODES: [[u32; 8]; 19] = [
-            [ 1280, 110,  40, 220,  720,  5,  5, 20 ], //  0  1280x 720@60
-            [ 1024,  24, 136, 160,  768,  3,  6, 29 ], //  1  1024x 768@60
-            [  720,  16,  62,  60,  480,  9,  6, 30 ], //  2   720x 480@60
-            [  720,  12,  64,  68,  576,  5,  5, 39 ], //  3   720x 576@50
-            [ 1280,  48, 112, 248, 1024,  1,  3, 38 ], //  4  1280x1024@60
-            [  800,  40, 128,  88,  600,  1,  4, 23 ], //  5   800x 600@60
-            [  640,  16,  96,  48,  480, 10,  2, 33 ], //  6   640x 480@60
-            [ 1280, 440,  40, 220,  720,  5,  5, 20 ], //  7  1280x 720@50
-            [ 1920,  88,  44, 148, 1080,  4,  5, 36 ], //  8  1920x1080@60
-            [ 1920, 528,  44, 148, 1080,  4,  5, 36 ], //  9  1920x1080@50
-            [ 1366,  70, 143, 213,  768,  3,  3, 24 ], // 10  1366x 768@60
-            [ 1024,  40, 104, 144,  600,  1,  3, 18 ], // 11  1024x 600@60
-            [ 1920,  48,  32,  80, 1440,  2,  4, 38 ], // 12  1920x1440@60
-            [ 2048,  48,  32,  80, 1536,  2,  4, 38 ], // 13  2048x1536@60
-            [ 1280,  24,  16,  40, 1440,  3,  5, 33 ], // 14  2560x1440@60 (pr)
+            [1280, 110, 40, 220, 720, 5, 5, 20], //  0  1280x 720@60
+            [1024, 24, 136, 160, 768, 3, 6, 29], //  1  1024x 768@60
+            [720, 16, 62, 60, 480, 9, 6, 30], //  2   720x 480@60
+            [720, 12, 64, 68, 576, 5, 5, 39], //  3   720x 576@50
+            [1280, 48, 112, 248, 1024, 1, 3, 38], //  4  1280x1024@60
+            [800, 40, 128, 88, 600, 1, 4, 23], //  5   800x 600@60
+            [640, 16, 96, 48, 480, 10, 2, 33], //  6   640x 480@60
+            [1280, 440, 40, 220, 720, 5, 5, 20], //  7  1280x 720@50
+            [1920, 88, 44, 148, 1080, 4, 5, 36], //  8  1920x1080@60
+            [1920, 528, 44, 148, 1080, 4, 5, 36], //  9  1920x1080@50
+            [1366, 70, 143, 213, 768, 3, 3, 24], // 10  1366x 768@60
+            [1024, 40, 104, 144, 600, 1, 3, 18], // 11  1024x 600@60
+            [1920, 48, 32, 80, 1440, 2, 4, 38], // 12  1920x1440@60
+            [2048, 48, 32, 80, 1536, 2, 4, 38], // 13  2048x1536@60
+            [1280, 24, 16, 40, 1440, 3, 5, 33], // 14  2560x1440@60 (pr)
 
             // TV modes.
-            [  640,  30,  60,  70,  240,  4,  4, 14 ], // NTSC 15K
-            [  640,  16,  96,  48,  480,  8,  4, 33 ], // NTSC 31K
-            [  640,  30,  60,  70,  288,  6,  4, 14 ], //  PAL 15K
-            [  640,  16,  96,  48,  576,  2,  4, 42 ], //  PAL 31K
+            [640, 30, 60, 70, 240, 4, 4, 14], // NTSC 15K
+            [640, 16, 96, 48, 480, 8, 4, 33], // NTSC 31K
+            [640, 30, 60, 70, 288, 6, 4, 14], //  PAL 15K
+            [640, 16, 96, 48, 576, 2, 4, 42], //  PAL 31K
         ];
 
         V_PARAM_DEFAULT_MODES.get(*self as usize).unwrap()
@@ -446,8 +449,8 @@ impl DefaultVideoMode {
             12.587,  //  PAL 15K
             25.175,  //  PAL 31K
         ]
-        .get(*self as usize)
-        .unwrap()
+            .get(*self as usize)
+            .unwrap()
     }
 
     pub fn vic_mode(&self) -> u32 {
@@ -472,8 +475,8 @@ impl DefaultVideoMode {
             0, //  PAL 15K
             0, //  PAL 31K
         ]
-        .get(*self as usize)
-        .unwrap()
+            .get(*self as usize)
+            .unwrap()
     }
 }
 
@@ -505,25 +508,34 @@ impl From<DefaultVideoMode> for CustomVideoModeParam {
 pub struct CustomVideoModeParam {
     pub mode: u32, // 0
 
-    pub hact: u32, // 1
-    pub hfp: u32,  // 2
-    pub hs: u32,   // 3
+    pub hact: u32,
+    // 1
+    pub hfp: u32,
+    // 2
+    pub hs: u32,
+    // 3
     pub hbp: u32,  // 4
 
-    pub vact: u32, // 5
-    pub vfp: u32,  // 6
-    pub vs: u32,   // 7
+    pub vact: u32,
+    // 5
+    pub vfp: u32,
+    // 6
+    pub vs: u32,
+    // 7
     pub vbp: u32,  // 8
 
     pub pll: [u32; 12], // 9-20
 
     // These are polarity for hsync and vsync.
     // Not sure why hs and vs cannot be 2-complement (and thus `i32`).
-    pub hpol: u32, // 21
+    pub hpol: u32,
+    // 21
     pub vpol: u32, // 22
 
-    pub vic: u32, // 23
-    pub rb: u32,  // 24
+    pub vic: u32,
+    // 23
+    pub rb: u32,
+    // 24
     pub pr: u32,  // 25
 }
 
@@ -717,9 +729,9 @@ fn parse_4k_hdmi_edid() {
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 93 \
         "
-        .replace(" ", ""),
+            .replace(" ", ""),
     )
-    .unwrap();
+        .unwrap();
 
     let vmode = parse_edid_vmode_(&MisterConfig::new_defaults(), &edid).unwrap();
     assert_eq!(vmode.param.hact, 3840);

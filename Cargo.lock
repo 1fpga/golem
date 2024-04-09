@@ -2139,7 +2139,7 @@ dependencies = [
  "fixed-map",
  "golem-core",
  "golem-db",
- "golem-script",
+ "golem-script-host",
  "golem-ui",
  "hex",
  "humansize",
@@ -2202,7 +2202,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "golem-script"
+name = "golem-script-host"
 version = "0.1.0"
 dependencies = [
  "boa_engine",

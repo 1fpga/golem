@@ -1,5 +1,4 @@
 use std::cell::RefCell;
-use std::ops::DerefMut;
 use std::rc::Rc;
 
 use boa_engine::{
@@ -10,12 +9,7 @@ use boa_engine::object::builtins::JsArray;
 use boa_interop::{IntoJsFunctionUnsafe, IntoJsModule};
 use boa_macros::TryFromJs;
 
-use golem_ui::application::menu::{
-    GolemMenuState, IntoTextMenuItem, text_menu, TextMenuItem, TextMenuOptions,
-};
-use golem_ui::application::menu::style::MenuReturn;
-
-use crate::utils::JsVec;
+use golem_ui::application::menu;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum MenuAction {
@@ -26,7 +20,7 @@ enum MenuAction {
     Back,
 }
 
-impl MenuReturn for MenuAction {
+impl menu::style::MenuReturn for MenuAction {
     fn back() -> Option<Self> {
         Some(MenuAction::Back)
     }
@@ -44,7 +38,7 @@ impl MenuReturn for MenuAction {
 }
 
 #[derive(Debug, Trace, Finalize, JsData)]
-pub struct MenuItem {
+pub struct TextMenuItem {
     label: String,
     marker: Option<String>,
     selectable: bool,
@@ -52,7 +46,7 @@ pub struct MenuItem {
     index: usize,
 }
 
-impl boa_engine::value::TryFromJs for MenuItem {
+impl boa_engine::value::TryFromJs for TextMenuItem {
     fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let object = match value {
             JsValue::Object(o) => o,
@@ -101,12 +95,12 @@ impl boa_engine::value::TryFromJs for MenuItem {
     }
 }
 
-impl<'a> IntoTextMenuItem<'a, MenuAction> for MenuItem {
-    fn to_menu_item(&'a self) -> TextMenuItem<'a, MenuAction> {
+impl<'a> menu::IntoTextMenuItem<'a, MenuAction> for TextMenuItem {
+    fn to_menu_item(&'a self) -> menu::TextMenuItem<'a, MenuAction> {
         if self.label.is_empty() || self.label.chars().all(|c| c == '-') {
-            TextMenuItem::separator()
+            menu::TextMenuItem::separator()
         } else {
-            TextMenuItem::navigation_item(
+            menu::TextMenuItem::navigation_item(
                 self.label.as_str(),
                 self.marker.as_ref().map(|m| m.as_str()).unwrap_or_default(),
                 MenuAction::Select(self.index),
@@ -115,77 +109,67 @@ impl<'a> IntoTextMenuItem<'a, MenuAction> for MenuItem {
     }
 }
 
-/// Custom host-defined struct that has some state, and can be shared between JavaScript and rust.
+/// Menu options being passed to [`text_menu`].
 #[derive(Debug, Trace, Finalize, JsData, TryFromJs)]
 struct UiMenuOptions {
     title: String,
     back: Option<bool>,
-    items: JsVec<MenuItem>,
+    items: Vec<TextMenuItem>,
 }
 
-fn menu(
+fn text_menu_(
     mut options: UiMenuOptions,
-    ctx: &mut Context,
+    context: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
-) -> JsValue {
-    // Replace missing IDs by their index.
-    for (i, item) in options.items.0.iter_mut().enumerate() {
+) -> JsArray {
+    for (i, item) in options.items.iter_mut().enumerate() {
         item.index = i;
     }
 
-    let mut state = GolemMenuState::default();
+    let mut state = menu::GolemMenuState::default();
     loop {
-        let menu_options: TextMenuOptions<MenuAction> = TextMenuOptions::default()
+        let menu_options = menu::TextMenuOptions::default()
             .with_back_menu(options.back.unwrap_or(true))
             .with_state(Some(state));
 
-        let (result, new_state) = text_menu(
+        let (result, new_state) = menu::text_menu(
             app,
             &options.title,
-            options.items.0.as_slice(),
+            options.items.as_slice(),
             menu_options,
         );
         state = new_state;
 
         match result {
             MenuAction::Select(i) => {
-                let value: JsValue = options.items.0[i].id.clone();
-                return
-                    JsArray::from_iter([JsValue::from(js_string!("select")), value], ctx).into();
+                return JsArray::from_iter([js_string!("select").into(), options.items[i].id.clone()], context);
             }
             MenuAction::Details(i) => {
-                return JsArray::from_iter(
-                    [JsValue::from(js_string!("details")), JsValue::new(i)],
-                    ctx,
-                )
-                    .into();
+                let value: JsValue = options.items[i].id.clone();
+                return JsArray::from_iter([js_string!("details").into(), value], context);
             }
             MenuAction::Sort => {
-                return JsArray::from_iter([JsValue::from(js_string!("sort"))], ctx).into();
+                return JsArray::from_iter([js_string!("sort").into()], context);
             }
             MenuAction::Back => {
-                return JsArray::from_iter(
-                    [JsValue::from(js_string!("back"))],
-                    ctx,
-                )
-                    .into();
+                return JsArray::from_iter([js_string!("back").into()], context);
             }
             _ => {}
         }
     }
 }
 
-fn alert(
-    message: JsString,
-    title: Option<JsString>,
+fn alert_(
+    message: String,
+    title: Option<String>,
     _ctx: &mut Context,
     app: &mut golem_ui::application::GoLEmApp,
 ) {
     // Swap title and message if title is specified.
     let (message, title) = if let Some(t) = title {
-        (t.to_std_string_escaped(), message.to_std_string_escaped())
+        (t, message)
     } else {
-        (message.to_std_string_escaped(), "".to_string())
+        (message, "".to_string())
     };
 
     golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
@@ -196,25 +180,24 @@ pub fn create_module(
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<(JsString, Module)> {
     unsafe {
-        let menu = {
+        let text_menu = {
             let app = app.clone();
             move |options: UiMenuOptions, context: &mut Context| {
-                menu(options, context, app.borrow_mut().deref_mut())
+                text_menu_(options, context, &mut app.borrow_mut())
             }
         }.into_js_function_unsafe(context);
 
         let alert = {
             let app = app.clone();
-            move |title, message| {
-                alert(title, message, context, &mut app.borrow_mut());
-                JsValue::undefined()
+            move |message, title, context: &mut Context| {
+                alert_(message, title, context, &mut app.borrow_mut())
             }
         }.into_js_function_unsafe(context);
 
         Ok((
             js_string!("ui"),
             [
-                (js_string!("menu"), menu),
+                (js_string!("textMenu"), text_menu),
                 (js_string!("alert"), alert),
             ].into_js_module(context),
         ))

@@ -1,12 +1,15 @@
+use std::time::Instant;
+
+use sdl3::event::Event;
+use tracing::{debug, error, info, trace};
+
+use golem_core::GolemCore;
+
 use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
-use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
+use crate::input::shortcut::Shortcut;
 use crate::platform::GoLEmPlatform;
-use golem_core::GolemCore;
-use sdl3::event::Event;
-use std::time::Instant;
-use tracing::{debug, error, info, trace};
 
 pub mod menu;
 
@@ -20,7 +23,7 @@ fn commands_(app: &mut GoLEmApp, core: &GolemCore) -> Vec<(ShortcutCommand, Shor
         .collect::<Vec<_>>()
 }
 
-fn core_loop(app: &mut GoLEmApp, mut core: GolemCore) {
+fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
     let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
@@ -102,7 +105,7 @@ fn core_loop(app: &mut GoLEmApp, mut core: GolemCore) {
                 inputs.clear();
                 update_commands = true;
 
-                match command.execute(app, &mut core) {
+                match command.execute(app, core) {
                     CommandResult::Ok => {}
                     CommandResult::Err(err) => {
                         error!("Error executing command: {}", err);
@@ -160,7 +163,7 @@ fn core_loop(app: &mut GoLEmApp, mut core: GolemCore) {
 }
 
 /// Run the core loop and send events to the core.
-pub fn run_core_loop(app: &mut GoLEmApp, mut core: GolemCore, should_show_menu: bool) {
+pub fn run_core_loop(app: &mut GoLEmApp, core: &mut GolemCore, should_show_menu: bool) {
     let mut should_run_loop = true;
     debug!("Starting core loop...");
 
@@ -169,7 +172,7 @@ pub fn run_core_loop(app: &mut GoLEmApp, mut core: GolemCore, should_show_menu: 
     if !should_show_menu {
         app.platform_mut().core_manager_mut().hide_menu();
     } else {
-        should_run_loop = !menu::core_menu(app, &mut core);
+        should_run_loop = !menu::core_menu(app, core);
     }
 
     if should_run_loop {

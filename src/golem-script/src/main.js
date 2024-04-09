@@ -1,3 +1,4 @@
+// The root file being executed by Golem by default.
 import * as db from "golem/db";
 import * as ui from "golem/ui";
 
@@ -30,8 +31,8 @@ function test_menu() {
 }
 
 function main_menu() {
-    const nb_games = db.query("SELECT COUNT(*) as count FROM games")?.[0]?.count;
-    const nb_cores = db.query("SELECT COUNT(*) as count FROM cores")?.[0]?.count;
+    const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")?.count;
+    const nb_cores = db.queryOne("SELECT COUNT(*) as count FROM cores")?.count;
 
     const games_lbl = nb_games > 0 ? `(${nb_games})` : "";
     const cores_lbl = nb_cores > 0 ? `(${nb_cores})` : "";
@@ -77,3 +78,5 @@ while (true) {
         ui.alert("Error", e.message);
     }
 }
+
+

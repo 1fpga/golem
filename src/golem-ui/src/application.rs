@@ -1,19 +1,22 @@
+use std::sync::{Arc, Mutex};
+
+use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::Drawable;
+use embedded_graphics::pixelcolor::BinaryColor;
+use sdl3::event::Event;
+use sdl3::gamepad::Gamepad;
+use sdl3::joystick::Joystick;
+use tracing::{info, warn};
+
+use golem_db::Connection;
+
 use crate::application::coordinator::Coordinator;
-use crate::application::menu::main_menu;
 use crate::application::toolbar::Toolbar;
+use crate::data::paths;
 use crate::data::settings::Settings;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::platform::{GoLEmPlatform, WindowManager};
-use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::Drawable;
-use golem_db::Connection;
-use sdl3::event::Event;
-use sdl3::gamepad::Gamepad;
-use sdl3::joystick::Joystick;
-use std::sync::{Arc, Mutex};
-use tracing::{info, warn};
 
 pub mod menu;
 
@@ -22,8 +25,6 @@ mod toolbar;
 mod widgets;
 
 pub mod coordinator;
-
-use crate::data::paths;
 
 pub struct GoLEmApp {
     toolbar: Toolbar,
@@ -86,11 +87,8 @@ impl GoLEmApp {
         &self.settings
     }
 
-    pub fn run(&mut self) {
+    pub fn init_platform(&mut self) {
         self.platform.init();
-
-        // Run the main menu.
-        main_menu(self);
     }
 
     pub fn main_buffer(&mut self) -> &mut DrawBuffer<BinaryColor> {
