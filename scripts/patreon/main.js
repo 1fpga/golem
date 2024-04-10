@@ -88,7 +88,8 @@ async function main() {
     const PLEDGES = await client.fetchPledges(campaign_id);
     console.error(`Found ${PLEDGES.length} pledges.`);
 
-    const output = {};
+    const tiers = {};
+    const patrons = {};
 
     for (let pledge of PLEDGES) {
         let user = pledge.relationships.patron.data;
@@ -101,13 +102,14 @@ async function main() {
             client.fetchReward(reward.id)
         ]);
         let user_name = user_data.attributes.full_name;
-        let reward_tier = reward_data.attributes.title || "member";
+        let reward_tier = reward_data.attributes.title;
+        tiers[reward_data.attributes.amount] = reward_tier;
 
-        output[reward_tier] = output[reward_tier] || [];
-        output[reward_tier].push(`${user_name.trim()} (${since})`);
+        patrons[reward_tier] = patrons[reward_tier] || [];
+        patrons[reward_tier].push(`${user_name.trim()} (${since})`);
     }
 
-    console.log(JSON.stringify(output, null, 4));
+    console.log(JSON.stringify({tiers, patrons}, null, 4));
 }
 
 main().then(() => {
