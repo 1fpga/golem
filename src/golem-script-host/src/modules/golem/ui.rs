@@ -175,12 +175,30 @@ fn alert_(
     golem_ui::application::panels::alert::alert(&mut app, &title, &message, &["OK"]);
 }
 
+fn qr_code_(
+    url: String,
+    message: String,
+    title: Option<String>,
+    ContextData(host_defined): ContextData<HostData>,
+) {
+    // Swap title and message if title is specified.
+    let (message, title) = if let Some(t) = title {
+        (t, message)
+    } else {
+        (message, "".to_string())
+    };
+
+    let mut app = host_defined.app_mut();
+    golem_ui::application::panels::qrcode::qrcode_alert(&mut app, &title, &message, &url);
+}
+
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
         js_string!("ui"),
         [
-            (js_string!("textMenu"), text_menu_.into_js_function_copied(context)),
             (js_string!("alert"), alert_.into_js_function_copied(context)),
+            (js_string!("qrCode"), qr_code_.into_js_function_copied(context)),
+            (js_string!("textMenu"), text_menu_.into_js_function_copied(context)),
         ].into_js_module(context),
     ))
 }

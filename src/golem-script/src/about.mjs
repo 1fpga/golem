@@ -23,17 +23,28 @@ export function about() {
     }
 
     while (true) {
-        let [action] = ui.textMenu({
+        let [action, id] = ui.textMenu({
             title: "About",
             back: true,
             items: [
+                {label: "< Join our Patron server... >", marker: "...", id: 0},
+                "-",
                 "Thanks to our patrons",
                 ...patronsList,
             ]
         });
 
-        if (action === "back") {
-            return;
+        switch (action) {
+            case "select":
+                if (id === 0) {
+                    ui.qrCode(
+                        "https://patreon.com/golem_fpga/join",
+                        "Use this code to join our Patreon community",
+                    );
+                }
+                break;
+            case "back":
+                return;
         }
     }
 }

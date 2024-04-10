@@ -40,4 +40,10 @@ declare module "golem/ui" {
      */
     export function alert(message: string): void;
     export function alert(title: string, message: string): void;
+
+    /**
+     * Show a message to the user, with a QR Code.
+     */
+    export function qrCode(url: string, message: string): void;
+    export function qrCode(url: string, title: string, message: string): void;
 }
