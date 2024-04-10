@@ -1,22 +1,20 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use boa_engine::{
     Context, Finalize, js_string, JsData, JsNativeError, JsResult, JsString, JsValue,
     Module, Trace,
 };
 use boa_engine::object::builtins::JsArray;
-use boa_interop::{IntoJsFunctionUnsafe, IntoJsModule};
+use boa_interop::{HostDefined, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::TryFromJs;
 
 use golem_ui::application::menu;
+
+use crate::HostDefinedStruct;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum MenuAction {
     Select(usize),
     Details(usize),
     Sort,
-    Idle,
     Back,
 }
 
@@ -119,9 +117,10 @@ struct UiMenuOptions {
 
 fn text_menu_(
     mut options: UiMenuOptions,
+    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
     context: &mut Context,
-    app: &mut golem_ui::application::GoLEmApp,
 ) -> JsArray {
+    let mut app = host_defined.app_mut();
     for (i, item) in options.items.iter_mut().enumerate() {
         item.index = i;
     }
@@ -133,37 +132,35 @@ fn text_menu_(
             .with_state(Some(state));
 
         let (result, new_state) = menu::text_menu(
-            app,
+            &mut app,
             &options.title,
             options.items.as_slice(),
             menu_options,
         );
         state = new_state;
 
-        match result {
+        return match result {
             MenuAction::Select(i) => {
-                return JsArray::from_iter([js_string!("select").into(), options.items[i].id.clone()], context);
+                JsArray::from_iter([js_string!("select").into(), options.items[i].id.clone()], context)
             }
             MenuAction::Details(i) => {
                 let value: JsValue = options.items[i].id.clone();
-                return JsArray::from_iter([js_string!("details").into(), value], context);
+                JsArray::from_iter([js_string!("details").into(), value], context)
             }
             MenuAction::Sort => {
-                return JsArray::from_iter([js_string!("sort").into()], context);
+                JsArray::from_iter([js_string!("sort").into()], context)
             }
             MenuAction::Back => {
-                return JsArray::from_iter([js_string!("back").into()], context);
+                JsArray::from_iter([js_string!("back").into()], context)
             }
-            _ => {}
-        }
+        };
     }
 }
 
 fn alert_(
     message: String,
     title: Option<String>,
-    _ctx: &mut Context,
-    app: &mut golem_ui::application::GoLEmApp,
+    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
 ) {
     // Swap title and message if title is specified.
     let (message, title) = if let Some(t) = title {
@@ -172,34 +169,16 @@ fn alert_(
         (message, "".to_string())
     };
 
-    golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
+    let mut app = host_defined.app_mut();
+    golem_ui::application::panels::alert::alert(&mut app, &title, &message, &["OK"]);
 }
 
-pub fn create_module(
-    context: &mut Context,
-    app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
-) -> JsResult<(JsString, Module)> {
-    unsafe {
-        let text_menu = {
-            let app = app.clone();
-            move |options: UiMenuOptions, context: &mut Context| {
-                text_menu_(options, context, &mut app.borrow_mut())
-            }
-        }.into_js_function_unsafe(context);
-
-        let alert = {
-            let app = app.clone();
-            move |message, title, context: &mut Context| {
-                alert_(message, title, context, &mut app.borrow_mut())
-            }
-        }.into_js_function_unsafe(context);
-
-        Ok((
-            js_string!("ui"),
-            [
-                (js_string!("textMenu"), text_menu),
-                (js_string!("alert"), alert),
-            ].into_js_module(context),
-        ))
-    }
+pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
+    Ok((
+        js_string!("ui"),
+        [
+            (js_string!("textMenu"), text_menu_.into_js_function_copied(context)),
+            (js_string!("alert"), alert_.into_js_function_copied(context)),
+        ].into_js_module(context),
+    ))
 }

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use boa_engine::{Context, js_string, JsError, JsNativeError, JsResult, JsString, Module, Source};
 use boa_engine::module::{ModuleLoader, Referrer};
@@ -63,35 +63,20 @@ impl ModuleLoader for GolemModuleLoader {
             }
 
             // Otherwise, try to resolve using the file system.
-            let path = specifier
-                .to_std_string()
-                .map_err(|err| JsNativeError::typ().with_message(err.to_string()))?;
-            let path = boa_interop::loaders::predicate::predicates::path_resolver(
-                self.root.clone(),
-            )(referrer.path(), js_string!(path))?
-                .to_std_string_escaped();
-            let short_path = Path::new(&path);
-            let path = self.root.join(short_path);
-            let path = path.canonicalize().map_err(|err| {
-                JsNativeError::typ()
-                    .with_message(format!(
-                        "could not canonicalize path `{}`",
-                        short_path.display()
-                    ))
-                    .with_cause(JsError::from_opaque(js_string!(err.to_string()).into()))
-            })?;
+            let path = boa_engine::module::resolve_module_specifier(
+                Some(&self.root), &specifier, referrer.path(), context)?;
             if let Some(module) = self.get(&path) {
                 return Ok(module);
             }
 
             let source = Source::from_filepath(&path).map_err(|err| {
                 JsNativeError::typ()
-                    .with_message(format!("could not open file `{}`", short_path.display()))
+                    .with_message(format!("could not open file `{}`", specifier.to_std_string_escaped()))
                     .with_cause(JsError::from_opaque(js_string!(err.to_string()).into()))
             })?;
             let module = Module::parse(source, None, context).map_err(|err| {
                 JsNativeError::syntax()
-                    .with_message(format!("could not parse module `{}`", short_path.display()))
+                    .with_message(format!("could not parse module `{}`", specifier.to_std_string_escaped()))
                     .with_cause(err)
             })?;
             self.insert(path, module.clone());

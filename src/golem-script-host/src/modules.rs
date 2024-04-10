@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::rc::Rc;
 
 use boa_engine::JsResult;
@@ -10,8 +9,7 @@ mod golem;
 pub(super) fn register_modules(
     loader: Rc<GolemModuleLoader>,
     context: &mut boa_engine::Context,
-    app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<()> {
-    golem::register_modules(loader, context, app)?;
+    golem::register_modules(loader, context)?;
     Ok(())
 }

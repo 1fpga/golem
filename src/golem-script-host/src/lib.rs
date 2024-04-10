@@ -1,10 +1,11 @@
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 use std::path::Path;
 use std::rc::Rc;
 
 use boa_engine::{Context, js_string, JsError, Module, Source};
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::property::Attribute;
+use boa_macros::{Finalize, JsData, Trace};
 use tracing::{error, info};
 
 use crate::module_loader::GolemModuleLoader;
@@ -14,12 +15,34 @@ mod module_loader;
 mod console;
 mod modules;
 
+/// The application type for HostDefined information.
+#[derive(Clone, Trace, Finalize, JsData)]
+pub(crate) struct HostDefinedStruct {
+    /// The platform for the application.
+    #[unsafe_ignore_trace]
+    app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
+}
+
+impl std::fmt::Debug for HostDefinedStruct {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HostDefinedStruct")
+            .finish()
+    }
+}
+
+impl HostDefinedStruct {
+    pub fn app_mut(&self) -> RefMut<golem_ui::application::GoLEmApp> {
+        self.app.borrow_mut()
+    }
+}
+
 pub fn run(
     script: Option<&impl AsRef<Path>>,
     mut app: golem_ui::application::GoLEmApp,
 ) -> Result<(), Box<dyn std::error::Error>> {
     app.init_platform();
     let app = Rc::new(RefCell::new(app));
+    let host_defined = HostDefinedStruct { app: app.clone() };
 
     let script_path = script.expect("No script provided").as_ref();
     let dir = script_path.parent().unwrap();
@@ -28,6 +51,9 @@ pub fn run(
 
     // Instantiate the execution context
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
+    let realm = context.realm().clone();
+
+    realm.host_defined_mut().insert(host_defined);
 
     // Initialize the Console object.
     let console = console::Console::init(&mut context);
@@ -41,7 +67,7 @@ pub fn run(
         )
         .expect("The console object shouldn't exist yet");
 
-    modules::register_modules(loader.clone(), &mut context, app.clone())?;
+    modules::register_modules(loader.clone(), &mut context)?;
 
     let source = Source::from_reader(std::fs::File::open(script_path)?, Some(script_path));
 

@@ -1,18 +1,17 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use boa_engine::{
     Context, js_string, JsError, JsObject, JsResult, JsString, JsValue, Module,
 };
 use boa_engine::object::builtins::JsArray;
 use boa_engine::value::TryFromJs;
-use boa_interop::{IntoJsFunctionUnsafe, IntoJsModule};
+use boa_interop::{HostDefined, IntoJsFunctionCopied, IntoJsModule};
 use diesel::{Connection, SqliteConnection};
 use diesel::connection::LoadConnection;
 use diesel::deserialize::FromSql;
 use diesel::query_builder::{BoxedSqlQuery, SqlQuery};
 use diesel::row::{Field, Row};
 use diesel::sqlite::{Sqlite, SqliteType, SqliteValue};
+
+use crate::HostDefinedStruct;
 
 /// A value in a column in SQL, compatible with JavaScript.
 pub enum SqlValue {
@@ -156,10 +155,11 @@ fn create_row_object<'a>(
 fn query_(
     query: String,
     bindings: Option<Vec<SqlValue>>,
+    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
     ctx: &mut Context,
-    app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
     let query = build_query_(query, bindings, ctx)?;
+    let app = host_defined.app_mut();
 
     let db = app.database();
     let mut db = db.lock().unwrap();
@@ -179,13 +179,14 @@ fn query_(
     Ok(result.into())
 }
 
-fn execute(
+fn execute_(
     query: String,
     bindings: Option<Vec<SqlValue>>,
+    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
     ctx: &mut Context,
-    app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
     let query = build_query_(query, bindings, ctx)?;
+    let app = host_defined.app_mut();
 
     let db = app.database();
     let mut db = db.lock().unwrap();
@@ -196,13 +197,14 @@ fn execute(
     Ok(JsValue::from(result))
 }
 
-fn get(
+fn query_one_(
     query: String,
     bindings: Option<Vec<SqlValue>>,
+    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
     ctx: &mut Context,
-    app: &mut golem_ui::application::GoLEmApp,
 ) -> JsResult<JsValue> {
     let query = build_query_(query, bindings, ctx)?;
+    let app = host_defined.app_mut();
 
     let db = app.database();
     let mut db = db.lock().unwrap();
@@ -226,36 +228,13 @@ fn get(
 
 pub fn create_module(
     context: &mut Context,
-    app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 ) -> JsResult<(JsString, Module)> {
-    unsafe {
-        let execute = {
-            let app = app.clone();
-            move |query, bindings, context: &mut Context| {
-                execute(query, bindings, context, &mut app.borrow_mut()).unwrap()
-            }
-        }.into_js_function_unsafe(context);
+    let module = [
+        (js_string!("execute"), execute_.into_js_function_copied(context)),
+        (js_string!("queryOne"), query_one_.into_js_function_copied(context)),
+        (js_string!("query"), query_.into_js_function_copied(context)),
+    ].into_js_module(context);
 
-        let query_one = {
-            let app = app.clone();
-            move |query, bindings, context: &mut Context| {
-                get(query, bindings, context, &mut app.borrow_mut()).unwrap()
-            }
-        }.into_js_function_unsafe(context);
-
-        let query = {
-            let app = app.clone();
-            move |query, bindings, context: &mut Context| {
-                query_(query, bindings, context, &mut app.borrow_mut()).unwrap()
-            }
-        }.into_js_function_unsafe(context);
-
-        let module = [
-            (js_string!("execute"), execute),
-            (js_string!("queryOne"), query_one),
-            (js_string!("query"), query),
-        ].into_js_module(context);
-
-        Ok((js_string!("db"), module))
-    }
+    Ok((js_string!("db"), module))
 }
+

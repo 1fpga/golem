@@ -35,6 +35,8 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
 
     let mut should_check_savestates = core.save_states().map(|x| !x.is_empty()).unwrap_or(false);
 
+    let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+
     // This is a special loop that forwards everything to the core,
     // except for the menu button(s).
     app.event_loop(move |app, state| {
@@ -48,7 +50,7 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
             }
 
             // Every 500 frames, show FPS.
-            if tracing::enabled!(tracing::Level::TRACE) && i % 500 == 0 {
+            if trace_enabled && i % 500 == 0 {
                 trace!("Settings update took {:?}", now.elapsed());
                 trace!(
                     "FPS: {}",

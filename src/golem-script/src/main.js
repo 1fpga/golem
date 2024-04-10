@@ -3,9 +3,11 @@ import * as db from "golem/db";
 import * as ui from "golem/ui";
 
 import {games_menu} from "./games.mjs";
+import {cores_menu} from "./cores.mjs";
+import {about} from "./about.mjs"
 
 function test_menu() {
-    const [action, id] = ui.menu({
+    const [action, id] = ui.textMenu({
         title: "Test",
         back: true,
         items: [
@@ -37,7 +39,7 @@ function main_menu() {
     const games_lbl = nb_games > 0 ? `(${nb_games})` : "";
     const cores_lbl = nb_cores > 0 ? `(${nb_cores})` : "";
 
-    const [action, id] = ui.menu({
+    const [action, id] = ui.textMenu({
         title: "",
         back: false,
         items: [
@@ -47,8 +49,7 @@ function main_menu() {
             {label: "Settings...", id: "settings"},
             {label: "Downloads...", id: "downloads"},
             "---",
-            {label: "About", id: "about"},
-            {label: "Test", id: test_menu},
+            {label: "About", id: about},
             "---",
             {label: "Exit", id: "exit"},
         ],

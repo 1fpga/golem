@@ -34,4 +34,10 @@ declare module "golem/ui" {
      * @param options The options for the textual menu.
      */
     export function textMenu(options: TextMenuOptions): [string, any?];
+
+    /**
+     * Show an alert to the user, with OK.
+     */
+    export function alert(message: string): void;
+    export function alert(title: string, message: string): void;
 }
