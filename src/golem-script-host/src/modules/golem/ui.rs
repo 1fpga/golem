@@ -97,12 +97,14 @@ impl<'a> menu::IntoTextMenuItem<'a, MenuAction> for TextMenuItem {
     fn to_menu_item(&'a self) -> menu::TextMenuItem<'a, MenuAction> {
         if self.label.is_empty() || self.label.chars().all(|c| c == '-') {
             menu::TextMenuItem::separator()
-        } else {
+        } else if self.selectable {
             menu::TextMenuItem::navigation_item(
                 self.label.as_str(),
                 self.marker.as_ref().map(|m| m.as_str()).unwrap_or_default(),
                 MenuAction::Select(self.index),
             )
+        } else {
+            menu::TextMenuItem::unselectable(self.label.as_str())
         }
     }
 }

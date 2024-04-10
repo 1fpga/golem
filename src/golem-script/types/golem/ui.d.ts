@@ -24,7 +24,7 @@ declare module "golem/ui" {
     export interface TextMenuOptions {
         title: String,
         back?: boolean,
-        items: TextMenuItem[],
+        items: (string | TextMenuItem)[],
     }
 
     /**

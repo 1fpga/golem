@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 boa_engine = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_gc = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
-boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script", features = ["json"] }
 boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 diesel = { version = "2.1.5", features = ["sqlite"] }
