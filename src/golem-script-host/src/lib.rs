@@ -17,20 +17,20 @@ mod modules;
 
 /// The application type for HostDefined information.
 #[derive(Clone, Trace, Finalize, JsData)]
-pub(crate) struct HostDefinedStruct {
+pub(crate) struct HostData {
     /// The platform for the application.
     #[unsafe_ignore_trace]
     app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
 }
 
-impl std::fmt::Debug for HostDefinedStruct {
+impl std::fmt::Debug for HostData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("HostDefinedStruct")
+        f.debug_struct("HostData")
             .finish()
     }
 }
 
-impl HostDefinedStruct {
+impl HostData {
     pub fn app_mut(&self) -> RefMut<golem_ui::application::GoLEmApp> {
         self.app.borrow_mut()
     }
@@ -42,7 +42,7 @@ pub fn run(
 ) -> Result<(), Box<dyn std::error::Error>> {
     app.init_platform();
     let app = Rc::new(RefCell::new(app));
-    let host_defined = HostDefinedStruct { app: app.clone() };
+    let host_defined = HostData { app: app.clone() };
 
     let script_path = script.expect("No script provided").as_ref();
     let dir = script_path.parent().unwrap();
@@ -51,9 +51,7 @@ pub fn run(
 
     // Instantiate the execution context
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
-    let realm = context.realm().clone();
-
-    realm.host_defined_mut().insert(host_defined);
+    context.insert_data(host_defined);
 
     // Initialize the Console object.
     let console = console::Console::init(&mut context);

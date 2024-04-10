@@ -2,14 +2,14 @@ use std::path::PathBuf;
 
 use boa_engine::{Context, js_string, JsError, JsResult, JsString, JsValue, Module};
 use boa_engine::value::TryFromJs;
-use boa_interop::{HostDefined, IntoJsFunctionCopied, IntoJsModule};
+use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::{Finalize, JsData, Trace};
 
 use golem_core::runner::CoreLauncher;
 use golem_ui::application::panels::core_loop::run_core_loop;
 use golem_ui::platform::GoLEmPlatform;
 
-use crate::HostDefinedStruct;
+use crate::HostData;
 
 /// The core type from JavaScript.
 #[derive(Debug, Trace, Finalize, JsData)]
@@ -70,10 +70,7 @@ struct RunOptions {
     autoloop: Option<bool>,
 }
 
-fn run_(
-    options: RunOptions,
-    HostDefined(app): HostDefined<HostDefinedStruct>,
-) {
+fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
     let mut app = app.app_mut();
     let mut core_options = match &options.core {
         CoreType::Path { path } => CoreLauncher::rbf(PathBuf::from(path.to_std_string_escaped())),

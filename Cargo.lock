@@ -132,9 +132,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.81"
+version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0952808a6c2afd1aa8947271f3a60f1a6763c7b912d210184c5149b5cf147247"
+checksum = "f538837af36e6f6a9be0faa67f9a314f8119e4e4b5867c6ab40ed60360142519"
 
 [[package]]
 name = "arbitrary"
@@ -364,7 +364,7 @@ dependencies = [
 [[package]]
 name = "boa_ast"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "bitflags 2.5.0",
  "boa_interner",
@@ -377,7 +377,7 @@ dependencies = [
 [[package]]
 name = "boa_engine"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "arrayvec",
  "bitflags 2.5.0",
@@ -421,7 +421,7 @@ dependencies = [
 [[package]]
 name = "boa_gc"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "boa_macros",
  "boa_profiler",
@@ -432,7 +432,7 @@ dependencies = [
 [[package]]
 name = "boa_interner"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "boa_gc",
  "boa_macros",
@@ -447,7 +447,7 @@ dependencies = [
 [[package]]
 name = "boa_interop"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "boa_engine",
  "boa_gc",
@@ -458,7 +458,7 @@ dependencies = [
 [[package]]
 name = "boa_macros"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -469,7 +469,7 @@ dependencies = [
 [[package]]
 name = "boa_parser"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "bitflags 2.5.0",
  "boa_ast",
@@ -487,12 +487,12 @@ dependencies = [
 [[package]]
 name = "boa_profiler"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 
 [[package]]
 name = "boa_runtime"
 version = "0.18.0"
-source = "git+https://github.com/hansl/boa.git?branch=golem-script#dc74c2ba02239f0fa8539d510b01fa856a0239d9"
+source = "git+https://github.com/hansl/boa.git?branch=golem-script#cd284fa2e920c478e7648f7a6f9f8edc616489d7"
 dependencies = [
  "boa_engine",
  "boa_gc",
@@ -613,9 +613,9 @@ dependencies = [
 
 [[package]]
 name = "cfg-expr"
-version = "0.15.7"
+version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa50868b64a9a6fda9d593ce778849ea8715cd2a3d2cc17ffdb4a2f2f2f1961d"
+checksum = "d067ad48b8650848b989a59a86c6c36a995d02d2bf778d45c3c5d57bc2718f02"
 dependencies = [
  "smallvec 1.13.2",
  "target-lexicon",
@@ -1272,9 +1272,9 @@ checksum = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
 
 [[package]]
 name = "encoding_rs"
-version = "0.8.33"
+version = "0.8.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7268b386296a025e474d5140678f75d6de9493ae55a5d709eeb9dd08149945e1"
+checksum = "b45de904aa0b010bce2ab45264d0631681847fa7b6f2eaa7dab7619943bc4f59"
 dependencies = [
  "cfg-if",
 ]
@@ -1351,9 +1351,9 @@ dependencies = [
 
 [[package]]
 name = "figment"
-version = "0.10.15"
+version = "0.10.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7270677e7067213e04f323b55084586195f18308cd7546cfac9f873344ccceb6"
+checksum = "fdefe49ed1057d124dc81a0681c30dd07de56ad96e32adc7b64e8f28eaab31c4"
 dependencies = [
  "atomic 0.6.0",
  "pear",
@@ -3720,9 +3720,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
+checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
 dependencies = [
  "proc-macro2",
 ]
@@ -4873,9 +4873,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.34"
+version = "0.3.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8248b6521bb14bc45b4067159b9b6ad792e2d6d754d6c41fb50e29fefe38749"
+checksum = "ef89ece63debf11bc32d1ed8d078ac870cbeb44da02afb02a9ff135ae7ca0582"
 dependencies = [
  "deranged",
  "itoa",
@@ -4897,9 +4897,9 @@ checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.17"
+version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ba3a3ef41e6672a2f0f001392bb5dcd3ff0a9992d618ca761a11c3121547774"
+checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
 dependencies = [
  "num-conv",
  "time-core",

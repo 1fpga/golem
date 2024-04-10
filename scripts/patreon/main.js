@@ -88,8 +88,17 @@ async function main() {
     const PLEDGES = await client.fetchPledges(campaign_id);
     console.error(`Found ${PLEDGES.length} pledges.`);
 
-    const tiers = {};
-    const patrons = {};
+    const tiers = {
+        0: "Contributors",
+    };
+    const patrons = {
+        "Contributors": [
+            "hansl (from the beginning)",
+        ],
+    };
+
+    // The list of names to be replaced by aliases.
+    const replace_patrons_names = {};
 
     for (let pledge of PLEDGES) {
         let user = pledge.relationships.patron.data;
@@ -102,6 +111,10 @@ async function main() {
             client.fetchReward(reward.id)
         ]);
         let user_name = user_data.attributes.full_name;
+        if (replace_patrons_names[user_name]) {
+            user_name = replace_patrons_names[user_name];
+        }
+
         let reward_tier = reward_data.attributes.title;
         tiers[reward_data.attributes.amount] = reward_tier;
 

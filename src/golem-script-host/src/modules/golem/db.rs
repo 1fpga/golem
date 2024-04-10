@@ -3,7 +3,7 @@ use boa_engine::{
 };
 use boa_engine::object::builtins::JsArray;
 use boa_engine::value::TryFromJs;
-use boa_interop::{HostDefined, IntoJsFunctionCopied, IntoJsModule};
+use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use diesel::{Connection, SqliteConnection};
 use diesel::connection::LoadConnection;
 use diesel::deserialize::FromSql;
@@ -11,7 +11,7 @@ use diesel::query_builder::{BoxedSqlQuery, SqlQuery};
 use diesel::row::{Field, Row};
 use diesel::sqlite::{Sqlite, SqliteType, SqliteValue};
 
-use crate::HostDefinedStruct;
+use crate::HostData;
 
 /// A value in a column in SQL, compatible with JavaScript.
 pub enum SqlValue {
@@ -155,7 +155,7 @@ fn create_row_object<'a>(
 fn query_(
     query: String,
     bindings: Option<Vec<SqlValue>>,
-    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
+    ContextData(host_defined): ContextData<HostData>,
     ctx: &mut Context,
 ) -> JsResult<JsValue> {
     let query = build_query_(query, bindings, ctx)?;
@@ -182,7 +182,7 @@ fn query_(
 fn execute_(
     query: String,
     bindings: Option<Vec<SqlValue>>,
-    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
+    ContextData(host_defined): ContextData<HostData>,
     ctx: &mut Context,
 ) -> JsResult<JsValue> {
     let query = build_query_(query, bindings, ctx)?;
@@ -200,7 +200,7 @@ fn execute_(
 fn query_one_(
     query: String,
     bindings: Option<Vec<SqlValue>>,
-    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
+    ContextData(host_defined): ContextData<HostData>,
     ctx: &mut Context,
 ) -> JsResult<JsValue> {
     let query = build_query_(query, bindings, ctx)?;

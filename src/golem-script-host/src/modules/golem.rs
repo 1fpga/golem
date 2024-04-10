@@ -18,5 +18,6 @@ pub(super) fn register_modules(
         loader.insert_named(module_name, module);
     }
 
+
     Ok(())
 }

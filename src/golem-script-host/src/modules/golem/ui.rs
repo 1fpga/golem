@@ -3,12 +3,12 @@ use boa_engine::{
     Module, Trace,
 };
 use boa_engine::object::builtins::JsArray;
-use boa_interop::{HostDefined, IntoJsFunctionCopied, IntoJsModule};
+use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::TryFromJs;
 
 use golem_ui::application::menu;
 
-use crate::HostDefinedStruct;
+use crate::HostData;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum MenuAction {
@@ -117,7 +117,7 @@ struct UiMenuOptions {
 
 fn text_menu_(
     mut options: UiMenuOptions,
-    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
+    ContextData(host_defined): ContextData<HostData>,
     context: &mut Context,
 ) -> JsArray {
     let mut app = host_defined.app_mut();
@@ -160,7 +160,7 @@ fn text_menu_(
 fn alert_(
     message: String,
     title: Option<String>,
-    HostDefined(host_defined): HostDefined<HostDefinedStruct>,
+    ContextData(host_defined): ContextData<HostData>,
 ) {
     // Swap title and message if title is specified.
     let (message, title) = if let Some(t) = title {
