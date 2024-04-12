@@ -7,7 +7,7 @@ use mister_fpga::config::edid::DefaultVideoMode;
 use crate::HostData;
 
 fn set_mode_(mode: String, ContextData(data): ContextData<HostData>) -> JsResult<()> {
-    let mut app = data.app_mut();
+    let app = data.app_mut();
     let core_manager = app.platform_mut().core_manager_mut();
     let mut golem_core = core_manager.get_current_core().unwrap();
     let core = golem_core.as_mister_mut().unwrap();

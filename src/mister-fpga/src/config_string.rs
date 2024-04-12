@@ -56,7 +56,7 @@ impl FromStr for FileExtension {
 
         let bytes = s.as_bytes();
         Ok(Self([
-            bytes.get(0).copied().unwrap_or(b' '),
+            bytes.first().copied().unwrap_or(b' '),
             bytes.get(1).copied().unwrap_or(b' '),
             bytes.get(2).copied().unwrap_or(b' '),
         ]))

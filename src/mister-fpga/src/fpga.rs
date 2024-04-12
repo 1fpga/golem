@@ -143,7 +143,7 @@ impl MisterFpga {
     pub fn init() -> Result<Self, &'static str> {
         unsafe {
             if INITIALIZED.load(Ordering::Relaxed) {
-                const MSG: &'static str = "FPGA already initialized. This is an error.";
+                const MSG: &str = "FPGA already initialized. This is an error.";
                 error!("{}", MSG);
                 return Err(MSG);
             }

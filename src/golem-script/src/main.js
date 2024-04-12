@@ -21,36 +21,20 @@ function main_menu() {
     const games_lbl = nb_games > 0 ? `(${nb_games})` : "";
     const cores_lbl = nb_cores > 0 ? `(${nb_cores})` : "";
 
-    const [action, id] = ui.textMenu({
+    ui.textMenu({
         title: "",
-        back: false,
         items: [
-            {label: "Games...", id: games_menu, marker: games_lbl},
-            {label: "Cores...", id: cores_menu, marker: cores_lbl},
+            {label: "Games...", select: games_menu, marker: games_lbl},
+            {label: "Cores...", select: cores_menu, marker: cores_lbl},
             "---",
-            {label: "Settings...", id: settings_menu},
-            {label: "Downloads...", id: downloads_menu},
+            {label: "Settings...", select: settings_menu},
+            {label: "Downloads...", select: downloads_menu},
             "---",
-            {label: "About", id: about},
+            {label: "About", select: about},
             "---",
-            {label: "Exit", id: "exit"},
+            {label: "Exit", select: () => true},
         ],
     });
-
-    switch (action) {
-        case "select":
-            switch (id) {
-                case "exit":
-                    return false;
-                default:
-                    id();
-            }
-            break;
-        case "back":
-            throw new Error("Should never back here");
-    }
-
-    return true;
 }
 
 while (true) {
@@ -61,5 +45,3 @@ while (true) {
         ui.alert("Error", e.message);
     }
 }
-
-

@@ -14,17 +14,19 @@ declare module "golem/ui" {
     export interface TextMenuItem {
         label: string,
         marker?: string,
-        selectable?: boolean,
-        id?: any,
+        select?: () => any,
+        details?: () => any,
     }
 
     /**
      * Represents the options for the `textMenu` function.
      */
     export interface TextMenuOptions {
-        title: String,
-        back?: boolean,
+        title?: String,
         items: (string | TextMenuItem)[],
+        back?: () => any,
+        sort?: () => Partial<TextMenuOptions>,
+        sort_label?: string,
     }
 
     /**

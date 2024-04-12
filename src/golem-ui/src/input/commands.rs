@@ -6,8 +6,8 @@ use image::GenericImageView;
 use sdl3::keyboard::Scancode;
 use tracing::{debug, error, info, warn};
 
-use crate::application::GoLEmApp;
 use crate::application::panels::core_loop::menu::core_menu;
+use crate::application::GoLEmApp;
 use crate::data::paths;
 use crate::input::shortcut::Shortcut;
 

@@ -5,9 +5,9 @@ use std::path::{Path, PathBuf};
 use embedded_graphics::mono_font::ascii;
 use regex::Regex;
 
-use crate::application::GoLEmApp;
-use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::menu::style::MenuReturn;
+use crate::application::menu::{text_menu, TextMenuOptions};
+use crate::application::GoLEmApp;
 
 const MAXIMUM_TITLE_PATH_LENGTH: usize = 38;
 

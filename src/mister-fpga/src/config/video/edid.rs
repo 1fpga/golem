@@ -262,7 +262,7 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
             warn!("EDID: Using safe vmode {}.", n);
 
             let mode = DefaultVideoMode::from_repr(n).unwrap();
-            v.param = mode.clone().into();
+            v.param = mode.into();
             v.param.vic = mode.vic_mode();
             v.f_pix = mode.f_pix();
         } else if frame_rate > 60. {
@@ -728,7 +728,7 @@ fn parse_4k_hdmi_edid() {
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 93 \
         "
-        .replace(" ", ""),
+        .replace(' ', ""),
     )
     .unwrap();
 

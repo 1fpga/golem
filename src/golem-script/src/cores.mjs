@@ -8,36 +8,31 @@ function start_core(db_core) {
     });
 }
 
+function select_core_file() {
+    let f = ui.selectFile("Select Core",
+        "/media/fat",
+        {
+            dirFirst: false,
+            extensions: ["rbf"],
+        });
+
+    core.run({
+        core: {type: "path", path: f},
+    });
+}
+
 export function cores_menu() {
     const cores = db.query("SELECT * FROM cores");
-    const [action, id] = ui.textMenu({
+    ui.textMenu({
         title: "Cores",
-        back: true,
+        back: () => true,
         items: [
-            ...cores.map(core => ({label: core.name, id: core})),
+            ...cores.map(core => ({
+                label: core.name,
+                select: () => start_core(core),
+            })),
             "-",
-            {label: "Select File...", id: "select"},
+            {label: "Select File...", select: select_core_file},
         ],
     });
-
-    switch (action) {
-        case "select":
-            if (id === "select") {
-                let f = ui.selectFile("Select Core",
-                    "/media/fat",
-                    {
-                        dirFirst: false,
-                        extensions: ["rbf"],
-                    });
-
-                core.run({
-                    core: {type: "path", path: f},
-                });
-            } else {
-                start_core(id);
-            }
-            return;
-        case "back":
-            return;
-    }
 }

@@ -23,7 +23,7 @@ fn core_settings(input: Input) -> Result<settings::Settings> {
     // TODO: add a proper parser for the settings line.
     map(
         recognize(many0(satisfy(|c| c != ';' && c != '-' && c != 'C'))),
-        |s: Input| settings::Settings::from_str(*s.fragment()).unwrap(),
+        |s: Input| settings::Settings::from_str(s.fragment()).unwrap(),
     )(input)
 }
 
@@ -153,10 +153,7 @@ fn file<'a>(line: u8) -> impl FnMut(Input<'a>) -> Result<'a, ConfigMenu> {
                     .map(|i| FileExtension::from_str(i.fragment()).unwrap())
                     .collect();
                 let marker = extensions.iter().map(|x| x.to_string()).join(",");
-                let address = match address {
-                    Some(a) => Some(FpgaRamMemoryAddress::try_from(a).unwrap()),
-                    None => None,
-                };
+                let address = address.map(|a| FpgaRamMemoryAddress::try_from(a).unwrap());
                 let index = match index {
                     Some(i) => i as u8,
                     None => line,
@@ -218,8 +215,8 @@ fn sd_card(input: Input) -> Result<ConfigMenu> {
 
 fn single_char_bit_index(input: Input) -> Result<u8> {
     map(one_of("0123456789ABCDEFGHIJKLMNOPQRSTUV"), |i| match i {
-        '0'..='9' => i as u8 - '0' as u8,
-        'A'..='V' => i as u8 - 'A' as u8 + 10,
+        '0'..='9' => i as u8 - b'0',
+        'A'..='V' => i as u8 - b'A' + 10,
         _ => unreachable!(),
     })(input)
 }

@@ -52,7 +52,7 @@ impl SpiCommand for FileExtension<'_> {
         // Extend to 4 characters with the dot.
         let ext: [u8; 4] = [
             b'.',
-            ext_bytes.get(0).copied().unwrap_or(0),
+            ext_bytes.first().copied().unwrap_or(0),
             ext_bytes.get(1).copied().unwrap_or(0),
             ext_bytes.get(2).copied().unwrap_or(0),
         ];

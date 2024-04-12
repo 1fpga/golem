@@ -90,7 +90,7 @@ struct RunOptions {
 }
 
 fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
-    let mut app = app.app_mut();
+    let app = app.app_mut();
     let mut core_options = match &options.core {
         CoreType::Path { path } => CoreLauncher::rbf(PathBuf::from(path.to_std_string_escaped())),
     };

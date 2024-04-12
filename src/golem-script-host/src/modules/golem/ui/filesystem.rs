@@ -62,12 +62,12 @@ pub fn select(
     ContextData(data): ContextData<HostData>,
     context: &mut Context,
 ) -> JsResult<JsValue> {
-    let mut app = data.app_mut();
+    let app = data.app_mut();
 
     options
         .try_into()
         .and_then(|options| {
-            select_file_path_menu(&mut app, &title, Path::new(&initial_dir), options)
+            select_file_path_menu(app, &title, Path::new(&initial_dir), options)
                 .map_err(|e| e.to_string())
         })
         .map(|path| path.map(|p| JsString::from(p.to_string_lossy().to_string())))

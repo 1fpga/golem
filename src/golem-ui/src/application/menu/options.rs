@@ -1,11 +1,13 @@
-use super::style::MenuReturn;
-use super::GolemMenuState;
 use embedded_graphics::mono_font::MonoFont;
+
+use super::GolemMenuState;
+use super::style::MenuReturn;
 
 #[derive(Clone)]
 pub struct TextMenuOptions<'a, R: MenuReturn + Copy> {
     pub(super) show_back_menu: bool,
     pub(super) back_label: Option<&'a str>,
+    pub(super) show_sort: Option<bool>,
     pub(super) sort_by: Option<&'a str>,
     pub(super) detail_label: Option<&'a str>,
     pub(super) state: Option<GolemMenuState<R>>,
@@ -21,6 +23,7 @@ impl<'a, R: MenuReturn + Copy> Default for TextMenuOptions<'a, R> {
     fn default() -> Self {
         Self {
             show_back_menu: true,
+            show_sort: Some(true),
             prefix: &[],
             suffix: &[],
             back_label: None,
@@ -48,6 +51,13 @@ impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
         }
     }
 
+    pub fn with_show_sort(self, show: bool) -> Self {
+        Self {
+            show_sort: Some(show),
+            ..self
+        }
+    }
+
     pub fn with_title_font(self, font: &'static MonoFont<'static>) -> Self {
         Self {
             title_font: Some(font),
@@ -65,6 +75,13 @@ impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
     pub fn with_sort(self, field: &'a str) -> Self {
         Self {
             sort_by: Some(field),
+            ..self
+        }
+    }
+
+    pub fn with_sort_opt(self, field: Option<&'a str>) -> Self {
+        Self {
+            sort_by: field,
             ..self
         }
     }

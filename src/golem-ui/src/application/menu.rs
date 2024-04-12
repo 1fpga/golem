@@ -1,38 +1,37 @@
-use crate::application::menu::style::OptionalMenuItem;
-use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
-use crate::application::widgets::controller::ControllerButton;
-use crate::application::widgets::menu::SizedMenu;
-use crate::application::widgets::opt::OptionalView;
-use crate::application::widgets::text::FontRendererView;
-use crate::application::widgets::EmptyView;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_layout::align::horizontal;
-use embedded_layout::layout::linear::{spacing, LinearLayout};
+use embedded_layout::layout::linear::{LinearLayout, spacing};
 use embedded_layout::object_chain::Chain;
 use embedded_layout::View;
-use embedded_menu::selection_indicator::style::Invert;
-use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, MenuItem, MenuState};
+use embedded_menu::selection_indicator::AnimatedPosition;
+use embedded_menu::selection_indicator::style::Invert;
 use sdl3::keyboard::Keycode;
 use tracing::info;
 use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
+
+pub use cores::cores_menu_panel;
+pub use item::*;
+pub use options::*;
+
+use crate::application::GoLEmApp;
+use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
+use crate::application::menu::style::OptionalMenuItem;
+use crate::application::widgets::controller::ControllerButton;
+use crate::application::widgets::EmptyView;
+use crate::application::widgets::menu::SizedMenu;
+use crate::application::widgets::opt::OptionalView;
+use crate::application::widgets::text::FontRendererView;
 
 pub mod cores;
 pub mod filesystem;
 pub mod games;
 pub mod item;
-pub mod main;
-pub mod style;
-pub use cores::cores_menu_panel;
-pub use item::*;
-pub use main::main_menu;
-
 pub mod options;
-use crate::application::GoLEmApp;
-pub use options::*;
+pub mod style;
 
 pub type GolemMenuState<R> = MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, Invert>;
 
@@ -42,7 +41,7 @@ fn bottom_bar_<'a>(
     sort_field: &'a str,
     show_details: bool,
     detail_label: Option<&'a str>,
-) -> impl embedded_layout::view_group::ViewGroup + 'a + Drawable<Color = BinaryColor> {
+) -> impl embedded_layout::view_group::ViewGroup + 'a + Drawable<Color=BinaryColor> {
     type Font = u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic;
 
     LinearLayout::horizontal(
@@ -90,8 +89,8 @@ fn bottom_bar_<'a>(
                 ),
             )),
     )
-    .with_spacing(spacing::FixedMargin(2))
-    .arrange()
+        .with_spacing(spacing::FixedMargin(2))
+        .arrange()
 }
 
 pub fn text_menu<'a, R: MenuReturn + Copy>(
@@ -103,6 +102,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let TextMenuOptions {
         show_back_menu,
         back_label,
+        show_sort,
         sort_by,
         state: mut menu_state,
         detail_label,
@@ -110,10 +110,10 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         prefix,
         suffix,
     } = options;
-    let show_back_button = R::back().is_some();
+    let show_back_button = R::back().is_some() && show_back_menu;
     let show_back = show_back_button && show_back_menu;
     let show_details = detail_label.is_some();
-    let show_sort = R::sort().is_some();
+    let show_sort = show_sort.unwrap_or(true) && R::sort().is_some();
     let display_area = app.main_buffer().bounding_box();
 
     let mut prefix_items = prefix
@@ -137,9 +137,9 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let bottom_area = Rectangle::new(
         display_area.top_left
             + Point::new(
-                0,
-                display_area.size.height as i32 - bottom_row.height as i32 + 1,
-            ),
+            0,
+            display_area.size.height as i32 - bottom_row.height as i32 + 1,
+        ),
         bottom_row,
     );
 
@@ -225,11 +225,11 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                     Point::new(0, 0),
                     Point::new(display_area.size.width as i32, 0),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
+                    .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
             ),
         )
-        .with_alignment(horizontal::Left)
-        .arrange();
+            .with_alignment(horizontal::Left)
+            .arrange();
 
         let (result, new_state) = app.event_loop(|app, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
@@ -261,11 +261,11 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                         SdlMenuAction::Back => return R::back().map(|b| (Some(b), menu.state())),
                         SdlMenuAction::Select(result) => return Some((Some(result), menu.state())),
                         SdlMenuAction::ChangeSort => {
-                            return R::sort().map(|r| (Some(r), menu.state()))
+                            return R::sort().map(|r| (Some(r), menu.state()));
                         }
                         SdlMenuAction::ShowOptions => match menu.selected_value() {
                             SdlMenuAction::Select(r) => {
-                                return r.into_details().map(|r| (Some(r), menu.state()))
+                                return r.into_details().map(|r| (Some(r), menu.state()));
                             }
                             _ => {}
                         },

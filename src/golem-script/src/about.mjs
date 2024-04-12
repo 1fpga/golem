@@ -17,34 +17,27 @@ export function about() {
             patronsList.push({label: tier, selectable: false});
             patronsList.push("-");
             for (let patron of patrons[tier]) {
-                patronsList.push({label: patron, selectable: true});
+                patronsList.push({label: patron, select: () => undefined});
             }
         }
     }
 
-    while (true) {
-        let [action, id] = ui.textMenu({
-            title: "About",
-            back: true,
-            items: [
-                {label: "< Join our Patron server... >", marker: "...", id: 0},
-                "-",
-                "Thanks to our patrons",
-                ...patronsList,
-            ]
-        });
-
-        switch (action) {
-            case "select":
-                if (id === 0) {
+    ui.textMenu({
+        title: "About",
+        back: () => true,
+        items: [
+            {
+                label: "< Join our Patron server... >", marker: "...", select: () => {
                     ui.qrCode(
                         "https://patreon.com/golem_fpga/join",
                         "Use this code to join our Patreon community",
                     );
+
                 }
-                break;
-            case "back":
-                return;
-        }
-    }
+            },
+            "-",
+            "Thanks to our patrons",
+            ...patronsList,
+        ]
+    });
 }

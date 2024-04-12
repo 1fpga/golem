@@ -1,12 +1,13 @@
-use std::cell::{RefCell, RefMut};
 use std::path::Path;
 use std::rc::Rc;
 
+use boa_engine::{Context, js_string, JsError, Module, Source};
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::property::Attribute;
-use boa_engine::{js_string, Context, JsError, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
 use tracing::{error, info};
+
+use golem_ui::application::GoLEmApp;
 
 use crate::module_loader::GolemModuleLoader;
 
@@ -19,8 +20,9 @@ mod modules;
 #[derive(Clone, Trace, Finalize, JsData)]
 pub(crate) struct HostData {
     /// The platform for the application.
+    // TODO: remove the pointer.
     #[unsafe_ignore_trace]
-    app: Rc<RefCell<golem_ui::application::GoLEmApp>>,
+    app: Rc<*mut GoLEmApp>,
 }
 
 impl std::fmt::Debug for HostData {
@@ -30,8 +32,8 @@ impl std::fmt::Debug for HostData {
 }
 
 impl HostData {
-    pub fn app_mut(&self) -> RefMut<golem_ui::application::GoLEmApp> {
-        self.app.borrow_mut()
+    pub fn app_mut(&self) -> &mut golem_ui::application::GoLEmApp {
+        unsafe { self.app.as_mut().unwrap() }
     }
 }
 
@@ -40,8 +42,8 @@ pub fn run(
     mut app: golem_ui::application::GoLEmApp,
 ) -> Result<(), Box<dyn std::error::Error>> {
     app.init_platform();
-    let app = Rc::new(RefCell::new(app));
-    let host_defined = HostData { app: app.clone() };
+    let app = Rc::new((&mut app) as *mut GoLEmApp);
+    let host_defined = HostData { app };
 
     let script_path = script.expect("No script provided").as_ref();
     let dir = script_path.parent().unwrap();
