@@ -1,53 +1,46 @@
 #![allow(dead_code)]
-use crate::application::menu::style::MenuReturn;
-use crate::application::menu::{text_menu, TextMenuOptions};
-use crate::application::GoLEmApp;
+
+use std::path::{Path, PathBuf};
+
 use embedded_graphics::mono_font::ascii;
 use regex::Regex;
-use std::path::{Path, PathBuf};
+
+use crate::application::GoLEmApp;
+use crate::application::menu::{text_menu, TextMenuOptions};
+use crate::application::menu::style::MenuReturn;
 
 const MAXIMUM_TITLE_PATH_LENGTH: usize = 38;
 
+#[derive(Debug, Default, Clone)]
 pub struct FilesystemMenuOptions {
     /// Allow the user to go to the parent of the initial directory.
-    allow_back: bool,
+    pub allow_back: Option<bool>,
 
     /// Show directories first.
-    dir_first: bool,
+    pub dir_first: Option<bool>,
 
     /// Show hidden files and directories.
-    show_hidden: bool,
+    pub show_hidden: Option<bool>,
 
     /// Show extensions on files.
-    show_extensions: bool,
+    pub show_extensions: Option<bool>,
 
     /// Select directory only (not files).
-    directory: bool,
+    pub directory: Option<bool>,
 
     /// File pattern to show.
-    pattern: Option<Regex>,
+    pub pattern: Option<Regex>,
 
     /// Extensions to show.
-    extensions: Option<Vec<String>>,
-}
-
-impl Default for FilesystemMenuOptions {
-    fn default() -> Self {
-        Self {
-            allow_back: false,
-            dir_first: true,
-            show_hidden: false,
-            show_extensions: true,
-            directory: false,
-            pattern: None,
-            extensions: None,
-        }
-    }
+    pub extensions: Option<Vec<String>>,
 }
 
 impl FilesystemMenuOptions {
     pub fn with_allow_back(self, allow_back: bool) -> Self {
-        Self { allow_back, ..self }
+        Self {
+            allow_back: Some(allow_back),
+            ..self
+        }
     }
 
     pub fn with_pattern(self, pattern: Regex) -> Self {
@@ -59,7 +52,7 @@ impl FilesystemMenuOptions {
 
     pub fn with_select_dir(self) -> Self {
         Self {
-            directory: true,
+            directory: Some(true),
             ..self
         }
     }
@@ -133,6 +126,12 @@ pub fn select_file_path_menu(
         pattern,
         extensions,
     } = options;
+
+    let show_hidden = show_hidden.unwrap_or(false);
+    let allow_back = allow_back.unwrap_or(true);
+    let dir_first = dir_first.unwrap_or(true);
+    let directory = directory.unwrap_or(false);
+    let show_extensions = show_extensions.unwrap_or(true);
 
     let mut path = initial.as_ref().to_path_buf();
 

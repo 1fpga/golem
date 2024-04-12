@@ -17,6 +17,8 @@ function start_game(game_id) {
     core.run({
         core: {type: "path", path: c.path},
         game: {type: "rom-path", path: g.path},
+        autoloop: true,
+        showmenu: false,
     })
 }
 

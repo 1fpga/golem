@@ -8,8 +8,8 @@ use tracing::{debug, info, trace, warn};
 use cyclone_v::memory::MemoryMapper;
 
 use crate::config::MisterConfig;
-use crate::fpga::Spi;
 use crate::fpga::user_io::SetVideoMode;
+use crate::fpga::Spi;
 
 pub struct Edid {
     inner: [u8; 256],
@@ -374,7 +374,7 @@ fn find_pll_par_(f_out: f64) -> Option<Pll> {
 
 #[derive(Debug, Clone, Copy, FromRepr)]
 #[repr(u8)]
-enum DefaultVideoMode {
+pub enum DefaultVideoMode {
     V1280x720r60 = 0,
     V1024x768r60,
     V720x480r60,
@@ -449,8 +449,8 @@ impl DefaultVideoMode {
             12.587,  //  PAL 15K
             25.175,  //  PAL 31K
         ]
-            .get(*self as usize)
-            .unwrap()
+        .get(*self as usize)
+        .unwrap()
     }
 
     pub fn vic_mode(&self) -> u32 {
@@ -475,8 +475,8 @@ impl DefaultVideoMode {
             0, //  PAL 15K
             0, //  PAL 31K
         ]
-            .get(*self as usize)
-            .unwrap()
+        .get(*self as usize)
+        .unwrap()
     }
 }
 
@@ -514,7 +514,7 @@ pub struct CustomVideoModeParam {
     // 2
     pub hs: u32,
     // 3
-    pub hbp: u32,  // 4
+    pub hbp: u32, // 4
 
     pub vact: u32,
     // 5
@@ -522,7 +522,7 @@ pub struct CustomVideoModeParam {
     // 6
     pub vs: u32,
     // 7
-    pub vbp: u32,  // 8
+    pub vbp: u32, // 8
 
     pub pll: [u32; 12], // 9-20
 
@@ -536,7 +536,7 @@ pub struct CustomVideoModeParam {
     // 23
     pub rb: u32,
     // 24
-    pub pr: u32,  // 25
+    pub pr: u32, // 25
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -550,7 +550,7 @@ pub struct CustomVideoMode {
 impl CustomVideoMode {
     pub fn send_to_core(
         &self,
-        options: &MisterConfig,
+        direct_video: bool,
         spi: &mut Spi<impl MemoryMapper>,
         is_menu: bool,
     ) -> Result<(), String> {
@@ -560,7 +560,7 @@ impl CustomVideoMode {
         // At this point in the process if all your options aren't processed you're
         // doing something wrong.
         // No need to have options passed to this function.
-        if options.direct_video() {
+        if direct_video {
             fixed.param.hfp = 6;
             fixed.param.hbp = 3;
             fixed.param.hact += self.param.hfp - fixed.param.hfp;
@@ -666,7 +666,6 @@ fn parse_custom_video_mode(video_mode: Option<&str>) -> CustomVideoMode {
 }
 
 pub fn select_video_mode(options: &MisterConfig) -> Result<VideoModeDef, String> {
-    eprintln!("0001 {}", options.direct_video());
     if options.direct_video() {
         let mode = match (options.menu_pal(), options.forced_scandoubler()) {
             (false, false) => DefaultVideoMode::Ntsc15K,
@@ -729,9 +728,9 @@ fn parse_4k_hdmi_edid() {
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 93 \
         "
-            .replace(" ", ""),
+        .replace(" ", ""),
     )
-        .unwrap();
+    .unwrap();
 
     let vmode = parse_edid_vmode_(&MisterConfig::new_defaults(), &edid).unwrap();
     assert_eq!(vmode.param.hact, 3840);

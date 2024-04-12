@@ -1,9 +1,15 @@
-use crate::config;
-use crate::config::{video, HdmiLimitedConfig, HdrConfig, MisterConfig, VgaMode};
 use glam::Mat4;
 use i2cdev::core::I2CDevice;
 use i2cdev::linux::LinuxI2CDevice;
 use tracing::{debug, error};
+
+use cyclone_v::memory::MemoryMapper;
+
+use crate::config;
+use crate::config::aspect::AspectRatio;
+use crate::config::edid::{CustomVideoMode, VideoModeDef};
+use crate::config::{video, HdmiLimitedConfig, HdrConfig, MisterConfig, VgaMode};
+use crate::fpga::Spi;
 
 mod video_mode;
 
@@ -406,42 +412,42 @@ fn hdmi_config_set_csc(device: &mut LinuxI2CDevice, options: &MisterConfig) -> R
 
     // Pass to HDMI, use 0xA0 to set a mode of [-2..2] per ADV7513 programming guide
     #[rustfmt::skip]
-    let csc_data: &[(u8, u8)] = &[
+        let csc_data: &[(u8, u8)] = &[
         // csc Coefficients, Channel A
         (0x18, if is_ypbpr { 0x86 } else { 0b10100000 | ((csc_int16[0] >> 8) & 0b00011111) as u8 }),
-        (0x19, if is_ypbpr { 0xDF } else { (csc_int16[0]     ) as u8 }),
+        (0x19, if is_ypbpr { 0xDF } else { (csc_int16[0]) as u8 }),
         (0x1A, if is_ypbpr { 0x1A } else { (csc_int16[1] >> 8) as u8 }),
-        (0x1B, if is_ypbpr { 0x3F } else { (csc_int16[1]     ) as u8 }),
+        (0x1B, if is_ypbpr { 0x3F } else { (csc_int16[1]) as u8 }),
         (0x1C, if is_ypbpr { 0x1E } else { (csc_int16[2] >> 8) as u8 }),
-        (0x1D, if is_ypbpr { 0xE2 } else { (csc_int16[2]     ) as u8 }),
+        (0x1D, if is_ypbpr { 0xE2 } else { (csc_int16[2]) as u8 }),
         (0x1E, if is_ypbpr { 0x07 } else { (csc_int16[3] >> 8) as u8 }),
-        (0x1F, if is_ypbpr { 0xE7 } else { (csc_int16[3]     ) as u8 }),
+        (0x1F, if is_ypbpr { 0xE7 } else { (csc_int16[3]) as u8 }),
 
         // csc Coefficients, Channel B
         (0x20, if is_ypbpr { 0x04 } else { (csc_int16[4] >> 8) as u8 }),
-        (0x21, if is_ypbpr { 0x1C } else { (csc_int16[4]     ) as u8 }),
+        (0x21, if is_ypbpr { 0x1C } else { (csc_int16[4]) as u8 }),
         (0x22, if is_ypbpr { 0x08 } else { (csc_int16[5] >> 8) as u8 }),
-        (0x23, if is_ypbpr { 0x11 } else { (csc_int16[5]     ) as u8 }),
+        (0x23, if is_ypbpr { 0x11 } else { (csc_int16[5]) as u8 }),
         (0x24, if is_ypbpr { 0x01 } else { (csc_int16[6] >> 8) as u8 }),
-        (0x25, if is_ypbpr { 0x91 } else { (csc_int16[6]     ) as u8 }),
+        (0x25, if is_ypbpr { 0x91 } else { (csc_int16[6]) as u8 }),
         (0x26, if is_ypbpr { 0x01 } else { (csc_int16[7] >> 8) as u8 }),
-        (0x27, if is_ypbpr { 0x00 } else { (csc_int16[7]     ) as u8 }),
+        (0x27, if is_ypbpr { 0x00 } else { (csc_int16[7]) as u8 }),
 
         // csc Coefficients, Channel C
-        (0x28, if is_ypbpr { 0x1D } else { (csc_int16[ 8] >> 8) as u8 }),
-        (0x29, if is_ypbpr { 0xAE } else { (csc_int16[ 8]     ) as u8 }),
-        (0x2A, if is_ypbpr { 0x1B } else { (csc_int16[ 9] >> 8) as u8 }),
-        (0x2B, if is_ypbpr { 0x73 } else { (csc_int16[ 9]     ) as u8 }),
+        (0x28, if is_ypbpr { 0x1D } else { (csc_int16[8] >> 8) as u8 }),
+        (0x29, if is_ypbpr { 0xAE } else { (csc_int16[8]) as u8 }),
+        (0x2A, if is_ypbpr { 0x1B } else { (csc_int16[9] >> 8) as u8 }),
+        (0x2B, if is_ypbpr { 0x73 } else { (csc_int16[9]) as u8 }),
         (0x2C, if is_ypbpr { 0x06 } else { (csc_int16[10] >> 8) as u8 }),
-        (0x2D, if is_ypbpr { 0xDF } else { (csc_int16[10]     ) as u8 }),
+        (0x2D, if is_ypbpr { 0xDF } else { (csc_int16[10]) as u8 }),
         (0x2E, if is_ypbpr { 0x07 } else { (csc_int16[11] >> 8) as u8 }),
-        (0x2F, if is_ypbpr { 0xE7 } else { (csc_int16[11]     ) as u8 }),
+        (0x2F, if is_ypbpr { 0xE7 } else { (csc_int16[11]) as u8 }),
 
         // HDMI limited clamps
         (0xC0, (clip_min >> 8) as u8),
-        (0xC1, (clip_min     ) as u8),
+        (0xC1, (clip_min) as u8),
         (0xC2, (clip_max >> 8) as u8),
-        (0xC3, (clip_max     ) as u8),
+        (0xC3, (clip_max) as u8),
     ];
 
     send_to_i2c(device, csc_data)?;
@@ -461,7 +467,7 @@ fn hdmi_config_set_hdr(device: &mut LinuxI2CDevice, options: &MisterConfig) -> R
     // 25% of the image to be 1000cd/m2)
     // If HDR == 1, use HLG
     #[rustfmt::skip]
-    let hdr_data: &mut [u8] = &mut [
+        let hdr_data: &mut [u8] = &mut [
         0x87,
         0x01,
         0x1a,
@@ -562,4 +568,24 @@ pub fn init_mode(
     is_menu: bool,
 ) -> Result<(), String> {
     video_mode::init_mode(options, core.spi_mut(), is_menu)
+}
+
+pub fn select_mode(
+    mode: CustomVideoMode,
+    direct_video: bool,
+    aspect_ratio_1: Option<AspectRatio>,
+    aspect_ratio_2: Option<AspectRatio>,
+    spi: &mut Spi<impl MemoryMapper>,
+    is_menu: bool,
+) -> Result<(), String> {
+    video_mode::select_mode(
+        mode,
+        Default::default(),
+        0,
+        direct_video,
+        aspect_ratio_1,
+        aspect_ratio_2,
+        spi,
+        is_menu,
+    )
 }

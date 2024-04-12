@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use boa_engine::{Context, js_string, JsError, JsNativeError, JsResult, JsString, Module, Source};
 use boa_engine::module::{ModuleLoader, Referrer};
+use boa_engine::{js_string, Context, JsError, JsNativeError, JsResult, JsString, Module, Source};
 use boa_gc::GcRefCell;
 
 /// A module loader that also understands "free-standing" modules and
@@ -64,19 +64,29 @@ impl ModuleLoader for GolemModuleLoader {
 
             // Otherwise, try to resolve using the file system.
             let path = boa_engine::module::resolve_module_specifier(
-                Some(&self.root), &specifier, referrer.path(), context)?;
+                Some(&self.root),
+                &specifier,
+                referrer.path(),
+                context,
+            )?;
             if let Some(module) = self.get(&path) {
                 return Ok(module);
             }
 
             let source = Source::from_filepath(&path).map_err(|err| {
                 JsNativeError::typ()
-                    .with_message(format!("could not open file `{}`", specifier.to_std_string_escaped()))
+                    .with_message(format!(
+                        "could not open file `{}`",
+                        specifier.to_std_string_escaped()
+                    ))
                     .with_cause(JsError::from_opaque(js_string!(err.to_string()).into()))
             })?;
             let module = Module::parse(source, None, context).map_err(|err| {
                 JsNativeError::syntax()
-                    .with_message(format!("could not parse module `{}`", specifier.to_std_string_escaped()))
+                    .with_message(format!(
+                        "could not parse module `{}`",
+                        specifier.to_std_string_escaped()
+                    ))
                     .with_cause(err)
             })?;
             self.insert(path, module.clone());

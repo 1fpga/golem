@@ -10,7 +10,7 @@ use tracing::trace;
 /// Buttons supported by the MisterFPGA API.
 /// This is MiSTer specific.
 #[derive(
-Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key, FromRepr,
+    Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key, FromRepr,
 )]
 #[repr(i8)]
 pub enum MisterFpgaButtons {

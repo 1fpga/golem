@@ -1,0 +1,6 @@
+{
+  "name": "golem-fpga",
+  "workspaces": [
+    "scripts/patreon"
+  ]
+}

@@ -1,8 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::Drawable;
 use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
 use sdl3::joystick::Joystick;

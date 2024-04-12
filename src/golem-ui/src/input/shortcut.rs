@@ -1,13 +1,15 @@
-use crate::input::InputState;
-use itertools::Itertools;
-use sdl3::gamepad::{Axis, Button};
-use sdl3::keyboard::Scancode;
-use serde::{Deserialize, Deserializer, Serialize};
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
 use std::str::FromStr;
+
+use itertools::Itertools;
+use sdl3::gamepad::{Axis, Button};
+use sdl3::keyboard::Scancode;
+use serde::{Deserialize, Deserializer, Serialize};
+
+use crate::input::InputState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AxisValue {

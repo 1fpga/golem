@@ -2,9 +2,9 @@ use std::cell::{RefCell, RefMut};
 use std::path::Path;
 use std::rc::Rc;
 
-use boa_engine::{Context, js_string, JsError, Module, Source};
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::property::Attribute;
+use boa_engine::{js_string, Context, JsError, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
 use tracing::{error, info};
 
@@ -25,8 +25,7 @@ pub(crate) struct HostData {
 
 impl std::fmt::Debug for HostData {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("HostData")
-            .finish()
+        f.debug_struct("HostData").finish()
     }
 }
 

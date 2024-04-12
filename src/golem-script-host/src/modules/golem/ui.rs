@@ -1,6 +1,5 @@
 use boa_engine::{
-    Context, Finalize, js_string, JsData, JsNativeError, JsResult, JsString, JsValue,
-    Module, Trace,
+    Context, Finalize, js_string, JsData, JsNativeError, JsResult, JsString, JsValue, Module, Trace,
 };
 use boa_engine::object::builtins::JsArray;
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
@@ -9,6 +8,8 @@ use boa_macros::TryFromJs;
 use golem_ui::application::menu;
 
 use crate::HostData;
+
+mod filesystem;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum MenuAction {
@@ -142,19 +143,16 @@ fn text_menu_(
         state = new_state;
 
         return match result {
-            MenuAction::Select(i) => {
-                JsArray::from_iter([js_string!("select").into(), options.items[i].id.clone()], context)
-            }
+            MenuAction::Select(i) => JsArray::from_iter(
+                [js_string!("select").into(), options.items[i].id.clone()],
+                context,
+            ),
             MenuAction::Details(i) => {
                 let value: JsValue = options.items[i].id.clone();
                 JsArray::from_iter([js_string!("details").into(), value], context)
             }
-            MenuAction::Sort => {
-                JsArray::from_iter([js_string!("sort").into()], context)
-            }
-            MenuAction::Back => {
-                JsArray::from_iter([js_string!("back").into()], context)
-            }
+            MenuAction::Sort => JsArray::from_iter([js_string!("sort").into()], context),
+            MenuAction::Back => JsArray::from_iter([js_string!("back").into()], context),
         };
     }
 }
@@ -197,8 +195,19 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
         js_string!("ui"),
         [
             (js_string!("alert"), alert_.into_js_function_copied(context)),
-            (js_string!("qrCode"), qr_code_.into_js_function_copied(context)),
-            (js_string!("textMenu"), text_menu_.into_js_function_copied(context)),
-        ].into_js_module(context),
+            (
+                js_string!("qrCode"),
+                qr_code_.into_js_function_copied(context),
+            ),
+            (
+                js_string!("textMenu"),
+                text_menu_.into_js_function_copied(context),
+            ),
+            (
+                js_string!("selectFile"),
+                filesystem::select.into_js_function_copied(context),
+            ),
+        ]
+            .into_js_module(context),
     ))
 }

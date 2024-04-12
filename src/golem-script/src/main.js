@@ -5,32 +5,7 @@ import * as ui from "golem/ui";
 import {games_menu} from "./games.mjs";
 import {cores_menu} from "./cores.mjs";
 import {about} from "./about.mjs"
-
-function test_menu() {
-    const [action, id] = ui.textMenu({
-        title: "Test",
-        back: true,
-        items: [
-            {label: "Test 1", id: "test1"},
-            {label: "Test 2", id: "test2"},
-        ],
-    });
-
-    switch (action) {
-        case "select":
-            switch (id) {
-                case "test1":
-                    ui.alert("Test 1", "Test 2");
-                    break;
-                case "test2":
-                    ui.alert("Test 2");
-                    break;
-            }
-            break;
-        case "back":
-            break;
-    }
-}
+import {video_menu} from "./settings/video.mjs";
 
 function main_menu() {
     const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")?.count;
@@ -46,7 +21,7 @@ function main_menu() {
             {label: "Games...", id: games_menu, marker: games_lbl},
             {label: "Cores...", id: cores_menu, marker: cores_lbl},
             "---",
-            {label: "Settings...", id: "settings"},
+            {label: "Settings...", id: video_menu},
             {label: "Downloads...", id: "downloads"},
             "---",
             {label: "About", id: about},

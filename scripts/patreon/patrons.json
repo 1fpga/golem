@@ -5,9 +5,6 @@
         "500": "Cloud Subscriber"
     },
     "patrons": {
-        "Contributors": [
-            "hans__l (from the beginning)"
-        ],
         "Cloud Subscriber": [
             "Josh Jenkins (4 months)",
             "Nicolas Mutis Mesa (4 months)",
@@ -20,7 +17,10 @@
             "John Stefanic (4 months)",
             "Oyster_Source (3 months)",
             "Cory Stargel (4 months)",
-            "Jon (1 week)"
+            "Jon (2 weeks)"
+        ],
+        "Contributors": [
+            "hansl"
         ]
     }
 }

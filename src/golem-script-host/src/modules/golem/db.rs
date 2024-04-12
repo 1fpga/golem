@@ -1,15 +1,13 @@
-use boa_engine::{
-    Context, js_string, JsError, JsObject, JsResult, JsString, JsValue, Module,
-};
 use boa_engine::object::builtins::JsArray;
 use boa_engine::value::TryFromJs;
+use boa_engine::{js_string, Context, JsError, JsObject, JsResult, JsString, JsValue, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
-use diesel::{Connection, SqliteConnection};
 use diesel::connection::LoadConnection;
 use diesel::deserialize::FromSql;
 use diesel::query_builder::{BoxedSqlQuery, SqlQuery};
 use diesel::row::{Field, Row};
 use diesel::sqlite::{Sqlite, SqliteType, SqliteValue};
+use diesel::{Connection, SqliteConnection};
 
 use crate::HostData;
 
@@ -25,15 +23,12 @@ pub enum SqlValue {
 impl SqlValue {
     pub fn bind(self, query: BoxedSqlQuery<Sqlite, SqlQuery>) -> BoxedSqlQuery<Sqlite, SqlQuery> {
         match self {
-            SqlValue::String(s) => {
-                query.bind::<diesel::sql_types::Text, _>(s.to_string())
-            }
+            SqlValue::String(s) => query.bind::<diesel::sql_types::Text, _>(s.to_string()),
             SqlValue::Integer(i) => query.bind::<diesel::sql_types::Integer, _>(i),
             SqlValue::Boolean(b) => query.bind::<diesel::sql_types::Bool, _>(b),
             SqlValue::Number(f) => query.bind::<diesel::sql_types::Double, _>(f),
-            SqlValue::Null => {
-                query.bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(None::<String>)
-            }
+            SqlValue::Null => query
+                .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(None::<String>),
         }
     }
 }
@@ -46,10 +41,15 @@ impl TryFromJs for SqlValue {
             JsValue::String(s) => Ok(Self::String(s.to_std_string_escaped())),
             JsValue::Rational(r) => Ok(Self::Number(*r)),
             JsValue::Integer(i) => Ok(Self::Integer(*i)),
-            JsValue::BigInt(_) |
-            JsValue::Undefined |
-            JsValue::Object(_) |
-            JsValue::Symbol(_) => Err(JsError::from_opaque(js_string!(format!("Invalid value type {}, cannot convert to SQL.", value.type_of())).into()))
+            JsValue::BigInt(_) | JsValue::Undefined | JsValue::Object(_) | JsValue::Symbol(_) => {
+                Err(JsError::from_opaque(
+                    js_string!(format!(
+                        "Invalid value type {}, cannot convert to SQL.",
+                        value.type_of()
+                    ))
+                    .into(),
+                ))
+            }
         }
     }
 }
@@ -94,7 +94,9 @@ impl TryFrom<SqliteValue<'_, '_, '_>> for SqlValue {
                     .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
                 Ok(SqlValue::String(s))
             }
-            _ => Err(JsError::from_opaque(js_string!("Unsupported SQL type").into())),
+            _ => Err(JsError::from_opaque(
+                js_string!("Unsupported SQL type").into(),
+            )),
         }
     }
 }
@@ -126,10 +128,7 @@ fn build_query_<'a>(
     Ok(q)
 }
 
-fn create_row_object<'a>(
-    row: impl Row<'a, diesel::sqlite::Sqlite>,
-    ctx: &mut Context,
-) -> JsResult<JsObject> {
+fn create_row_object<'a>(row: impl Row<'a, Sqlite>, ctx: &mut Context) -> JsResult<JsObject> {
     let row_result = JsObject::with_null_proto();
 
     for i in 0..row.field_count() {
@@ -142,7 +141,6 @@ fn create_row_object<'a>(
             row_result.set(i, JsValue::undefined(), false, ctx)?;
             continue;
         };
-
 
         if let Some(name) = name {
             row_result.set(JsString::from(name), SqlValue::try_from(value)?, false, ctx)?;
@@ -226,15 +224,19 @@ fn query_one_(
     result
 }
 
-pub fn create_module(
-    context: &mut Context,
-) -> JsResult<(JsString, Module)> {
+pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     let module = [
-        (js_string!("execute"), execute_.into_js_function_copied(context)),
-        (js_string!("queryOne"), query_one_.into_js_function_copied(context)),
+        (
+            js_string!("execute"),
+            execute_.into_js_function_copied(context),
+        ),
+        (
+            js_string!("queryOne"),
+            query_one_.into_js_function_copied(context),
+        ),
         (js_string!("query"), query_.into_js_function_copied(context)),
-    ].into_js_module(context);
+    ]
+    .into_js_module(context);
 
     Ok((js_string!("db"), module))
 }
-

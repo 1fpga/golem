@@ -56,7 +56,13 @@ declare module "golem/core" {
         savestate?: string,
 
         /**
-         * Whether to start a loop or to load the core and return it.
+         * Whether to show the core menu or not when launching. True by default.
+         */
+        showmenu?: boolean,
+
+        /**
+         * Whether to start a loop or to load the core and return it. Default
+         * to true.
          */
         autoloop?: boolean,
     }

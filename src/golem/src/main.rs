@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use clap_verbosity_flag::{LogLevel, Verbosity};
 use clap_verbosity_flag::Level as VerbosityLevel;
+use clap_verbosity_flag::{LogLevel, Verbosity};
 use tracing::{info, Level};
 use tracing_subscriber::fmt::Subscriber;
 
@@ -64,7 +64,8 @@ fn main() {
     // Create the application and run it.
     let start = std::time::Instant::now();
     info!("Starting application...");
-    golem_script_host::run(opts.script.as_ref(), application::GoLEmApp::new()).expect("Failed to run script");
+    golem_script_host::run(opts.script.as_ref(), application::GoLEmApp::new())
+        .expect("Failed to run script");
     let elapsed = start.elapsed();
     info!(?elapsed, "Done");
 }

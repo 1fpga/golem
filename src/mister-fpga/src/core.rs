@@ -16,7 +16,6 @@ use crate::core::buttons::ButtonMap;
 use crate::core::file::SdCard;
 use crate::core::video::VideoInfo;
 use crate::core::volume::IntoVolume;
-use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga, user_io};
 use crate::fpga::file_io::{
     FileExtension, FileIndex, FileTxData16Bits, FileTxData8Bits, FileTxDisabled, FileTxEnabled,
 };
@@ -24,6 +23,7 @@ use crate::fpga::user_io::{
     GetSdStat, GetStatusBits, SdRead, SdStatOutput, SdWrite, SetSdConf, SetSdInfo, SetSdStat,
     SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp, UserIoRtc,
 };
+use crate::fpga::{user_io, CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
@@ -32,7 +32,7 @@ pub mod buttons;
 pub mod file;
 pub mod volume;
 
-mod video;
+pub mod video;
 
 pub enum MisterFpgaSendFileInfo {
     Memory {

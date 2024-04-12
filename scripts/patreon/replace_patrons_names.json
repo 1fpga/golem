@@ -1,0 +1,5 @@
+{
+  "--0": "This is a file to rename patrons in the list.",
+  "--1": "The key is the old name, and the value is the new name.",
+  "Hans Larsen": "hansl"
+}

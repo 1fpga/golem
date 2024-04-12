@@ -46,4 +46,24 @@ declare module "golem/ui" {
      */
     export function qrCode(url: string, message: string): void;
     export function qrCode(url: string, title: string, message: string): void;
+
+    export interface SelectFileOptions {
+        allowBack?: boolean,
+        dirFirst?: boolean,
+        showHidden?: boolean,
+        showExtensions?: boolean,
+        showDirectory?: boolean,
+        filterPattern?: string,
+        extensions?: string[],
+    }
+
+    /**
+     * Select a file from the user's device. Return the path of the selected file,
+     * or `undefined` if the user canceled the operation.
+     */
+    export function selectFile(
+        title: string,
+        initialDir: string,
+        options: SelectFileOptions,
+    ): string | undefined;
 }

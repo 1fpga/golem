@@ -11,11 +11,16 @@ boa_gc = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script", features = ["json"] }
 boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
-diesel = { version = "2.1.5", features = ["sqlite"] }
+de10-nano = { path = "../de10-nano" }
+diesel = { version = "2.1.5", features = ["sqlite", "extras"] }
 golem-core = { path = "../golem-core" }
 golem-ui = { path = "../golem-ui", default-features = false }
+mister-fpga = { path = "../mister-fpga" }
 rustc-hash = "1.1.0"
+serde = { version = "1.0.197", features = ["derive"] }
+serde_json = "1.0.115"
 tracing = "0.1.40"
+regex = "1.10.4"
 
 [features]
 platform_de10 = ["golem-ui/platform_de10"]

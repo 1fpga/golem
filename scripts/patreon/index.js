@@ -1,5 +1,6 @@
 import {createPromptModule} from "inquirer";
-import timesago from 'timesago'
+import timesago from "timesago";
+import {simpleGit} from 'simple-git';
 
 const inquirer = {prompt: createPromptModule({output: process.stderr})};
 
@@ -48,6 +49,8 @@ class PatreonClient {
 }
 
 async function main() {
+    const git = simpleGit();
+
     const API_TOKEN = process.env['PATREON_API_TOKEN'] ?? (
         (await inquirer.prompt({
             name: "API_TOKEN",
@@ -57,6 +60,18 @@ async function main() {
             output: process.stderr,
         })).API_TOKEN
     );
+    let LAST_RELEASE = process.env['LAST_RELEASE'] ?? (
+        (await inquirer.prompt({
+            name: "LAST_RELEASE",
+            message: "Enter the last release tag:",
+            type: "input",
+        }, {
+            output: process.stderr,
+        })).LAST_RELEASE
+    );
+    if (!LAST_RELEASE) {
+        LAST_RELEASE = (await git.tags()).latest;
+    }
 
     let client = new PatreonClient(API_TOKEN);
     let user = await client.fetchCurrentUser();
@@ -91,14 +106,10 @@ async function main() {
     const tiers = {
         0: "Contributors",
     };
-    const patrons = {
-        "Contributors": [
-            "hansl (from the beginning)",
-        ],
-    };
+    const patrons = {};
 
     // The list of names to be replaced by aliases.
-    const replace_patrons_names = {};
+    const replace_patrons_names = (await import("./replace_patrons_names.json", {with: {type: "json"}})).default;
 
     for (let pledge of PLEDGES) {
         let user = pledge.relationships.patron.data;
@@ -121,6 +132,20 @@ async function main() {
         patrons[reward_tier] = patrons[reward_tier] || [];
         patrons[reward_tier].push(`${user_name.trim()} (${since})`);
     }
+
+    // Contributors.
+    const contributors = new Set();
+    let logs = await git.log({
+        from: LAST_RELEASE,
+    });
+    for (let log of logs.all) {
+        let author = log.author_name;
+        if (replace_patrons_names[author]) {
+            author = replace_patrons_names[author];
+        }
+        contributors.add(author);
+    }
+    patrons[tiers[0]] = Array.from(contributors);
 
     console.log(JSON.stringify({tiers, patrons}, null, 4));
 }
