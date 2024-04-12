@@ -5,7 +5,14 @@ import * as ui from "golem/ui";
 import {games_menu} from "./games.mjs";
 import {cores_menu} from "./cores.mjs";
 import {about} from "./about.mjs"
-import {video_menu} from "./settings/video.mjs";
+
+function settings_menu() {
+    ui.alert("Settings", "Not implemented yet.");
+}
+
+function downloads_menu() {
+    ui.alert("Downloads", "Not implemented yet.");
+}
 
 function main_menu() {
     const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")?.count;
@@ -21,8 +28,8 @@ function main_menu() {
             {label: "Games...", id: games_menu, marker: games_lbl},
             {label: "Cores...", id: cores_menu, marker: cores_lbl},
             "---",
-            {label: "Settings...", id: video_menu},
-            {label: "Downloads...", id: "downloads"},
+            {label: "Settings...", id: settings_menu},
+            {label: "Downloads...", id: downloads_menu},
             "---",
             {label: "About", id: about},
             "---",

@@ -1,4 +1,4 @@
-use boa_engine::{js_string, Context, JsError, JsResult, JsString, Module};
+use boa_engine::{Context, js_string, JsError, JsResult, JsString, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 
 use golem_ui::platform::GoLEmPlatform;
@@ -16,6 +16,7 @@ fn set_mode_(mode: String, ContextData(data): ContextData<HostData>) -> JsResult
         "V1920x1080r60" => DefaultVideoMode::V1920x1080r60,
         "V1920x1080r50" => DefaultVideoMode::V1920x1080r50,
         "V1280x720r60" => DefaultVideoMode::V1280x720r60,
+        "V640x480r60" => DefaultVideoMode::V640x480r60,
         _ => {
             return Ok(());
         }
