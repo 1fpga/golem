@@ -19,8 +19,11 @@ mod modules;
 /// The application type for HostDefined information.
 #[derive(Clone, Trace, Finalize, JsData)]
 pub(crate) struct HostData {
-    /// The platform for the application.
-    // TODO: remove the pointer.
+    // TODO: remove the pointer. This is safe because the JS code
+    //       stops execution before the App is dropped, but it would
+    //       be better to have a safe way to handle this.
+    //       A RefCell isn't good enough because it's recursive.
+    /// The GoLEm application.
     #[unsafe_ignore_trace]
     app: Rc<*mut GoLEmApp>,
 }

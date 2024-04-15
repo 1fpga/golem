@@ -16,9 +16,11 @@ function select_core_file() {
             extensions: ["rbf"],
         });
 
-    core.run({
-        core: {type: "path", path: f},
-    });
+    if (f !== undefined) {
+        core.run({
+            core: {type: "path", path: f},
+        });
+    }
 }
 
 export function cores_menu() {

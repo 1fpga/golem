@@ -21,11 +21,11 @@ declare module "golem/ui" {
     /**
      * Represents the options for the `textMenu` function.
      */
-    export interface TextMenuOptions {
+    export interface TextMenuOptions<R> {
         title?: String,
         items: (string | TextMenuItem)[],
-        back?: () => any,
-        sort?: () => Partial<TextMenuOptions>,
+        back?: () => R,
+        sort?: () => Partial<TextMenuOptions<R>>,
         sort_label?: string,
     }
 
@@ -35,7 +35,7 @@ declare module "golem/ui" {
      * tuple with the action string and the `id` of the selected option.
      * @param options The options for the textual menu.
      */
-    export function textMenu(options: TextMenuOptions): [string, any?];
+    export function textMenu<R>(options: TextMenuOptions<R>): R;
 
     /**
      * Show an alert to the user, with OK.
