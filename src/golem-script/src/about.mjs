@@ -27,7 +27,7 @@ export function about() {
         back: () => true,
         items: [
             {
-                label: "< Join our Patron server... >", marker: "...", select: () => {
+                label: "< Join the GoLEm FPGA Patreon >", marker: "...", select: () => {
                     ui.qrCode(
                         "https://patreon.com/golem_fpga/join",
                         "Use this code to join our Patreon community",
