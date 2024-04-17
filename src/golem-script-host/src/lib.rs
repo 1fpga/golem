@@ -120,14 +120,12 @@ pub fn run(
         }
     };
 
-    let result = loop {
-        let main_fn = module.namespace(&mut context).get(js_string!("main"), &mut context)?;
-        let result = main_fn.as_callable().expect("Main was not callable").call(&JsValue::undefined(), &[], &mut context)?;
+    let main_fn = module.namespace(&mut context).get(js_string!("main"), &mut context)?;
+    let result = main_fn.as_callable().expect("Main was not callable").call(&JsValue::undefined(), &[], &mut context)?;
 
-        context.run_jobs();
-    };
+    context.run_jobs();
 
-    info!("Script executed successfully.");
+    info!(?result, "Script executed successfully.");
 
     Ok(())
 }
