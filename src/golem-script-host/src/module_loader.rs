@@ -1,26 +1,36 @@
-use std::collections::HashMap;
+use std::cell::RefCell;
 use std::path::PathBuf;
+use std::rc::Rc;
 
-use boa_engine::module::{ModuleLoader, Referrer};
-use boa_engine::{js_string, Context, JsError, JsNativeError, JsResult, JsString, Module, Source};
-use boa_gc::GcRefCell;
+use boa_engine::{Context, JsResult, JsString, Module};
+use boa_engine::module::{ModuleLoader, Referrer, SimpleModuleLoader};
+use boa_interop::embed_module;
+use boa_interop::loaders::{HashMapModuleLoader, MergeModuleLoader};
 
-/// A module loader that also understands "free-standing" modules and
+/// A module loader that also understands "freestanding" modules and
 /// special resolution.
 pub struct GolemModuleLoader {
-    root: PathBuf,
-    named_module_map: GcRefCell<HashMap<JsString, Module>>,
-    cache: GcRefCell<HashMap<PathBuf, Module>>,
+    named_modules: Rc<RefCell<HashMapModuleLoader>>,
+    inner: Rc<dyn ModuleLoader>,
+}
+
+impl Default for GolemModuleLoader {
+    fn default() -> Self {
+        Self {
+            named_modules: Rc::new(RefCell::new(HashMapModuleLoader::default())),
+            inner: Rc::new(embed_module!("../golem-script/src/")),
+        }
+    }
 }
 
 impl GolemModuleLoader {
-    /// Creates a new `GolemModuleLoader` from a root module path without checking
-    /// the path exists.
     fn new_unchecked(root: PathBuf) -> Self {
         Self {
-            root,
-            named_module_map: GcRefCell::default(),
-            cache: GcRefCell::default(),
+            named_modules: Rc::new(RefCell::new(HashMapModuleLoader::default())),
+            inner: Rc::new(MergeModuleLoader::new(
+                SimpleModuleLoader::new(root).expect("Could not find the script folder."),
+                GolemModuleLoader::default(),
+            )),
         }
     }
 
@@ -32,19 +42,7 @@ impl GolemModuleLoader {
     /// Inserts a module in the named module map.
     #[inline]
     pub fn insert_named(&self, name: JsString, module: Module) {
-        self.named_module_map.borrow_mut().insert(name, module);
-    }
-
-    /// Inserts a new module onto the module map.
-    #[inline]
-    pub fn insert(&self, path: PathBuf, module: Module) {
-        self.cache.borrow_mut().insert(path, module);
-    }
-
-    /// Gets a module from its original path.
-    #[inline]
-    pub fn get(&self, path: &PathBuf) -> Option<Module> {
-        self.cache.borrow().get(path).cloned()
+        self.named_modules.borrow_mut().register(name, module);
     }
 }
 
@@ -56,43 +54,28 @@ impl ModuleLoader for GolemModuleLoader {
         finish_load: Box<dyn FnOnce(JsResult<Module>, &mut Context)>,
         context: &mut Context,
     ) {
-        let result = (|| {
-            // First, try to resolve from our internal cached.
-            if let Some(module) = self.named_module_map.borrow().get(&specifier) {
-                return Ok(module.clone());
-            }
+        let inner = self.inner.clone();
+        self.named_modules.borrow().load_imported_module(
+            referrer.clone(),
+            specifier.clone(),
+            Box::new(move |module, context| {
+                if module.is_ok() {
+                    finish_load(module, context);
+                } else {
+                    inner.as_ref().load_imported_module(
+                        referrer,
+                        specifier,
+                        finish_load,
+                        context,
+                    );
+                }
+            }),
+            context,
+        );
+    }
 
-            // Otherwise, try to resolve using the file system.
-            let path = boa_engine::module::resolve_module_specifier(
-                Some(&self.root),
-                &specifier,
-                referrer.path(),
-                context,
-            )?;
-            if let Some(module) = self.get(&path) {
-                return Ok(module);
-            }
-
-            let source = Source::from_filepath(&path).map_err(|err| {
-                JsNativeError::typ()
-                    .with_message(format!(
-                        "could not open file `{}`",
-                        specifier.to_std_string_escaped()
-                    ))
-                    .with_cause(JsError::from_opaque(js_string!(err.to_string()).into()))
-            })?;
-            let module = Module::parse(source, None, context).map_err(|err| {
-                JsNativeError::syntax()
-                    .with_message(format!(
-                        "could not parse module `{}`",
-                        specifier.to_std_string_escaped()
-                    ))
-                    .with_cause(err)
-            })?;
-            self.insert(path, module.clone());
-            Ok(module)
-        })();
-
-        finish_load(result, context);
+    fn get_module(&self, specifier: JsString) -> Option<Module> {
+        self.named_modules.borrow().get_module(specifier.clone())
+            .or_else(|| self.inner.as_ref().get_module(specifier))
     }
 }

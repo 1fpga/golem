@@ -49,3 +49,65 @@ fn build_games_list_(
         Vec::new()
     })
 }
+
+pub fn games_list(app: &mut GoLEmApp) {
+    let mut state = None;
+    let mut sort_order = GameOrder::LastPlayed;
+
+    loop {
+        let mut all_games = build_games_list_(&mut app.database().lock().unwrap(), sort_order);
+
+        let menu_items = all_games
+            .iter()
+            .enumerate()
+            .map(|(i, game)| (game.name.as_str(), "", MenuAction::LoadGame(i)))
+            .collect::<Vec<_>>();
+
+        let (result, new_state) = text_menu(
+            app,
+            "Games",
+            &menu_items,
+            TextMenuOptions::default()
+                .with_state(state)
+                .with_sort(sort_order.as_str())
+                .with_suffix(&[("Manage Games", "", MenuAction::Manage).into()])
+                .with_details("Details"),
+        );
+        state = Some(new_state);
+
+        match result {
+            MenuAction::Back => break,
+            MenuAction::Manage => manage_games(app),
+            MenuAction::LoadGame(i) => {
+                let game = &mut all_games[i];
+
+                let (should_show_menu, mut core) = match app.coordinator_mut().launch_game(
+                    app,
+                    GameStartInfo::default()
+                        .with_maybe_core_id(game.core_id)
+                        .with_game_id(game.id),
+                ) {
+                    Ok((should_show_menu, core)) => (should_show_menu, core),
+                    Err(e) => {
+                        show_error(
+                            app,
+                            anyhow!("Failed to start game: {}", e).as_dyn_error(),
+                            true,
+                        );
+                        return;
+                    }
+                };
+
+                // Run the core loop.
+                run_core_loop(app, &mut core, should_show_menu);
+            }
+            MenuAction::ShowDetails(i) => {
+                let game = &mut all_games[i];
+                if let Err(e) = details::games_details(app, game) {
+                    show_error(app, e.as_dyn_error(), true);
+                }
+            }
+            MenuAction::ChangeSort => sort_order = sort_order.next(),
+        }
+    }
+}

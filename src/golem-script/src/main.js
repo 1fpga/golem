@@ -14,7 +14,7 @@ function downloads_menu() {
     ui.alert("Downloads", "Not implemented yet.");
 }
 
-function main_menu() {
+async function main_menu() {
     const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")?.count;
     const nb_cores = db.queryOne("SELECT COUNT(*) as count FROM cores")?.count;
 
@@ -37,11 +37,13 @@ function main_menu() {
     });
 }
 
-while (true) {
-    try {
-        main_menu();
-    } catch (e) {
-        console.error(e);
-        ui.alert("Error", e.message);
+export async function main() {
+    while (true) {
+        try {
+            return await main_menu();
+        } catch (e) {
+            console.error(e);
+            ui.alert("Error", e.message);
+        }
     }
 }

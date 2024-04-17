@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
-use boa_engine::{js_string, Context, JsResult, JsString};
-use boa_interop::modules::json::json_string_module;
+use boa_engine::{Context, js_string, JsResult, JsString, Module};
 
 use crate::module_loader::GolemModuleLoader;
 
@@ -32,8 +31,8 @@ pub(super) fn register_modules(
     // The patrons module.
     loader.insert_named(
         js_string!("golem/patrons"),
-        json_string_module(
-            include_str!("../../../../scripts/patreon/patrons.json"),
+        Module::parse_json(
+            js_string!(include_str!("../../../../scripts/patreon/patrons.json")),
             context,
         )?,
     );

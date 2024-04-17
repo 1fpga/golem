@@ -25,4 +25,3 @@ impl<R: Read + Seek> Bk2File<R> {
     }
 }
 
-impl Bk2File<_> {}
