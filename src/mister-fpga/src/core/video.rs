@@ -1,22 +1,31 @@
-use crate::config;
-use cyclone_v::memory::MemoryMapper;
 use std::time::Duration;
+
 use tracing::{error, warn};
+
+use cyclone_v::memory::MemoryMapper;
+#[cfg(target_os = "linux")]
+use linux as private;
+
+use crate::config;
+use crate::config::aspect::AspectRatio;
+use crate::config::edid::CustomVideoMode;
+use crate::config::resolution::Resolution;
+use crate::fpga::user_io::UserIoCommands;
+use crate::fpga::Spi;
 
 #[cfg(target_os = "linux")]
 mod linux;
 
-use crate::config::aspect::AspectRatio;
-use crate::config::resolution::Resolution;
-use crate::fpga::user_io::UserIoCommands;
-use crate::fpga::Spi;
-#[cfg(target_os = "linux")]
-use linux as private;
-
 #[cfg(not(target_os = "linux"))]
 mod private {
-    use crate::config;
     use tracing::debug;
+
+    use cyclone_v::memory::MemoryMapper;
+
+    use crate::config;
+    use crate::config::aspect::AspectRatio;
+    use crate::config::edid::CustomVideoMode;
+    use crate::fpga::Spi;
 
     pub fn hdmi_config_init(config: &config::MisterConfig) -> Result<(), String> {
         debug!(?config, "HDMI configuration not supported on this platform");
@@ -34,6 +43,17 @@ mod private {
         );
         Ok(())
     }
+
+    pub fn select_mode(
+        _mode: CustomVideoMode,
+        _direct_video: bool,
+        _aspect_ratio_1: Option<AspectRatio>,
+        _aspect_ratio_2: Option<AspectRatio>,
+        _spi: &mut Spi<impl MemoryMapper>,
+        _is_menu: bool,
+    ) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 /// Initialize the video Hardware configuration.
@@ -43,6 +63,24 @@ pub fn init(options: &config::MisterConfig) {
         error!("Failed to initialize HDMI configuration: {}", error);
         warn!("This is not a fatal error, the application will continue to run.");
     }
+}
+
+pub fn select_mode(
+    mode: CustomVideoMode,
+    direct_video: bool,
+    aspect_ratio_1: Option<AspectRatio>,
+    aspect_ratio_2: Option<AspectRatio>,
+    spi: &mut Spi<impl MemoryMapper>,
+    is_menu: bool,
+) -> Result<(), String> {
+    private::select_mode(
+        mode,
+        direct_video,
+        aspect_ratio_1,
+        aspect_ratio_2,
+        spi,
+        is_menu,
+    )
 }
 
 pub fn init_mode(

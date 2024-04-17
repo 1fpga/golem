@@ -1,0 +1,17 @@
+{
+  "name": "patreon",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "output": "node index.js > patrons.json"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "inquirer": "^9.2.17",
+    "simple-git": "^3.24.0",
+    "timesago": "^1.0.1"
+  }
+}

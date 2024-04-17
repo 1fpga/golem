@@ -931,7 +931,7 @@ impl Config {
         #[cfg(test)]
         {
             unsafe {
-                return testing::ROOT.clone().unwrap();
+                testing::ROOT.clone().unwrap()
             }
         }
 
@@ -1164,7 +1164,7 @@ impl Config {
             &m.waitmount.clone().unwrap_or_default(),
         );
         let ar = m.custom_aspect_ratio();
-        let aspect_ratio_1 = ar.get(0);
+        let aspect_ratio_1 = ar.first();
         let aspect_ratio_2 = ar.get(1);
         if let Some(a1) = aspect_ratio_1 {
             copy_string(&mut dest.custom_aspect_ratio[0], &a1.to_string());

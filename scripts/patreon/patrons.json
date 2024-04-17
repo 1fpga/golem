@@ -1,0 +1,26 @@
+{
+    "tiers": {
+        "0": "Contributors",
+        "300": "Members",
+        "500": "Cloud Subscriber"
+    },
+    "patrons": {
+        "Cloud Subscriber": [
+            "Josh Jenkins (4 months)",
+            "Nicolas Mutis Mesa (4 months)",
+            "Callan Barrett (4 months)",
+            "RetroRGB (4 months)"
+        ],
+        "Members": [
+            "Pat Jones (4 months)",
+            "Allister Fiend (4 months)",
+            "John Stefanic (4 months)",
+            "Oyster_Source (4 months)",
+            "Cory Stargel (4 months)",
+            "Jon (2 weeks)"
+        ],
+        "Contributors": [
+            "hansl"
+        ]
+    }
+}

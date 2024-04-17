@@ -64,9 +64,7 @@ impl OsdDisplay {
                 .unwrap();
         }
     }
-}
 
-impl OsdDisplay {
     fn with_offset(self, offset_y: usize) -> Self {
         Self { offset_y, ..self }
     }

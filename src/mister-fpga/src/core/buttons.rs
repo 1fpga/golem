@@ -1,8 +1,9 @@
+use std::fmt::Debug;
+use std::str::FromStr;
+
 use bitvec::prelude::*;
 use fixed_map::Key;
 use static_assertions::{const_assert, const_assert_eq};
-use std::fmt::Debug;
-use std::str::FromStr;
 use strum::{Display, EnumCount, EnumIter, EnumString, FromRepr, IntoEnumIterator};
 use tracing::trace;
 
@@ -192,6 +193,13 @@ impl ButtonMap {
         if let Some(i) = index {
             self.bits.set(i as usize, false);
         }
+
+        if tracing::enabled!(tracing::Level::TRACE) {
+            let mask = format!("0b{:016b}", self.value());
+            let snes = self.map[sdl_btn as usize];
+            trace!(?sdl_btn, ?snes, ?index, ?mask, "Button up");
+        }
+
         self.value()
     }
 

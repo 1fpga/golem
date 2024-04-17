@@ -1,3 +1,14 @@
+use std::ffi::OsStr;
+use std::fmt::Debug;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::path::Path;
+
+use image::DynamicImage;
+use tracing::{debug, info, trace};
+
+use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+
 use crate::config::MisterConfig;
 use crate::config_string;
 use crate::config_string::{FpgaRamMemoryAddress, LoadFileInfo};
@@ -16,20 +27,12 @@ use crate::fpga::{user_io, CoreInterfaceType, CoreType, MisterFpga};
 use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
-use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use image::DynamicImage;
-use std::ffi::OsStr;
-use std::fmt::Debug;
-use std::fs::File;
-use std::io::{Read, Seek, SeekFrom, Write};
-use std::path::Path;
-use tracing::{debug, info, trace};
 
 pub mod buttons;
 pub mod file;
 pub mod volume;
 
-mod video;
+pub mod video;
 
 pub enum MisterFpgaSendFileInfo {
     Memory {
@@ -334,7 +337,7 @@ impl MisterFpgaCore {
     /// Notify the core of a gamepad button up event.
     pub fn gamepad_button_up(&mut self, joystick_idx: u8, button: u8) {
         let g = &mut self.gamepads[joystick_idx as usize];
-        g.down(button);
+        g.up(button);
 
         self.fpga
             .spi_mut()

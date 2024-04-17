@@ -72,7 +72,7 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
 
     #[inline]
     pub fn write_nz(&mut self, word: u16) -> &mut Self {
-        let word = word.into();
+        let word = word;
         if word != 0 {
             self.spi.write(word);
         }
@@ -417,7 +417,7 @@ impl<M: MemoryMapper> SpiCommandExt for Spi<M> {
     #[inline]
     fn write_cond_b(&mut self, cond: bool, byte: u8) -> &mut Self {
         if cond {
-            self.write_b(byte.into());
+            self.write_b(byte);
         }
         self
     }

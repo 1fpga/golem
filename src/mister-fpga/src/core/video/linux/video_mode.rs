@@ -1,13 +1,17 @@
+use i2cdev::core::I2CDevice;
+use tracing::{debug, error};
+
+use cyclone_v::memory::MemoryMapper;
+
 use crate::config;
 use crate::config::aspect::AspectRatio;
+use crate::config::edid::CustomVideoMode;
+use crate::config::FramebufferSizeConfig;
 use crate::fpga::user_io::{
     DisableGamma, EnableGamma, IsGammaSupported, SetCustomAspectRatio, SetFramebufferToCore,
     SetFramebufferToLinux,
 };
 use crate::fpga::Spi;
-use cyclone_v::memory::MemoryMapper;
-use i2cdev::core::I2CDevice;
-use tracing::{debug, error};
 
 pub struct GammaConfiguration(Vec<(u8, u8, u8)>);
 
@@ -37,12 +41,14 @@ impl GammaConfiguration {
 }
 
 fn video_fb_config(
-    options: &config::MisterConfig,
     mode: &config::video::edid::CustomVideoMode,
+    fb_size: FramebufferSizeConfig,
+    vscale_border: u16,
+    direct_video: bool,
     spi: &mut Spi<impl MemoryMapper>,
     _is_menu: bool,
 ) -> Result<(), String> {
-    let mut fb_scale = options.fb_size.unwrap_or_default().as_scale() as u32;
+    let mut fb_scale = fb_size.as_scale() as u32;
 
     if fb_scale <= 1 {
         if mode.param.hact * mode.param.vact > 1920 * 1080 {
@@ -62,20 +68,15 @@ fn video_fb_config(
     let width = (mode.param.hact / fb_scale_x) as u16;
     let height = (mode.param.vact / fb_scale_y) as u16;
 
-    let brd_x = options.vscale_border.unwrap_or_default() / fb_scale_x as u16;
-    let brd_y = options.vscale_border.unwrap_or_default() / fb_scale_y as u16;
+    let brd_x = vscale_border / fb_scale_x as u16;
+    let brd_y = vscale_border / fb_scale_y as u16;
     debug!("video_fb_config: fb_scale_x={}, fb_scale_y={}, fb_width={}, fb_height={}, brd_x={}, brd_y={}", fb_scale_x, fb_scale_y, width, height, brd_x, brd_y);
 
-    let xoff = if options.direct_video() {
-        mode.param.hbp - 3
+    let (xoff, yoff) = if direct_video {
+        ((mode.param.hbp - 3) as u16, (mode.param.vbp - 2) as u16)
     } else {
-        0
-    } as u16;
-    let yoff = if options.direct_video() {
-        mode.param.vbp - 2
-    } else {
-        0
-    } as u16;
+        (0, 0)
+    };
 
     spi.execute(SetFramebufferToLinux {
         n: 1,
@@ -91,11 +92,11 @@ fn video_fb_config(
 }
 
 fn hdmi_config_set_mode(
-    options: &config::MisterConfig,
+    direct_video: bool,
     mode: &config::video::edid::CustomVideoMode,
 ) -> Result<(), String> {
     let vic_mode = mode.param.vic as u8;
-    let pr_flags = if options.direct_video() {
+    let pr_flags = if direct_video {
         0 // Automatic Pixel Repetition.
     } else if mode.param.pr != 0 {
         0b01001000 // Manual Pixel Repetition with 2x clock.
@@ -106,7 +107,7 @@ fn hdmi_config_set_mode(
     let sync_invert = ((!mode.param.hpol as u8) << 5) | ((!mode.param.vpol as u8) << 6);
 
     #[rustfmt::skip]
-    let init_data = [
+        let init_data = [
         (0x17, (0b00000010 | sync_invert)), // Aspect ratio 16:9 [1]=1, 4:3 [1]=0
         (0x3B, pr_flags),
         (0x3C, vic_mode),                   // VIC
@@ -121,14 +122,16 @@ fn hdmi_config_set_mode(
     Ok(())
 }
 
-pub fn init_mode(
-    options: &config::MisterConfig,
+pub fn select_mode(
+    mode: CustomVideoMode,
+    fb_size: FramebufferSizeConfig,
+    vscale_border: u16,
+    direct_video: bool,
+    aspect_ratio_1: Option<AspectRatio>,
+    aspect_ratio_2: Option<AspectRatio>,
     spi: &mut Spi<impl MemoryMapper>,
     is_menu: bool,
 ) -> Result<(), String> {
-    let mode = config::video::edid::select_video_mode(options)?;
-    eprintln!("Selected video mode: {:?}", mode);
-
     let mut has_gamma = false;
     spi.execute(IsGammaSupported(&mut has_gamma))?;
 
@@ -141,10 +144,9 @@ pub fn init_mode(
         gamma.set(spi)?;
     }
 
-    let arc = options.custom_aspect_ratio();
-    if !arc.is_empty() {
-        let first = arc.first().copied().unwrap_or_else(AspectRatio::zero);
-        let second = arc.get(1).copied().unwrap_or_else(AspectRatio::zero);
+    if aspect_ratio_1.or(aspect_ratio_2).is_some() {
+        let first = aspect_ratio_1.unwrap_or_else(AspectRatio::zero);
+        let second = aspect_ratio_2.unwrap_or_else(AspectRatio::zero);
 
         spi.execute(SetCustomAspectRatio(first.into(), second.into()))?;
     }
@@ -152,18 +154,39 @@ pub fn init_mode(
     // TODO: set scaler filter.
     // TODO: set VRR.
 
-    if let Some(m) = mode.vmode_def.clone() {
-        m.send_to_core(options, spi, is_menu)?;
-
-        if is_menu {
-            hdmi_config_set_mode(options, &m)?;
-            video_fb_config(options, &m, spi, is_menu)?;
-        } else {
-            spi.execute(SetFramebufferToCore)?;
-        }
+    mode.send_to_core(direct_video, spi, is_menu)?;
+    if is_menu {
+        hdmi_config_set_mode(direct_video, &mode)?;
+        video_fb_config(&mode, fb_size, vscale_border, direct_video, spi, is_menu)?;
     } else {
-        error!("No video mode defined");
+        spi.execute(SetFramebufferToCore)?;
     }
+    Ok(())
+}
+
+pub fn init_mode(
+    options: &config::MisterConfig,
+    spi: &mut Spi<impl MemoryMapper>,
+    is_menu: bool,
+) -> Result<(), String> {
+    let mode = config::video::edid::select_video_mode(options)?;
+
+    let Some(m) = mode.vmode_def else {
+        error!("No video mode selected");
+        return Err("No video mode selected".to_string());
+    };
+    eprintln!("Selected video mode: {:?}", m);
+
+    select_mode(
+        m,
+        options.fb_size.unwrap_or_default(),
+        options.vscale_border.unwrap_or_default(),
+        options.direct_video(),
+        options.custom_aspect_ratio().first().cloned(),
+        options.custom_aspect_ratio().get(1).cloned(),
+        spi,
+        is_menu,
+    )?;
 
     Ok(())
 }

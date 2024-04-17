@@ -1,10 +1,9 @@
 use std::io::{Read, Seek};
-use std::path::Path;
+
+pub use error::Bk2Error;
 
 mod error;
 mod header;
-
-pub use error::Bk2Error;
 
 pub struct Bk2File<R: Read + Seek> {
     file: zip::ZipArchive<R>,
@@ -26,6 +25,3 @@ impl<R: Read + Seek> Bk2File<R> {
     }
 }
 
-impl Bk2File<_> {
-    pub fn header(&self) -> Result<Bk2Header>
-}

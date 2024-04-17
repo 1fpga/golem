@@ -2,8 +2,8 @@
 # see https://diesel.rs/guides/configuring-diesel-cli
 
 [print_schema]
-file = "golem-db/src/schema.rs"
+file = "src/golem-db/src/schema.rs"
 custom_type_derives = ["diesel::query_builder::QueryId"]
 
 [migrations_directory]
-dir = "golem-db/migrations"
+dir = "src/golem-db/migrations"

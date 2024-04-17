@@ -1,12 +1,15 @@
-use crate::config::MisterConfig;
-use crate::fpga::user_io::SetVideoMode;
-use crate::fpga::Spi;
-use cyclone_v::memory::MemoryMapper;
-use strum::FromRepr;
-use tracing::{debug, info, trace, warn};
+#![allow(unused)]
 
 #[cfg(target_os = "linux")]
 use i2cdev::core::I2CDevice;
+use strum::FromRepr;
+use tracing::{debug, info, trace, warn};
+
+use cyclone_v::memory::MemoryMapper;
+
+use crate::config::MisterConfig;
+use crate::fpga::user_io::SetVideoMode;
+use crate::fpga::Spi;
 
 pub struct Edid {
     inner: [u8; 256],
@@ -259,7 +262,7 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
             warn!("EDID: Using safe vmode {}.", n);
 
             let mode = DefaultVideoMode::from_repr(n).unwrap();
-            v.param = mode.clone().into();
+            v.param = mode.into();
             v.param.vic = mode.vic_mode();
             v.f_pix = mode.f_pix();
         } else if frame_rate > 60. {
@@ -371,7 +374,7 @@ fn find_pll_par_(f_out: f64) -> Option<Pll> {
 
 #[derive(Debug, Clone, Copy, FromRepr)]
 #[repr(u8)]
-enum DefaultVideoMode {
+pub enum DefaultVideoMode {
     V1280x720r60 = 0,
     V1024x768r60,
     V720x480r60,
@@ -398,27 +401,27 @@ impl DefaultVideoMode {
     pub fn v_param(&self) -> &'static [u32; 8] {
         #[rustfmt::skip]
         const V_PARAM_DEFAULT_MODES: [[u32; 8]; 19] = [
-            [ 1280, 110,  40, 220,  720,  5,  5, 20 ], //  0  1280x 720@60
-            [ 1024,  24, 136, 160,  768,  3,  6, 29 ], //  1  1024x 768@60
-            [  720,  16,  62,  60,  480,  9,  6, 30 ], //  2   720x 480@60
-            [  720,  12,  64,  68,  576,  5,  5, 39 ], //  3   720x 576@50
-            [ 1280,  48, 112, 248, 1024,  1,  3, 38 ], //  4  1280x1024@60
-            [  800,  40, 128,  88,  600,  1,  4, 23 ], //  5   800x 600@60
-            [  640,  16,  96,  48,  480, 10,  2, 33 ], //  6   640x 480@60
-            [ 1280, 440,  40, 220,  720,  5,  5, 20 ], //  7  1280x 720@50
-            [ 1920,  88,  44, 148, 1080,  4,  5, 36 ], //  8  1920x1080@60
-            [ 1920, 528,  44, 148, 1080,  4,  5, 36 ], //  9  1920x1080@50
-            [ 1366,  70, 143, 213,  768,  3,  3, 24 ], // 10  1366x 768@60
-            [ 1024,  40, 104, 144,  600,  1,  3, 18 ], // 11  1024x 600@60
-            [ 1920,  48,  32,  80, 1440,  2,  4, 38 ], // 12  1920x1440@60
-            [ 2048,  48,  32,  80, 1536,  2,  4, 38 ], // 13  2048x1536@60
-            [ 1280,  24,  16,  40, 1440,  3,  5, 33 ], // 14  2560x1440@60 (pr)
+            [1280, 110, 40, 220, 720, 5, 5, 20], //  0  1280x 720@60
+            [1024, 24, 136, 160, 768, 3, 6, 29], //  1  1024x 768@60
+            [720, 16, 62, 60, 480, 9, 6, 30], //  2   720x 480@60
+            [720, 12, 64, 68, 576, 5, 5, 39], //  3   720x 576@50
+            [1280, 48, 112, 248, 1024, 1, 3, 38], //  4  1280x1024@60
+            [800, 40, 128, 88, 600, 1, 4, 23], //  5   800x 600@60
+            [640, 16, 96, 48, 480, 10, 2, 33], //  6   640x 480@60
+            [1280, 440, 40, 220, 720, 5, 5, 20], //  7  1280x 720@50
+            [1920, 88, 44, 148, 1080, 4, 5, 36], //  8  1920x1080@60
+            [1920, 528, 44, 148, 1080, 4, 5, 36], //  9  1920x1080@50
+            [1366, 70, 143, 213, 768, 3, 3, 24], // 10  1366x 768@60
+            [1024, 40, 104, 144, 600, 1, 3, 18], // 11  1024x 600@60
+            [1920, 48, 32, 80, 1440, 2, 4, 38], // 12  1920x1440@60
+            [2048, 48, 32, 80, 1536, 2, 4, 38], // 13  2048x1536@60
+            [1280, 24, 16, 40, 1440, 3, 5, 33], // 14  2560x1440@60 (pr)
 
             // TV modes.
-            [  640,  30,  60,  70,  240,  4,  4, 14 ], // NTSC 15K
-            [  640,  16,  96,  48,  480,  8,  4, 33 ], // NTSC 31K
-            [  640,  30,  60,  70,  288,  6,  4, 14 ], //  PAL 15K
-            [  640,  16,  96,  48,  576,  2,  4, 42 ], //  PAL 31K
+            [640, 30, 60, 70, 240, 4, 4, 14], // NTSC 15K
+            [640, 16, 96, 48, 480, 8, 4, 33], // NTSC 31K
+            [640, 30, 60, 70, 288, 6, 4, 14], //  PAL 15K
+            [640, 16, 96, 48, 576, 2, 4, 42], //  PAL 31K
         ];
 
         V_PARAM_DEFAULT_MODES.get(*self as usize).unwrap()
@@ -505,26 +508,35 @@ impl From<DefaultVideoMode> for CustomVideoModeParam {
 pub struct CustomVideoModeParam {
     pub mode: u32, // 0
 
-    pub hact: u32, // 1
-    pub hfp: u32,  // 2
-    pub hs: u32,   // 3
-    pub hbp: u32,  // 4
+    pub hact: u32,
+    // 1
+    pub hfp: u32,
+    // 2
+    pub hs: u32,
+    // 3
+    pub hbp: u32, // 4
 
-    pub vact: u32, // 5
-    pub vfp: u32,  // 6
-    pub vs: u32,   // 7
-    pub vbp: u32,  // 8
+    pub vact: u32,
+    // 5
+    pub vfp: u32,
+    // 6
+    pub vs: u32,
+    // 7
+    pub vbp: u32, // 8
 
     pub pll: [u32; 12], // 9-20
 
     // These are polarity for hsync and vsync.
     // Not sure why hs and vs cannot be 2-complement (and thus `i32`).
-    pub hpol: u32, // 21
+    pub hpol: u32,
+    // 21
     pub vpol: u32, // 22
 
-    pub vic: u32, // 23
-    pub rb: u32,  // 24
-    pub pr: u32,  // 25
+    pub vic: u32,
+    // 23
+    pub rb: u32,
+    // 24
+    pub pr: u32, // 25
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -538,7 +550,7 @@ pub struct CustomVideoMode {
 impl CustomVideoMode {
     pub fn send_to_core(
         &self,
-        options: &MisterConfig,
+        direct_video: bool,
         spi: &mut Spi<impl MemoryMapper>,
         is_menu: bool,
     ) -> Result<(), String> {
@@ -548,7 +560,7 @@ impl CustomVideoMode {
         // At this point in the process if all your options aren't processed you're
         // doing something wrong.
         // No need to have options passed to this function.
-        if options.direct_video() {
+        if direct_video {
             fixed.param.hfp = 6;
             fixed.param.hbp = 3;
             fixed.param.hact += self.param.hfp - fixed.param.hfp;
@@ -654,7 +666,6 @@ fn parse_custom_video_mode(video_mode: Option<&str>) -> CustomVideoMode {
 }
 
 pub fn select_video_mode(options: &MisterConfig) -> Result<VideoModeDef, String> {
-    eprintln!("0001 {}", options.direct_video());
     if options.direct_video() {
         let mode = match (options.menu_pal(), options.forced_scandoubler()) {
             (false, false) => DefaultVideoMode::Ntsc15K,
@@ -717,7 +728,7 @@ fn parse_4k_hdmi_edid() {
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 \
         00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 93 \
         "
-        .replace(" ", ""),
+        .replace(' ', ""),
     )
     .unwrap();
 

@@ -1,10 +1,12 @@
+use std::path::{Path, PathBuf};
+
 use image::DynamicImage;
+use sdl3::gamepad::{Axis, Button};
+use sdl3::keyboard::Scancode;
+
 use mister_fpga::config_string::{ConfigMenu, LoadFileInfo};
 use mister_fpga::core::file::SdCard;
 use mister_fpga::types::StatusBitMap;
-use sdl3::gamepad::{Axis, Button};
-use sdl3::keyboard::Scancode;
-use std::path::{Path, PathBuf};
 
 /// A core that be used in the Golem platform.
 pub struct GolemCore {
@@ -18,6 +20,16 @@ impl GolemCore {
             inner,
             loaded_file: None,
         }
+    }
+
+    /// If this is a MiSTer core, returns it as its proper type.
+    pub fn as_mister(&self) -> Option<&mister_fpga::core::MisterFpgaCore> {
+        Some(&self.inner)
+    }
+
+    /// If this is a MiSTer core, returns it as its proper type (mut version).
+    pub fn as_mister_mut(&mut self) -> Option<&mut mister_fpga::core::MisterFpgaCore> {
+        Some(&mut self.inner)
     }
 
     pub fn send_to_framebuffer(&mut self, image_raw: impl AsRef<[u8]>) -> Result<(), String> {

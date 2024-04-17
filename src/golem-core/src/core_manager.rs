@@ -98,7 +98,7 @@ impl CoreManager {
         let mut core = self.load(bytes, true)?;
 
         // Send the logo to the framebuffer.
-        let logo = include_bytes!("../../logo.png");
+        let logo = include_bytes!("../../../logo.png");
         let image = image::load_from_memory_with_format(logo, image::ImageFormat::Png)
             .map_err(|e| format!("Could not load logo: {e}"))?;
 
