@@ -22,16 +22,26 @@ macro_rules! declare_field {
     ($(#[$field_attr:meta])* $field_name: ident, $const_name: ident, $ty: ty [pointer]) => {
         paste::paste! {
             $(#[$field_attr])*
-            pub fn $field_name(&self) -> *const $ty {
+            pub unsafe fn [< $field_name _ptr >](&self) -> *const $ty {
+                self.memory.as_ptr::<u8>().add(offsets::$const_name) as *const $ty
+            }
+
+            $(#[$field_attr])*
+            pub unsafe fn [< $field_name _ptr_mut >](&mut self) -> *mut $ty {
+                self.memory.as_mut_ptr::<u8>().add(offsets::$const_name) as *mut $ty
+            }
+
+            $(#[$field_attr])*
+            pub fn $field_name(&self) -> &$ty {
                 unsafe {
-                    self.memory.as_ptr::<u8>().add(offsets::$const_name) as *const $ty
+                    &*(self.memory.as_ptr::<u8>().add(offsets::$const_name) as *const $ty)
                 }
             }
 
             $(#[$field_attr])*
-            pub fn [< $field_name _mut >](&mut self) -> *mut $ty {
+            pub fn [< $field_name _mut >](&mut self) -> &$ty {
                 unsafe {
-                    self.memory.as_mut_ptr::<u8>().add(offsets::$const_name) as *mut $ty
+                    &mut *(self.memory.as_mut_ptr::<u8>().add(offsets::$const_name) as *mut $ty)
                 }
             }
         }
