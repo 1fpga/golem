@@ -418,7 +418,7 @@ impl MisterFpga {
             return Ok(());
         }
 
-        let data = self.soc_mut().data_mut() as *mut u32;
+        let data = unsafe { self.soc_mut().data_ptr_mut() } as *mut u32;
         unsafe {
             let (prefix, shorts, suffix) = program.align_to::<u32>();
 

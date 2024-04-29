@@ -131,10 +131,6 @@ mod cpp {
     }
 }
 
-extern "C" {
-    pub static mut cfg: cpp::CppCfg;
-}
-
 #[derive(Error, Debug)]
 #[error(transparent)]
 pub enum ConfigError {
@@ -930,9 +926,7 @@ impl Config {
     fn root() -> PathBuf {
         #[cfg(test)]
         {
-            unsafe {
-                testing::ROOT.clone().unwrap()
-            }
+            unsafe { testing::ROOT.clone().unwrap() }
         }
 
         #[cfg(not(test))]
@@ -1240,21 +1234,6 @@ impl Config {
     /// Merge a configuration file with another.
     pub fn merge(&mut self, other: Config) {
         Merge::merge(self, other);
-    }
-}
-
-#[cfg(not(test))]
-#[no_mangle]
-pub extern "C" fn rust_load_config() {
-    let root = Config::root();
-
-    let p = root.join("MiSTer.ini");
-    tracing::debug!("Loading config from {p:?}");
-    let mut config = Config::load(p).unwrap();
-    config.mister.set_defaults();
-
-    unsafe {
-        config.copy_to_cfg_cpp(&mut cfg);
     }
 }
 
