@@ -18,7 +18,9 @@ pub struct Bk2Header {
 impl TryFrom<String> for Bk2Header {
     type Error = Bk2HeaderError;
 
-    fn try_from(header: String) -> Result<Self, Self::Error> {}
+    fn try_from(header: String) -> Result<Self, Self::Error> {
+        todo!()
+    }
 }
 
 impl Bk2Header {}

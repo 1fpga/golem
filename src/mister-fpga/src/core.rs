@@ -16,6 +16,7 @@ use crate::core::buttons::ButtonMap;
 use crate::core::file::SdCard;
 use crate::core::video::VideoInfo;
 use crate::core::volume::IntoVolume;
+use crate::fpga::{CoreInterfaceType, CoreType, MisterFpga, user_io};
 use crate::fpga::file_io::{
     FileExtension, FileIndex, FileTxData16Bits, FileTxData8Bits, FileTxDisabled, FileTxEnabled,
 };
@@ -23,7 +24,7 @@ use crate::fpga::user_io::{
     GetSdStat, GetStatusBits, SdRead, SdStatOutput, SdWrite, SetSdConf, SetSdInfo, SetSdStat,
     SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp, UserIoRtc,
 };
-use crate::fpga::{user_io, CoreInterfaceType, CoreType, MisterFpga};
+use crate::framebuffer::FbHeader;
 use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
@@ -150,6 +151,8 @@ impl MisterFpgaCore {
     pub fn init_video(&mut self, config: &MisterConfig, is_menu: bool) -> Result<(), String> {
         video::init(config);
         video::init_mode(config, self, is_menu);
+
+        self.framebuffer.update_ty();
         Ok(())
     }
 
@@ -177,6 +180,11 @@ impl MisterFpgaCore {
         debug!(?volume, "Setting volume");
         self.fpga.spi_mut().execute(volume.into_user_io())?;
         Ok(())
+    }
+
+    pub fn frame_iter(&mut self) -> crate::framebuffer::FrameIter {
+        self.framebuffer.update_ty();
+        crate::framebuffer::FrameIter::new(&self.framebuffer)
     }
 
     /// Send a file (ROM or BIOS) to the core on an index.
@@ -358,6 +366,10 @@ impl MisterFpgaCore {
     /// Take a screenshot and return the image in memory.
     pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
         self.framebuffer.take_screenshot()
+    }
+
+    pub fn framebuffer(&self) -> &crate::framebuffer::FpgaFramebuffer<DevMemMemoryMapper> {
+        &self.framebuffer
     }
 
     /// Mount an SD card to the core.

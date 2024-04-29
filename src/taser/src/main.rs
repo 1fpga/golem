@@ -1,15 +1,18 @@
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
-use fce_movie_format::{FceFrame, FceInputButton};
-use mister_fpga::config::Config;
-use mister_fpga::core::buttons::MisterFpgaButtons;
-use mister_fpga::fpga::user_io::UserIoButtonSwitch;
-use std::io::{BufReader, Read};
-use std::path::PathBuf;
-use std::process;
-use tracing::{debug, error, info, trace, Level};
+use tracing::{debug, error, info, Level, trace};
 use tracing_subscriber::fmt::Subscriber;
+
+use fce_movie_format::{FceInputButton, FceInputGamepad};
+use mister_fpga::config::Config;
+use mister_fpga::core::buttons::{ButtonMap, MisterFpgaButtons};
+use mister_fpga::core::MisterFpgaCore;
+use mister_fpga::fpga::user_io::UserIoButtonSwitch;
 
 /// `taser` is a simple command-line interface to the GoLEm Mister core
 /// library. It is intended to be used as a standalone application, or as a
@@ -36,10 +39,13 @@ struct Flags {
     #[clap(long, default_value = "0")]
     volume: u8,
 
-    /// Set the frame time in nanoseconds. Default will use the core's video
-    /// vertical refresh time.
+    /// Length to wait at the start before starting the simulation after a reset.
     #[clap(long)]
-    frame_nsec: Option<u64>,
+    wait_start: Option<String>,
+
+    /// Number of nanoseconds to wait after the frame changed.
+    #[clap(long)]
+    wait_inner_frame: Option<humantime::Duration>,
 
     #[command(flatten)]
     pub verbose: Verbosity<clap_verbosity_flag::InfoLevel>,
@@ -83,8 +89,7 @@ fn main() {
 
     let options = Config::base().into_inner();
 
-    let mut core =
-        mister_fpga::core::MisterFpgaCore::new(fpga.clone()).expect("Could not create the core");
+    let mut core = MisterFpgaCore::new(fpga.clone()).expect("Could not create the core");
 
     core.init().unwrap();
     core.init_video(&options, false).unwrap();
@@ -104,129 +109,134 @@ fn main() {
     info!(?video_info, "Video initialized");
 
     if let Some(tas) = opts.tas {
-        match tas.extension().map(|e| e.to_str().unwrap_or_default()) {
-            Some("fm2") => {
-                info!("Playing FM2 file: {}", tas.display());
-                // Read the file and decode it.
-                let file = std::fs::File::open(&tas).expect("Could not open TAS file");
-                let fm = fce_movie_format::FceFile::load_stream(BufReader::new(file)).unwrap();
+        // Showtime!
+        core.soft_reset();
 
-                // Showtime!
-                core.soft_reset();
+        let port0 = *core.gamepad(0).unwrap();
+        let frames = read_frames(&tas, port0).expect("Could not read TAS file.");
 
-                let sleepy_time =
-                    // std::time::Duration::from_secs_f64(1. / 60.00);
-                    // std::time::Duration::from_secs_f64(1. / 60.1);
-                // std::time::Duration::from_secs_f64(1. / 60.099822938442230224609375);
-                // std::time::Duration::from_nanos(16_638_984);
-                // std::time::Duration::from_nanos(16_638_997);
-                // std::time::Duration::from_nanos(16_641_160);
+        let trace_is_enabled = tracing::enabled!(Level::TRACE);
 
+        const TRACE_EVERY_N_FRAMES: usize = 600;
 
-// gets star
-
-                // std::time::Duration::from_nanos(16_641_170); // gets star
-                // std::time::Duration::from_nanos(16_641_165); // gets star
-                // std::time::Duration::from_nanos(16_641_160);
-                // std::time::Duration::from_nanos(16_641_155);
-                //    std::time::Duration::from_nanos(16_641_140);
-
-
-                   // std::time::Duration::from_nanos(16_641_180);
-                    opts.frame_nsec.map( std::time::Duration::from_nanos).unwrap_or_else(||video_info.vtime());
-
-                //     video_info.vtime();
-                let sleepy_time_ns = sleepy_time.as_nanos() as u32;
-                debug!(?sleepy_time, ?sleepy_time_ns, "Showtime");
-                std::thread::sleep(sleepy_time / 2);
-
-                let mut port0 = *core.gamepad(0).unwrap();
-
-                let start = std::time::Instant::now();
-                let mut last = std::time::Instant::now();
-                let trace_is_enabled = tracing::enabled!(Level::TRACE);
-
-                const TRACE_EVERY_N_FRAMES: usize = 600;
-
-                let mut next = std::time::Instant::now();
-                let frames = std::iter::repeat(FceFrame::empty(&fm.header))
-                    .take(10)
-                    .chain(fm.frames().copied());
-                for (frame, fce_frame) in frames.enumerate() {
-                    while std::time::Instant::now() < next {}
-                    next += sleepy_time;
-
-                    if trace_is_enabled && frame > 0 && frame % TRACE_EVERY_N_FRAMES == 0 {
-                        let elapsed = last.elapsed();
-                        let per_frame = elapsed / 600;
-                        let per_frame_entire = start.elapsed() / frame as u32;
-                        let fps = 1. / per_frame.as_secs_f64();
-                        let fps_entire = 1. / per_frame_entire.as_secs_f64();
-
-                        trace!(
-                            ?frame,
-                            ?elapsed,
-                            ?per_frame,
-                            ?fps,
-                            ?per_frame_entire,
-                            ?fps_entire,
-                            "Frame"
-                        );
-                        last = std::time::Instant::now();
-                    }
-
-                    if let Some(buttons) = fce_frame.port0.as_ref().and_then(|p| p.as_gamepad()) {
-                        let mut changed = true;
-                        if !port0.is_empty() {
-                            port0.clear();
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::A) {
-                            port0.press(MisterFpgaButtons::A);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::B) {
-                            port0.press(MisterFpgaButtons::B);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::Down) {
-                            port0.press(MisterFpgaButtons::DpadDown);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::Up) {
-                            port0.press(MisterFpgaButtons::DpadUp);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::Left) {
-                            port0.press(MisterFpgaButtons::DpadLeft);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::Right) {
-                            port0.press(MisterFpgaButtons::DpadRight);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::Select) {
-                            port0.press(MisterFpgaButtons::Back);
-                            changed = true;
-                        }
-                        if buttons.has(FceInputButton::Start) {
-                            port0.press(MisterFpgaButtons::Start);
-                            changed = true;
-                        }
-
-                        // if changed {
-                        core.send_gamepad(0, port0);
-                        // }
-                    }
+        let mut wait_frames = 0;
+        let wait_start: Duration = if let Some(wait_start) = &opts.wait_start {
+            humantime::parse_duration_ex(wait_start, |unit, value| match unit {
+                "fr" | "frame" | "frames" => {
+                    wait_frames = value as u32;
+                    Ok(Some(0))
                 }
+                _ => Ok(None),
+            }).expect("Invalid wait_start argument.")
+        } else {
+            Duration::from_secs(0)
+        };
+
+        let wait_inner_frame: Duration = opts.wait_inner_frame.map(|x| x.into()).unwrap_or_default();
+
+        let mut frame_it = core.frame_iter();
+        for _ in 0..wait_frames {
+            let _ = frame_it.next();
+        }
+
+        let mut next = std::time::Instant::now();
+        next += wait_start;
+        while std::time::Instant::now() < next {}
+
+        let start = std::time::Instant::now();
+        let mut last = start;
+
+        for (frame, (p0, p1)) in frames.into_iter().enumerate() {
+            let _ = frame_it.next();
+
+            let wait_to_inner_frame = std::time::Instant::now() + wait_inner_frame;
+            while std::time::Instant::now() < wait_to_inner_frame {}
+
+            if trace_is_enabled && frame != 0 && frame % TRACE_EVERY_N_FRAMES == 0 {
+                let elapsed = last.elapsed();
+                let per_frame = elapsed / 600;
+                let per_frame_entire = start.elapsed() / frame as u32;
+                let fps = 1. / per_frame.as_secs_f64();
+                let fps_entire = 1. / per_frame_entire.as_secs_f64();
+
+                trace!(
+                    ?frame,
+                    ?elapsed,
+                    ?per_frame,
+                    ?fps,
+                    ?per_frame_entire,
+                    ?fps_entire,
+                    "Frame"
+                );
+                last = std::time::Instant::now();
             }
-            _ => {
-                error!("Unsupported TAS file format.");
-                process::exit(1);
+
+            if let Some(p0) = p0 {
+                core.send_gamepad(0, p0);
+            }
+            if let Some(p1) = p1 {
+                core.send_gamepad(1, p1);
             }
         }
     } else {
-        info!("No bk2 file provided, running the core indefinitely.");
+        info!("No TAS file provided, running the core indefinitely.");
         loop {}
+    }
+}
+
+fn fce_button_to_mister(button: FceInputButton) -> MisterFpgaButtons {
+    match button {
+        FceInputButton::A => MisterFpgaButtons::A,
+        FceInputButton::B => MisterFpgaButtons::B,
+        FceInputButton::Select => MisterFpgaButtons::Back,
+        FceInputButton::Start => MisterFpgaButtons::Start,
+        FceInputButton::Up => MisterFpgaButtons::DpadUp,
+        FceInputButton::Down => MisterFpgaButtons::DpadDown,
+        FceInputButton::Left => MisterFpgaButtons::DpadLeft,
+        FceInputButton::Right => MisterFpgaButtons::DpadRight,
+    }
+}
+
+fn fce_gamepad_to_button_map(gamepad: FceInputGamepad, mut map: ButtonMap) -> ButtonMap {
+    map.clear();
+    for button in gamepad.buttons() {
+        map.press(fce_button_to_mister(button));
+    }
+    map
+}
+
+fn read_frames(
+    tas_file: impl AsRef<Path>,
+    base_map: ButtonMap,
+) -> Result<Vec<(Option<ButtonMap>, Option<ButtonMap>)>, &'static str> {
+    // let base_map = ButtonMap::new();
+    let tas = tas_file.as_ref();
+    match tas.extension().map(|e| e.to_str().unwrap_or_default()) {
+        Some("fm2") => {
+            info!("Reading FM2 file: {}", tas.display());
+            // Read the file and decode it.
+            let file = std::fs::File::open(&tas).expect("Could not open TAS file");
+            let fm = fce_movie_format::FceFile::load_stream(BufReader::new(file)).unwrap();
+
+            let frames = fm.frames().map(|f| {
+                let p0 = f
+                    .port0
+                    .as_ref()
+                    .and_then(|p| p.as_gamepad())
+                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map.clone()));
+                let p1 = f
+                    .port1
+                    .as_ref()
+                    .and_then(|p| p.as_gamepad())
+                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map.clone()));
+                (p0, p1)
+            });
+
+            Ok(frames.collect())
+        }
+        _ => {
+            error!("Unsupported TAS file format.");
+            Err("Unsupported TAS file format.")
+        }
     }
 }

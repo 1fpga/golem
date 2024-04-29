@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::str::FromStr;
 
 use bitvec::prelude::*;
@@ -10,7 +10,7 @@ use tracing::trace;
 /// Buttons supported by the MisterFPGA API.
 /// This is MiSTer specific.
 #[derive(
-    Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key, FromRepr,
+Copy, Clone, Debug, Eq, PartialEq, Display, EnumCount, EnumIter, EnumString, Key, FromRepr,
 )]
 #[repr(i8)]
 pub enum MisterFpgaButtons {
@@ -209,5 +209,15 @@ impl ButtonMap {
 
     pub fn value(&self) -> u32 {
         self.bits.load()
+    }
+
+    pub fn display(&self) -> String {
+        let mut s = String::new();
+        for (i, btn) in self.map.iter().enumerate() {
+            if self.bits.get(i).as_deref() == Some(&true) {
+                s.push_str(&format!("{:?} ", btn));
+            }
+        }
+        s
     }
 }

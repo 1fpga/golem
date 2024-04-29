@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = [
     "src/bk2-format",
     "src/cyclone-v",
@@ -14,7 +15,6 @@ members = [
     "src/senior",
     "src/taser",
 ]
-resolver = "2"
 
 [profile.release]
 lto = true
@@ -27,4 +27,21 @@ debug = false
 overflow-checks = false
 debug = 0
 panic = "abort"
+
+[workspace.dependencies]
+
+# Repo crates
+bk2-format = { path = "src/bk2-format" }
+cyclone-v = { path = "src/cyclone-v" }
+de10-nano = { path = "src/de10-nano" }
+fce-movie-format = { path = "src/fce-movie-format" }
+golem = { path = "src/golem" }
+golem-core = { path = "src/golem-core" }
+golem-db = { path = "src/golem-db" }
+golem-script-host = { path = "src/golem-script-host" }
+golem-ui = { path = "src/golem-ui" }
+junior = { path = "src/junior" }
+mister-fpga = { path = "src/mister-fpga" }
+senior = { path = "src/senior" }
+taser = { path = "src/taser" }
 
