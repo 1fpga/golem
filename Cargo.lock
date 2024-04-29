@@ -2190,7 +2190,7 @@ dependencies = [
  "serde_with",
  "sha1",
  "sha2",
- "strum",
+ "strum 0.25.0",
  "tempdir",
  "thiserror",
  "tinybmp",
@@ -2219,7 +2219,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "retronomicon-dto",
- "strum",
+ "strum 0.25.0",
  "tracing",
 ]
 
@@ -2301,7 +2301,7 @@ dependencies = [
  "serde_with",
  "sha1",
  "sha2",
- "strum",
+ "strum 0.25.0",
  "tempdir",
  "thiserror",
  "tinybmp",
@@ -3139,7 +3139,7 @@ dependencies = [
  "serde",
  "serde_with",
  "static_assertions",
- "strum",
+ "strum 0.25.0",
  "tempdir",
  "thiserror",
  "tracing",
@@ -4077,7 +4077,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "strum",
+ "strum 0.25.0",
  "thiserror",
  "url",
 ]
@@ -4738,7 +4738,16 @@ version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.25.3",
+]
+
+[[package]]
+name = "strum"
+version = "0.26.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d8cec3501a5194c432b2b7976db6b7d10ec95c253208b45f83f7136aa985e29"
+dependencies = [
+ "strum_macros 0.26.2",
 ]
 
 [[package]]
@@ -4746,6 +4755,19 @@ name = "strum_macros"
 version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23dc1fa9ac9c169a78ba62f0b841814b7abae11bdd047b9c58f893439e309ea0"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.59",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.26.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6cf59daf282c0a494ba14fd21610a0325f9f90ec9d1231dea26bcb1d696c946"
 dependencies = [
  "heck 0.4.1",
  "proc-macro2",
@@ -4846,6 +4868,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 
 [[package]]
+name = "tasbot"
+version = "0.1.0"
+dependencies = [
+ "strum 0.26.2",
+]
+
+[[package]]
 name = "taser"
 version = "0.1.0"
 dependencies = [
@@ -4854,6 +4883,7 @@ dependencies = [
  "core_affinity",
  "fce-movie-format",
  "mister-fpga",
+ "tasbot",
  "tracing",
  "tracing-subscriber",
 ]

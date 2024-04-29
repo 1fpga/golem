@@ -1,0 +1,14 @@
+[package]
+name = "tasbot"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "tasbot"
+path = "src/main.rs"
+
+[dependencies]
+strum = { version = "0.26.2", features = ["derive"] }
