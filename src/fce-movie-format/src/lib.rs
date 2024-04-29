@@ -1,8 +1,9 @@
-use base64::prelude::*;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::io::BufRead;
 use std::str::FromStr;
+
+use base64::prelude::*;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -197,6 +198,13 @@ impl FceInputGamepad {
 
     pub fn has(&self, button: FceInputButton) -> bool {
         self.0 & (button as u8) != 0
+    }
+
+    pub fn buttons(&self) -> Vec<FceInputButton> {
+        (0..8)
+            .filter(|i| self.0 & (1 << *i) != 0)
+            .map(|i| FceInputButton::from(1 << i))
+            .collect()
     }
 }
 
@@ -501,7 +509,7 @@ fn parse_input_line(header: &FceHeader, line: &str) -> Result<FceFrame, FceError
 pub struct FceFrameInputs(Vec<FceFrame>);
 
 impl FceFrameInputs {
-    pub fn iter(&self) -> impl Iterator<Item = &FceFrame> {
+    pub fn iter(&self) -> impl Iterator<Item=&FceFrame> {
         self.0.iter()
     }
 }
@@ -539,7 +547,7 @@ impl FceFile {
         })
     }
 
-    pub fn frames(&self) -> impl Iterator<Item = &FceFrame> {
+    pub fn frames(&self) -> impl Iterator<Item=&FceFrame> {
         self.inputs.iter()
     }
 }
