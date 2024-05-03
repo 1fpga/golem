@@ -1,10 +1,10 @@
 use std::path::Path;
 use std::rc::Rc;
 
-use boa_engine::{Context, js_string, JsError, JsValue, Module, Source};
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::module::ModuleLoader;
 use boa_engine::property::Attribute;
+use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
 use tracing::{error, info};
 
@@ -51,7 +51,7 @@ fn create_context(
 
             Rc::new(GolemModuleLoader::new(dir).expect("Could not find the script folder."))
         }
-        None => Rc::new(GolemModuleLoader::default())
+        None => Rc::new(GolemModuleLoader::default()),
     };
 
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
@@ -118,10 +118,16 @@ pub fn run(
                 return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
             }
         }
-    };
+    }
 
-    let main_fn = module.namespace(&mut context).get(js_string!("main"), &mut context)?;
-    let result = main_fn.as_callable().expect("Main was not callable").call(&JsValue::undefined(), &[], &mut context)?;
+    let main_fn = module
+        .namespace(&mut context)
+        .get(js_string!("main"), &mut context)?;
+    let result = main_fn.as_callable().expect("Main was not callable").call(
+        &JsValue::undefined(),
+        &[],
+        &mut context,
+    )?;
 
     context.run_jobs();
 

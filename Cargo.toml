@@ -13,7 +13,6 @@ members = [
     "src/junior",
     "src/mister-fpga",
     "src/senior",
-    "src/tasbot",
     "src/taser",
 ]
 
@@ -44,6 +43,5 @@ golem-ui = { path = "src/golem-ui" }
 junior = { path = "src/junior" }
 mister-fpga = { path = "src/mister-fpga" }
 senior = { path = "src/senior" }
-tasbot = { path = "src/tasbot" }
 taser = { path = "src/taser" }
 

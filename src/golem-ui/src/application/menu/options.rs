@@ -1,7 +1,7 @@
 use embedded_graphics::mono_font::MonoFont;
 
-use super::GolemMenuState;
 use super::style::MenuReturn;
+use super::GolemMenuState;
 
 #[derive(Clone)]
 pub struct TextMenuOptions<'a, R: MenuReturn + Copy> {

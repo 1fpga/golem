@@ -328,6 +328,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d7e60934ceec538daadb9d8432424ed043a904d8e0243f3c6446bce549a46ac"
 
 [[package]]
+name = "bitfield"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c821a6e124197eb56d907ccc2188eab1038fb919c914f47976e64dd8dbc855d1"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -867,7 +873,7 @@ dependencies = [
 name = "cyclone-v"
 version = "0.1.0"
 dependencies = [
- "bitfield",
+ "bitfield 0.14.0",
  "byteorder",
  "libc",
  "memoffset",
@@ -2136,7 +2142,7 @@ name = "golem"
 version = "0.1.10"
 dependencies = [
  "anyhow",
- "bitfield",
+ "bitfield 0.14.0",
  "bitvec",
  "bus",
  "byteorder",
@@ -2190,7 +2196,7 @@ dependencies = [
  "serde_with",
  "sha1",
  "sha2",
- "strum 0.25.0",
+ "strum",
  "tempdir",
  "thiserror",
  "tinybmp",
@@ -2219,7 +2225,7 @@ dependencies = [
  "diesel",
  "diesel_migrations",
  "retronomicon-dto",
- "strum 0.25.0",
+ "strum",
  "tracing",
 ]
 
@@ -2249,7 +2255,7 @@ name = "golem-ui"
 version = "0.0.1"
 dependencies = [
  "anyhow",
- "bitfield",
+ "bitfield 0.14.0",
  "bitvec",
  "bus",
  "byteorder",
@@ -2301,7 +2307,7 @@ dependencies = [
  "serde_with",
  "sha1",
  "sha2",
- "strum 0.25.0",
+ "strum",
  "tempdir",
  "thiserror",
  "tinybmp",
@@ -2449,6 +2455,11 @@ checksum = "6cb51c9a029ddc91b07a787f1d86b53ccfa49b0e86688c946ebe8d3555685dd7"
 dependencies = [
  "libm",
 ]
+
+[[package]]
+name = "humantime"
+version = "2.1.0"
+source = "git+https://github.com/hansl/humantime.git?rev=70e660a#70e660affa1a36a9f9fd9186bc1cedb3205c7a50"
 
 [[package]]
 name = "hyper"
@@ -3112,7 +3123,7 @@ name = "mister-fpga"
 version = "0.1.0"
 dependencies = [
  "array_map",
- "bitfield",
+ "bitfield 0.15.0",
  "bitvec",
  "cfg-if",
  "chrono",
@@ -3138,8 +3149,9 @@ dependencies = [
  "sdl3",
  "serde",
  "serde_with",
+ "simple_endian",
  "static_assertions",
- "strum 0.25.0",
+ "strum",
  "tempdir",
  "thiserror",
  "tracing",
@@ -4077,7 +4089,7 @@ dependencies = [
  "hex",
  "serde",
  "serde_json",
- "strum 0.25.0",
+ "strum",
  "thiserror",
  "url",
 ]
@@ -4636,6 +4648,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "simple_endian"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "872b1ba2925d84fd02d5a3a0b7196b7b681cda5d64a214c6bb1aafb3827c458f"
+
+[[package]]
 name = "siphasher"
 version = "0.3.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4738,16 +4756,7 @@ version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
 dependencies = [
- "strum_macros 0.25.3",
-]
-
-[[package]]
-name = "strum"
-version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d8cec3501a5194c432b2b7976db6b7d10ec95c253208b45f83f7136aa985e29"
-dependencies = [
- "strum_macros 0.26.2",
+ "strum_macros",
 ]
 
 [[package]]
@@ -4755,19 +4764,6 @@ name = "strum_macros"
 version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23dc1fa9ac9c169a78ba62f0b841814b7abae11bdd047b9c58f893439e309ea0"
-dependencies = [
- "heck 0.4.1",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn 2.0.59",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6cf59daf282c0a494ba14fd21610a0325f9f90ec9d1231dea26bcb1d696c946"
 dependencies = [
  "heck 0.4.1",
  "proc-macro2",
@@ -4868,13 +4864,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1fc403891a21bcfb7c37834ba66a547a8f402146eba7265b5a6d88059c9ff2f"
 
 [[package]]
-name = "tasbot"
-version = "0.1.0"
-dependencies = [
- "strum 0.26.2",
-]
-
-[[package]]
 name = "taser"
 version = "0.1.0"
 dependencies = [
@@ -4882,8 +4871,8 @@ dependencies = [
  "clap-verbosity-flag",
  "core_affinity",
  "fce-movie-format",
+ "humantime",
  "mister-fpga",
- "tasbot",
  "tracing",
  "tracing-subscriber",
 ]

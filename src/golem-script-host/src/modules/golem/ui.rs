@@ -1,7 +1,7 @@
-use boa_engine::{
-    Context, Finalize, js_string, JsData, JsNativeError, JsResult, JsString, JsValue, Module, Trace,
-};
 use boa_engine::object::builtins::JsArray;
+use boa_engine::{
+    js_string, Context, Finalize, JsData, JsNativeError, JsResult, JsString, JsValue, Module, Trace,
+};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::TryFromJs;
 
@@ -144,8 +144,12 @@ fn text_menu_(
             .with_sort_opt(sort_label)
             .with_state(Some(state));
 
-        let (result, new_state) =
-            menu::text_menu(app, &options.title.clone().unwrap_or_default(), options.items.as_slice(), menu_options);
+        let (result, new_state) = menu::text_menu(
+            app,
+            &options.title.clone().unwrap_or_default(),
+            options.items.as_slice(),
+            menu_options,
+        );
         state = new_state;
 
         fn call_callable(
@@ -186,7 +190,8 @@ fn text_menu_(
                     if let Some(v) = call_callable(js_string!("sort"), maybe_callable, context)? {
                         // In sort, we try to replace partial options with the result of the callable.
                         // If this doesn't work, we return the value.
-                        let Ok(mut new_options): JsResult<UiMenuOptions> = v.try_js_into(context) else {
+                        let Ok(mut new_options): JsResult<UiMenuOptions> = v.try_js_into(context)
+                        else {
                             return Ok(v);
                         };
 
@@ -263,6 +268,6 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
                 filesystem::select.into_js_function_copied(context),
             ),
         ]
-            .into_js_module(context),
+        .into_js_module(context),
     ))
 }
