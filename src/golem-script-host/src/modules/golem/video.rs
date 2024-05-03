@@ -1,4 +1,4 @@
-use boa_engine::{Context, js_string, JsError, JsResult, JsString, Module};
+use boa_engine::{js_string, Context, JsError, JsResult, JsString, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 
 use golem_ui::platform::GoLEmPlatform;

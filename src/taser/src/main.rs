@@ -8,7 +8,7 @@ use clap_verbosity_flag::Verbosity;
 use tracing::{debug, error, info, Level, trace};
 use tracing_subscriber::fmt::Subscriber;
 
-use fce_movie_format::{FceInputButton, FceInputGamepad};
+use fce_movie_format::{FceFrame, FceInputButton, FceInputGamepad};
 use mister_fpga::config::Config;
 use mister_fpga::core::buttons::{ButtonMap, MisterFpgaButtons};
 use mister_fpga::core::MisterFpgaCore;
@@ -127,12 +127,14 @@ fn main() {
                     Ok(Some(0))
                 }
                 _ => Ok(None),
-            }).expect("Invalid wait_start argument.")
+            })
+                .expect("Invalid wait_start argument.")
         } else {
             Duration::from_secs(0)
         };
 
-        let wait_inner_frame: Duration = opts.wait_inner_frame.map(|x| x.into()).unwrap_or_default();
+        let wait_inner_frame: Duration =
+            opts.wait_inner_frame.map(|x| x.into()).unwrap_or_default();
 
         let mut frame_it = core.frame_iter();
         for _ in 0..wait_frames {

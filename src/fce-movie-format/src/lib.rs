@@ -509,7 +509,7 @@ fn parse_input_line(header: &FceHeader, line: &str) -> Result<FceFrame, FceError
 pub struct FceFrameInputs(Vec<FceFrame>);
 
 impl FceFrameInputs {
-    pub fn iter(&self) -> impl Iterator<Item=&FceFrame> {
+    pub fn iter(&self) -> impl Iterator<Item = &FceFrame> {
         self.0.iter()
     }
 }
@@ -547,7 +547,7 @@ impl FceFile {
         })
     }
 
-    pub fn frames(&self) -> impl Iterator<Item=&FceFrame> {
+    pub fn frames(&self) -> impl Iterator<Item = &FceFrame> {
         self.inputs.iter()
     }
 }

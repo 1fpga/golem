@@ -1,13 +1,13 @@
 use std::path::Path;
 
-use boa_engine::{Context, JsError, JsNativeError, JsResult, JsString, JsValue, TryIntoJsResult};
 use boa_engine::value::TryFromJs;
+use boa_engine::{Context, JsError, JsNativeError, JsResult, JsString, JsValue, TryIntoJsResult};
 use boa_interop::ContextData;
 use boa_macros::{Finalize, JsData, Trace};
 use regex::Regex;
 use serde::Deserialize;
 
-use golem_ui::application::menu::filesystem::{FilesystemMenuOptions, select_file_path_menu};
+use golem_ui::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 
 use crate::HostData;
 

@@ -4,12 +4,12 @@ use thiserror::__private::AsDynError;
 use golem_db::models::GameOrder;
 
 use crate::application::coordinator::GameStartInfo;
-use crate::application::GoLEmApp;
-use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::menu::games::manage::manage_games;
 use crate::application::menu::style::MenuReturn;
+use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::show_error;
 use crate::application::panels::core_loop::run_core_loop;
+use crate::application::GoLEmApp;
 
 mod details;
 mod manage;

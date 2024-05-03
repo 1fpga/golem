@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use boa_engine::{Context, js_string, JsResult, JsString, Module};
+use boa_engine::{js_string, Context, JsResult, JsString, Module};
 
 use crate::module_loader::GolemModuleLoader;
 

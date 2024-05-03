@@ -2,8 +2,8 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use boa_engine::{Context, JsResult, JsString, Module};
 use boa_engine::module::{ModuleLoader, Referrer, SimpleModuleLoader};
+use boa_engine::{Context, JsResult, JsString, Module};
 use boa_interop::embed_module;
 use boa_interop::loaders::{HashMapModuleLoader, MergeModuleLoader};
 
@@ -62,12 +62,9 @@ impl ModuleLoader for GolemModuleLoader {
                 if module.is_ok() {
                     finish_load(module, context);
                 } else {
-                    inner.as_ref().load_imported_module(
-                        referrer,
-                        specifier,
-                        finish_load,
-                        context,
-                    );
+                    inner
+                        .as_ref()
+                        .load_imported_module(referrer, specifier, finish_load, context);
                 }
             }),
             context,
@@ -75,7 +72,9 @@ impl ModuleLoader for GolemModuleLoader {
     }
 
     fn get_module(&self, specifier: JsString) -> Option<Module> {
-        self.named_modules.borrow().get_module(specifier.clone())
+        self.named_modules
+            .borrow()
+            .get_module(specifier.clone())
             .or_else(|| self.inner.as_ref().get_module(specifier))
     }
 }
