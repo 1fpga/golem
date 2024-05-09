@@ -36,7 +36,7 @@ cyclone-v = { path = "src/cyclone-v" }
 de10-nano = { path = "src/de10-nano" }
 fce-movie-format = { path = "src/fce-movie-format" }
 golem = { path = "src/golem" }
-golem-core = { path = "src/golem-core" }
+golem-core = { path = "src/golem-core", version = "0.1.0" }
 golem-db = { path = "src/golem-db" }
 golem-script-host = { path = "src/golem-script-host" }
 golem-ui = { path = "src/golem-ui" }
@@ -44,4 +44,3 @@ junior = { path = "src/junior" }
 mister-fpga = { path = "src/mister-fpga" }
 senior = { path = "src/senior" }
 taser = { path = "src/taser" }
-

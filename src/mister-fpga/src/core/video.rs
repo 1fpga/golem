@@ -114,7 +114,7 @@ pub struct VideoInfo {
     arxy: u16,
     fb_en: u16,
     fb_fmt: u16,
-    fb_resolution: u16,
+    _fb_resolution: u16,
     fb_width: u16,
     fb_height: u16,
 

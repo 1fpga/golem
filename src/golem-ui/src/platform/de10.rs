@@ -1,17 +1,20 @@
 #![cfg(feature = "platform_de10")]
-use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
-use crate::macguiver::platform::Platform;
-use crate::platform::{sizes, GoLEmPlatform};
+
 use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::Drawable;
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::BinaryColor;
-use embedded_graphics::Drawable;
-use golem_core::CoreManager;
-use mister_fpga::fpga;
-use mister_fpga::osd::OsdDisplay;
 use sdl3::event::Event;
 use tracing::{debug, error};
+
+use mister_fpga::fpga;
+use mister_fpga::osd::OsdDisplay;
+
+use crate::core_manager::CoreManager;
+use crate::macguiver::buffer::DrawBuffer;
+use crate::macguiver::platform::Platform;
+use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
+use crate::platform::{GoLEmPlatform, sizes};
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";

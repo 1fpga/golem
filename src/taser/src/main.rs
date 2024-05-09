@@ -5,10 +5,10 @@ use std::time::Duration;
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
-use tracing::{debug, error, info, Level, trace};
+use tracing::{debug, error, info, trace, Level};
 use tracing_subscriber::fmt::Subscriber;
 
-use fce_movie_format::{FceFrame, FceInputButton, FceInputGamepad};
+use fce_movie_format::{FceInputButton, FceInputGamepad};
 use mister_fpga::config::Config;
 use mister_fpga::core::buttons::{ButtonMap, MisterFpgaButtons};
 use mister_fpga::core::MisterFpgaCore;
@@ -52,11 +52,11 @@ struct Flags {
 }
 
 fn main() {
-    let cores = core_affinity::get_core_ids().unwrap();
+    let cpu_cores = core_affinity::get_core_ids().unwrap();
     // Always use the first core available.
-    let core = cores
+    let core = cpu_cores
         .get(1)
-        .unwrap_or_else(|| cores.first().expect("Could not find a CPU?!"));
+        .unwrap_or_else(|| cpu_cores.first().expect("Could not find a CPU?!"));
     core_affinity::set_for_current(*core);
 
     let opts = Flags::parse();
@@ -128,7 +128,7 @@ fn main() {
                 }
                 _ => Ok(None),
             })
-                .expect("Invalid wait_start argument.")
+            .expect("Invalid wait_start argument.")
         } else {
             Duration::from_secs(0)
         };

@@ -3,7 +3,7 @@ use std::time::Instant;
 use sdl3::event::Event;
 use tracing::{debug, error, info, trace};
 
-use golem_core::GolemCore;
+use golem_core::{Core, GolemCore};
 
 use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
@@ -33,7 +33,7 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
     let mut i = 0;
     let mut prev = Instant::now();
 
-    let mut should_check_savestates = core.save_states().map(|x| !x.is_empty()).unwrap_or(false);
+    let mut should_check_savestates = matches!(core.save_state(0), Ok(Some(_)));
 
     let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
 
@@ -70,7 +70,7 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
                 } => {
                     if !repeat {
                         inputs.key_down(scancode);
-                        core.key_down(scancode);
+                        let _ = core.key_down(scancode.into());
                     }
                 }
                 Event::KeyUp {
@@ -78,21 +78,22 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
                     ..
                 } => {
                     inputs.key_up(scancode);
-                    core.key_up(scancode);
+                    let _ = core.key_up(scancode.into());
                 }
                 Event::ControllerButtonDown { which, button, .. } => {
                     inputs.controller_button_down(which, button);
-                    core.sdl_button_down((which - 1) as u8, button);
+                    let _ = core.gamepad_button_down((which - 1) as usize, button);
                 }
                 Event::ControllerButtonUp { which, button, .. } => {
                     inputs.controller_button_up(which, button);
-                    core.sdl_button_up((which - 1) as u8, button);
+                    let _ = core.gamepad_button_up((which - 1) as usize, button);
                 }
                 Event::ControllerAxisMotion {
                     which, axis, value, ..
                 } => {
                     inputs.controller_axis_motion(which, axis, value);
-                    core.sdl_axis_motion((which - 1) as u8, axis, value);
+                    // TODO
+                    // let _ = core.sdl_axis_motion((which - 1) as u8, axis, value);
                 }
                 _ => {}
             }
@@ -123,40 +124,45 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
         // Check Savestates and SD Card every 5 loop. This should still be under every
         // frame, since we approximate 600fps.
         if should_check_savestates && i % 5 == 0 {
-            let should_save_savestates = core
-                .save_states()
-                .map(|x| x.iter().any(|x| x.is_dirty()))
-                .unwrap_or(false);
+            let mut should_save_savestates = false;
+
+            for i in 0.. {
+                match core.save_state(i) {
+                    Ok(Some(ss)) => {
+                        if ss.is_dirty() {
+                            should_save_savestates = true;
+                            break;
+                        }
+                    }
+                    Ok(None) | Err(_) => break,
+                }
+            }
 
             if should_save_savestates {
                 let start = Instant::now();
-                let screenshot = core.take_screenshot().ok();
+                let screenshot = core.screenshot().ok();
 
-                if let Some(s) = core.save_states() {
-                    let mut done_any = false;
-
-                    s.iter_mut()
-                        .enumerate()
-                        .filter(|(_, ss)| ss.is_dirty())
-                        .for_each(|(i, ss)| {
-                            match app
-                                .coordinator_mut()
-                                .create_savestate(i, screenshot.as_ref())
-                            {
-                                Ok(f) => ss.write_to(f).unwrap(),
-                                Err(err) => {
-                                    error!(?err, "Error creating savestate. Will stop trying.");
-                                    should_check_savestates = false;
+                for i in 0.. {
+                    match core.save_state_mut(i) {
+                        Ok(Some(ss)) => {
+                            if ss.is_dirty() {
+                                match app
+                                    .coordinator_mut()
+                                    .create_savestate(i, screenshot.as_ref())
+                                {
+                                    Ok(mut f) => ss.save(&mut f).unwrap(),
+                                    Err(err) => {
+                                        error!(?err, "Error creating savestate. Will stop trying.");
+                                        should_check_savestates = false;
+                                    }
                                 }
                             }
-
-                            done_any = true;
-                        });
-
-                    if done_any {
-                        trace!("Saved save states in {}msec.", start.elapsed().as_millis());
+                        }
+                        Ok(None) | Err(_) => break,
                     }
                 }
+
+                trace!("Saved save states in {}msec.", start.elapsed().as_millis());
             }
         }
 

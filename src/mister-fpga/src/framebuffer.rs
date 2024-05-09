@@ -81,6 +81,7 @@ pub(crate) struct FbHeader {
 }
 
 impl FbHeader {
+    #[inline]
     pub unsafe fn from_memory(memory: *const u8) -> Option<Self> {
         let header = (memory as *const FbHeader).read_volatile();
         // eprintln!("header: {:?} attributes: {:?}", header, header.attributes());
@@ -91,35 +92,48 @@ impl FbHeader {
         }
     }
 
+    #[allow(unused)]
     pub fn frame_checksum(&self) -> u8 {
         self.attributes().frame_counter()
     }
 
+    #[inline]
     pub fn scaler_pixel_format(&self) -> ScalerPixelFormat {
         self.scaler_pixel_format.into()
     }
 
+    #[inline]
     pub fn header_len(&self) -> u16 {
         self.header_len.into()
     }
 
+    #[inline]
     pub fn attributes(&self) -> ScalerAttributes {
         let bytes: u16 = self.attributes.into();
         ScalerAttributes::from(bytes)
     }
 
+    #[inline]
     pub fn width(&self) -> u16 {
         self.width.into()
     }
+
+    #[inline]
     pub fn height(&self) -> u16 {
         self.height.into()
     }
+
+    #[inline]
     pub fn line(&self) -> u16 {
         self.line.into()
     }
+
+    #[allow(unused)]
     pub fn output_width(&self) -> u16 {
         self.output_width.into()
     }
+
+    #[allow(unused)]
     pub fn output_height(&self) -> u16 {
         self.output_height.into()
     }
@@ -264,7 +278,7 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         Ok(())
     }
 
-    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
+    pub fn take_screenshot(&self) -> Result<DynamicImage, String> {
         // Bytes are in big endian, but ARM is in little endian.
         let header = self.first_header();
 

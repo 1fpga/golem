@@ -2,7 +2,7 @@
 
 #[cfg(target_os = "linux")]
 use i2cdev::core::I2CDevice;
-use strum::FromRepr;
+use strum::{EnumString, FromRepr};
 use tracing::{debug, info, trace, warn};
 
 use cyclone_v::memory::MemoryMapper;
@@ -372,7 +372,7 @@ fn find_pll_par_(f_out: f64) -> Option<Pll> {
     }
 }
 
-#[derive(Debug, Clone, Copy, FromRepr)]
+#[derive(Debug, Clone, Copy, FromRepr, EnumString)]
 #[repr(u8)]
 pub enum DefaultVideoMode {
     V1280x720r60 = 0,

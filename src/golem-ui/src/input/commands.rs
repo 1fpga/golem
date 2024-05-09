@@ -1,10 +1,13 @@
+use image::GenericImageView;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::time::Instant;
 
-use image::GenericImageView;
 use sdl3::keyboard::Scancode;
 use tracing::{debug, error, info, warn};
+
+use golem_core::Core;
+use mister_fpga::core::MisterFpgaCore;
 
 use crate::application::panels::core_loop::menu::core_menu;
 use crate::application::GoLEmApp;
@@ -119,8 +122,10 @@ impl ShortcutCommand {
             }
             ShortcutCommand::ResetCore => {
                 debug!("Resetting core");
-                core.status_pulse(0);
-                CommandResult::Ok
+                match core.reset() {
+                    Ok(_) => CommandResult::Ok,
+                    Err(e) => CommandResult::Err(e.to_string()),
+                }
             }
             ShortcutCommand::QuitCore => {
                 debug!("Quitting core");
@@ -129,10 +134,10 @@ impl ShortcutCommand {
             ShortcutCommand::TakeScreenshot => {
                 debug!("Taking screenshot");
                 let start = Instant::now();
-                let img = match core.take_screenshot() {
+                let img = match core.screenshot() {
                     Ok(img) => img,
                     Err(e) => {
-                        return CommandResult::Err(e);
+                        return CommandResult::Err(e.to_string());
                     }
                 };
 
@@ -159,6 +164,10 @@ impl ShortcutCommand {
                 CommandResult::Ok
             }
             ShortcutCommand::CoreSpecificCommand(id) => {
+                let Some(core) = core.as_any_mut().downcast_mut::<MisterFpgaCore>() else {
+                    error!("Core is not a MisterFPGA core");
+                    return CommandResult::Err("Core is not a MisterFPGA core".to_string());
+                };
                 let menu = core.menu_options().iter().find(|m| m.id() == Some(*id));
                 let menu = menu.cloned();
                 debug!(

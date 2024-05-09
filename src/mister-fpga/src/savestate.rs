@@ -1,5 +1,6 @@
 use crate::config_string::Config;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+use golem_core::core::Error;
 use std::io::{Read, Write};
 use std::ptr::NonNull;
 use std::slice;
@@ -108,6 +109,25 @@ pub struct SaveState {
     counter: u32,
 }
 
+impl golem_core::core::SaveState for SaveState {
+    fn is_dirty(&self) -> bool {
+        self.is_dirty()
+    }
+
+    fn save(&mut self, writer: &mut dyn Write) -> Result<(), Error> {
+        writer.write_all(self.inner().all())?;
+        self.counter = self.inner().counter;
+        Ok(())
+    }
+
+    fn load(&mut self, reader: &mut dyn Read) -> Result<(), Error> {
+        reader.read_exact(self.inner_mut().all_mut())?;
+        self.inner_mut().reset();
+        self.counter = self.inner().counter;
+        Ok(())
+    }
+}
+
 impl SaveState {
     fn from_base(memory: &mut impl MemoryMapper, offset: usize) -> Self {
         let inner = unsafe { NonNull::new(memory.as_mut_ptr::<u8>().add(offset) as _).unwrap() };
@@ -135,22 +155,5 @@ impl SaveState {
     #[inline]
     pub fn live_counter(&self) -> u32 {
         self.inner().counter()
-    }
-
-    pub fn write_to(&mut self, mut writer: impl Write) -> Result<(), String> {
-        writer
-            .write_all(self.inner().all())
-            .map_err(|e| e.to_string())?;
-        self.counter = self.inner().counter;
-        Ok(())
-    }
-
-    pub fn read_from(&mut self, mut reader: impl Read) -> Result<(), String> {
-        reader
-            .read_exact(self.inner_mut().all_mut())
-            .map_err(|e| e.to_string())?;
-        self.inner_mut().reset();
-        self.counter = self.inner().counter;
-        Ok(())
     }
 }

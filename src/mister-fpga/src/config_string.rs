@@ -4,16 +4,22 @@
 //!
 //! This is located in utils to allow to run test. There is no FPGA or MiSTer specific
 //! code in this module, even though it isn't used outside of MiSTer itself.
-use crate::types::StatusBitMap;
-use itertools::Itertools;
-use once_cell::sync::Lazy;
-use regex::Regex;
 use std::convert::TryFrom;
 use std::fmt::{Debug, Formatter};
 use std::ops::{Deref, Range};
 use std::path::Path;
 use std::str::FromStr;
+
+use itertools::Itertools;
+use once_cell::sync::Lazy;
+use regex::Regex;
 use tracing::debug;
+
+use golem_core::core::CoreMenuItem;
+pub use types::*;
+
+use crate::fpga::user_io;
+use crate::types::StatusBitMap;
 
 pub mod midi;
 pub mod settings;
@@ -22,8 +28,6 @@ pub mod uart;
 mod parser;
 
 mod types;
-use crate::fpga::user_io;
-pub use types::*;
 
 static LABELED_SPEED_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\d*)(\([^)]*\))?").unwrap());
 
@@ -38,7 +42,7 @@ impl Debug for FileExtension {
     }
 }
 
-impl std::ops::Deref for FileExtension {
+impl Deref for FileExtension {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -371,6 +375,10 @@ impl Config {
             }
         }
         None
+    }
+
+    pub fn as_core_menu(&self) -> Vec<CoreMenuItem> {
+        todo!()
     }
 }
 

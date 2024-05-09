@@ -7,15 +7,17 @@
 //! which is either Desktop, DE10Nano, null (for testing) or others.
 //!
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
-use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::platform::sdl::SdlPlatform;
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
-use golem_core::CoreManager;
 use sdl3::event::Event;
 
+use de10::De10Platform as PlatformWindowManager;
+
+pub use crate::core_manager::CoreManager;
+use crate::macguiver::buffer::DrawBuffer;
+use crate::macguiver::platform::sdl::SdlPlatform;
+
 pub mod de10;
-pub use de10::De10Platform as PlatformWindowManager;
 
 // In tests, this is unused as there are no OSD.
 #[allow(unused)]

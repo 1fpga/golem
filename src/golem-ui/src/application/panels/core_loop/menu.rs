@@ -5,7 +5,8 @@ use crate::application::panels::core_loop::menu::core_settings::{
 };
 use crate::application::GoLEmApp;
 use crate::platform::GoLEmPlatform;
-use golem_core::GolemCore;
+use golem_core::{Core, GolemCore};
+use mister_fpga::core::MisterFpgaCore;
 use tracing::error;
 
 mod core_debug;
@@ -42,19 +43,28 @@ impl MenuReturn for CoreMenuAction {
 pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
     app.platform_mut().core_manager_mut().show_menu();
 
+    let Some(c) = core.as_any_mut().downcast_mut::<MisterFpgaCore>() else {
+        error!("Core is not a MisterFPGA core.");
+        return false;
+    };
+
     // Update saves.
-    match core.check_sav() {
-        Ok(_) => {}
-        Err(e) => {
-            error!(?e, "Error updating the SD card.");
+    loop {
+        match c.poll_mounts() {
+            Ok(true) => {}
+            Ok(false) => break,
+            Err(e) => {
+                error!(?e, "Error updating the SD card.");
+                break;
+            }
         }
     }
 
     let mut state = None;
 
     let result = loop {
-        let status = core.status_bits();
-        let mut additional_items = core
+        let status = c.status_bits();
+        let mut additional_items = c
             .menu_options()
             .iter()
             .filter(|o| o.as_load_file().is_some())
@@ -67,7 +77,8 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
             ])
             .collect::<Vec<_>>();
 
-        let version = core
+        let version = c
+            .config()
             .version()
             .map(|s| ("Version", s, CoreMenuAction::Unselectable));
         let (result, new_state) = text_menu(
@@ -91,21 +102,21 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
 
         match result {
             CoreMenuAction::Reset => {
-                core.status_pulse(0);
+                c.status_pulse(0);
             }
             CoreMenuAction::CoreSettings => {
-                if core_settings::core_settings(app, core) {
+                if core_settings::core_settings(app, c) {
                     break false;
                 }
             }
             CoreMenuAction::DebugMenu => {
-                core_debug::debug_menu(app, core);
+                core_debug::debug_menu(app, c);
             }
             CoreMenuAction::InputMapping => {
-                input_mapping::menu(app, &Some(core));
+                input_mapping::menu_inner(app, &Some(c));
             }
             CoreMenuAction::CoreMenuAction(action) => {
-                if let Some(_) = execute_core_settings(app, core, action) {
+                if let Some(_) = execute_core_settings(app, c, action) {
                     break false;
                 }
             }

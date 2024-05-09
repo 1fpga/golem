@@ -1,14 +1,19 @@
+use std::convert::TryFrom;
+
+use tracing::info;
+
+use golem_core::runner::CoreLaunchInfo;
+use golem_core::{Core, GolemCore};
+use mister_fpga::config_string::ConfigMenu;
+use mister_fpga::core::MisterFpgaCore;
+use mister_fpga::types::StatusBitMap;
+
 use crate::application::coordinator::GameStartInfo;
 use crate::application::menu::filesystem::{select_file_path_menu, FilesystemMenuOptions};
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuItem, TextMenuOptions};
 use crate::application::GoLEmApp;
 use crate::data::paths::core_root_path;
-use golem_core::GolemCore;
-use mister_fpga::config_string::ConfigMenu;
-use mister_fpga::types::StatusBitMap;
-use std::convert::TryFrom;
-use tracing::info;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum CoreMenuAction {
@@ -116,7 +121,7 @@ pub fn into_text_menu_item<'a>(
 
 pub fn execute_core_settings(
     app: &mut GoLEmApp,
-    core: &mut GolemCore,
+    core: &mut MisterFpgaCore,
     action: CoreMenuAction,
 ) -> Option<bool> {
     match action {
@@ -124,9 +129,9 @@ pub fn execute_core_settings(
             return Some(false);
         }
         CoreMenuAction::ToggleOption(from, to, value, max) => {
-            let mut bits = core.status_bits();
+            let mut bits = *core.status_bits();
             bits.set_range(from..to, ((value + 1) % max) as u32);
-            core.set_status_bits(bits);
+            core.send_status_bits(bits);
         }
         CoreMenuAction::Trigger(idx, close_osd) => {
             core.status_pulse(idx as usize);
@@ -176,7 +181,11 @@ pub fn execute_core_settings(
                 .map(|g| g.id);
                 if let Some(game_id) = maybe_id {
                     app.coordinator_mut()
-                        .launch_game(app, GameStartInfo::default().with_game_id(game_id))
+                        .launch_game(
+                            app,
+                            CoreLaunchInfo::current()
+                                .with_data(GameStartInfo::default().with_game_id(game_id)),
+                        )
                         .unwrap();
                     should_load = false;
                 }
@@ -196,10 +205,10 @@ pub fn execute_core_settings(
 /// The Core Settings menu. We cannot use `text_menu` here as we need to generate
 /// custom menu lines for some items.
 /// Returns whether we should close the OSD or not.
-pub fn core_settings(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
+pub fn core_settings(app: &mut GoLEmApp, core: &mut MisterFpgaCore) -> bool {
     let mut state = None;
     loop {
-        let status = core.status_bits();
+        let status = *core.status_bits();
         let mut items = core
             .menu_options()
             .iter()

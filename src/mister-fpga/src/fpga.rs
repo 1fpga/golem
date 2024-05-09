@@ -1,21 +1,22 @@
-use crate::fpga::osd_io::{OsdDisable, OsdEnable};
-use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
-use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
-use cyclone_v::memory::DevMemMemoryMapper;
 use std::cell::UnsafeCell;
 use std::io::Read;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
+
 use strum::{Display, EnumIter, FromRepr};
 use tracing::{debug, error, info, trace};
 
-mod framebuffer;
-mod program;
-mod spi;
-
+use cyclone_v::fpgamgrregs::ctrl::{FpgaCtrlCfgWidth, FpgaCtrlEn, FpgaCtrlNce};
+use cyclone_v::fpgamgrregs::stat::StatusRegisterMode;
+use cyclone_v::memory::DevMemMemoryMapper;
 pub use program::Program;
 pub use spi::*;
+
+use crate::fpga::osd_io::{OsdDisable, OsdEnable};
+
+mod program;
+mod spi;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(u8)]
@@ -105,6 +106,9 @@ pub struct MisterFpga {
     soc: Arc<UnsafeCell<cyclone_v::SocFpga<DevMemMemoryMapper>>>,
     spi: Spi<DevMemMemoryMapper>,
 }
+
+// SAFETY:
+// Since the FPGA is using memory-mapped I/O, it is not safe to send it to another thread.
 unsafe impl Send for MisterFpga {}
 unsafe impl Sync for MisterFpga {}
 
