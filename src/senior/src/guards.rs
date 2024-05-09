@@ -3,8 +3,10 @@ use rocket::tokio::sync::Mutex;
 use rocket::{request, Request};
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct CoreGuard(Arc<Mutex<mister_fpga::core::MisterFpgaCore>>);
 unsafe impl Send for CoreGuard {}
+unsafe impl Sync for CoreGuard {}
 
 #[rocket::async_trait]
 impl<'r> request::FromRequest<'r> for CoreGuard {

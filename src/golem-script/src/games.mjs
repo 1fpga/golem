@@ -5,9 +5,11 @@ import * as ui from "golem/ui";
 function start_game(game_id) {
     const db_game = db.queryOne("SELECT * FROM games WHERE id = ?", [game_id]);
     const db_core = db.queryOne("SELECT * from cores WHERE id = ?", [db_game.core_id]);
+    const db_files = db.query("SELECT * from core_files WHERE game_id = ? AND core_id = ?", [game_id, db_game.core_id]);
 
     const g = db_game;
     const c = db_core;
+    const f = db_files;
 
     if (!g || !c) {
         ui.alert(
@@ -22,6 +24,7 @@ function start_game(game_id) {
     core.run({
         core: {type: "path", path: c.path},
         game: {type: "rom-path", path: g.path},
+        files: f.map(file => file.path),
         autoloop: true,
         showmenu: false,
     })

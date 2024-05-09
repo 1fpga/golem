@@ -1,8 +1,9 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::input::commands::ShortcutCommand;
-use golem_core::GolemCore;
+use golem_core::{Core, GolemCore};
 use mister_fpga::config_string::ConfigMenu;
+use mister_fpga::core::MisterFpgaCore;
 
 mod remap;
 use crate::application::GoLEmApp;
@@ -24,7 +25,16 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn menu(app: &mut GoLEmApp, core: &Option<&mut GolemCore>) {
+pub fn menu(app: &mut GoLEmApp, core: &mut Option<&mut GolemCore>) {
+    menu_inner(
+        app,
+        &core
+            .as_deref_mut()
+            .and_then(|x| x.as_any_mut().downcast_mut::<MisterFpgaCore>()),
+    );
+}
+
+pub fn menu_inner(app: &mut GoLEmApp, core: &Option<&mut MisterFpgaCore>) {
     let mut state = None;
 
     loop {

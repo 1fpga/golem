@@ -12,11 +12,12 @@ use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
-use golem_core::GolemCore;
+use golem_core::Core;
+use mister_fpga::core::MisterFpgaCore;
 use sdl3::event::Event;
 use tracing::info;
 
-pub fn remap(app: &mut GoLEmApp, core: Option<&GolemCore>, command: ShortcutCommand) {
+pub fn remap(app: &mut GoLEmApp, core: Option<&MisterFpgaCore>, command: ShortcutCommand) {
     let mapping = app
         .settings()
         .inner()
@@ -162,17 +163,19 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&GolemCore>, command: ShortcutComm
 
             if let ShortcutCommand::CoreSpecificCommand(id) = command {
                 if let Some(c) = core {
-                    if let Some(label) = c
-                        .menu_options()
-                        .iter()
-                        .find(|o| o.id() == Some(id))
-                        .and_then(|o| o.label())
-                    {
-                        app.settings().inner_mut().mappings_mut().add_core_specific(
-                            c.name(),
-                            label,
-                            input.clone(),
-                        );
+                    if let Some(c) = c.as_any().downcast_ref::<MisterFpgaCore>() {
+                        if let Some(label) = c
+                            .menu_options()
+                            .iter()
+                            .find(|o| o.id() == Some(id))
+                            .and_then(|o| o.label())
+                        {
+                            app.settings().inner_mut().mappings_mut().add_core_specific(
+                                c.name(),
+                                label,
+                                input.clone(),
+                            );
+                        }
                     }
                 }
             } else {

@@ -1,8 +1,11 @@
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
+use golem_core::Core;
+use std::str::FromStr;
 
 use golem_ui::platform::GoLEmPlatform;
 use mister_fpga::config::edid::DefaultVideoMode;
+use mister_fpga::core::MisterFpgaCore;
 
 use crate::HostData;
 
@@ -10,17 +13,14 @@ fn set_mode_(mode: String, ContextData(data): ContextData<HostData>) -> JsResult
     let app = data.app_mut();
     let core_manager = app.platform_mut().core_manager_mut();
     let mut golem_core = core_manager.get_current_core().unwrap();
-    let core = golem_core.as_mister_mut().unwrap();
+    let core = golem_core
+        .as_any_mut()
+        .downcast_mut::<MisterFpgaCore>()
+        .unwrap();
 
-    let video_mode = match mode.as_str() {
-        "V1920x1080r60" => DefaultVideoMode::V1920x1080r60,
-        "V1920x1080r50" => DefaultVideoMode::V1920x1080r50,
-        "V1280x720r60" => DefaultVideoMode::V1280x720r60,
-        "V640x480r60" => DefaultVideoMode::V640x480r60,
-        _ => {
-            return Ok(());
-        }
-    };
+    let video_mode = DefaultVideoMode::from_str(&mode).map_err(|e| {
+        JsError::from_opaque(JsString::from(format!("Invalid video mode string: {}", e)).into())
+    })?;
 
     eprintln!("Setting video mode: {:?}", video_mode);
     mister_fpga::core::video::select_mode(

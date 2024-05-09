@@ -17,6 +17,7 @@ cyclone-v = { path = "../cyclone-v", version = "0.1" }
 embedded-graphics = "0.8.1"
 fixed-map = "0.9.3"
 glam = "0.25.0"
+golem-core = { workspace = true }
 hex = "0.4.3"
 i2cdev = "0.6.0"
 image = "0.25.1"

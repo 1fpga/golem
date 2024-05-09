@@ -2,7 +2,6 @@ use std::path::Path;
 use std::rc::Rc;
 
 use boa_engine::builtins::promise::PromiseState;
-use boa_engine::module::ModuleLoader;
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};

@@ -4,8 +4,9 @@ use boa_engine::value::TryFromJs;
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, JsValue, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::{Finalize, JsData, Trace};
+use golem_core::core::Rom;
+use golem_core::runner::CoreLaunchInfo;
 
-use golem_core::runner::CoreLauncher;
 use golem_ui::application::panels::core_loop::run_core_loop;
 use golem_ui::platform::GoLEmPlatform;
 
@@ -83,7 +84,7 @@ impl TryFromJs for GameType {
 struct RunOptions {
     core: CoreType,
     game: Option<GameType>,
-    sav: Option<String>,
+    files: Option<Vec<Option<String>>>,
     savestate: Option<String>,
     showmenu: Option<bool>,
     autoloop: Option<bool>,
@@ -92,19 +93,34 @@ struct RunOptions {
 fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
     let app = app.app_mut();
     let mut core_options = match &options.core {
-        CoreType::Path { path } => CoreLauncher::rbf(PathBuf::from(path.to_std_string_escaped())),
+        CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path.to_std_string_escaped())),
     };
 
     match &options.game {
         Some(GameType::RomPath { path }) => {
-            core_options = core_options.with_file(PathBuf::from(path.to_std_string_escaped()));
+            core_options =
+                core_options.with_rom(Rom::File(PathBuf::from(path.to_std_string_escaped())));
         }
         None => {}
     };
 
+    if let Some(files) = &options.files {
+        for (i, file) in files
+            .iter()
+            .enumerate()
+            .filter_map(|(i, x)| x.as_ref().map(|x| (i, x)))
+        {
+            core_options
+                .files
+                .insert(i, golem_core::runner::Slot::File(PathBuf::from(file)));
+        }
+    }
+
     eprintln!("Launching core: {:?}", core_options);
-    let mut core = core_options
-        .launch(app.platform_mut().core_manager_mut())
+    let mut core = app
+        .platform_mut()
+        .core_manager_mut()
+        .launch(core_options)
         .unwrap();
 
     if options.autoloop.unwrap_or(true) {

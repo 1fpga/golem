@@ -1,16 +1,23 @@
-use crate::application::GoLEmApp;
-use crate::data::paths;
-use crate::platform::GoLEmPlatform;
-use golem_core::GolemCore;
+use std::fmt::{Debug, Formatter};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use image::DynamicImage;
+use tracing::{info, trace};
+
+use golem_core::core::SaveState;
+use golem_core::runner::CoreLaunchInfo;
+use golem_core::{Core, GolemCore};
 use golem_db::models::Core as DbCore;
 use golem_db::models::CoreFile as DbCoreFile;
 use golem_db::models::Game as DbGame;
 use golem_db::Connection;
-use image::DynamicImage;
-use std::fmt::{Debug, Formatter};
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use tracing::{info, trace};
+use mister_fpga::core::file::SdCard;
+use mister_fpga::core::MisterFpgaCore;
+
+use crate::application::GoLEmApp;
+use crate::data::paths;
+use crate::platform::GoLEmPlatform;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct GameStartInfo {
@@ -71,13 +78,13 @@ impl CoordinatorInner {
     pub fn launch_game(
         &mut self,
         app: &mut GoLEmApp,
-        info: GameStartInfo,
+        info: CoreLaunchInfo<GameStartInfo>,
     ) -> Result<(bool, GolemCore), String> {
         info!(?info, "Starting game");
         let mut database = self.database.lock().unwrap();
 
         // Load the core if necessary. If it's the same core, we don't need to.
-        let (mut c, core): (GolemCore, DbCore) = match info.core_id {
+        let (mut golem_core, core): (GolemCore, DbCore) = match info.data.core_id {
             Some(id) => {
                 let db_core = DbCore::get(&mut database, id)
                     .map_err(|e| e.to_string())?
@@ -98,12 +105,17 @@ impl CoordinatorInner {
             }
         };
 
+        let c = golem_core
+            .as_any_mut()
+            .downcast_mut::<MisterFpgaCore>()
+            .ok_or("Core is not a MisterFpgaCore")?;
+
         self.current_core = Some(core);
         self.current_game = None;
         let mut should_show_menu = true;
 
         // Load the game
-        if let Some(game_id) = info.game_id {
+        if let Some(game_id) = info.data.game_id {
             let mut game = DbGame::get(&mut database, game_id)
                 .map_err(|e| e.to_string())?
                 .ok_or("Game not found")?;
@@ -127,16 +139,17 @@ impl CoordinatorInner {
                 let game_name = game.name.clone();
 
                 if let Some(core_file) = core_file {
-                    c.mount_sav(Path::new(&core_file.path))?;
+                    c.mount(SdCard::from_path(Path::new(&core_file.path)).unwrap(), 0)?;
                 } else {
                     info!("No SAV file found for game, creating one.");
-                    let path = paths::sav_path(&c.name()).join(format!("{}.sav", game_name));
-                    c.mount_sav(&path)?;
+                    let path = paths::sav_path(c.name()).join(format!("{}.sav", game_name));
+                    c.mount(SdCard::from_path(Path::new(&path)).unwrap(), 0)
+                        .map_err(|e| e.to_string())?;
                 }
             }
             c.end_send_file()?;
 
-            c.check_sav()?;
+            c.poll_mounts()?;
 
             // Record in the Database the time we launched this game, ignoring
             // errors.
@@ -147,30 +160,30 @@ impl CoordinatorInner {
 
         // Load all savestates for this game.
         if let Some(game) = &self.current_game {
-            if let Some(core_ss) = c.save_states() {
-                let db_ss = golem_db::models::SaveState::list_for_game(&mut database, game.id)
-                    .map_err(|e| e.to_string())?;
+            let db_ss = golem_db::models::SaveState::list_for_game(&mut database, game.id)
+                .map_err(|e| e.to_string())?;
 
-                for (db_state, state) in db_ss.iter().zip(core_ss.iter_mut()) {
-                    let f = std::fs::File::open(&db_state.path).map_err(|e| e.to_string())?;
-                    golem_core::SaveState::read_from(state, f)?;
+            for (slot, ss) in db_ss.iter().enumerate() {
+                if let Ok(Some(core_ss)) = c.save_state_mut(slot) {
+                    let mut f = std::fs::File::open(&ss.path).map_err(|e| e.to_string())?;
+                    core_ss.load(&mut f).map_err(|e| e.to_string())?;
                 }
             }
         }
 
         // Load the savestate requested in the first slot.
-        if let Some(savestate) = info.save_state_id {
+        if let Some(savestate) = info.data.save_state_id {
             let savestate = golem_db::models::SaveState::get(&mut database, savestate)
                 .map_err(|e| e.to_string())?
                 .ok_or("Savestate not found")?;
 
-            if let Some(state) = c.save_states().and_then(|x| x.get_mut(0)) {
-                let f = std::fs::File::open(&savestate.path).map_err(|e| e.to_string())?;
-                state.read_from(f)?;
+            if let Some(state) = c.save_states_mut().and_then(|x| x.slots_mut().get_mut(0)) {
+                let mut f = std::fs::File::open(&savestate.path).map_err(|e| e.to_string())?;
+                state.load(&mut f).map_err(|e| e.to_string())?;
             }
         }
 
-        Ok((should_show_menu, c))
+        Ok((should_show_menu, golem_core))
     }
 
     pub fn create_savestate(
@@ -230,7 +243,7 @@ impl Coordinator {
     pub fn launch_game(
         &mut self,
         app: &mut GoLEmApp,
-        info: GameStartInfo,
+        info: CoreLaunchInfo<GameStartInfo>,
     ) -> Result<(bool, GolemCore), String> {
         self.inner.lock().unwrap().launch_game(app, info)
     }

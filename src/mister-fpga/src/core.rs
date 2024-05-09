@@ -1,21 +1,26 @@
+use std::any::Any;
 use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
+use std::time::SystemTime;
 
 use image::DynamicImage;
 use tracing::{debug, info, trace};
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
+use golem_core::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use golem_core::inputs::{Button, Scancode};
+use golem_core::Core;
 
 use crate::config::MisterConfig;
 use crate::config_string;
-use crate::config_string::{FpgaRamMemoryAddress, LoadFileInfo};
+use crate::config_string::{ConfigMenu, FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
 use crate::core::file::SdCard;
 use crate::core::video::VideoInfo;
-use crate::core::volume::IntoVolume;
+use crate::core::volume::{IntoVolume, Volume};
 use crate::fpga::file_io::{
     FileExtension, FileIndex, FileTxData16Bits, FileTxData8Bits, FileTxDisabled, FileTxEnabled,
 };
@@ -24,7 +29,6 @@ use crate::fpga::user_io::{
     SetStatusBits, UserIoJoystick, UserIoKeyboardKeyDown, UserIoKeyboardKeyUp, UserIoRtc,
 };
 use crate::fpga::{user_io, CoreInterfaceType, CoreType, MisterFpga};
-use crate::framebuffer::FbHeader;
 use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
@@ -208,18 +212,18 @@ impl MisterFpgaCore {
         let now = std::time::Instant::now();
         debug!("Sending file {:?} to core", path);
 
-        let f = File::open(path).map_err(|e| e.to_string())?;
-        let size = f.metadata().map_err(|e| e.to_string())?.len() as u32;
+        let file = File::open(path).map_err(|e| e.to_string())?;
+        let size = file.metadata().map_err(|e| e.to_string())?.len() as u32;
 
         self.start_send_file(info.index(), &ext, size)?;
         match info {
             MisterFpgaSendFileInfo::Memory { index, address } => {
                 trace!(?index, ?address, ?ext, ?size, "File info (memory)");
-                self.send_file_to_sdram_(size, address, f)?;
+                self.send_file_to_sdram_(size, address, file)?;
             }
             MisterFpgaSendFileInfo::Buffered { index } => {
                 trace!(?index, ?ext, ?size, "File info (buffered)");
-                self.send_file_to_buffer_(size, f)?;
+                self.send_file_to_buffer_(size, file)?;
             }
         }
         self.read_status_bits();
@@ -264,6 +268,19 @@ impl MisterFpgaCore {
         Ok(())
     }
 
+    pub fn status_mask(&self) -> StatusBitMap {
+        self.config().status_bit_map_mask()
+    }
+
+    pub fn status_pulse(&mut self, bit: usize) {
+        let mut bits = *self.status_bits();
+        bits.set(bit, true);
+        self.send_status_bits(bits);
+
+        bits.set(bit, false);
+        self.send_status_bits(bits);
+    }
+
     /// Return the core status bits. This is an internal cache of the
     /// status bits. Use `[Core::read_status_bits()]` to read the status
     /// from the core.
@@ -285,6 +302,10 @@ impl MisterFpgaCore {
         debug!(?bits, "Setting status bits");
         self.fpga.spi_mut().execute(SetStatusBits(&bits)).unwrap();
         self.status = bits;
+    }
+
+    pub fn menu_options(&self) -> &[ConfigMenu] {
+        self.config().menu.as_slice()
     }
 
     /// Notify the core of a keyboard key down event.
@@ -364,7 +385,7 @@ impl MisterFpgaCore {
     }
 
     /// Take a screenshot and return the image in memory.
-    pub fn take_screenshot(&mut self) -> Result<DynamicImage, String> {
+    pub fn take_screenshot(&self) -> Result<DynamicImage, String> {
         self.framebuffer.take_screenshot()
     }
 
@@ -522,5 +543,181 @@ impl MisterFpgaCore {
         debug!("CRC: {:08X}", crc);
 
         Ok(())
+    }
+
+    pub fn trigger_menu(&mut self, menu: &ConfigMenu) -> Result<bool, String> {
+        match menu {
+            ConfigMenu::HideIf(cond, sub) | ConfigMenu::DisableIf(cond, sub) => {
+                if self.config().status_bit_map_mask().get(*cond as usize) {
+                    self.trigger_menu(sub)
+                } else {
+                    Err("Cannot trigger menu".to_string())
+                }
+            }
+            ConfigMenu::HideUnless(cond, sub) | ConfigMenu::DisableUnless(cond, sub) => {
+                if !self.config().status_bit_map_mask().get(*cond as usize) {
+                    self.trigger_menu(sub)
+                } else {
+                    Err("Cannot trigger menu".to_string())
+                }
+            }
+            ConfigMenu::Option { bits, choices, .. } => {
+                let (from, to) = (bits.start, bits.end);
+                let mut bits = *self.status_bits();
+                let max = choices.len();
+                let value = bits.get_range(from..to) as usize;
+                bits.set_range(from..to, ((value + 1) % max) as u32);
+                self.send_status_bits(bits);
+                Ok(true)
+            }
+            ConfigMenu::Trigger { index, .. } => {
+                self.status_pulse(*index as usize);
+                Ok(true)
+            }
+            ConfigMenu::PageItem(_, sub) => self.trigger_menu(sub),
+
+            // TODO: see if we can implement more (like Load File).
+            _ => Ok(false),
+        }
+    }
+}
+
+impl Core for MisterFpgaCore {
+    fn init(&mut self) -> Result<(), Error> {
+        self.init().map_err(Error::Message)?;
+        self.init_video(&MisterConfig::default(), false)
+            .map_err(Error::Message)?;
+        Ok(())
+    }
+
+    fn name(&self) -> &str {
+        self.config.name.as_str()
+    }
+
+    fn reset(&mut self) -> Result<(), Error> {
+        self.soft_reset();
+        Ok(())
+    }
+
+    fn set_volume(&mut self, volume: u8) -> Result<(), Error> {
+        self.send_volume(Volume::scaled(volume))
+            .map_err(Error::Message)?;
+        Ok(())
+    }
+
+    fn set_rtc(&mut self, time: SystemTime) -> Result<(), Error> {
+        self.fpga
+            .spi_mut()
+            .execute(UserIoRtc::from(time))
+            .map_err(Error::Message)?;
+        Ok(())
+    }
+
+    fn screenshot(&self) -> Result<DynamicImage, Error> {
+        self.take_screenshot().map_err(Error::Message)
+    }
+
+    fn save_state_mut(&mut self, slot: usize) -> Result<Option<&mut dyn SaveState>, Error> {
+        let manager = self.save_states_mut();
+        if let Some(manager) = manager {
+            let slots = manager.slots_mut();
+            if slot >= slots.len() {
+                Ok(None)
+            } else {
+                Ok(Some(&mut slots[slot]))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn save_state(&self, slot: usize) -> Result<Option<&dyn SaveState>, Error> {
+        let manager = self.save_states();
+        if let Some(manager) = manager {
+            let slots = manager.slots();
+            if slot >= slots.len() {
+                Ok(None)
+            } else {
+                Ok(Some(&slots[slot]))
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn mounted_file_mut(&mut self, slot: usize) -> Result<Option<&mut dyn MountedFile>, Error> {
+        match self.cards.get_mut(slot) {
+            Some(Some(card)) => Ok(Some(card.as_mounted())),
+            _ => Ok(None),
+        }
+    }
+
+    fn send_rom(&mut self, rom: Rom) -> Result<(), Error> {
+        match rom {
+            Rom::Memory(_, _) => Err(Error::Message(
+                "Memory ROMs are not supported yet.".to_string(),
+            )),
+            Rom::File(path) => self.load_file(&path, None).map_err(Error::Message),
+        }
+    }
+
+    fn send_bios(&mut self, _bios: Bios) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn key_up(&mut self, key: Scancode) -> Result<(), Error> {
+        self.key_up(key);
+        Ok(())
+    }
+
+    fn key_down(&mut self, key: Scancode) -> Result<(), Error> {
+        self.key_down(key);
+        Ok(())
+    }
+
+    fn keys_set(&mut self, _keys: &[Scancode]) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn keys(&self) -> Result<&[Scancode], Error> {
+        todo!()
+    }
+
+    fn gamepad_button_up(&mut self, index: usize, button: Button) -> Result<(), Error> {
+        self.gamepad_button_up(index as u8, button as u8);
+        Ok(())
+    }
+
+    fn gamepad_button_down(&mut self, index: usize, button: Button) -> Result<(), Error> {
+        self.gamepad_button_down(index as u8, button as u8);
+        Ok(())
+    }
+
+    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: &[Button]) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn gamepad_buttons(&self, _index: usize) -> Result<Option<&[Button]>, Error> {
+        todo!()
+    }
+
+    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
+        Ok(self.config.as_core_menu())
+    }
+
+    fn trigger(&mut self, _id: ConfigMenuId) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
     }
 }

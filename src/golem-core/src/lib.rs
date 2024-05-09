@@ -1,8 +1,8 @@
+pub use core::Core;
+pub use core::GolemCore;
+
 pub mod core;
-pub mod core_manager;
 pub mod runner;
 
-pub use core::GolemCore;
-pub use core_manager::CoreManager;
+pub mod inputs;
 
-pub use mister_fpga::savestate::SaveState;

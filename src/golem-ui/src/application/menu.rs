@@ -3,28 +3,28 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_layout::align::horizontal;
-use embedded_layout::layout::linear::{spacing, LinearLayout};
+use embedded_layout::layout::linear::{LinearLayout, spacing};
 use embedded_layout::object_chain::Chain;
 use embedded_layout::View;
-use embedded_menu::selection_indicator::style::Invert;
-use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, MenuItem, MenuState};
+use embedded_menu::selection_indicator::AnimatedPosition;
+use embedded_menu::selection_indicator::style::Invert;
 use sdl3::keyboard::Keycode;
 use tracing::info;
 use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
 
-pub use cores::cores_menu_panel;
+// pub use cores::cores_menu_panel;
 pub use item::*;
 pub use options::*;
 
-use crate::application::menu::style::OptionalMenuItem;
+use crate::application::GoLEmApp;
 use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
+use crate::application::menu::style::OptionalMenuItem;
 use crate::application::widgets::controller::ControllerButton;
+use crate::application::widgets::EmptyView;
 use crate::application::widgets::menu::SizedMenu;
 use crate::application::widgets::opt::OptionalView;
 use crate::application::widgets::text::FontRendererView;
-use crate::application::widgets::EmptyView;
-use crate::application::GoLEmApp;
 
 pub mod cores;
 pub mod filesystem;

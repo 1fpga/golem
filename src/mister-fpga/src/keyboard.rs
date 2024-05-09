@@ -8,7 +8,8 @@ const RALT: u32 = 0x004000;
 const RGUI: u32 = 0x008000;
 const MODMASK: u32 = 0x00FF00;
 
-const CAPS_TOGGLE: u32 = 0x040000; // caps lock toggle behaviour
+const CAPS_TOGGLE: u32 = 0x040000;
+// caps lock toggle behaviour
 const EXT: u32 = 0x080000;
 const EMU_SWITCH_1: u32 = 0x100000;
 const EMU_SWITCH_2: u32 = 0x200000;
@@ -317,6 +318,7 @@ const SDL3_TO_PS2: array_map::ArrayMap<u8, Option<Ps2Scancode>, 256> = array_map
 /// type.
 #[derive(strum::EnumCount, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u32)]
+#[rustfmt::skip]
 pub enum Ps2Scancode {
     None = 0xFF,
     F9 = 0x01,                        //67  KEY_F9
@@ -434,10 +436,9 @@ pub enum Ps2Scancode {
     RightShift = RSHIFT + 0x59,       //54  KEY_RIGHTSHIFT
 }
 
-#[cfg(feature = "sdl3")]
-impl From<sdl3::keyboard::Scancode> for Ps2Scancode {
-    fn from(scancode: sdl3::keyboard::Scancode) -> Self {
-        SDL3_TO_PS2[scancode as u8].unwrap_or(Ps2Scancode::None)
+impl From<golem_core::inputs::Scancode> for Ps2Scancode {
+    fn from(scancode: golem_core::inputs::Scancode) -> Self {
+        SDL3_TO_PS2[scancode.as_repr() as u8].unwrap_or(Ps2Scancode::None)
     }
 }
 

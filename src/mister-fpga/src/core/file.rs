@@ -1,3 +1,4 @@
+use golem_core::core::Error;
 use std::fs::{File, OpenOptions};
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -25,6 +26,8 @@ enum SdMountFileInner {
         max_size: Option<u64>,
     },
 }
+
+impl golem_core::core::MountedFile for SdMountFileInner {}
 
 impl Read for SdMountFileInner {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
@@ -191,6 +194,10 @@ impl SdCard {
     }
 
     pub fn as_io(&mut self) -> &'_ mut (impl Read + Write + Seek) {
+        &mut self.inner
+    }
+
+    pub fn as_mounted(&mut self) -> &'_ mut dyn golem_core::core::MountedFile {
         &mut self.inner
     }
 }

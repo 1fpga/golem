@@ -1,112 +1,87 @@
-use crate::{CoreManager, GolemCore};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 
+use crate::core::{Bios, Rom};
+
+/// The type of core to launch.
 #[derive(Debug, Clone)]
-enum CoreLoader {
+pub enum CoreType {
+    /// Don't launch a new core, keep the current one running.
+    Current,
+
+    /// Launch a core from an RBF file.
     RbfFile(PathBuf),
+
+    /// Launch the menu core.
     Menu,
 }
 
-impl CoreLoader {
-    pub(crate) fn load(&self, manager: &mut CoreManager) -> Result<GolemCore, String> {
-        match self {
-            CoreLoader::RbfFile(rbf_path) => manager.load_core(rbf_path),
-            CoreLoader::Menu => manager.load_menu(),
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-enum Slot {
-    #[default]
-    Empty,
+#[derive(Debug, Clone)]
+pub enum Slot {
     File(PathBuf),
+    Memory(PathBuf, Vec<u8>),
 }
 
 #[derive(Debug, Clone)]
-pub struct CoreLauncher {
-    core_loader: CoreLoader,
-    files: Vec<PathBuf>,
-    sav: Slot,
-    savestate: Slot,
-    slotted_savestate: HashMap<usize, Slot>,
+pub struct CoreLaunchInfo<T> {
+    pub core: CoreType,
+    pub rom: Option<Rom>,
+    pub bios: Vec<Bios>,
+    pub files: BTreeMap<usize, Slot>,
+    pub save_state: Vec<Slot>,
+
+    pub data: T,
 }
 
-impl CoreLauncher {
-    fn new(core_loader: CoreLoader) -> Self {
+impl CoreLaunchInfo<()> {
+    fn new(core_loader: CoreType) -> Self {
         Self {
-            core_loader,
+            core: core_loader,
+            rom: None,
+            bios: Default::default(),
             files: Default::default(),
-            sav: Default::default(),
-            savestate: Default::default(),
-            slotted_savestate: Default::default(),
+            save_state: Default::default(),
+            data: (),
         }
     }
 
     pub fn rbf(rbf_path: PathBuf) -> Self {
-        Self::new(CoreLoader::RbfFile(rbf_path))
+        Self::new(CoreType::RbfFile(rbf_path))
     }
 
     pub fn menu() -> Self {
-        Self::new(CoreLoader::Menu)
+        Self::new(CoreType::Menu)
     }
 
-    pub fn with_sav(mut self, file: PathBuf) -> Self {
-        self.sav = Slot::File(file);
+    pub fn current() -> Self {
+        Self::new(CoreType::Current)
+    }
+}
+
+impl<T> CoreLaunchInfo<T> {
+    pub fn with_rom(mut self, rom: Rom) -> Self {
+        self.rom = Some(rom);
         self
     }
 
-    pub fn with_savestate_slot(mut self, slot: usize, file: PathBuf) -> Self {
-        self.slotted_savestate.insert(slot, Slot::File(file));
+    pub fn with_file(mut self, slot: usize, content: Slot) -> Self {
+        self.files.insert(slot, content);
         self
     }
 
-    pub fn with_savestate(mut self, file: PathBuf) -> Self {
-        self.savestate = Slot::File(file);
+    pub fn with_save_state(mut self, content: Slot) -> Self {
+        self.save_state.push(content);
         self
     }
 
-    pub fn with_file(mut self, file: PathBuf) -> Self {
-        self.files.push(file);
-        self
-    }
-
-    pub fn launch(self, manager: &mut CoreManager) -> Result<GolemCore, String> {
-        let mut core = self.core_loader.load(manager)?;
-
-        if !self.files.is_empty() {
-            let should_sav = core
-                .menu_options()
-                .iter()
-                .filter_map(|x| x.as_load_file_info())
-                .any(|i| i.save_support);
-
-            for file in self.files {
-                core.load_file(&file, None)?;
-            }
-
-            if should_sav {
-                if let Slot::File(ref file) = self.sav {
-                    core.mount_sav(file)?;
-                }
-            }
-            core.end_send_file()?;
-            core.check_sav()?;
+    pub fn with_data<U>(self, data: U) -> CoreLaunchInfo<U> {
+        CoreLaunchInfo {
+            core: self.core,
+            rom: self.rom,
+            bios: self.bios,
+            files: self.files,
+            save_state: self.save_state,
+            data,
         }
-
-        // Load all savestates.
-        if let Some(savestate_manager) = core.save_states() {
-            for (slot, state) in savestate_manager.iter_mut().enumerate() {
-                let path = match self.slotted_savestate.get(&slot) {
-                    Some(Slot::File(ref path)) => path,
-                    _ => continue,
-                };
-                let f = std::fs::File::open(path).map_err(|e| e.to_string())?;
-                state.read_from(f)?;
-            }
-        }
-
-        Ok(core)
     }
 }

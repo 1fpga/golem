@@ -20,7 +20,7 @@ impl MenuReturn for MenuAction {
     }
 }
 
-pub fn settings_panel(app: &mut GoLEmApp, core: &Option<&mut GolemCore>) {
+pub fn settings_panel(app: &mut GoLEmApp, core: &mut Option<&mut GolemCore>) {
     let mut state = None;
     loop {
         let (result, new_state) = text_menu(

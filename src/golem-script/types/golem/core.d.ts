@@ -48,7 +48,7 @@ declare module "golem/core" {
          * The save file path to load (or save to). If missing the core will
          * not use any save file.
          */
-        sav?: string,
+        files?: [string?],
 
         /**
          * The savestate file to load. If savestates are not supported, this will be ignored.
