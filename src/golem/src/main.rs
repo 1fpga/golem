@@ -64,7 +64,7 @@ fn main() {
     // Create the application and run it.
     let start = std::time::Instant::now();
     info!("Starting application...");
-    golem_script_host::run(opts.script.as_ref(), application::GoLEmApp::new())
+    golem_script::run(opts.script.as_ref(), application::GoLEmApp::new())
         .expect("Failed to run script");
     let elapsed = start.elapsed();
     info!(?elapsed, "Done");

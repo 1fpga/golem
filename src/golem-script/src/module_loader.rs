@@ -18,7 +18,7 @@ impl Default for GolemModuleLoader {
     fn default() -> Self {
         Self {
             named_modules: Rc::new(RefCell::new(HashMapModuleLoader::default())),
-            inner: Rc::new(embed_module!("../golem-script/src/")),
+            inner: Rc::new(embed_module!("../golem-frontend/dist/")),
         }
     }
 }

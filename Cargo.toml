@@ -8,7 +8,7 @@ members = [
     "src/golem",
     "src/golem-core",
     "src/golem-db",
-    "src/golem-script-host",
+    "src/golem-script",
     "src/golem-ui",
     "src/junior",
     "src/mister-fpga",
@@ -38,7 +38,7 @@ fce-movie-format = { path = "src/fce-movie-format" }
 golem = { path = "src/golem" }
 golem-core = { path = "src/golem-core", version = "0.1.0" }
 golem-db = { path = "src/golem-db" }
-golem-script-host = { path = "src/golem-script-host" }
+golem-script = { path = "src/golem-script" }
 golem-ui = { path = "src/golem-ui" }
 junior = { path = "src/junior" }
 mister-fpga = { path = "src/mister-fpga" }
