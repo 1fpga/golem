@@ -3,7 +3,6 @@ use std::convert::TryFrom;
 use tracing::info;
 
 use golem_core::runner::CoreLaunchInfo;
-use golem_core::{Core, GolemCore};
 use mister_fpga::config_string::ConfigMenu;
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::types::StatusBitMap;

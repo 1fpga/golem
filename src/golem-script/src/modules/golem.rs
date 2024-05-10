@@ -6,6 +6,7 @@ use crate::module_loader::GolemModuleLoader;
 
 mod core;
 mod db;
+mod net;
 mod storage;
 mod ui;
 mod video;
@@ -17,6 +18,7 @@ pub(super) fn register_modules(
     let modules = [
         core::create_module,
         db::create_module,
+        net::create_module,
         storage::create_module,
         video::create_module,
         ui::create_module,

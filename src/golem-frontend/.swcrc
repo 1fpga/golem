@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json.schemastore.org/swcrc",
+  "minify": true,
+  "jsc": {
+    "baseUrl": "./",
+    "parser": {
+      "syntax": "typescript",
+      "dynamicImport": true
+    },
+    "minify": {
+      "compress": {
+        "unused": true
+      },
+      "mangle": true
+    },
+    "paths": {
+      "golem/*": [
+        "./types/golem/*"
+      ]
+    }
+  },
+  "module": {
+    "type": "es6",
+    "noInterop": true
+  }
+}

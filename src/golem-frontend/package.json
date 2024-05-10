@@ -1,0 +1,23 @@
+{
+  "name": "golem-frontend",
+  "version": "1.0.0",
+  "description": "The Golem UI scripts in JavaScript, and the `golem-fpga/types` type definitions for the Golem FPGA Script Host modules.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@swc/cli": "^0.3.12",
+    "@swc/core": "^1.5.5",
+    "prettier": "^3.2.5",
+    "rollup": "^4.17.2",
+    "tslib": "^2.6.2",
+    "typescript": "^5.4.5"
+  }
+}
