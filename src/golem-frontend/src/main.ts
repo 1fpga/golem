@@ -1,6 +1,6 @@
 // The root file being executed by Golem by default.
-import * as db from "golem/db";
-import * as ui from "golem/ui";
+import * as db from "@/golem/db";
+import * as ui from "@/golem/ui";
 
 import { games_menu } from "./games";
 import { cores_menu } from "./cores";
@@ -14,7 +14,7 @@ function downloads_menu() {
   ui.alert("Downloads", "Not implemented yet.");
 }
 
-async function main_menu() {
+function main_menu() {
   const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")
     ?.count as number;
   const nb_cores = db.queryOne("SELECT COUNT(*) as count FROM cores")
@@ -39,10 +39,10 @@ async function main_menu() {
   });
 }
 
-export async function main() {
+export function main() {
   while (true) {
     try {
-      return await main_menu();
+      return main_menu();
     } catch (e: any) {
       console.error(e);
       ui.alert("Error", e.message);

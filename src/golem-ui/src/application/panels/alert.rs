@@ -8,7 +8,7 @@ use embedded_graphics::mono_font::ascii;
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Line, PrimitiveStyle};
+use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
@@ -88,6 +88,51 @@ pub fn show_error(app: &mut GoLEmApp, error: impl std::error::Error, recoverable
     if reboot {
         error!("Rebooting... Just kidding you're on a desktop.");
     }
+}
+
+pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
+    let display_area = app.main_buffer().bounding_box();
+
+    let character_style = u8g2_fonts::U8g2TextStyle::new(
+        u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
+        BinaryColor::On,
+    );
+    let textbox_style = TextBoxStyleBuilder::new()
+        .height_mode(HeightMode::FitToText)
+        .alignment(embedded_text::alignment::HorizontalAlignment::Justified)
+        .paragraph_spacing(1)
+        .build();
+
+    let bounds = app.main_buffer().bounding_box();
+    let text_box = TextBox::with_textbox_style(message, bounds, character_style, textbox_style);
+
+    let layout = LinearLayout::vertical(
+        Chain::new(Text::new(
+            title,
+            Point::zero(),
+            MonoTextStyle::new(&ascii::FONT_8X13_BOLD, BinaryColor::On),
+        ))
+        .append(
+            Line::new(
+                Point::zero(),
+                Point::new(display_area.bounding_box().size.width as i32, 0),
+            )
+            .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
+        )
+        .append(text_box),
+    )
+    .with_alignment(horizontal::Center)
+    .with_spacing(spacing::FixedMargin(2))
+    .arrange()
+    .align_to(&display_area, horizontal::Center, vertical::Top)
+    .into_inner();
+
+    // Only show once, return immediately.
+    app.draw(move |app| {
+        let buffer = app.main_buffer();
+        buffer.clear(BinaryColor::Off).unwrap();
+        layout.draw(buffer).unwrap();
+    });
 }
 
 pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -> Option<usize> {

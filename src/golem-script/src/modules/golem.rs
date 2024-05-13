@@ -26,13 +26,13 @@ pub(super) fn register_modules(
 
     for create_fn in modules.iter() {
         let (name, module) = create_fn(context)?;
-        let module_name = JsString::concat(&js_string!("golem/"), &name);
+        let module_name = JsString::concat(&js_string!("@/golem/"), &name);
         loader.insert_named(module_name, module);
     }
 
     // The patrons module.
     loader.insert_named(
-        js_string!("golem/patrons"),
+        js_string!("@/golem/patrons"),
         Module::parse_json(
             js_string!(include_str!("../../../../scripts/patreon/patrons.json")),
             context,

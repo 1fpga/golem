@@ -3,7 +3,7 @@
 /**
  * This module provides functions to interact with cores in Golem Script.
  */
-declare module "golem/core" {
+declare module "@/golem/core" {
   /**
    * A path to a core file.
    */

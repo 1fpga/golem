@@ -115,6 +115,26 @@ impl GoLEmApp {
         self.coordinator.clone()
     }
 
+    pub fn draw(&mut self, drawer_fn: impl FnOnce(&mut Self)) {
+        self.platform.start_loop();
+
+        drawer_fn(self);
+
+        self.platform.update_main(&self.main_buffer);
+        if self.render_toolbar && self.toolbar.update() {
+            self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
+            self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
+
+            if self.settings.invert_toolbar() {
+                self.toolbar_buffer.invert();
+            }
+
+            self.platform.update_toolbar(&self.toolbar_buffer);
+        }
+
+        self.platform.end_loop();
+    }
+
     pub fn event_loop<R>(
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,

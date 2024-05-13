@@ -1,6 +1,6 @@
-import * as core from "golem/core";
-import * as db from "golem/db";
-import * as ui from "golem/ui";
+import * as core from "@/golem/core";
+import * as db from "@/golem/db";
+import * as ui from "@/golem/ui";
 
 function start_game(game_id: number) {
   const db_game = db.queryOne("SELECT * FROM games WHERE id = ?", [game_id])!;

@@ -9,6 +9,6 @@ declare const PATRONS: {
   };
 };
 
-declare module "golem/patrons" {
+declare module "@/golem/patrons" {
   export default PATRONS;
 }
