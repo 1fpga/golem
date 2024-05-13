@@ -4,7 +4,7 @@
  * This module provides functions for interacting with the storage.
  * It allows scripts to store and retrieve JS values from the storage.
  */
-declare module "golem/storage" {
+declare module "@/golem/storage" {
   /**
    * Retrieves a value from the storage.
    *

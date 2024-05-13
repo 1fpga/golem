@@ -13,11 +13,7 @@
       },
       "mangle": true
     },
-    "paths": {
-      "golem/*": [
-        "./types/golem/*"
-      ]
-    }
+    "paths": {}
   },
   "module": {
     "type": "es6",

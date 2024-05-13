@@ -5,7 +5,7 @@
  * It is free form, so you can execute any SQL query you want. Be careful with
  * updates and schema changes.
  */
-declare module "golem/db" {
+declare module "@/golem/db" {
   /**
    * A value that can be bound to or returned from a SQL query. This can be a string,
    * number, boolean, or NULL.

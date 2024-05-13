@@ -7,5 +7,6 @@ export default {
     file: "dist/main.js",
     format: "es",
   },
-  plugins: [typescript(), terser()],
+  plugins: [typescript()],
+  external: [],
 };

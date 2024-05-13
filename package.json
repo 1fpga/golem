@@ -1,6 +1,7 @@
 {
   "name": "golem-fpga",
   "workspaces": [
+    "src/golem-frontend",
     "scripts/patreon"
   ]
 }

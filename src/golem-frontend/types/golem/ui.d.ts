@@ -7,7 +7,7 @@
  * with it. For example, the `textMenu` function will create a menu with a list of
  * textual option, and the function will return the index of the selected option.
  */
-declare module "golem/ui" {
+declare module "@/golem/ui" {
   /**
    * Represents a textual menu item.
    */
@@ -42,6 +42,12 @@ declare module "golem/ui" {
    */
   export function alert(message: string): void;
   export function alert(title: string, message: string): void;
+
+  /**
+   * Update the UI but don't let the user interact with it.
+   */
+  export function show(message: string): void;
+  export function show(title: string, message: string): void;
 
   /**
    * Show a message to the user, with a QR Code.

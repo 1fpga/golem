@@ -11,10 +11,7 @@
     "moduleResolution": "Bundler",
     "paths": {
       "@/*": [
-        "src/*"
-      ],
-      "golem/*": [
-        "types/golem/*"
+        "types/*"
       ]
     }
   }
