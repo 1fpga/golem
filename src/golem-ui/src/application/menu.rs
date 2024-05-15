@@ -3,12 +3,12 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_layout::align::horizontal;
-use embedded_layout::layout::linear::{LinearLayout, spacing};
+use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::object_chain::Chain;
 use embedded_layout::View;
-use embedded_menu::{Menu, MenuItem, MenuState};
-use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::selection_indicator::style::Invert;
+use embedded_menu::selection_indicator::AnimatedPosition;
+use embedded_menu::{Menu, MenuItem, MenuState};
 use sdl3::keyboard::Keycode;
 use tracing::info;
 use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
@@ -17,14 +17,14 @@ use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
 pub use item::*;
 pub use options::*;
 
-use crate::application::GoLEmApp;
-use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
 use crate::application::menu::style::OptionalMenuItem;
+use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
 use crate::application::widgets::controller::ControllerButton;
-use crate::application::widgets::EmptyView;
 use crate::application::widgets::menu::SizedMenu;
 use crate::application::widgets::opt::OptionalView;
 use crate::application::widgets::text::FontRendererView;
+use crate::application::widgets::EmptyView;
+use crate::application::GoLEmApp;
 
 pub mod cores;
 pub mod filesystem;
@@ -234,24 +234,24 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         let (result, new_state) = app.event_loop(|app, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
-            let buffer = app.main_buffer();
-            buffer.clear(BinaryColor::Off).unwrap();
+            let mut buffer = app.main_buffer().color_converted();
+            // let _ = buffer.clear(BinaryColor::Off);
 
             {
                 let menu = &mut layout.inner_mut().parent.object;
                 menu.update(&menu_bounding_box);
             }
 
-            layout.draw(buffer).unwrap();
-            if filter.is_empty() {
-                bottom_bar
-                    .draw(&mut buffer.sub_buffer(bottom_area))
-                    .unwrap();
-            } else {
-                filter_bar
-                    .draw(&mut buffer.sub_buffer(bottom_area))
-                    .unwrap();
-            }
+            let _ = layout.draw(&mut buffer);
+            // if filter.is_empty() {
+            //     bottom_bar
+            //         .draw(&mut buffer.sub_buffer(bottom_area))
+            //         .unwrap();
+            // } else {
+            //     filter_bar
+            //         .draw(&mut buffer.sub_buffer(bottom_area))
+            //         .unwrap();
+            // }
 
             let menu = &mut layout.inner_mut().parent.object;
 

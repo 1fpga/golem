@@ -1,11 +1,11 @@
-#![cfg(feature = "platform_de10")]
-
 use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
 use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::iterator::PixelIteratorExt;
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor};
 use embedded_graphics::Drawable;
+use embedded_graphics_framebuf::FrameBuf;
 use sdl3::event::Event;
+use std::convert::TryInto;
 use std::fs::File;
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::OpenOptionsExt;
@@ -18,7 +18,7 @@ use crate::core_manager::CoreManager;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
 use crate::macguiver::platform::Platform;
-use crate::platform::{sizes, GoLEmPlatform};
+use crate::platform::sizes;
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
@@ -34,7 +34,7 @@ pub struct De10Platform {
     core_manager: CoreManager,
 
     mapper: cyclone_v::memory::DevMemMemoryMapper,
-    framebuffer: embedded_graphics_framebuf::FrameBuf<Rgb888, &'static mut [Rgb888]>,
+    pub framebuffer: FrameBuf<Rgb888, &'static mut [Rgb888; 640 * 480]>,
 }
 
 impl Default for De10Platform {
@@ -69,8 +69,10 @@ impl Default for De10Platform {
         let mut mapper =
             cyclone_v::memory::DevMemMemoryMapper::create(fb_addr, 640 * 480 * 4).unwrap();
 
-        let slice = unsafe { std::slice::from_raw_parts_mut(mapper.as_mut_ptr(), 640 * 480) };
-        let framebuffer = embedded_graphics_framebuf::FrameBuf::new(slice, 640, 480);
+        let slice: &mut [Rgb888] =
+            unsafe { std::slice::from_raw_parts_mut(mapper.as_mut_ptr(), 640 * 480) };
+        let slice = slice.try_into().unwrap();
+        let framebuffer = FrameBuf::new(slice, 640, 480);
 
         Self {
             platform,
@@ -85,48 +87,50 @@ impl Default for De10Platform {
     }
 }
 
-impl GoLEmPlatform for De10Platform {
-    type Color = BinaryColor;
-
-    fn init(&mut self) {
+impl De10Platform {
+    pub fn init(&mut self) {
         self.core_manager.load_menu().unwrap();
     }
 
-    fn update_toolbar(&mut self, buffer: &DrawBuffer<Self::Color>) {
+    pub fn update_toolbar(&mut self, buffer: &DrawBuffer<BinaryColor>) {
         self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
         buffer.draw(&mut self.toolbar_buffer).unwrap();
         self.title_display
             .send(self.core_manager.fpga_mut(), &self.toolbar_buffer);
     }
 
-    fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
+    pub fn update_main(&mut self, buffer: &DrawBuffer<BinaryColor>) {
         // self.main_display.send(self.core_manager.fpga_mut(), buffer);
 
-        buffer
-            .draw(&mut self.framebuffer.color_converted())
-            .unwrap();
+        // buffer
+        //     .draw(&mut self.framebuffer.color_converted())
+        //     .unwrap();
     }
 
-    fn toolbar_dimensions(&self) -> Size {
+    pub fn toolbar_dimensions(&self) -> Size {
         sizes::TITLE
     }
-    fn main_dimensions(&self) -> Size {
+    pub fn main_dimensions(&self) -> Size {
         sizes::MAIN
     }
 
-    fn events(&mut self) -> Vec<Event> {
+    pub fn main_buffer(&mut self) -> &mut impl DrawTarget<Color = Rgb888> {
+        &mut self.framebuffer
+    }
+
+    pub fn events(&mut self) -> Vec<Event> {
         self.platform.events()
     }
 
-    fn sdl(&mut self) -> &mut SdlPlatform<Self::Color> {
+    pub fn sdl(&mut self) -> &mut SdlPlatform<BinaryColor> {
         &mut self.platform
     }
 
-    fn start_loop(&mut self) {}
+    pub fn start_loop(&mut self) {}
 
-    fn end_loop(&mut self) {}
+    pub fn end_loop(&mut self) {}
 
-    fn core_manager_mut(&mut self) -> &mut CoreManager {
+    pub fn core_manager_mut(&mut self) -> &mut CoreManager {
         &mut self.core_manager
     }
 }

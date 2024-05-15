@@ -14,7 +14,6 @@ use crate::application::menu::TextMenuOptions;
 use crate::application::panels::alert::{alert, show_error};
 use crate::application::panels::core_loop::run_core_loop;
 use crate::application::GoLEmApp;
-use crate::platform::GoLEmPlatform;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub enum MenuAction {

@@ -6,7 +6,7 @@ use crate::application::GoLEmApp;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::ascii;
 use embedded_graphics::mono_font::MonoTextStyle;
-use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
@@ -129,9 +129,9 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
 
     // Only show once, return immediately.
     app.draw(move |app| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let mut buffer = app.main_buffer();
+        let _ = buffer.clear(Rgb888::BLACK);
+        let _ = layout.draw(&mut buffer.color_converted());
     });
 }
 
@@ -187,9 +187,9 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
     .into_inner();
 
     app.event_loop(move |app, state| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let mut buffer = app.main_buffer();
+        let _ = buffer.clear(Rgb888::BLACK);
+        let _ = layout.draw(&mut buffer.color_converted());
 
         let menu = &mut layout.object;
         for ev in state.events() {

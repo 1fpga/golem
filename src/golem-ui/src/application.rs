@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
@@ -16,7 +16,7 @@ use crate::data::paths;
 use crate::data::settings::Settings;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
-use crate::platform::{GoLEmPlatform, WindowManager};
+use crate::platform::WindowManager;
 
 pub mod menu;
 
@@ -39,7 +39,6 @@ pub struct GoLEmApp {
     gamepads: [Option<Gamepad>; 32],
 
     platform: WindowManager,
-    main_buffer: DrawBuffer<BinaryColor>,
     toolbar_buffer: DrawBuffer<BinaryColor>,
 }
 
@@ -78,7 +77,6 @@ impl GoLEmApp {
             database,
             settings,
             platform,
-            main_buffer: DrawBuffer::new(main_size),
             toolbar_buffer: DrawBuffer::new(toolbar_size),
         }
     }
@@ -91,8 +89,8 @@ impl GoLEmApp {
         self.platform.init();
     }
 
-    pub fn main_buffer(&mut self) -> &mut DrawBuffer<BinaryColor> {
-        &mut self.main_buffer
+    pub fn main_buffer(&mut self) -> &mut impl DrawTarget<Color = Rgb888> {
+        self.platform_mut().main_buffer()
     }
 
     pub fn database(&self) -> Arc<Mutex<Connection>> {
@@ -120,7 +118,7 @@ impl GoLEmApp {
 
         drawer_fn(self);
 
-        self.platform.update_main(&self.main_buffer);
+        // self.platform.update_main(&self.main_buffer());
         if self.render_toolbar && self.toolbar.update() {
             self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
             self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
@@ -201,7 +199,7 @@ impl GoLEmApp {
                 break r;
             }
 
-            self.platform.update_main(&self.main_buffer);
+            // self.platform.update_main(&self.main_buffer);
             if self.render_toolbar && self.toolbar.update() {
                 self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
                 self.toolbar.draw(&mut self.toolbar_buffer).unwrap();

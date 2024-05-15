@@ -100,9 +100,9 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     .align_to(&display_area, horizontal::Center, vertical::Center);
 
     app.event_loop(move |app, state| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let mut buffer = app.main_buffer().color_converted();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(&mut buffer);
 
         let menu = &mut layout.inner_mut().object.inner_mut().object;
         for ev in state.events() {
@@ -111,7 +111,7 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
                 Some(MenuAction::Back) => return Some(()),
             }
         }
-        menu.update(buffer);
+        menu.update(&mut buffer);
 
         None
     });

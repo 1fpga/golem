@@ -8,7 +8,6 @@ use golem_core::core::Rom;
 use golem_core::runner::CoreLaunchInfo;
 
 use golem_ui::application::panels::core_loop::run_core_loop;
-use golem_ui::platform::GoLEmPlatform;
 
 use crate::HostData;
 

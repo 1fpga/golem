@@ -54,9 +54,9 @@ pub fn input_tester(app: &mut GoLEmApp) {
         .arrange()
         .align_to(&display_area, horizontal::Center, vertical::Top);
 
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let mut buffer = app.main_buffer().color_converted();
+        // let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(&mut buffer);
 
         for e in state.events() {
             match e {

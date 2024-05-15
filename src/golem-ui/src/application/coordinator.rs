@@ -17,7 +17,6 @@ use mister_fpga::core::MisterFpgaCore;
 
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::platform::GoLEmPlatform;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct GameStartInfo {

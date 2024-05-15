@@ -9,7 +9,6 @@ use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
-use crate::platform::GoLEmPlatform;
 
 pub mod menu;
 
