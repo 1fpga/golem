@@ -115,7 +115,7 @@ impl CoreManager {
                 .pixels_mut()
                 .for_each(|p| *p = image::Rgba([64, 64, 64, 0]));
             image::imageops::overlay(&mut fullframe, &image, 32, 32);
-            core.send_to_menu_framebuffer(fullframe.as_bytes())?;
+            core.menu_framebuffer(fullframe.as_bytes())?;
         }
 
         self.fpga_mut().osd_enable();

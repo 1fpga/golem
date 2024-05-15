@@ -29,7 +29,8 @@ mod sizes {
 
     /// The size of the main OSD display. We never resize it to be smaller,
     /// instead reusing the size for other information.
-    pub const MAIN: Size = Size::new(256, 16 * 8);
+    // pub const MAIN: Size = Size::new(256, 16 * 8);
+    pub const MAIN: Size = Size::new(320, 240);
 }
 
 pub trait GoLEmPlatform {

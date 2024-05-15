@@ -258,10 +258,9 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
         );
 
         if hact == 2048 && vact == 1536 {
-            let n = 13;
-            warn!("EDID: Using safe vmode {}.", n);
+            let mode = DefaultVideoMode::V2048x1536r60;
+            warn!("EDID: Using safe vmode ({:?}).", mode);
 
-            let mode = DefaultVideoMode::from_repr(n).unwrap();
             v.param = mode.into();
             v.param.vic = mode.vic_mode();
             v.f_pix = mode.f_pix();
@@ -277,6 +276,8 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
             } else {
                 return Err("EDID: Falling back to default video mode.".to_string());
             }
+        } else {
+            return Err("EDID: Falling back to default video mode.".to_string());
         }
     }
 
@@ -658,8 +659,9 @@ pub struct VideoModeDef {
 fn parse_custom_video_mode(video_mode: Option<&str>) -> CustomVideoMode {
     if video_mode.is_none() || matches!(video_mode, Some("auto")) || matches!(video_mode, Some(""))
     {
-        return DefaultVideoMode::V1920x1080r60.into();
+        // return DefaultVideoMode::V1920x1080r60.into();
         // return DefaultVideoMode::V1280x720r60.into();
+        return DefaultVideoMode::V640x480r60.into();
     }
 
     todo!("parse_custom_video_mode")

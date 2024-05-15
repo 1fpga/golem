@@ -5,8 +5,6 @@ use tracing::debug;
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 
-pub const FB_PIXEL_COUNT: usize = 1920 * 1080;
-pub const FB_SIZE: usize = FB_PIXEL_COUNT * 4 * 3;
 pub const FB_BASE_ADDRESS: usize = 0x2000_0000;
 pub const BUFFER_SIZE: usize = 2048 * 1024 * 3 * 4;
 

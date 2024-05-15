@@ -259,7 +259,7 @@ impl MisterFpgaCore {
     }
 
     // TODO: rethink how framebuffers are handled.
-    pub fn send_to_menu_framebuffer(&mut self, bytes: &[u8]) -> Result<(), String> {
+    pub fn menu_framebuffer(&mut self, bytes: &[u8]) -> Result<softbuffer::Buffer<>, String> {
         const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
 
         let fb_addr = FB_BASE + (1920 * 1080) * 4;

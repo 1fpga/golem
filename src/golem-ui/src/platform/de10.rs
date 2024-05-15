@@ -1,10 +1,14 @@
 #![cfg(feature = "platform_de10")]
 
-use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::Drawable;
+use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
 use embedded_graphics::geometry::{OriginDimensions, Size};
-use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::iterator::PixelIteratorExt;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor};
+use embedded_graphics::Drawable;
 use sdl3::event::Event;
+use std::fs::File;
+use std::os::fd::AsRawFd;
+use std::os::unix::fs::OpenOptionsExt;
 use tracing::{debug, error};
 
 use mister_fpga::fpga;
@@ -12,9 +16,9 @@ use mister_fpga::osd::OsdDisplay;
 
 use crate::core_manager::CoreManager;
 use crate::macguiver::buffer::DrawBuffer;
-use crate::macguiver::platform::Platform;
 use crate::macguiver::platform::sdl::{SdlInitState, SdlPlatform, Window};
-use crate::platform::{GoLEmPlatform, sizes};
+use crate::macguiver::platform::Platform;
+use crate::platform::{sizes, GoLEmPlatform};
 
 const SDL_VIDEO_DRIVER_VARNAME: &str = "SDL_VIDEO_DRIVER";
 const SDL_VIDEO_DRIVER_DEFAULT: &str = "evdev";
@@ -28,6 +32,9 @@ pub struct De10Platform {
     toolbar_buffer: DrawBuffer<BinaryColor>,
 
     core_manager: CoreManager,
+
+    mapper: cyclone_v::memory::DevMemMemoryMapper,
+    framebuffer: embedded_graphics_framebuf::FrameBuf<Rgb888, &'static mut [Rgb888]>,
 }
 
 impl Default for De10Platform {
@@ -55,6 +62,15 @@ impl Default for De10Platform {
         }
 
         let core_manager = CoreManager::new(fpga);
+        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
+
+        let fb_addr = FB_BASE + (1920 * 1080) * 4;
+        use cyclone_v::memory::MemoryMapper;
+        let mut mapper =
+            cyclone_v::memory::DevMemMemoryMapper::create(fb_addr, 640 * 480 * 4).unwrap();
+
+        let slice = unsafe { std::slice::from_raw_parts_mut(mapper.as_mut_ptr(), 640 * 480) };
+        let framebuffer = embedded_graphics_framebuf::FrameBuf::new(slice, 640, 480);
 
         Self {
             platform,
@@ -63,6 +79,8 @@ impl Default for De10Platform {
             _window: window,
             toolbar_buffer,
             core_manager,
+            mapper,
+            framebuffer,
         }
     }
 }
@@ -82,7 +100,11 @@ impl GoLEmPlatform for De10Platform {
     }
 
     fn update_main(&mut self, buffer: &DrawBuffer<Self::Color>) {
-        self.main_display.send(self.core_manager.fpga_mut(), buffer);
+        // self.main_display.send(self.core_manager.fpga_mut(), buffer);
+
+        buffer
+            .draw(&mut self.framebuffer.color_converted())
+            .unwrap();
     }
 
     fn toolbar_dimensions(&self) -> Size {
