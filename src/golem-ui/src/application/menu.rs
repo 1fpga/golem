@@ -6,9 +6,9 @@ use embedded_layout::align::horizontal;
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::object_chain::Chain;
 use embedded_layout::View;
-use embedded_menu::selection_indicator::style::Invert;
+use embedded_menu::selection_indicator::style::Border;
 use embedded_menu::selection_indicator::AnimatedPosition;
-use embedded_menu::{Menu, MenuItem, MenuState};
+use embedded_menu::{Menu, MenuState};
 use sdl3::keyboard::Keycode;
 use tracing::info;
 use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
@@ -33,7 +33,7 @@ pub mod item;
 pub mod options;
 pub mod style;
 
-pub type GolemMenuState<R> = MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, Invert>;
+pub type GolemMenuState<R> = MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, Border>;
 
 fn bottom_bar_<'a>(
     show_back_button: bool,
@@ -209,13 +209,13 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         let menu = SizedMenu::new(
             menu_size,
             Menu::with_style(title, menu_style)
-                .add_items(&mut prefix_items)
-                .add_item(separator1)
-                .add_items(&mut items_items)
-                .add_item(separator2)
-                .add_items(&mut suffix_items)
-                .add_item(separator3)
-                .add_item(back_item)
+                .add_menu_items(&mut prefix_items)
+                .add_menu_item(separator1)
+                .add_menu_items(&mut items_items)
+                .add_menu_item(separator2)
+                .add_menu_items(&mut suffix_items)
+                .add_menu_item(separator3)
+                .add_menu_item(back_item)
                 .build_with_state(menu_state.unwrap_or_default()),
         );
 
@@ -235,14 +235,15 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
             let mut buffer = app.main_buffer().color_converted();
-            // let _ = buffer.clear(BinaryColor::Off);
+            let _ = buffer.clear(BinaryColor::Off);
 
             {
                 let menu = &mut layout.inner_mut().parent.object;
                 menu.update(&menu_bounding_box);
+                let _ = menu.draw(&mut buffer);
             }
-
             let _ = layout.draw(&mut buffer);
+
             // if filter.is_empty() {
             //     bottom_bar
             //         .draw(&mut buffer.sub_buffer(bottom_area))

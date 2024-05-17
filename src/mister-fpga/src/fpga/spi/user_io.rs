@@ -759,11 +759,13 @@ pub struct SetFramebufferToCore;
 
 impl SpiCommand for SetFramebufferToCore {
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        debug!("Setting framebuffer to core");
         spi.command(UserIoCommands::UserIoSetFramebuffer).write(0);
         Ok(())
     }
 }
 
+#[derive(Debug)]
 pub struct SetFramebufferToLinux {
     pub n: usize,
     pub xoff: u16,
@@ -776,6 +778,8 @@ pub struct SetFramebufferToLinux {
 
 impl SpiCommand for SetFramebufferToLinux {
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
+        debug!("Setting framebuffer to Linux: {:#?}", self);
+
         let mut out = 0;
         let mut command = spi.command_read(UserIoCommands::UserIoSetFramebuffer, &mut out);
 

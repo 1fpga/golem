@@ -1,15 +1,12 @@
-use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::RgbColor;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::prelude::Size;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{PrimitiveStyle, Rectangle, StyledDrawable};
 use embedded_layout::View;
 
-use embedded_menu::{
-    interaction::InputAdapterSource,
-    selection_indicator::{style::IndicatorStyle, SelectionIndicatorController},
-    Marker, MenuItem, MenuStyle,
-};
+use embedded_menu::items::MenuListItem;
 
 #[derive(Clone)]
 pub struct SectionSeparator {
@@ -22,9 +19,9 @@ impl Default for SectionSeparator {
     }
 }
 
-impl Marker for SectionSeparator {}
+impl embedded_menu::items::Marker for SectionSeparator {}
 
-impl<R> MenuItem<R> for SectionSeparator {
+impl<R> MenuListItem<R> for SectionSeparator {
     fn value_of(&self) -> R {
         unreachable!()
     }
@@ -33,43 +30,21 @@ impl<R> MenuItem<R> for SectionSeparator {
         unreachable!()
     }
 
-    fn set_style<C, S, IT, P>(&mut self, _style: &MenuStyle<C, S, IT, P, R>)
-    where
-        C: PixelColor,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<R>,
-        P: SelectionIndicatorController,
-    {
+    fn set_style(&mut self, _text_style: &MonoTextStyle<'_, BinaryColor>) {
         // Nothing to do.
-    }
-
-    fn title(&self) -> &str {
-        ""
-    }
-
-    fn details(&self) -> &str {
-        ""
-    }
-
-    fn value(&self) -> &str {
-        ""
     }
 
     fn selectable(&self) -> bool {
         false
     }
 
-    fn draw_styled<C, S, IT, P, DIS>(
+    fn draw_styled<DIS>(
         &self,
-        _style: &MenuStyle<C, S, IT, P, R>,
+        _style: &MonoTextStyle<'_, BinaryColor>,
         display: &mut DIS,
     ) -> Result<(), DIS::Error>
     where
-        C: PixelColor + From<Rgb888>,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<R>,
-        P: SelectionIndicatorController,
-        DIS: DrawTarget<Color = C>,
+        DIS: DrawTarget<Color = BinaryColor>,
     {
         self.line.translate(Point::new(0, 1)).draw_styled(
             &PrimitiveStyle::with_stroke(Rgb888::WHITE.into(), 1),

@@ -8,10 +8,11 @@ use std::convert::{Infallible, TryFrom};
 use std::fmt::{Debug, Formatter};
 use std::rc::Rc;
 
-enum DrawBufferInner<C> {
+enum DrawBufferInner<C: 'static> {
     Empty,
     Buffer(Box<[C]>, Size),
     SubBuffer(Rc<RefCell<DrawBufferInner<C>>>, Rectangle),
+    MemoryBuffer(&'static mut [C], Size),
 }
 
 impl<C> Debug for DrawBufferInner<C> {
@@ -27,6 +28,10 @@ impl<C> Debug for DrawBufferInner<C> {
                 .field("parent", parent)
                 .finish(),
             DrawBufferInner::Empty => f.debug_struct("DrawBuffer::Empty").finish(),
+            DrawBufferInner::MemoryBuffer(_, size) => f
+                .debug_struct("DrawBuffer::MemoryBuffer")
+                .field("size", size)
+                .finish(),
         }
     }
 }
@@ -37,6 +42,18 @@ impl<C: PixelColor> DrawBufferInner<C> {
             vec![default_color; size.width as usize * size.height as usize].into_boxed_slice(),
             size,
         )
+    }
+
+    pub unsafe fn from_memory_slice<const N: usize>(
+        slice: &'static mut [C; N],
+        size: Size,
+    ) -> Self {
+        assert_eq!(
+            size.width as usize * size.height as usize,
+            N,
+            "Size of slice and buffer must match"
+        );
+        Self::MemoryBuffer(slice, size)
     }
 
     /// Returns the color of the pixel at a point.
@@ -53,6 +70,11 @@ impl<C: PixelColor> DrawBufferInner<C> {
                 parent.borrow().get_pixel(parent_point)
             }
             DrawBufferInner::Empty => unreachable!("Empty buffer has no pixels"),
+            DrawBufferInner::MemoryBuffer(slice, _) => {
+                let index = self.point_to_index(point);
+
+                slice[index.expect("Point is outside the buffer size")].clone()
+            }
         }
     }
 
@@ -70,6 +92,12 @@ impl<C: PixelColor> DrawBufferInner<C> {
                 parent.borrow_mut().set_pixel(parent_point, color);
             }
             DrawBufferInner::Empty => {}
+            DrawBufferInner::MemoryBuffer(slice, size) => {
+                let (x, y) = <(u32, u32)>::try_from(point).unwrap();
+                if x < size.width && y < size.height {
+                    slice[(x + y * size.width) as usize] = color;
+                }
+            }
         }
     }
 
@@ -96,6 +124,11 @@ impl DrawBufferInner<BinaryColor> {
             }
             DrawBufferInner::SubBuffer(_parent, _rectangle) => {
                 todo!()
+            }
+            DrawBufferInner::MemoryBuffer(pixels, _) => {
+                for pixel in pixels.iter_mut() {
+                    *pixel = pixel.invert();
+                }
             }
         }
     }
@@ -127,6 +160,15 @@ impl<C: PixelColor> DrawTarget for DrawBufferInner<C> {
                 }
             }
             DrawBufferInner::Empty => {}
+            DrawBufferInner::MemoryBuffer(buffer, size) => {
+                for Pixel(point, color) in pixels.into_iter() {
+                    if let Ok((x, y)) = <(u32, u32)>::try_from(point) {
+                        if x < size.width && y < size.height {
+                            buffer[(x + y * size.width) as usize] = color;
+                        }
+                    }
+                }
+            }
         }
 
         Ok(())
@@ -153,6 +195,13 @@ impl<C: PixelColor> Drawable for DrawBufferInner<C> {
                 unreachable!("Unimplemented: DrawBufferInner::SubBuffer::draw")
             }
             DrawBufferInner::Empty => Ok(()),
+            DrawBufferInner::MemoryBuffer(pixels, Size { width, .. }) => {
+                target.draw_iter(pixels.iter().enumerate().map(|(i, &c)| {
+                    let x = (i as u32) % width;
+                    let y = (i as u32) / width;
+                    Pixel(Point::new(x as i32, y as i32), c)
+                }))
+            }
         }
     }
 }
@@ -160,9 +209,20 @@ impl<C: PixelColor> Drawable for DrawBufferInner<C> {
 impl<C> OriginDimensions for DrawBufferInner<C> {
     fn size(&self) -> Size {
         match self {
-            DrawBufferInner::Buffer(_, size) => *size,
+            DrawBufferInner::Buffer(_, size) | DrawBufferInner::MemoryBuffer(_, size) => *size,
             DrawBufferInner::SubBuffer(_, rectangle) => rectangle.size,
             DrawBufferInner::Empty => Size::zero(),
+        }
+    }
+}
+
+impl<C> DrawBufferInner<C> {
+    fn raw_buffer(&self) -> Option<&[C]> {
+        match self {
+            DrawBufferInner::Buffer(pixels, _) => Some(pixels.as_ref()),
+            DrawBufferInner::SubBuffer(_, _) => None,
+            DrawBufferInner::Empty => Some(&[]),
+            DrawBufferInner::MemoryBuffer(pixels, _) => Some(pixels),
         }
     }
 }
@@ -177,39 +237,30 @@ where
         F: Fn(C) -> C::Bytes,
     {
         let mut bytes = Vec::new();
+        let pixels = self.raw_buffer().unwrap();
+        let size = self.size();
+        if C::Raw::BITS_PER_PIXEL >= 8 {
+            for pixel in pixels.iter() {
+                bytes.extend_from_slice(pixel_to_bytes(*pixel).as_ref())
+            }
+        } else {
+            let pixels_per_byte = 8 / C::Raw::BITS_PER_PIXEL;
 
-        match self {
-            DrawBufferInner::Buffer(pixels, size) => {
-                if C::Raw::BITS_PER_PIXEL >= 8 {
-                    for pixel in pixels.iter() {
-                        bytes.extend_from_slice(pixel_to_bytes(*pixel).as_ref())
+            for row in pixels.chunks(size.width as usize) {
+                for byte_pixels in row.chunks(pixels_per_byte) {
+                    let mut value = 0;
+
+                    for pixel in byte_pixels {
+                        value <<= C::Raw::BITS_PER_PIXEL;
+                        value |= pixel.to_be_bytes().as_ref()[0];
                     }
-                } else {
-                    let pixels_per_byte = 8 / C::Raw::BITS_PER_PIXEL;
 
-                    for row in pixels.chunks(size.width as usize) {
-                        for byte_pixels in row.chunks(pixels_per_byte) {
-                            let mut value = 0;
+                    value <<= C::Raw::BITS_PER_PIXEL * (pixels_per_byte - byte_pixels.len());
 
-                            for pixel in byte_pixels {
-                                value <<= C::Raw::BITS_PER_PIXEL;
-                                value |= pixel.to_be_bytes().as_ref()[0];
-                            }
-
-                            value <<=
-                                C::Raw::BITS_PER_PIXEL * (pixels_per_byte - byte_pixels.len());
-
-                            bytes.push(value);
-                        }
-                    }
+                    bytes.push(value);
                 }
             }
-            DrawBufferInner::SubBuffer(_, _) => {
-                unreachable!("Unsupported.");
-            }
-            DrawBufferInner::Empty => {}
         }
-
         bytes
     }
 }
@@ -217,7 +268,7 @@ where
 /// A buffer that can be drawn to in EmbeddedDisplay. Most views will draw
 /// directly to this.
 #[derive(Debug, Clone)]
-pub struct DrawBuffer<C> {
+pub struct DrawBuffer<C: 'static> {
     inner: Rc<RefCell<DrawBufferInner<C>>>,
 }
 
@@ -228,6 +279,18 @@ impl<C: PixelColor> DrawBuffer<C> {
             inner: Rc::new(RefCell::new(DrawBufferInner::with_default_color(
                 size,
                 default_color,
+            ))),
+        }
+    }
+
+    /// Creates a buffer that references an existing memory region.
+    pub unsafe fn from_memory_slice<const N: usize>(
+        slice: &'static mut [C; N],
+        size: Size,
+    ) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(DrawBufferInner::from_memory_slice(
+                slice, size,
             ))),
         }
     }

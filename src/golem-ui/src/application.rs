@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
+use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
@@ -89,7 +89,7 @@ impl GoLEmApp {
         self.platform.init();
     }
 
-    pub fn main_buffer(&mut self) -> &mut impl DrawTarget<Color = Rgb888> {
+    pub fn main_buffer(&mut self) -> &mut DrawBuffer<Rgb888> {
         self.platform_mut().main_buffer()
     }
 
@@ -113,12 +113,9 @@ impl GoLEmApp {
         self.coordinator.clone()
     }
 
-    pub fn draw(&mut self, drawer_fn: impl FnOnce(&mut Self)) {
-        self.platform.start_loop();
+    fn draw_inner<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
+        let result = drawer_fn(self);
 
-        drawer_fn(self);
-
-        // self.platform.update_main(&self.main_buffer());
         if self.render_toolbar && self.toolbar.update() {
             self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
             self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
@@ -130,7 +127,16 @@ impl GoLEmApp {
             self.platform.update_toolbar(&self.toolbar_buffer);
         }
 
+        result
+    }
+
+    pub fn draw<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
+        self.platform.start_loop();
+
+        let result = self.draw_inner(drawer_fn);
+
         self.platform.end_loop();
+        result
     }
 
     pub fn event_loop<R>(
@@ -195,20 +201,8 @@ impl GoLEmApp {
 
             let mut state = EventLoopState::new(events);
 
-            if let Some(r) = loop_fn(self, &mut state) {
+            if let Some(r) = self.draw_inner(|s| loop_fn(s, &mut state)) {
                 break r;
-            }
-
-            // self.platform.update_main(&self.main_buffer);
-            if self.render_toolbar && self.toolbar.update() {
-                self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
-                self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
-
-                if self.settings.invert_toolbar() {
-                    self.toolbar_buffer.invert();
-                }
-
-                self.platform.update_toolbar(&self.toolbar_buffer);
             }
 
             self.platform.end_loop();

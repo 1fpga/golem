@@ -1,6 +1,5 @@
 use crate::application::GoLEmApp;
 use crate::input::InputState;
-use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
@@ -55,7 +54,6 @@ pub fn input_tester(app: &mut GoLEmApp) {
         .align_to(&display_area, horizontal::Center, vertical::Top);
 
         let mut buffer = app.main_buffer().color_converted();
-        // let _ = buffer.clear(BinaryColor::Off);
         let _ = layout.draw(&mut buffer);
 
         for e in state.events() {

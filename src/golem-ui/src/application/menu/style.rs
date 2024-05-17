@@ -3,7 +3,7 @@ use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_menu::interaction::{
     Action, InputAdapter, InputAdapterSource, InputResult, InputState, Interaction, Navigation,
 };
-use embedded_menu::selection_indicator::style::Invert;
+use embedded_menu::selection_indicator::style::Border;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{DisplayScrollbar, MenuStyle};
 use sdl3::event::Event;
@@ -346,22 +346,22 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
 }
 
 pub fn menu_style<R: MenuReturn + Copy>(
-) -> MenuStyle<BinaryColor, Invert, SdlMenuInputAdapter<R>, AnimatedPosition, SdlMenuAction<R>> {
+) -> MenuStyle<Border, SdlMenuInputAdapter<R>, AnimatedPosition, SdlMenuAction<R>, BinaryColor> {
     MenuStyle::new(BinaryColor::On)
         .with_input_adapter(SdlMenuInputAdapter::default())
         .with_animated_selection_indicator(2)
-        .with_selection_indicator(Invert)
+        .with_selection_indicator(Border)
         .with_scrollbar_style(DisplayScrollbar::Auto)
         .with_title_font(&ascii::FONT_9X15_BOLD)
         .with_font(&ascii::FONT_6X10)
 }
 
 pub fn menu_style_simple<R: MenuReturn + Copy>(
-) -> MenuStyle<BinaryColor, Invert, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R> {
+) -> MenuStyle<Border, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R, BinaryColor> {
     MenuStyle::new(BinaryColor::On)
         .with_input_adapter(SimpleSdlMenuInputAdapter::default())
         .with_animated_selection_indicator(2)
-        .with_selection_indicator(Invert)
+        .with_selection_indicator(Border)
         .with_scrollbar_style(DisplayScrollbar::Auto)
         .with_title_font(&ascii::FONT_9X15_BOLD)
         .with_font(&ascii::FONT_6X10)

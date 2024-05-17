@@ -7,8 +7,6 @@
 //! which is either Desktop, DE10Nano, null (for testing) or others.
 //!
 //! Platforms are responsible for mocking the FPGA logic, graphics and initializing SDL.
-use embedded_graphics::pixelcolor::{BinaryColor, PixelColor, Rgb888};
-use embedded_graphics::prelude::DrawTarget;
 
 pub use crate::core_manager::CoreManager;
 
@@ -24,8 +22,7 @@ mod sizes {
 
     /// The size of the main OSD display. We never resize it to be smaller,
     /// instead reusing the size for other information.
-    // pub const MAIN: Size = Size::new(256, 16 * 8);
-    pub const MAIN: Size = Size::new(320, 240);
+    pub const MAIN: Size = Size::new(256, 16 * 8);
 }
 
 pub use de10::De10Platform as WindowManager;

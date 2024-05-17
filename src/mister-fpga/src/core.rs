@@ -1,3 +1,4 @@
+// TODO: split MiSTerFpgaCore into two types; MiSTerFpgaCore and MiSTerFpgaMenuCore.
 use std::any::Any;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -91,6 +92,7 @@ pub struct MisterFpgaCore {
     status_counter: u8,
 
     framebuffer: crate::framebuffer::FpgaFramebuffer<DevMemMemoryMapper>,
+    menu_fb_mapper: DevMemMemoryMapper,
 }
 
 impl MisterFpgaCore {
@@ -124,6 +126,11 @@ impl MisterFpgaCore {
         let save_states = SaveStateManager::from_config_string(&config);
         const NONE: Option<SdCard> = None;
 
+        // TODO: move this to its own module/type.
+        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
+        let fb_addr = FB_BASE + (1920 * 1080) * 4;
+        let menu_fb_mapper = DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4).unwrap();
+
         Ok(MisterFpgaCore {
             fpga,
             core_type,
@@ -136,6 +143,7 @@ impl MisterFpgaCore {
             status: Default::default(),
             status_counter: 0,
             framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
+            menu_fb_mapper,
         })
     }
 
@@ -259,13 +267,8 @@ impl MisterFpgaCore {
     }
 
     // TODO: rethink how framebuffers are handled.
-    pub fn menu_framebuffer(&mut self, bytes: &[u8]) -> Result<(), String> {
-        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
-
-        let fb_addr = FB_BASE + (1920 * 1080) * 4;
-        let mut mapper = DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4).unwrap();
-        mapper.as_mut_range(..bytes.len()).copy_from_slice(bytes);
-        Ok(())
+    pub fn menu_framebuffer_mut(&mut self) -> Result<&mut [u8], String> {
+        Ok(self.menu_fb_mapper.as_mut_range(..))
     }
 
     pub fn status_mask(&self) -> StatusBitMap {

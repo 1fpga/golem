@@ -25,11 +25,11 @@ de10-nano = { path = "../de10-nano", optional = true }
 dirs = "5.0.1"
 either = { version = "1.9.0", features = ["serde"] }
 embedded-graphics = "0.8.1"
-embedded-graphics-framebuf = "0.5"
 embedded-layout = "0.4.1"
-embedded-menu = "0.5.4"
+embedded-menu = "0.6.1"
 embedded-text = "0.6.6"
 fixed-map = "0.9.3"
+framebuffer = "0.3.1"
 golem-core = { workspace = true }
 hex = "0.4.3"
 humansize = "2.1.3"

@@ -1,17 +1,15 @@
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Point, Size};
-use embedded_graphics::pixelcolor::{PixelColor, Rgb888};
+use embedded_graphics::mono_font::MonoTextStyle;
+use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::primitives::Rectangle;
 use embedded_layout::View;
-use embedded_menu::interaction::InputAdapterSource;
-use embedded_menu::selection_indicator::style::IndicatorStyle;
-use embedded_menu::selection_indicator::SelectionIndicatorController;
-use embedded_menu::{Marker, MenuItem, MenuStyle};
+use embedded_menu::items::{Marker, MenuListItem};
 
 pub struct OptionalMenuItem<I, R>
 where
     R: Default,
-    I: MenuItem<R>,
+    I: MenuListItem<R>,
 {
     show: bool,
     item: I,
@@ -20,7 +18,7 @@ where
 
 impl<I, R> From<Option<I>> for OptionalMenuItem<I, R>
 where
-    I: MenuItem<R> + Default,
+    I: MenuListItem<R> + Default,
     R: Default,
 {
     fn from(value: Option<I>) -> Self {
@@ -34,14 +32,14 @@ where
 
 impl<I, R> Marker for OptionalMenuItem<I, R>
 where
-    I: MenuItem<R>,
+    I: MenuListItem<R>,
     R: Default,
 {
 }
 
 impl<I, R> View for OptionalMenuItem<I, R>
 where
-    I: MenuItem<R>,
+    I: MenuListItem<R>,
     R: Default,
 {
     fn translate_impl(&mut self, by: Point) {
@@ -57,10 +55,10 @@ where
     }
 }
 
-impl<I, R> MenuItem<R> for OptionalMenuItem<I, R>
+impl<I, R> MenuListItem<R> for OptionalMenuItem<I, R>
 where
     R: Default,
-    I: MenuItem<R>,
+    I: MenuListItem<R>,
 {
     fn value_of(&self) -> R {
         if self.show {
@@ -74,55 +72,21 @@ where
         self.item.interact()
     }
 
-    fn set_style<C, S, IT, P>(&mut self, style: &MenuStyle<C, S, IT, P, R>)
-    where
-        C: PixelColor,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<R>,
-        P: SelectionIndicatorController,
-    {
+    fn set_style(&mut self, style: &MonoTextStyle<'_, BinaryColor>) {
         self.item.set_style(style)
-    }
-
-    fn title(&self) -> &str {
-        if self.show {
-            self.item.title()
-        } else {
-            ""
-        }
-    }
-
-    fn details(&self) -> &str {
-        if self.show {
-            self.item.details()
-        } else {
-            ""
-        }
-    }
-
-    fn value(&self) -> &str {
-        if self.show {
-            self.item.value()
-        } else {
-            ""
-        }
     }
 
     fn selectable(&self) -> bool {
         self.show && self.item.selectable()
     }
 
-    fn draw_styled<C, S, IT, P, DIS>(
+    fn draw_styled<DIS>(
         &self,
-        style: &MenuStyle<C, S, IT, P, R>,
+        style: &MonoTextStyle<'static, BinaryColor>,
         display: &mut DIS,
     ) -> Result<(), DIS::Error>
     where
-        C: PixelColor + From<Rgb888>,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<R>,
-        P: SelectionIndicatorController,
-        DIS: DrawTarget<Color = C>,
+        DIS: DrawTarget<Color = BinaryColor>,
     {
         if self.show {
             self.item.draw_styled(style, display)
@@ -135,7 +99,7 @@ where
 impl<I, R> OptionalMenuItem<I, R>
 where
     R: Default + Copy,
-    I: MenuItem<R>,
+    I: MenuListItem<R>,
 {
     pub fn new(show: bool, item: I) -> Self {
         Self {

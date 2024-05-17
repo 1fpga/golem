@@ -13,15 +13,22 @@ use embedded_graphics::text::Text;
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::object_chain::Chain;
 use embedded_layout::prelude::*;
-use embedded_menu::items::NavigationItem;
+use embedded_menu::items::menu_item::SelectValue;
+use embedded_menu::items::MenuItem;
 use embedded_menu::Menu;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum MenuAction {
     #[default]
     Back,
+}
+
+impl SelectValue for MenuAction {
+    fn marker(&self) -> &str {
+        ""
+    }
 }
 
 impl MenuReturn for MenuAction {
@@ -64,11 +71,11 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     let bounds = Rectangle::new(Point::zero(), Size::new(128, 100));
     let text_box = TextBox::with_textbox_style(message, bounds, character_style, textbox_style);
 
-    let mut items = [NavigationItem::new("Back", MenuAction::Back)];
+    let mut items = [MenuItem::new("Back", MenuAction::Back)];
     let menu = SizedMenu::new(
         Size::new(64, 32),
         Menu::with_style(" ", style::menu_style_simple())
-            .add_items(&mut items)
+            .add_menu_items(&mut items)
             .build(),
     );
 
@@ -108,7 +115,7 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
         for ev in state.events() {
             match menu.interact(ev) {
                 None => {}
-                Some(MenuAction::Back) => return Some(()),
+                Some(_) => return Some(()),
             }
         }
         menu.update(&mut buffer);

@@ -659,9 +659,9 @@ pub struct VideoModeDef {
 fn parse_custom_video_mode(video_mode: Option<&str>) -> CustomVideoMode {
     if video_mode.is_none() || matches!(video_mode, Some("auto")) || matches!(video_mode, Some(""))
     {
-        // return DefaultVideoMode::V1920x1080r60.into();
+        return DefaultVideoMode::V1920x1080r60.into();
         // return DefaultVideoMode::V1280x720r60.into();
-        return DefaultVideoMode::V640x480r60.into();
+        // return DefaultVideoMode::V640x480r60.into();
     }
 
     todo!("parse_custom_video_mode")
