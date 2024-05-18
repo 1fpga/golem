@@ -1,6 +1,7 @@
 use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
 use embedded_graphics::geometry::{Dimensions, Point, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
+use embedded_graphics::prelude::PixelColor;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;
 use embedded_layout::view_group::ViewGroup;
@@ -94,15 +95,16 @@ where
     }
 }
 
-impl<T, IT, VG, R, P, S> Drawable for SizedMenu<T, IT, VG, R, BinaryColor, P, S>
+impl<T, IT, VG, R, C, P, S> Drawable for SizedMenu<T, IT, VG, R, C, P, S>
 where
     T: AsRef<str>,
     IT: InputAdapterSource<R>,
     VG: ViewGroup + MenuItemCollection<R>,
+    C: Theme,
     P: SelectionIndicatorController,
     S: IndicatorStyle,
 {
-    type Color = BinaryColor;
+    type Color = C::Color;
     type Output = ();
 
     fn draw<D>(&self, display: &mut D) -> Result<Self::Output, D::Error>

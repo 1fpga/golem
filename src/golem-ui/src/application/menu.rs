@@ -1,5 +1,5 @@
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
-use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_layout::align::horizontal;
@@ -17,8 +17,8 @@ use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
 pub use item::*;
 pub use options::*;
 
-use crate::application::menu::style::OptionalMenuItem;
 use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
+use crate::application::menu::style::{OptionalMenuItem, RectangleIndicator};
 use crate::application::widgets::controller::ControllerButton;
 use crate::application::widgets::menu::SizedMenu;
 use crate::application::widgets::opt::OptionalView;
@@ -33,7 +33,8 @@ pub mod item;
 pub mod options;
 pub mod style;
 
-pub type GolemMenuState<R> = MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, Border>;
+pub type GolemMenuState<R> =
+    MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, RectangleIndicator>;
 
 fn bottom_bar_<'a>(
     show_back_button: bool,
@@ -235,12 +236,12 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
             let mut buffer = app.main_buffer();
-            let _ = buffer.color_converted().clear(BinaryColor::Off);
+            let _ = buffer.clear(Rgb888::BLACK);
 
             {
                 let menu = &mut layout.inner_mut().parent.object;
                 menu.update(&menu_bounding_box);
-                let _ = menu.draw(&mut buffer.color_converted());
+                let _ = menu.draw(&mut buffer);
             }
             let _ = layout.draw(&mut buffer.color_converted());
 

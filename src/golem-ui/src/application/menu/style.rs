@@ -1,11 +1,12 @@
 use embedded_graphics::mono_font::ascii;
-use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_menu::interaction::{
     Action, InputAdapter, InputAdapterSource, InputResult, InputState, Interaction, Navigation,
 };
 use embedded_menu::selection_indicator::style::Border;
 use embedded_menu::selection_indicator::AnimatedPosition;
-use embedded_menu::{DisplayScrollbar, MenuStyle};
+use embedded_menu::theme::Theme;
+use embedded_menu::{selection_indicator, DisplayScrollbar, MenuStyle};
 use sdl3::event::Event;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Keycode;
@@ -345,23 +346,50 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
     }
 }
 
-pub fn menu_style<R: MenuReturn + Copy>(
-) -> MenuStyle<Border, SdlMenuInputAdapter<R>, AnimatedPosition, SdlMenuAction<R>, BinaryColor> {
-    MenuStyle::new(BinaryColor::On)
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+struct SimpleMenuTheme;
+
+impl Theme for SimpleMenuTheme {
+    type Color = Rgb888;
+
+    fn text_color(&self) -> Self::Color {
+        Rgb888::BLUE
+    }
+
+    fn selected_text_color(&self) -> Self::Color {
+        Rgb888::GREEN
+    }
+
+    fn selection_color(&self) -> Self::Color {
+        Rgb888::RED
+    }
+}
+
+pub use selection_indicator::style::rectangle::Rectangle as RectangleIndicator;
+
+pub fn menu_style<R: MenuReturn + Copy>() -> MenuStyle<
+    RectangleIndicator,
+    SdlMenuInputAdapter<R>,
+    AnimatedPosition,
+    SdlMenuAction<R>,
+    SimpleMenuTheme,
+> {
+    MenuStyle::new(SimpleMenuTheme)
         .with_input_adapter(SdlMenuInputAdapter::default())
         .with_animated_selection_indicator(2)
-        .with_selection_indicator(Border)
+        .with_selection_indicator(RectangleIndicator)
         .with_scrollbar_style(DisplayScrollbar::Auto)
         .with_title_font(&ascii::FONT_9X15_BOLD)
         .with_font(&ascii::FONT_6X10)
 }
 
 pub fn menu_style_simple<R: MenuReturn + Copy>(
-) -> MenuStyle<Border, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R, BinaryColor> {
-    MenuStyle::new(BinaryColor::On)
+) -> MenuStyle<RectangleIndicator, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R, SimpleMenuTheme>
+{
+    MenuStyle::new(SimpleMenuTheme)
         .with_input_adapter(SimpleSdlMenuInputAdapter::default())
         .with_animated_selection_indicator(2)
-        .with_selection_indicator(Border)
+        .with_selection_indicator(RectangleIndicator)
         .with_scrollbar_style(DisplayScrollbar::Auto)
         .with_title_font(&ascii::FONT_9X15_BOLD)
         .with_font(&ascii::FONT_6X10)
