@@ -15,7 +15,7 @@ use golem_core::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom
 use golem_core::inputs::{Button, Scancode};
 use golem_core::Core;
 
-use crate::config::MisterConfig;
+use crate::config::{Config, MisterConfig};
 use crate::config_string;
 use crate::config_string::{ConfigMenu, FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
@@ -164,7 +164,7 @@ impl MisterFpgaCore {
         video::init(config);
         video::init_mode(config, self, is_menu);
 
-        self.framebuffer.update_ty();
+        self.framebuffer.update_type_from_core();
         Ok(())
     }
 
@@ -195,7 +195,7 @@ impl MisterFpgaCore {
     }
 
     pub fn frame_iter(&mut self) -> crate::framebuffer::FrameIter {
-        self.framebuffer.update_ty();
+        self.framebuffer.update_type_from_core();
         crate::framebuffer::FrameIter::new(&self.framebuffer)
     }
 
@@ -588,7 +588,7 @@ impl MisterFpgaCore {
 impl Core for MisterFpgaCore {
     fn init(&mut self) -> Result<(), Error> {
         self.init().map_err(Error::Message)?;
-        self.init_video(&MisterConfig::default(), false)
+        self.init_video(&Config::base().into_inner(), false)
             .map_err(Error::Message)?;
         Ok(())
     }

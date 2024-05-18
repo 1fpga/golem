@@ -127,6 +127,8 @@ impl GoLEmApp {
             self.platform.update_toolbar(&self.toolbar_buffer);
         }
 
+        self.platform.update_menu_framebuffer();
+
         result
     }
 

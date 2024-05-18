@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::time::Duration;
 use thiserror::Error;
+use tracing::info;
 use validator::Validate;
 use video::aspect::AspectRatio;
 use video::resolution::Resolution;
@@ -582,12 +583,15 @@ pub struct MisterConfig {
     #[merge(strategy = merge::option::overwrite_some)]
     bt_reset_before_pair: Option<bool>,
 
+    #[serde(alias = "video_mode")]
     #[merge(strategy = merge::option::overwrite_some)]
     video_conf: Option<String>,
 
+    #[serde(alias = "video_mode_pal")]
     #[merge(strategy = merge::option::overwrite_some)]
     video_conf_pal: Option<String>,
 
+    #[serde(alias = "video_mode_ntsc")]
     #[merge(strategy = merge::option::overwrite_some)]
     video_conf_ntsc: Option<String>,
 
@@ -748,6 +752,7 @@ impl MisterConfig {
         self.video_hue.get_or_insert(0);
         self.video_gain_offset
             .get_or_insert("1, 0, 1, 0, 1, 0".parse().unwrap());
+        self.video_conf.get_or_insert("6".to_string());
     }
 
     pub fn custom_aspect_ratio(&self) -> Vec<AspectRatio> {
@@ -948,7 +953,9 @@ impl Config {
     }
 
     pub fn base() -> Self {
-        Self::load(Self::root().join("mister.ini")).unwrap_or_else(|_| {
+        let path = Self::root().join("MiSTer.ini");
+        Self::load(&path).unwrap_or_else(|_| {
+            info!(?path, "Failed to load MiSTer.ini, using defaults.");
             let mut c = Self::default();
             c.mister.set_defaults();
             c

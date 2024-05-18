@@ -234,25 +234,25 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         let (result, new_state) = app.event_loop(|app, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
-            let mut buffer = app.main_buffer().color_converted();
-            let _ = buffer.clear(BinaryColor::Off);
+            let mut buffer = app.main_buffer();
+            let _ = buffer.color_converted().clear(BinaryColor::Off);
 
             {
                 let menu = &mut layout.inner_mut().parent.object;
                 menu.update(&menu_bounding_box);
-                let _ = menu.draw(&mut buffer);
+                let _ = menu.draw(&mut buffer.color_converted());
             }
-            let _ = layout.draw(&mut buffer);
+            let _ = layout.draw(&mut buffer.color_converted());
 
-            // if filter.is_empty() {
-            //     bottom_bar
-            //         .draw(&mut buffer.sub_buffer(bottom_area))
-            //         .unwrap();
-            // } else {
-            //     filter_bar
-            //         .draw(&mut buffer.sub_buffer(bottom_area))
-            //         .unwrap();
-            // }
+            if filter.is_empty() {
+                bottom_bar
+                    .draw(&mut buffer.sub_buffer(bottom_area).color_converted())
+                    .unwrap();
+            } else {
+                filter_bar
+                    .draw(&mut buffer.sub_buffer(bottom_area).color_converted())
+                    .unwrap();
+            }
 
             let menu = &mut layout.inner_mut().parent.object;
 

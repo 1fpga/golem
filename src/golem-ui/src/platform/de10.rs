@@ -1,10 +1,9 @@
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Point, Size};
 use embedded_graphics::iterator::PixelIteratorExt;
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888, RgbColor};
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;
-use embedded_graphics_framebuf::FrameBuf;
 use sdl3::event::Event;
 use std::convert::TryInto;
 use tracing::{debug, error};
@@ -102,6 +101,20 @@ impl De10Platform {
             .send(self.core_manager.fpga_mut(), &self.toolbar_buffer);
     }
 
+    pub fn update_osd(&mut self, buffer: &DrawBuffer<BinaryColor>) {
+        self.main_display.send(self.core_manager.fpga_mut(), buffer);
+    }
+
+    pub fn update_menu_framebuffer(&mut self) {
+        self.buffer
+            .draw(
+                &mut self
+                    .core_framebuffer
+                    .sub_buffer(Rectangle::new(Point::new(300, 300), self.buffer.size())),
+            )
+            .unwrap();
+    }
+
     pub fn toolbar_dimensions(&self) -> Size {
         sizes::TITLE
     }
@@ -124,17 +137,7 @@ impl De10Platform {
 
     pub fn start_loop(&mut self) {}
 
-    pub fn end_loop(&mut self) {
-        // self.main_display
-        //     .send(self.core_manager.fpga_mut(), &self.buffer);
-        self.buffer
-            .draw(
-                &mut self
-                    .core_framebuffer
-                    .sub_buffer(Rectangle::new(Point::new(300, 300), self.buffer.size())),
-            )
-            .unwrap();
-    }
+    pub fn end_loop(&mut self) {}
 
     pub fn core_manager_mut(&mut self) -> &mut CoreManager {
         &mut self.core_manager

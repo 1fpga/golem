@@ -82,7 +82,6 @@ impl FbHeader {
     #[inline]
     pub unsafe fn from_memory(memory: *const u8) -> Option<Self> {
         let header = (memory as *const FbHeader).read_volatile();
-        // eprintln!("header: {:?} attributes: {:?}", header, header.attributes());
         if header.ty == SCALER_FB_TYPE {
             Some(header)
         } else {
@@ -226,7 +225,7 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         Ok(Self { memory, ty_: None })
     }
 
-    pub(crate) fn update_ty(&mut self) {
+    pub(crate) fn update_type_from_core(&mut self) {
         let first = unsafe { self.header_offset(0) };
         self.ty_ = if !first
             .map(|h| h.attributes().triple_buffered())
