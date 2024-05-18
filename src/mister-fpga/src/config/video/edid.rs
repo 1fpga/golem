@@ -509,35 +509,26 @@ impl From<DefaultVideoMode> for CustomVideoModeParam {
 pub struct CustomVideoModeParam {
     pub mode: u32, // 0
 
-    pub hact: u32,
-    // 1
-    pub hfp: u32,
-    // 2
-    pub hs: u32,
-    // 3
-    pub hbp: u32, // 4
+    pub hact: u32, // 1
+    pub hfp: u32,  // 2
+    pub hs: u32,   // 3
+    pub hbp: u32,  // 4
 
-    pub vact: u32,
-    // 5
-    pub vfp: u32,
-    // 6
-    pub vs: u32,
-    // 7
-    pub vbp: u32, // 8
+    pub vact: u32, // 5
+    pub vfp: u32,  // 6
+    pub vs: u32,   // 7
+    pub vbp: u32,  // 8
 
     pub pll: [u32; 12], // 9-20
 
     // These are polarity for hsync and vsync.
     // Not sure why hs and vs cannot be 2-complement (and thus `i32`).
-    pub hpol: u32,
-    // 21
+    pub hpol: u32, // 21
     pub vpol: u32, // 22
 
-    pub vic: u32,
-    // 23
-    pub rb: u32,
-    // 24
-    pub pr: u32, // 25
+    pub vic: u32, // 23
+    pub rb: u32,  // 24
+    pub pr: u32,  // 25
 }
 
 #[derive(Debug, Default, Clone, Copy)]

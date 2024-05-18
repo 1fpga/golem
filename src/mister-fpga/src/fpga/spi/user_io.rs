@@ -768,8 +768,8 @@ impl SpiCommand for SetFramebufferToCore {
 #[derive(Debug)]
 pub struct SetFramebufferToLinux {
     pub n: usize,
-    pub xoff: u16,
-    pub yoff: u16,
+    pub x_offset: u16,
+    pub y_offset: u16,
     pub height: u16,
     pub width: u16,
     pub hact: u16,
@@ -801,10 +801,10 @@ impl SpiCommand for SetFramebufferToLinux {
 
         command.write(self.width); // frame width
         command.write(self.height); // frame height
-        command.write(self.xoff);
-        command.write(self.xoff + self.hact - 1); // scaled right
-        command.write(self.yoff); // scaled top
-        command.write(self.yoff + self.vact - 1); // scaled bottom
+        command.write(self.x_offset);
+        command.write(self.x_offset + self.hact - 1); // scaled right
+        command.write(self.y_offset); // scaled top
+        command.write(self.y_offset + self.vact - 1); // scaled bottom
         command.write(self.width * 4); // stride
 
         Ok(())
