@@ -12,8 +12,8 @@ use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
-use golem_core::Core;
 use mister_fpga::core::MisterFpgaCore;
+use one_fpga::Core;
 use sdl3::event::Event;
 use tracing::info;
 

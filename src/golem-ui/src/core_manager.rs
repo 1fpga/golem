@@ -2,14 +2,14 @@ use std::path::Path;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use golem_core::core::SaveState;
-use golem_core::runner::{CoreLaunchInfo, CoreType, Slot};
-use golem_core::{Core, GolemCore};
 use mister_fpga::config::{Config, HdmiLimitedConfig, VgaMode};
 use mister_fpga::core::file::SdCard;
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};
 use mister_fpga::fpga::MisterFpga;
+use one_fpga::core::SaveState;
+use one_fpga::runner::{CoreLaunchInfo, CoreType, Slot};
+use one_fpga::{Core, GolemCore};
 
 pub struct CoreManager {
     fpga: MisterFpga,

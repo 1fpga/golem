@@ -3,7 +3,7 @@ use std::time::Instant;
 use sdl3::event::Event;
 use tracing::{debug, error, info, trace};
 
-use golem_core::{Core, GolemCore};
+use one_fpga::{Core, GolemCore};
 
 use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};

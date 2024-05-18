@@ -1,9 +1,9 @@
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::input::commands::ShortcutCommand;
-use golem_core::{Core, GolemCore};
 use mister_fpga::config_string::ConfigMenu;
 use mister_fpga::core::MisterFpgaCore;
+use one_fpga::{Core, GolemCore};
 
 mod remap;
 use crate::application::GoLEmApp;

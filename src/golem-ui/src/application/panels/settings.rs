@@ -2,7 +2,7 @@ use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::panels::alert::alert;
 use crate::application::GoLEmApp;
-use golem_core::GolemCore;
+use one_fpga::GolemCore;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 enum MenuAction {

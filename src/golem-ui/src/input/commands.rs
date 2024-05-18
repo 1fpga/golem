@@ -6,8 +6,8 @@ use std::time::Instant;
 use sdl3::keyboard::Scancode;
 use tracing::{debug, error, info, warn};
 
-use golem_core::Core;
 use mister_fpga::core::MisterFpgaCore;
+use one_fpga::Core;
 
 use crate::application::panels::core_loop::menu::core_menu;
 use crate::application::GoLEmApp;
@@ -110,7 +110,7 @@ impl ShortcutCommand {
         }
     }
 
-    pub fn execute(&self, app: &mut GoLEmApp, core: &mut golem_core::GolemCore) -> CommandResult {
+    pub fn execute(&self, app: &mut GoLEmApp, core: &mut one_fpga::GolemCore) -> CommandResult {
         match self {
             ShortcutCommand::ShowCoreMenu => {
                 debug!("Opening core menu");

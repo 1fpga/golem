@@ -11,9 +11,9 @@ use image::DynamicImage;
 use tracing::{debug, info, trace};
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use golem_core::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
-use golem_core::inputs::{Button, Scancode};
-use golem_core::Core;
+use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::inputs::{Button, Scancode};
+use one_fpga::Core;
 
 use crate::config::{Config, MisterConfig};
 use crate::config_string;

@@ -4,8 +4,8 @@ use crate::application::panels::core_loop::menu::core_settings::{
     execute_core_settings, into_text_menu_item,
 };
 use crate::application::GoLEmApp;
-use golem_core::{Core, GolemCore};
 use mister_fpga::core::MisterFpgaCore;
+use one_fpga::{Core, GolemCore};
 use tracing::error;
 
 mod core_debug;
