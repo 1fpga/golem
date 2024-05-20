@@ -41,4 +41,4 @@ settings.json5
 mister.sqlite
 golem.sqlite
 
-
+node_modules/
