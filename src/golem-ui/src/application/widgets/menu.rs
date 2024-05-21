@@ -1,7 +1,5 @@
 use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
 use embedded_graphics::geometry::{Dimensions, Point, Size};
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
-use embedded_graphics::prelude::PixelColor;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;
 use embedded_layout::view_group::ViewGroup;
@@ -65,7 +63,7 @@ where
     T: AsRef<str>,
     IT: InputAdapterSource<R>,
     VG: ViewGroup + MenuItemCollection<R>,
-    C: Theme + From<Rgb888>,
+    C: Theme,
     P: SelectionIndicatorController,
     S: IndicatorStyle,
 {

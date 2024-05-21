@@ -6,7 +6,6 @@ use embedded_layout::align::horizontal;
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::object_chain::Chain;
 use embedded_layout::View;
-use embedded_menu::selection_indicator::style::Border;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, MenuState};
 use sdl3::keyboard::Keycode;
@@ -46,7 +45,7 @@ fn bottom_bar_<'a>(
     type Font = u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic;
 
     LinearLayout::horizontal(
-        Chain::<EmptyView<BinaryColor>>::new(EmptyView::default())
+        Chain::<EmptyView>::new(EmptyView::default())
             .append(ControllerButton::new("a", &ascii::FONT_6X10))
             .append(FontRendererView::new::<Font>(
                 VerticalPosition::Baseline,
@@ -226,7 +225,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                     Point::new(0, 0),
                     Point::new(display_area.size.width as i32, 0),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
+                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On.into(), 1)),
             ),
         )
         .with_alignment(horizontal::Left)
@@ -235,13 +234,12 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         let (result, new_state) = app.event_loop(|app, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
-            let mut buffer = app.main_buffer();
+            let buffer = app.main_buffer();
             let _ = buffer.clear(Rgb888::BLACK);
 
             {
                 let menu = &mut layout.inner_mut().parent.object;
                 menu.update(&menu_bounding_box);
-                let _ = menu.draw(&mut buffer);
             }
             let _ = layout.draw(&mut buffer.color_converted());
 

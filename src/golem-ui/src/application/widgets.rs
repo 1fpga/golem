@@ -1,7 +1,7 @@
 //! MiSTer specific views.
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Point, Size};
-use embedded_graphics::pixelcolor::PixelColor;
+use embedded_graphics::pixelcolor::{BinaryColor, PixelColor};
 use embedded_graphics::prelude::Dimensions;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::transform::Transform;
@@ -14,8 +14,14 @@ pub mod network;
 pub mod opt;
 pub mod text;
 
-#[derive(Default, Debug, Copy, Clone)]
-pub struct EmptyView<C>(Point, core::marker::PhantomData<C>);
+#[derive(Debug, Copy, Clone)]
+pub struct EmptyView<C = BinaryColor>(Point, core::marker::PhantomData<C>);
+
+impl<C> Default for EmptyView<C> {
+    fn default() -> Self {
+        Self(Point::zero(), core::marker::PhantomData)
+    }
+}
 
 impl<C> Dimensions for EmptyView<C> {
     fn bounding_box(&self) -> Rectangle {

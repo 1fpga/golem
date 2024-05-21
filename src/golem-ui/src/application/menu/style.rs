@@ -1,9 +1,8 @@
 use embedded_graphics::mono_font::ascii;
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
+use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
 use embedded_menu::interaction::{
     Action, InputAdapter, InputAdapterSource, InputResult, InputState, Interaction, Navigation,
 };
-use embedded_menu::selection_indicator::style::Border;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::theme::Theme;
 use embedded_menu::{selection_indicator, DisplayScrollbar, MenuStyle};
@@ -347,17 +346,17 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
-struct SimpleMenuTheme;
+pub struct SimpleMenuTheme;
 
 impl Theme for SimpleMenuTheme {
     type Color = Rgb888;
 
     fn text_color(&self) -> Self::Color {
-        Rgb888::BLUE
+        Rgb888::WHITE
     }
 
     fn selected_text_color(&self) -> Self::Color {
-        Rgb888::GREEN
+        Rgb888::WHITE
     }
 
     fn selection_color(&self) -> Self::Color {
