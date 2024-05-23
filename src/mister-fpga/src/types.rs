@@ -1,7 +1,7 @@
 use bitvec::prelude::*;
 use serde::ser::SerializeSeq;
 use serde::{Serialize, Serializer};
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter, Write};
 
 pub mod units;
 
@@ -14,7 +14,7 @@ impl Serialize for StatusBitMap {
     where
         S: Serializer,
     {
-        // If the format is human readable, use bits as a string instead.
+        // If the format is human-readable, use bits as a string instead.
         if serializer.is_human_readable() {
             return serializer.serialize_str(&self.to_string());
         }
@@ -162,13 +162,12 @@ impl StatusBitMap {
     }
 }
 
-impl ToString for StatusBitMap {
-    fn to_string(&self) -> String {
-        let mut result = String::new();
-        for i in 0..128 {
-            result.push(if self.get(i) { '1' } else { '0' });
+impl Display for StatusBitMap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for i in 0..(if self.has_extra() { 128 } else { 64 }) {
+            f.write_char(if self.get(i) { '1' } else { '0' })?;
         }
-        result
+        Ok(())
     }
 }
 

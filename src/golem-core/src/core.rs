@@ -88,6 +88,12 @@ pub enum Error {
     AnyError(#[from] Box<dyn std::error::Error>),
 }
 
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Error::Generic(value)
+    }
+}
+
 /// An iterator over the save states of a core.
 #[derive(Copy, Clone)]
 pub struct SaveStateIter<'a, T: Core> {

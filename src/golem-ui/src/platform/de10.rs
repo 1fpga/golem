@@ -1,6 +1,5 @@
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{OriginDimensions, Point, Size};
-use embedded_graphics::iterator::PixelIteratorExt;
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;

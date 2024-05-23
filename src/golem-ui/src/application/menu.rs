@@ -25,9 +25,7 @@ use crate::application::widgets::text::FontRendererView;
 use crate::application::widgets::EmptyView;
 use crate::application::GoLEmApp;
 
-pub mod cores;
 pub mod filesystem;
-pub mod games;
 pub mod item;
 pub mod options;
 pub mod style;

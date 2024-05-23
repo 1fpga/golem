@@ -778,7 +778,7 @@ pub struct SetFramebufferToLinux {
 
 impl SpiCommand for SetFramebufferToLinux {
     fn execute<S: SpiCommandExt>(&mut self, spi: &mut S) -> Result<(), String> {
-        debug!("Setting framebuffer to Linux: {:#?}", self);
+        debug!("Setting framebuffer to Linux: {:?}", self);
 
         let mut out = 0;
         let mut command = spi.command_read(UserIoCommands::UserIoSetFramebuffer, &mut out);
@@ -796,14 +796,12 @@ impl SpiCommand for SetFramebufferToLinux {
 
         // format, enable flag
         command.write(fb_const::FB_EN | fb_const::FB_FMT_RXB | fb_const::FB_FMT_8888);
-        command.write(fb_addr as u16); // base address low word
-        command.write((fb_addr >> 16) as u16); // base address high word
-
+        command.write_32(fb_addr); // base address
         command.write(self.width); // frame width
         command.write(self.height); // frame height
-        command.write(self.x_offset);
+        command.write(self.x_offset); // frame x offset (scaled left)
         command.write(self.x_offset + self.hact - 1); // scaled right
-        command.write(self.y_offset); // scaled top
+        command.write(self.y_offset); // frame y offset (scaled top)
         command.write(self.y_offset + self.vact - 1); // scaled bottom
         command.write(self.width * 4); // stride
 
