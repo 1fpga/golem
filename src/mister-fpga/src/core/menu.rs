@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::core::MisterFpgaCore;
 use crate::fpga::MisterFpga;
 use crate::types::units::UnitConversion;
@@ -54,6 +55,7 @@ impl MenuCore {
 impl Core for MenuCore {
     fn init(&mut self) -> Result<(), Error> {
         self.inner.init()?;
+        self.inner.init_video(&Config::base().into_inner(), true)?;
         Ok(())
     }
 
