@@ -54,7 +54,6 @@ impl GoLEmApp {
             .expect("Failed to connect to database");
         let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
-        let main_size = platform.main_dimensions();
 
         // Due to a limitation in Rust language right now, None does not implement Copy
         // when Option<T> does not. This means we can't use it in an array. So we use a

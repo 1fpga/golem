@@ -14,7 +14,7 @@ use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, 
 use one_fpga::inputs::{Button, Scancode};
 use one_fpga::Core;
 
-use crate::config::{Config, HdmiLimitedConfig, MisterConfig, VgaMode};
+use crate::config::{Config, HdmiLimitedConfig, VgaMode};
 use crate::config_string;
 use crate::config_string::{ConfigMenu, FpgaRamMemoryAddress, LoadFileInfo};
 use crate::core::buttons::ButtonMap;
@@ -135,27 +135,6 @@ impl MisterFpgaCore {
             status_counter: 0,
             framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
         })
-    }
-
-    pub fn init(&mut self) -> Result<(), String> {
-        self.soft_reset();
-        self.fpga
-            .spi_mut()
-            .execute(user_io::SetMemorySize::from_fpga().unwrap())?;
-
-        // Initialize the framebuffer.
-        self.fpga.spi_mut().execute(user_io::SetFramebufferToCore)?;
-
-        Ok(())
-    }
-
-    // TODO: move this to a de10 platform and to the GoLEm code.
-    pub fn init_video(&mut self, config: &MisterConfig, is_menu: bool) -> Result<(), String> {
-        video::init(config);
-        video::init_mode(config, &mut self.fpga, is_menu);
-
-        self.framebuffer.update_type_from_core();
-        Ok(())
     }
 
     pub fn spi_mut(&mut self) -> &mut crate::fpga::Spi<DevMemMemoryMapper> {
@@ -572,7 +551,19 @@ impl MisterFpgaCore {
 
 impl Core for MisterFpgaCore {
     fn init(&mut self) -> Result<(), Error> {
-        self.init().map_err(Error::Message)?;
+        self.soft_reset();
+        self.fpga
+            .spi_mut()
+            .execute(user_io::SetMemorySize::from_fpga().unwrap())
+            .map_err(Error::Message)?;
+
+        // Initialize the framebuffer.
+        if !self.is_menu {
+            self.fpga
+                .spi_mut()
+                .execute(user_io::SetFramebufferToCore)
+                .map_err(Error::Message)?;
+        }
 
         let options = Config::base().into_inner();
 
@@ -608,8 +599,11 @@ impl Core for MisterFpgaCore {
         }
 
         self.spi_mut().execute(switches).unwrap();
-        self.init_video(&options, self.is_menu)
-            .map_err(Error::Message)?;
+
+        video::init(&options);
+        video::init_mode(&options, &mut self.fpga, self.is_menu);
+        self.framebuffer.update_type_from_core();
+
         Ok(())
     }
 

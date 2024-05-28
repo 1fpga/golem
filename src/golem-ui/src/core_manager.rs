@@ -3,10 +3,9 @@ use std::time::SystemTime;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use mister_fpga::config::{Config, HdmiLimitedConfig, VgaMode};
+use mister_fpga::config::Config;
 use mister_fpga::core::file::SdCard;
 use mister_fpga::core::{MenuCore, MisterFpgaCore};
-use mister_fpga::fpga::user_io::{ButtonSwitches, UserIoButtonSwitch};
 use mister_fpga::fpga::MisterFpga;
 use one_fpga::core::SaveState;
 use one_fpga::runner::{CoreLaunchInfo, CoreType, Slot};
