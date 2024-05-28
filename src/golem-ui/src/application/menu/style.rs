@@ -378,8 +378,8 @@ pub fn menu_style<R: MenuReturn + Copy>() -> MenuStyle<
         .with_animated_selection_indicator(2)
         .with_selection_indicator(RectangleIndicator)
         .with_scrollbar_style(DisplayScrollbar::Auto)
-        .with_title_font(&ascii::FONT_9X15_BOLD)
-        .with_font(&ascii::FONT_6X10)
+        .with_title_font(&ascii::FONT_10X20)
+        .with_font(&ascii::FONT_8X13_BOLD)
 }
 
 pub fn menu_style_simple<R: MenuReturn + Copy>(
@@ -390,6 +390,6 @@ pub fn menu_style_simple<R: MenuReturn + Copy>(
         .with_animated_selection_indicator(2)
         .with_selection_indicator(RectangleIndicator)
         .with_scrollbar_style(DisplayScrollbar::Auto)
-        .with_title_font(&ascii::FONT_9X15_BOLD)
-        .with_font(&ascii::FONT_6X10)
+        .with_title_font(&ascii::FONT_10X20)
+        .with_font(&ascii::FONT_8X13_BOLD)
 }

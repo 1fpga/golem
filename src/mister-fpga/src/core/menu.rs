@@ -32,7 +32,7 @@ impl MenuCore {
     }
 
     pub fn send_to_framebuffer(&mut self, image: &image::RgbImage) -> Result<(), String> {
-        let menu_fb_size = self.inner.video_info()?.resolution();
+        let menu_fb_size = self.inner.video_info()?.fb_resolution();
 
         let mut dest = image::ImageBuffer::from_raw(
             menu_fb_size.width as u32,
@@ -43,7 +43,13 @@ impl MenuCore {
 
         if image.width() > menu_fb_size.width as u32 || image.height() > menu_fb_size.height as u32
         {
-            warn!("Image size is larger than framebuffer size");
+            warn!(
+                "Image size ({}x{}) is larger than framebuffer size ({}x{})",
+                image.width(),
+                image.height(),
+                menu_fb_size.width,
+                menu_fb_size.height
+            );
         }
 
         image::imageops::overlay(&mut dest, image, 0, 0);
@@ -54,8 +60,7 @@ impl MenuCore {
 
 impl Core for MenuCore {
     fn init(&mut self) -> Result<(), Error> {
-        self.inner.init()?;
-        self.inner.init_video(&Config::base().into_inner(), true)?;
+        Core::init(&mut self.inner)?;
         Ok(())
     }
 

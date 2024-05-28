@@ -144,6 +144,10 @@ impl VideoInfo {
         self.resolution
     }
 
+    pub fn fb_resolution(&self) -> Resolution {
+        Resolution::new(self.fb_width, self.fb_height)
+    }
+
     pub fn aspect_ratio(&self) -> AspectRatio {
         self.aspect_ratio
     }

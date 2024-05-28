@@ -72,7 +72,8 @@ impl Default for De10Platform {
 
         let core_framebuffer =
             unsafe { DrawBuffer::from_memory_slice(slice, Size::new(1920, 1080)) };
-        let buffer = DrawBuffer::new(sizes::MAIN);
+        // let buffer = DrawBuffer::new(sizes::MAIN);
+        let buffer = DrawBuffer::new(Size::new(540, 360));
 
         Self {
             platform,
