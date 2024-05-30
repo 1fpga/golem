@@ -54,7 +54,8 @@ impl MenuCore {
             );
         }
 
-        image::imageops::overlay(&mut dest, &image.convert(), 0, 0);
+        // Don't overlay as it reads the original pixels. It is very slow.
+        image::imageops::replace(&mut dest, &image.convert(), 0, 0);
 
         Ok(())
     }

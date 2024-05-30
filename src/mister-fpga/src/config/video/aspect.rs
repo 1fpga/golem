@@ -22,12 +22,8 @@ fn gcd_(mut u: u16, mut v: u16) -> u16 {
     loop {
         v >>= v.trailing_zeros();
 
-        #[allow(clippy::manual_swap)]
         if u > v {
             std::mem::swap(&mut u, &mut v);
-            // let temp = u;
-            // u = v;
-            // v = temp;
         }
 
         v -= u; // here v >= u

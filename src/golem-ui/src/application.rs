@@ -40,6 +40,7 @@ pub struct GoLEmApp {
 
     platform: WindowManager,
     toolbar_buffer: DrawBuffer<BinaryColor>,
+    osd_buffer: DrawBuffer<BinaryColor>,
 }
 
 impl GoLEmApp {
@@ -54,6 +55,7 @@ impl GoLEmApp {
             .expect("Failed to connect to database");
         let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
+        let osd_size = platform.osd_dimensions();
 
         // Due to a limitation in Rust language right now, None does not implement Copy
         // when Option<T> does not. This means we can't use it in an array. So we use a
@@ -77,6 +79,7 @@ impl GoLEmApp {
             settings,
             platform,
             toolbar_buffer: DrawBuffer::new(toolbar_size),
+            osd_buffer: DrawBuffer::new(osd_size),
         }
     }
 
@@ -90,6 +93,10 @@ impl GoLEmApp {
 
     pub fn main_buffer(&mut self) -> &mut DrawBuffer<Rgb888> {
         self.platform_mut().main_buffer()
+    }
+
+    pub fn osd_buffer(&mut self) -> &mut DrawBuffer<BinaryColor> {
+        &mut self.osd_buffer
     }
 
     pub fn database(&self) -> Arc<Mutex<Connection>> {
@@ -113,6 +120,7 @@ impl GoLEmApp {
     }
 
     fn draw_inner<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
+        self.osd_buffer.clear(BinaryColor::Off).unwrap();
         let result = drawer_fn(self);
 
         if self.render_toolbar && self.toolbar.update() {
@@ -126,8 +134,8 @@ impl GoLEmApp {
             self.platform.update_toolbar(&self.toolbar_buffer);
         }
 
-        self.platform.update_menu_framebuffer();
-        self.platform.update_osd();
+        // self.platform.update_menu_framebuffer();
+        self.platform.update_osd(&self.osd_buffer);
 
         result
     }
