@@ -82,7 +82,7 @@ impl CoreManager {
             let image = image::load_from_memory_with_format(logo, image::ImageFormat::Png)
                 .map_err(|e| format!("Could not load logo: {e}"))?;
 
-            let mut fullframe = image::DynamicImage::new_rgba8(640, 480);
+            let mut fullframe = image::DynamicImage::new_rgba8(1920, 1080);
             let rgba8 = fullframe.as_mut_rgba8().unwrap();
             rgba8
                 .pixels_mut()

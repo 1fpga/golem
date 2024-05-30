@@ -2,7 +2,8 @@ use crate::core::MisterFpgaCore;
 use crate::fpga::MisterFpga;
 use crate::types::units::UnitConversion;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use image::DynamicImage;
+use image::buffer::ConvertBuffer;
+use image::{DynamicImage, Rgba};
 use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
@@ -35,7 +36,7 @@ impl MenuCore {
     pub fn send_to_framebuffer(&mut self, image: &image::RgbImage) -> Result<(), String> {
         let menu_fb_size = self.inner.video_info()?.fb_resolution();
 
-        let mut dest = image::ImageBuffer::from_raw(
+        let mut dest = image::ImageBuffer::<Rgba<u8>, _>::from_raw(
             menu_fb_size.width as u32,
             menu_fb_size.height as u32,
             self.menu_fb_mapper.as_mut_range(..),
@@ -53,7 +54,7 @@ impl MenuCore {
             );
         }
 
-        image::imageops::overlay(&mut dest, image, 0, 0);
+        image::imageops::overlay(&mut dest, &image.convert(), 0, 0);
 
         Ok(())
     }
