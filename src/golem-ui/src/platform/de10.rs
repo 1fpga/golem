@@ -1,10 +1,10 @@
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::{OriginDimensions, Point, Size};
+use embedded_graphics::geometry::{OriginDimensions, Size};
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
-use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;
+use image::RgbImage;
+use mister_fpga::core::AsMisterCore;
 use sdl3::event::Event;
-use std::convert::TryInto;
 use tracing::{debug, error};
 
 use mister_fpga::fpga;
@@ -29,8 +29,8 @@ pub struct De10Platform {
 
     core_manager: CoreManager,
 
-    buffer: DrawBuffer<Rgb888>,
-    mapper: cyclone_v::memory::DevMemMemoryMapper,
+    osd_buffer: DrawBuffer<BinaryColor>,
+
     core_framebuffer: DrawBuffer<Rgb888>,
 }
 
@@ -59,21 +59,8 @@ impl Default for De10Platform {
         }
 
         let core_manager = CoreManager::new(fpga);
-
-        const FB_BASE: usize = 0x20000000 + (32 * 1024 * 1024);
-        let fb_addr = FB_BASE + (1920 * 1080) * 4;
-        use cyclone_v::memory::MemoryMapper;
-        let mut mapper =
-            cyclone_v::memory::DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4).unwrap();
-
-        let slice: &'static mut [Rgb888] =
-            unsafe { std::slice::from_raw_parts_mut(mapper.as_mut_ptr(), 1920 * 1080) };
-        let slice: &'static mut [Rgb888; 1920 * 1080] = slice.try_into().unwrap();
-
-        let core_framebuffer =
-            unsafe { DrawBuffer::from_memory_slice(slice, Size::new(1920, 1080)) };
-        // let buffer = DrawBuffer::new(sizes::MAIN);
-        let buffer = DrawBuffer::new(Size::new(540, 360));
+        let osd_buffer = DrawBuffer::new(sizes::MAIN);
+        let core_framebuffer = DrawBuffer::new(sizes::MAIN);
 
         Self {
             platform,
@@ -82,9 +69,8 @@ impl Default for De10Platform {
             _window: window,
             toolbar_buffer,
             core_manager,
-            mapper,
-            buffer,
-            core_framebuffer, // linux_framebuffer,
+            osd_buffer,
+            core_framebuffer,
         }
     }
 }
@@ -101,18 +87,30 @@ impl De10Platform {
             .send(self.core_manager.fpga_mut(), &self.toolbar_buffer);
     }
 
-    pub fn update_osd(&mut self, buffer: &DrawBuffer<BinaryColor>) {
-        self.main_display.send(self.core_manager.fpga_mut(), buffer);
+    pub fn update_osd(&mut self) {
+        self.main_display
+            .send(self.core_manager.fpga_mut(), &self.osd_buffer);
     }
 
     pub fn update_menu_framebuffer(&mut self) {
-        self.buffer
-            .draw(
-                &mut self
-                    .core_framebuffer
-                    .sub_buffer(Rectangle::new(Point::new(300, 300), self.buffer.size())),
-            )
-            .unwrap();
+        if let Some(mut c) = self.core_manager_mut().get_current_core() {
+            if let Some(menu) = c.as_menu_core_mut() {
+                let size = self.core_framebuffer.size();
+                let img = RgbImage::from_raw(
+                    size.width,
+                    size.height,
+                    self.core_framebuffer.to_be_bytes(),
+                );
+
+                if let Some(i) = img {
+                    menu.send_to_framebuffer(&i).unwrap();
+                }
+            }
+        }
+    }
+
+    pub fn osd_buffer(&self) -> &DrawBuffer<BinaryColor> {
+        &self.osd_buffer
     }
 
     pub fn toolbar_dimensions(&self) -> Size {
@@ -124,7 +122,7 @@ impl De10Platform {
     }
 
     pub fn main_buffer(&mut self) -> &mut DrawBuffer<Rgb888> {
-        &mut self.buffer
+        &mut self.core_framebuffer
     }
 
     pub fn events(&mut self) -> Vec<Event> {

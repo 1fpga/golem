@@ -81,11 +81,11 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
                 }
                 Event::ControllerButtonDown { which, button, .. } => {
                     inputs.controller_button_down(which, button);
-                    let _ = core.gamepad_button_down((which - 1) as usize, button);
+                    let _ = core.gamepad_button_down((which - 1) as usize, button.into());
                 }
                 Event::ControllerButtonUp { which, button, .. } => {
                     inputs.controller_button_up(which, button);
-                    let _ = core.gamepad_button_up((which - 1) as usize, button);
+                    let _ = core.gamepad_button_up((which - 1) as usize, button.into());
                 }
                 Event::ControllerAxisMotion {
                     which, axis, value, ..

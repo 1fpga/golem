@@ -9,10 +9,12 @@ endif
 
 build-frontend: src/golem-frontend/dist/main.js
 
-build-golem:
+target/armv7-unknown-linux-gnueabihf/debug/golem: $(wildcard src/**/*) src/golem-frontend/dist/main.js
 ifndef CROSS
 	$(error "No `cross` in PATH, please install Node.js and npm, or pass NPM variable with path to npm binary")
 endif
 	$(CROSS) build --target armv7-unknown-linux-gnueabihf --bin golem --no-default-features --features=platform_de10
+
+build-golem: target/armv7-unknown-linux-gnueabihf/debug/golem
 
 build: build-frontend build-golem

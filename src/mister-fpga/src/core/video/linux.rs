@@ -569,7 +569,7 @@ pub fn init_mode_menu(
     video_mode::init_mode(options, fpga.spi_mut(), true)
 }
 
-pub fn init_mode(
+pub fn init_mode_core(
     options: &config::MisterConfig,
     fpga: &mut crate::fpga::MisterFpga,
 ) -> Result<(), String> {

@@ -3,7 +3,6 @@ use std::time::SystemTime;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use mister_fpga::config::Config;
 use mister_fpga::core::file::SdCard;
 use mister_fpga::core::{MenuCore, MisterFpgaCore};
 use mister_fpga::fpga::MisterFpga;
@@ -13,11 +12,15 @@ use one_fpga::{Core, GolemCore};
 
 pub struct CoreManager {
     fpga: MisterFpga,
+    current_core: Option<GolemCore>,
 }
 
 impl CoreManager {
     pub fn new(fpga: MisterFpga) -> Self {
-        Self { fpga }
+        Self {
+            fpga,
+            current_core: None,
+        }
     }
 
     pub fn fpga(&self) -> &MisterFpga {
@@ -40,12 +43,11 @@ impl CoreManager {
                 .map_err(|e| format!("Could not instantiate Core: {e}"))?
         };
 
-        let options = Config::base().into_inner();
-
         core.init().map_err(|e| e.to_string())?;
         core.set_volume(0).map_err(|e| e.to_string())?;
         core.set_rtc(SystemTime::now()).map_err(|e| e.to_string())?;
 
+        self.current_core = Some(core.clone());
         Ok(core)
     }
 
@@ -66,9 +68,7 @@ impl CoreManager {
             .core_reset()
             .map_err(|_| "Could not reset the Core".to_string())?;
 
-        let core = self.create_core(is_menu)?;
-
-        Ok(core)
+        self.create_core(is_menu)
     }
 
     pub fn load_menu(&mut self) -> Result<GolemCore, String> {
@@ -103,7 +103,7 @@ impl CoreManager {
 
     pub fn launch(&mut self, info: CoreLaunchInfo<()>) -> Result<GolemCore, String> {
         let mut golem_core = match info.core {
-            CoreType::Current => self.get_current_core()?,
+            CoreType::Current => self.get_current_core().ok_or("No core running")?,
             CoreType::Menu => self.load_menu()?,
             CoreType::RbfFile(path) => self.load_core(path)?,
         };
@@ -152,10 +152,8 @@ impl CoreManager {
         Ok(golem_core)
     }
 
-    pub fn get_current_core(&mut self) -> Result<GolemCore, String> {
-        let core = MisterFpgaCore::new(self.fpga.clone())
-            .map_err(|e| format!("Could not instantiate Core: {e}"))?;
-        Ok(GolemCore::new(core))
+    pub fn get_current_core(&mut self) -> Option<GolemCore> {
+        self.current_core.clone()
     }
 
     pub fn show_menu(&mut self) {

@@ -49,10 +49,17 @@ pub fn init_mode(
             error!("Failed to initialize video mode: {}", error);
             warn!("This is not a fatal error, the application will continue to run.");
         }
+    } else {
+        info!("Initializing video mode for core");
+
+        if let Err(error) = linux::init_mode_core(options, fpga) {
+            error!("Failed to initialize video mode: {}", error);
+            warn!("This is not a fatal error, the application will continue to run.");
+        }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct VideoInfo {
     resolution: Resolution,
     aspect_ratio: AspectRatio,

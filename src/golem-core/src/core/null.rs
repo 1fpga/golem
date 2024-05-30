@@ -2,11 +2,12 @@ use std::any::Any;
 use std::time::SystemTime;
 
 use image::{ColorType, DynamicImage};
-use sdl3::gamepad::Button;
 
 use crate::core::{Bios, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use crate::inputs::gamepad::ButtonSet;
+use crate::inputs::keyboard::ScancodeSet;
+use crate::inputs::{Button, Scancode};
 use crate::Core;
-use crate::inputs::Scancode;
 
 /// A Golem Core that does nothing.
 pub struct NullCore;
@@ -64,12 +65,12 @@ impl Core for NullCore {
         Ok(())
     }
 
-    fn keys_set(&mut self, _keys: &[Scancode]) -> Result<(), Error> {
+    fn keys_set(&mut self, _keys: ScancodeSet) -> Result<(), Error> {
         Ok(())
     }
 
-    fn keys(&self) -> Result<&[Scancode], Error> {
-        Ok(&[])
+    fn keys(&self) -> Result<ScancodeSet, Error> {
+        Ok(ScancodeSet::new())
     }
 
     fn gamepad_button_up(&mut self, _index: usize, _button: Button) -> Result<(), Error> {
@@ -80,11 +81,11 @@ impl Core for NullCore {
         Ok(())
     }
 
-    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: &[Button]) -> Result<(), Error> {
+    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: ButtonSet) -> Result<(), Error> {
         Ok(())
     }
 
-    fn gamepad_buttons(&self, _index: usize) -> Result<Option<&[Button]>, Error> {
+    fn gamepad_buttons(&self, _index: usize) -> Result<Option<ButtonSet>, Error> {
         Ok(None)
     }
 

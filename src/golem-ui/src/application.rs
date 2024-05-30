@@ -127,6 +127,7 @@ impl GoLEmApp {
         }
 
         self.platform.update_menu_framebuffer();
+        self.platform.update_osd();
 
         result
     }

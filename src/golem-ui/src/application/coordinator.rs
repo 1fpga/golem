@@ -98,7 +98,10 @@ impl CoordinatorInner {
             None => {
                 let db_core = self.current_core.clone().ok_or("No core selected")?;
                 (
-                    app.platform_mut().core_manager_mut().get_current_core()?,
+                    app.platform_mut()
+                        .core_manager_mut()
+                        .get_current_core()
+                        .ok_or("No core running")?,
                     db_core,
                 )
             }

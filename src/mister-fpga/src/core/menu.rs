@@ -1,10 +1,11 @@
-use crate::config::Config;
 use crate::core::MisterFpgaCore;
 use crate::fpga::MisterFpga;
 use crate::types::units::UnitConversion;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::DynamicImage;
 use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::inputs::gamepad::ButtonSet;
+use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::Button;
 use one_fpga::inputs::Scancode;
 use one_fpga::Core;
@@ -113,15 +114,11 @@ impl Core for MenuCore {
         unreachable!("Menu core does not support inputs")
     }
 
-    fn keys_set(&mut self, _keys: &[Scancode]) -> Result<(), Error> {
+    fn keys_set(&mut self, _keys: ScancodeSet) -> Result<(), Error> {
         unreachable!("Menu core does not support inputs")
     }
 
-    fn keys_update(&mut self, _up: &[Scancode], _down: &[Scancode]) -> Result<(), Error> {
-        unreachable!("Menu core does not support inputs")
-    }
-
-    fn keys(&self) -> Result<&[Scancode], Error> {
+    fn keys(&self) -> Result<ScancodeSet, Error> {
         unreachable!("Menu core does not support inputs")
     }
 
@@ -133,20 +130,11 @@ impl Core for MenuCore {
         unreachable!("Menu core does not support inputs")
     }
 
-    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: &[Button]) -> Result<(), Error> {
+    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: ButtonSet) -> Result<(), Error> {
         unreachable!("Menu core does not support inputs")
     }
 
-    fn gamepad_buttons_update(
-        &mut self,
-        _index: usize,
-        _up: &[Button],
-        _down: &[Button],
-    ) -> Result<(), Error> {
-        unreachable!("Menu core does not support inputs")
-    }
-
-    fn gamepad_buttons(&self, _index: usize) -> Result<Option<&[Button]>, Error> {
+    fn gamepad_buttons(&self, _index: usize) -> Result<Option<ButtonSet>, Error> {
         unreachable!("Menu core does not support inputs")
     }
 

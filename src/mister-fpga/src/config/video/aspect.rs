@@ -24,10 +24,10 @@ fn gcd_(mut u: u16, mut v: u16) -> u16 {
 
         #[allow(clippy::manual_swap)]
         if u > v {
-            // mem::swap(&mut u, &mut v);
-            let temp = u;
-            u = v;
-            v = temp;
+            std::mem::swap(&mut u, &mut v);
+            // let temp = u;
+            // u = v;
+            // v = temp;
         }
 
         v -= u; // here v >= u
@@ -63,7 +63,7 @@ pub struct AspectRatio {
 
 impl AspectRatio {
     pub fn new(horizontal: u16, vertical: u16) -> Self {
-        let gcd = gcd_(vertical, horizontal);
+        let gcd = gcd_(vertical, horizontal).max(1);
         AspectRatio {
             vertical: vertical / gcd,
             horizontal: horizontal / gcd,

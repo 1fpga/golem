@@ -11,6 +11,8 @@ use tracing::{debug, info, trace};
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::inputs::gamepad::ButtonSet;
+use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::{Button, Scancode};
 use one_fpga::Core;
 
@@ -88,6 +90,9 @@ pub struct MisterFpgaCore {
     status_counter: u8,
 
     framebuffer: crate::framebuffer::FpgaFramebuffer<DevMemMemoryMapper>,
+
+    // A cache for the video_info.
+    video_info: Option<VideoInfo>,
 }
 
 impl MisterFpgaCore {
@@ -134,6 +139,7 @@ impl MisterFpgaCore {
             status: Default::default(),
             status_counter: 0,
             framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
+            video_info: None,
         })
     }
 
@@ -232,7 +238,13 @@ impl MisterFpgaCore {
 
     /// Return the video info of the core.
     pub fn video_info(&mut self) -> Result<VideoInfo, String> {
-        VideoInfo::create(self.spi_mut())
+        if let Some(video_info) = self.video_info {
+            return Ok(video_info);
+        }
+
+        let video_info = VideoInfo::create(self.spi_mut())?;
+        self.video_info = Some(video_info);
+        Ok(video_info)
     }
 
     pub fn status_mask(&self) -> StatusBitMap {
@@ -692,11 +704,11 @@ impl Core for MisterFpgaCore {
         Ok(())
     }
 
-    fn keys_set(&mut self, _keys: &[Scancode]) -> Result<(), Error> {
+    fn keys_set(&mut self, _keys: ScancodeSet) -> Result<(), Error> {
         todo!()
     }
 
-    fn keys(&self) -> Result<&[Scancode], Error> {
+    fn keys(&self) -> Result<ScancodeSet, Error> {
         todo!()
     }
 
@@ -710,11 +722,11 @@ impl Core for MisterFpgaCore {
         Ok(())
     }
 
-    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: &[Button]) -> Result<(), Error> {
+    fn gamepad_buttons_set(&mut self, _index: usize, _buttons: ButtonSet) -> Result<(), Error> {
         todo!()
     }
 
-    fn gamepad_buttons(&self, _index: usize) -> Result<Option<&[Button]>, Error> {
+    fn gamepad_buttons(&self, _index: usize) -> Result<Option<ButtonSet>, Error> {
         todo!()
     }
 
