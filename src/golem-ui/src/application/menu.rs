@@ -112,7 +112,9 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let show_back = show_back_button && show_back_menu;
     let show_details = detail_label.is_some();
     let show_sort = show_sort.unwrap_or(true) && R::sort().is_some();
-    let display_area = app.main_buffer().bounding_box();
+
+    let mut buffer = app.osd_buffer().clone();
+    let display_area = buffer.bounding_box();
 
     let mut prefix_items = prefix
         .into_iter()
@@ -141,8 +143,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         bottom_row,
     );
 
-    let menu_size = app
-        .main_buffer()
+    let menu_size = buffer
         .bounding_box()
         .size
         .saturating_sub(Size::new(0, bottom_row.height));
@@ -194,9 +195,10 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
             HorizontalAlignment::Left,
             curr_filter_label.as_str(),
         );
+
         // Not sure why, it's translated too high.
         let height = filter_bar.size().height as i32;
-        embedded_layout::View::translate_mut(&mut filter_bar, Point::new(1, height + 2));
+        View::translate_mut(&mut filter_bar, Point::new(1, height + 2));
 
         let back_item = OptionalMenuItem::new(
             show_back,
@@ -229,11 +231,10 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         .with_alignment(horizontal::Left)
         .arrange();
 
-        let (result, new_state) = app.event_loop(|app, state| {
+        let (result, new_state) = app.event_loop(|_, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
-            let buffer = app.main_buffer();
-            let _ = buffer.clear(Rgb888::BLACK);
+            let _ = buffer.clear(Rgb888::BLACK.into());
 
             {
                 let menu = &mut layout.inner_mut().parent.object;

@@ -16,6 +16,7 @@ use crate::data::paths;
 use crate::data::settings::Settings;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
+use crate::platform::de10::De10Platform;
 use crate::platform::WindowManager;
 
 pub mod menu;
@@ -27,6 +28,8 @@ mod widgets;
 pub mod coordinator;
 
 pub struct GoLEmApp {
+    platform: De10Platform,
+
     toolbar: Toolbar,
     settings: Arc<Settings>,
     database: Arc<Mutex<Connection>>,
@@ -38,7 +41,6 @@ pub struct GoLEmApp {
     joysticks: [Option<Joystick>; 32],
     gamepads: [Option<Gamepad>; 32],
 
-    platform: WindowManager,
     toolbar_buffer: DrawBuffer<BinaryColor>,
     osd_buffer: DrawBuffer<BinaryColor>,
 }

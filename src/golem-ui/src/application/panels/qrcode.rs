@@ -6,7 +6,7 @@ use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::image::Image;
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
-use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
 use embedded_graphics::text::Text;
@@ -60,7 +60,7 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
 
     let character_style = u8g2_fonts::U8g2TextStyle::new(
         u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
-        Rgb888::WHITE,
+        BinaryColor::On,
     );
     let textbox_style = TextBoxStyleBuilder::new()
         .height_mode(HeightMode::FitToText)
@@ -85,14 +85,14 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
                 Chain::new(Text::new(
                     title,
                     Point::zero(),
-                    MonoTextStyle::new(&ascii::FONT_8X13_BOLD, Rgb888::WHITE),
+                    MonoTextStyle::new(&ascii::FONT_8X13_BOLD, BinaryColor::On),
                 ))
                 .append(
                     Line::new(
                         Point::zero(),
                         Point::new(display_area.bounding_box().size.width as i32 / 2, 0),
                     )
-                    .into_styled(PrimitiveStyle::with_stroke(Rgb888::WHITE, 1)),
+                    .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
                 )
                 .append(text_box)
                 .append(menu),
@@ -107,9 +107,9 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     .align_to(&display_area, horizontal::Center, vertical::Center);
 
     app.event_loop(move |app, state| {
-        let mut buffer = app.main_buffer().color_converted();
-        let _ = buffer.clear(Rgb888::BLACK);
-        let _ = layout.draw(&mut buffer);
+        let buffer = app.osd_buffer();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(buffer);
 
         let menu = &mut layout.inner_mut().object.inner_mut().object;
         for ev in state.events() {
@@ -118,7 +118,6 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
                 Some(_) => return Some(()),
             }
         }
-        menu.update(&mut buffer);
 
         None
     });

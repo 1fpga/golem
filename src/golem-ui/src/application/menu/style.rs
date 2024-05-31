@@ -1,5 +1,5 @@
 use embedded_graphics::mono_font::ascii;
-use embedded_graphics::pixelcolor::{Rgb888, RgbColor};
+use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_menu::interaction::{
     Action, InputAdapter, InputAdapterSource, InputResult, InputState, Interaction, Navigation,
 };
@@ -349,22 +349,33 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
 pub struct SimpleMenuTheme;
 
 impl Theme for SimpleMenuTheme {
-    type Color = Rgb888;
+    type Color = BinaryColor;
 
     fn text_color(&self) -> Self::Color {
-        Rgb888::WHITE
+        BinaryColor::On
     }
 
     fn selected_text_color(&self) -> Self::Color {
-        Rgb888::WHITE
+        BinaryColor::Off
     }
 
     fn selection_color(&self) -> Self::Color {
-        Rgb888::RED
+        BinaryColor::On
     }
 }
 
 pub use selection_indicator::style::rectangle::Rectangle as RectangleIndicator;
+
+fn menu_style_inner<I: InputAdapterSource<R> + Default, R>(
+) -> MenuStyle<RectangleIndicator, I, AnimatedPosition, R, SimpleMenuTheme> {
+    MenuStyle::new(SimpleMenuTheme)
+        .with_input_adapter(I::default())
+        .with_animated_selection_indicator(2)
+        .with_selection_indicator(RectangleIndicator)
+        .with_scrollbar_style(DisplayScrollbar::Auto)
+        .with_title_font(&ascii::FONT_8X13)
+        .with_font(&ascii::FONT_5X8)
+}
 
 pub fn menu_style<R: MenuReturn + Copy>() -> MenuStyle<
     RectangleIndicator,
@@ -373,23 +384,11 @@ pub fn menu_style<R: MenuReturn + Copy>() -> MenuStyle<
     SdlMenuAction<R>,
     SimpleMenuTheme,
 > {
-    MenuStyle::new(SimpleMenuTheme)
-        .with_input_adapter(SdlMenuInputAdapter::default())
-        .with_animated_selection_indicator(2)
-        .with_selection_indicator(RectangleIndicator)
-        .with_scrollbar_style(DisplayScrollbar::Auto)
-        .with_title_font(&ascii::FONT_10X20)
-        .with_font(&ascii::FONT_8X13_BOLD)
+    menu_style_inner()
 }
 
 pub fn menu_style_simple<R: MenuReturn + Copy>(
 ) -> MenuStyle<RectangleIndicator, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R, SimpleMenuTheme>
 {
-    MenuStyle::new(SimpleMenuTheme)
-        .with_input_adapter(SimpleSdlMenuInputAdapter::default())
-        .with_animated_selection_indicator(2)
-        .with_selection_indicator(RectangleIndicator)
-        .with_scrollbar_style(DisplayScrollbar::Auto)
-        .with_title_font(&ascii::FONT_10X20)
-        .with_font(&ascii::FONT_8X13_BOLD)
+    menu_style_inner()
 }

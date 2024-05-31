@@ -6,7 +6,7 @@ use crate::application::GoLEmApp;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::mono_font::ascii;
 use embedded_graphics::mono_font::MonoTextStyle;
-use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::{Line, PrimitiveStyle};
 use embedded_graphics::text::Text;
@@ -103,7 +103,7 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
 
     let character_style = u8g2_fonts::U8g2TextStyle::new(
         u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
-        Rgb888::WHITE,
+        BinaryColor::On,
     );
     let textbox_style = TextBoxStyleBuilder::new()
         .height_mode(HeightMode::FitToText)
@@ -118,14 +118,14 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
         Chain::new(Text::new(
             title,
             Point::zero(),
-            MonoTextStyle::new(&ascii::FONT_8X13_BOLD, Rgb888::WHITE),
+            MonoTextStyle::new(&ascii::FONT_8X13_BOLD, BinaryColor::On),
         ))
         .append(
             Line::new(
                 Point::zero(),
                 Point::new(display_area.bounding_box().size.width as i32, 0),
             )
-            .into_styled(PrimitiveStyle::with_stroke(Rgb888::WHITE, 1)),
+            .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
         )
         .append(text_box),
     )
@@ -137,9 +137,9 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
 
     // Only show once, return immediately.
     app.draw(move |app| {
-        let buffer = app.main_buffer();
-        let _ = buffer.clear(Rgb888::BLACK);
-        let _ = layout.draw(&mut buffer.color_converted());
+        let buffer = app.osd_buffer();
+        let _ = buffer.clear(BinaryColor::On);
+        let _ = layout.draw(buffer);
     });
 }
 
@@ -161,7 +161,7 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
 
     let character_style = u8g2_fonts::U8g2TextStyle::new(
         u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
-        Rgb888::WHITE,
+        BinaryColor::On,
     );
     let textbox_style = TextBoxStyleBuilder::new()
         .height_mode(HeightMode::FitToText)
@@ -176,14 +176,14 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
         Chain::new(Text::new(
             title,
             Point::zero(),
-            MonoTextStyle::new(&ascii::FONT_8X13_BOLD, Rgb888::WHITE),
+            MonoTextStyle::new(&ascii::FONT_8X13_BOLD, BinaryColor::On),
         ))
         .append(
             Line::new(
                 Point::zero(),
                 Point::new(display_area.bounding_box().size.width as i32, 0),
             )
-            .into_styled(PrimitiveStyle::with_stroke(Rgb888::WHITE, 1)),
+            .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
         )
         .append(text_box)
         .append(menu),
@@ -195,9 +195,9 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
     .into_inner();
 
     app.event_loop(move |app, state| {
-        let buffer = app.main_buffer();
-        let _ = buffer.clear(Rgb888::BLACK);
-        let _ = layout.draw(&mut buffer.color_converted());
+        let buffer = app.osd_buffer();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(buffer);
 
         let menu = &mut layout.object;
         for ev in state.events() {
