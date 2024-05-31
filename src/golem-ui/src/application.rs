@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
@@ -16,7 +16,8 @@ use crate::data::paths;
 use crate::data::settings::Settings;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
-use crate::platform::{GoLEmPlatform, WindowManager};
+use crate::platform::de10::De10Platform;
+use crate::platform::WindowManager;
 
 pub mod menu;
 
@@ -27,6 +28,8 @@ mod widgets;
 pub mod coordinator;
 
 pub struct GoLEmApp {
+    platform: De10Platform,
+
     toolbar: Toolbar,
     settings: Arc<Settings>,
     database: Arc<Mutex<Connection>>,
@@ -38,9 +41,8 @@ pub struct GoLEmApp {
     joysticks: [Option<Joystick>; 32],
     gamepads: [Option<Gamepad>; 32],
 
-    platform: WindowManager,
-    main_buffer: DrawBuffer<BinaryColor>,
     toolbar_buffer: DrawBuffer<BinaryColor>,
+    osd_buffer: DrawBuffer<BinaryColor>,
 }
 
 impl GoLEmApp {
@@ -55,7 +57,7 @@ impl GoLEmApp {
             .expect("Failed to connect to database");
         let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
-        let main_size = platform.main_dimensions();
+        let osd_size = platform.osd_dimensions();
 
         // Due to a limitation in Rust language right now, None does not implement Copy
         // when Option<T> does not. This means we can't use it in an array. So we use a
@@ -78,8 +80,8 @@ impl GoLEmApp {
             database,
             settings,
             platform,
-            main_buffer: DrawBuffer::new(main_size),
             toolbar_buffer: DrawBuffer::new(toolbar_size),
+            osd_buffer: DrawBuffer::new(osd_size),
         }
     }
 
@@ -91,8 +93,12 @@ impl GoLEmApp {
         self.platform.init();
     }
 
-    pub fn main_buffer(&mut self) -> &mut DrawBuffer<BinaryColor> {
-        &mut self.main_buffer
+    pub fn main_buffer(&mut self) -> &mut DrawBuffer<Rgb888> {
+        self.platform_mut().main_buffer()
+    }
+
+    pub fn osd_buffer(&mut self) -> &mut DrawBuffer<BinaryColor> {
+        &mut self.osd_buffer
     }
 
     pub fn database(&self) -> Arc<Mutex<Connection>> {
@@ -115,12 +121,10 @@ impl GoLEmApp {
         self.coordinator.clone()
     }
 
-    pub fn draw(&mut self, drawer_fn: impl FnOnce(&mut Self)) {
-        self.platform.start_loop();
+    fn draw_inner<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
+        self.osd_buffer.clear(BinaryColor::Off).unwrap();
+        let result = drawer_fn(self);
 
-        drawer_fn(self);
-
-        self.platform.update_main(&self.main_buffer);
         if self.render_toolbar && self.toolbar.update() {
             self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
             self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
@@ -132,7 +136,19 @@ impl GoLEmApp {
             self.platform.update_toolbar(&self.toolbar_buffer);
         }
 
+        // self.platform.update_menu_framebuffer();
+        self.platform.update_osd(&self.osd_buffer);
+
+        result
+    }
+
+    pub fn draw<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
+        self.platform.start_loop();
+
+        let result = self.draw_inner(drawer_fn);
+
         self.platform.end_loop();
+        result
     }
 
     pub fn event_loop<R>(
@@ -197,20 +213,8 @@ impl GoLEmApp {
 
             let mut state = EventLoopState::new(events);
 
-            if let Some(r) = loop_fn(self, &mut state) {
+            if let Some(r) = self.draw_inner(|s| loop_fn(s, &mut state)) {
                 break r;
-            }
-
-            self.platform.update_main(&self.main_buffer);
-            if self.render_toolbar && self.toolbar.update() {
-                self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
-                self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
-
-                if self.settings.invert_toolbar() {
-                    self.toolbar_buffer.invert();
-                }
-
-                self.platform.update_toolbar(&self.toolbar_buffer);
             }
 
             self.platform.end_loop();

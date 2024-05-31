@@ -3,13 +3,12 @@ use std::time::Instant;
 use sdl3::event::Event;
 use tracing::{debug, error, info, trace};
 
-use golem_core::{Core, GolemCore};
+use one_fpga::{Core, GolemCore};
 
 use crate::application::GoLEmApp;
 use crate::input::commands::{CommandResult, ShortcutCommand};
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
-use crate::platform::GoLEmPlatform;
 
 pub mod menu;
 
@@ -82,11 +81,11 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
                 }
                 Event::ControllerButtonDown { which, button, .. } => {
                     inputs.controller_button_down(which, button);
-                    let _ = core.gamepad_button_down((which - 1) as usize, button);
+                    let _ = core.gamepad_button_down((which - 1) as usize, button.into());
                 }
                 Event::ControllerButtonUp { which, button, .. } => {
                     inputs.controller_button_up(which, button);
-                    let _ = core.gamepad_button_up((which - 1) as usize, button);
+                    let _ = core.gamepad_button_up((which - 1) as usize, button.into());
                 }
                 Event::ControllerAxisMotion {
                     which, axis, value, ..

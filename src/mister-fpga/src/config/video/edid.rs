@@ -258,10 +258,9 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
         );
 
         if hact == 2048 && vact == 1536 {
-            let n = 13;
-            warn!("EDID: Using safe vmode {}.", n);
+            let mode = DefaultVideoMode::V2048x1536r60;
+            warn!("EDID: Using safe vmode ({:?}).", mode);
 
-            let mode = DefaultVideoMode::from_repr(n).unwrap();
             v.param = mode.into();
             v.param.vic = mode.vic_mode();
             v.f_pix = mode.f_pix();
@@ -277,6 +276,8 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
             } else {
                 return Err("EDID: Falling back to default video mode.".to_string());
             }
+        } else {
+            return Err("EDID: Falling back to default video mode.".to_string());
         }
     }
 
@@ -401,21 +402,21 @@ impl DefaultVideoMode {
     pub fn v_param(&self) -> &'static [u32; 8] {
         #[rustfmt::skip]
         const V_PARAM_DEFAULT_MODES: [[u32; 8]; 19] = [
-            [1280, 110, 40, 220, 720, 5, 5, 20], //  0  1280x 720@60
-            [1024, 24, 136, 160, 768, 3, 6, 29], //  1  1024x 768@60
-            [720, 16, 62, 60, 480, 9, 6, 30], //  2   720x 480@60
-            [720, 12, 64, 68, 576, 5, 5, 39], //  3   720x 576@50
+            [1280, 110, 40, 220, 720, 5, 5, 20],  //  0  1280x 720@60
+            [1024, 24, 136, 160, 768, 3, 6, 29],  //  1  1024x 768@60
+            [720, 16, 62, 60, 480, 9, 6, 30],     //  2   720x 480@60
+            [720, 12, 64, 68, 576, 5, 5, 39],     //  3   720x 576@50
             [1280, 48, 112, 248, 1024, 1, 3, 38], //  4  1280x1024@60
-            [800, 40, 128, 88, 600, 1, 4, 23], //  5   800x 600@60
-            [640, 16, 96, 48, 480, 10, 2, 33], //  6   640x 480@60
-            [1280, 440, 40, 220, 720, 5, 5, 20], //  7  1280x 720@50
-            [1920, 88, 44, 148, 1080, 4, 5, 36], //  8  1920x1080@60
+            [800, 40, 128, 88, 600, 1, 4, 23],    //  5   800x 600@60
+            [640, 16, 96, 48, 480, 10, 2, 33],    //  6   640x 480@60
+            [1280, 440, 40, 220, 720, 5, 5, 20],  //  7  1280x 720@50
+            [1920, 88, 44, 148, 1080, 4, 5, 36],  //  8  1920x1080@60
             [1920, 528, 44, 148, 1080, 4, 5, 36], //  9  1920x1080@50
-            [1366, 70, 143, 213, 768, 3, 3, 24], // 10  1366x 768@60
-            [1024, 40, 104, 144, 600, 1, 3, 18], // 11  1024x 600@60
-            [1920, 48, 32, 80, 1440, 2, 4, 38], // 12  1920x1440@60
-            [2048, 48, 32, 80, 1536, 2, 4, 38], // 13  2048x1536@60
-            [1280, 24, 16, 40, 1440, 3, 5, 33], // 14  2560x1440@60 (pr)
+            [1366, 70, 143, 213, 768, 3, 3, 24],  // 10  1366x 768@60
+            [1024, 40, 104, 144, 600, 1, 3, 18],  // 11  1024x 600@60
+            [1920, 48, 32, 80, 1440, 2, 4, 38],   // 12  1920x1440@60
+            [2048, 48, 32, 80, 1536, 2, 4, 38],   // 13  2048x1536@60
+            [1280, 24, 16, 40, 1440, 3, 5, 33],   // 14  2560x1440@60 (pr)
 
             // TV modes.
             [640, 30, 60, 70, 240, 4, 4, 14], // NTSC 15K
@@ -508,35 +509,26 @@ impl From<DefaultVideoMode> for CustomVideoModeParam {
 pub struct CustomVideoModeParam {
     pub mode: u32, // 0
 
-    pub hact: u32,
-    // 1
-    pub hfp: u32,
-    // 2
-    pub hs: u32,
-    // 3
-    pub hbp: u32, // 4
+    pub hact: u32, // 1
+    pub hfp: u32,  // 2
+    pub hs: u32,   // 3
+    pub hbp: u32,  // 4
 
-    pub vact: u32,
-    // 5
-    pub vfp: u32,
-    // 6
-    pub vs: u32,
-    // 7
-    pub vbp: u32, // 8
+    pub vact: u32, // 5
+    pub vfp: u32,  // 6
+    pub vs: u32,   // 7
+    pub vbp: u32,  // 8
 
     pub pll: [u32; 12], // 9-20
 
     // These are polarity for hsync and vsync.
     // Not sure why hs and vs cannot be 2-complement (and thus `i32`).
-    pub hpol: u32,
-    // 21
+    pub hpol: u32, // 21
     pub vpol: u32, // 22
 
-    pub vic: u32,
-    // 23
-    pub rb: u32,
-    // 24
-    pub pr: u32, // 25
+    pub vic: u32, // 23
+    pub rb: u32,  // 24
+    pub pr: u32,  // 25
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -660,9 +652,11 @@ fn parse_custom_video_mode(video_mode: Option<&str>) -> CustomVideoMode {
     {
         return DefaultVideoMode::V1920x1080r60.into();
         // return DefaultVideoMode::V1280x720r60.into();
+        // return DefaultVideoMode::V640x480r60.into();
     }
+    return DefaultVideoMode::V1920x1080r60.into();
 
-    todo!("parse_custom_video_mode")
+    // todo!("parse_custom_video_mode")
 }
 
 pub fn select_video_mode(options: &MisterConfig) -> Result<VideoModeDef, String> {
@@ -683,6 +677,13 @@ pub fn select_video_mode(options: &MisterConfig) -> Result<VideoModeDef, String>
             vmode_ntsc: None,
         })
     } else {
+        eprintln!("select_video_mode: conf: {:?}", options.video_conf);
+        // return Ok(VideoModeDef {
+        //     vmode_def: Some(DefaultVideoMode::V640x480r60.into()),
+        //     vmode_pal: None,
+        //     vmode_ntsc: None,
+        // });
+
         if options.video_conf.is_none()
             && options.video_conf_pal.is_none()
             && options.video_conf_ntsc.is_none()

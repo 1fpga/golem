@@ -8,18 +8,20 @@ use embedded_graphics::mono_font::ascii;
 use embedded_graphics::mono_font::MonoTextStyle;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::*;
-use embedded_graphics::primitives::{Line, PrimitiveStyle, Rectangle};
+use embedded_graphics::primitives::{Line, PrimitiveStyle};
 use embedded_graphics::text::Text;
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
-use embedded_menu::items::NavigationItem;
+use embedded_menu::items::menu_item::SelectValue;
+use embedded_menu::items::MenuItem;
 use embedded_menu::Menu;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
 use reqwest::Url;
+use std::convert::identity;
 use tracing::error;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum MenuAction {
     #[default]
     Back,
@@ -29,6 +31,12 @@ pub enum MenuAction {
 impl MenuReturn for MenuAction {
     fn back() -> Option<Self> {
         Some(MenuAction::Back)
+    }
+}
+
+impl SelectValue for MenuAction {
+    fn marker(&self) -> &str {
+        ""
     }
 }
 
@@ -129,9 +137,9 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
 
     // Only show once, return immediately.
     app.draw(move |app| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let buffer = app.osd_buffer();
+        let _ = buffer.clear(BinaryColor::On);
+        let _ = layout.draw(buffer);
     });
 }
 
@@ -141,13 +149,13 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
     let mut choices = choices
         .into_iter()
         .enumerate()
-        .map(|(i, ch)| NavigationItem::new(ch, MenuAction::Select(i)))
+        .map(|(i, ch)| MenuItem::new(ch, MenuAction::Select(i)).with_value_converter(identity))
         .collect::<Vec<_>>();
 
     let menu = SizedMenu::new(
         Size::new(128, 48),
         Menu::with_style(" ", style::menu_style_simple())
-            .add_items(&mut choices)
+            .add_menu_items(&mut choices)
             .build(),
     );
 
@@ -187,9 +195,9 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
     .into_inner();
 
     app.event_loop(move |app, state| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let buffer = app.osd_buffer();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(buffer);
 
         let menu = &mut layout.object;
         for ev in state.events() {

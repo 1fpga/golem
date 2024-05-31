@@ -5,19 +5,18 @@ use std::sync::{Arc, Mutex};
 use image::DynamicImage;
 use tracing::{info, trace};
 
-use golem_core::core::SaveState;
-use golem_core::runner::CoreLaunchInfo;
-use golem_core::{Core, GolemCore};
 use golem_db::models::Core as DbCore;
 use golem_db::models::CoreFile as DbCoreFile;
 use golem_db::models::Game as DbGame;
 use golem_db::Connection;
 use mister_fpga::core::file::SdCard;
 use mister_fpga::core::MisterFpgaCore;
+use one_fpga::core::SaveState;
+use one_fpga::runner::CoreLaunchInfo;
+use one_fpga::{Core, GolemCore};
 
 use crate::application::GoLEmApp;
 use crate::data::paths;
-use crate::platform::GoLEmPlatform;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct GameStartInfo {
@@ -99,7 +98,10 @@ impl CoordinatorInner {
             None => {
                 let db_core = self.current_core.clone().ok_or("No core selected")?;
                 (
-                    app.platform_mut().core_manager_mut().get_current_core()?,
+                    app.platform_mut()
+                        .core_manager_mut()
+                        .get_current_core()
+                        .ok_or("No core running")?,
                     db_core,
                 )
             }

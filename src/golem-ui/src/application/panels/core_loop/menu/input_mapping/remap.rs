@@ -12,8 +12,8 @@ use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::*;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
-use golem_core::Core;
 use mister_fpga::core::MisterFpgaCore;
+use one_fpga::Core;
 use sdl3::event::Event;
 use tracing::info;
 
@@ -113,9 +113,9 @@ pub fn remap(app: &mut GoLEmApp, core: Option<&MisterFpgaCore>, command: Shortcu
         .arrange()
         .align_to(&display_area, horizontal::Center, vertical::Top);
 
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let mut buffer = app.main_buffer().color_converted();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(&mut buffer);
 
         for e in state.events() {
             match e {

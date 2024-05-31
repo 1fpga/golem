@@ -5,8 +5,6 @@ use tracing::debug;
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 
-pub const FB_PIXEL_COUNT: usize = 1920 * 1080;
-pub const FB_SIZE: usize = FB_PIXEL_COUNT * 4 * 3;
 pub const FB_BASE_ADDRESS: usize = 0x2000_0000;
 pub const BUFFER_SIZE: usize = 2048 * 1024 * 3 * 4;
 
@@ -84,7 +82,6 @@ impl FbHeader {
     #[inline]
     pub unsafe fn from_memory(memory: *const u8) -> Option<Self> {
         let header = (memory as *const FbHeader).read_volatile();
-        // eprintln!("header: {:?} attributes: {:?}", header, header.attributes());
         if header.ty == SCALER_FB_TYPE {
             Some(header)
         } else {
@@ -228,7 +225,7 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         Ok(Self { memory, ty_: None })
     }
 
-    pub(crate) fn update_ty(&mut self) {
+    pub(crate) fn update_type_from_core(&mut self) {
         let first = unsafe { self.header_offset(0) };
         self.ty_ = if !first
             .map(|h| h.attributes().triple_buffered())

@@ -1,6 +1,6 @@
 use crate::config_string::Config;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use golem_core::core::Error;
+use one_fpga::core::Error;
 use std::io::{Read, Write};
 use std::ptr::NonNull;
 use std::slice;
@@ -109,7 +109,7 @@ pub struct SaveState {
     counter: u32,
 }
 
-impl golem_core::core::SaveState for SaveState {
+impl one_fpga::core::SaveState for SaveState {
     fn is_dirty(&self) -> bool {
         self.is_dirty()
     }

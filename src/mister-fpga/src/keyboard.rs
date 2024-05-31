@@ -436,8 +436,8 @@ pub enum Ps2Scancode {
     RightShift = RSHIFT + 0x59,       //54  KEY_RIGHTSHIFT
 }
 
-impl From<golem_core::inputs::Scancode> for Ps2Scancode {
-    fn from(scancode: golem_core::inputs::Scancode) -> Self {
+impl From<one_fpga::inputs::Scancode> for Ps2Scancode {
+    fn from(scancode: one_fpga::inputs::Scancode) -> Self {
         SDL3_TO_PS2[scancode.as_repr() as u8].unwrap_or(Ps2Scancode::None)
     }
 }

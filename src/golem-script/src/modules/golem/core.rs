@@ -4,11 +4,10 @@ use boa_engine::value::TryFromJs;
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, JsValue, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::{Finalize, JsData, Trace};
-use golem_core::core::Rom;
-use golem_core::runner::CoreLaunchInfo;
+use one_fpga::core::Rom;
+use one_fpga::runner::CoreLaunchInfo;
 
 use golem_ui::application::panels::core_loop::run_core_loop;
-use golem_ui::platform::GoLEmPlatform;
 
 use crate::HostData;
 
@@ -112,7 +111,7 @@ fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
         {
             core_options
                 .files
-                .insert(i, golem_core::runner::Slot::File(PathBuf::from(file)));
+                .insert(i, one_fpga::runner::Slot::File(PathBuf::from(file)));
         }
     }
 

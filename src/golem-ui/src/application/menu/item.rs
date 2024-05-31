@@ -1,18 +1,15 @@
 use crate::application::menu::style::{MenuReturn, SdlMenuAction, SectionSeparator};
 use embedded_graphics::geometry::Size;
+use embedded_graphics::mono_font::MonoTextStyle;
+use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::primitives::{Line, PrimitiveStyle, StyledDrawable};
 use embedded_graphics::{
     pixelcolor::Rgb888,
-    prelude::{DrawTarget, PixelColor, Point},
+    prelude::{DrawTarget, Point},
     primitives::Rectangle,
 };
 use embedded_layout::View;
-use embedded_menu::{
-    interaction::InputAdapterSource,
-    items::MenuLine,
-    selection_indicator::{style::IndicatorStyle, SelectionIndicatorController},
-    Marker, MenuItem, MenuStyle,
-};
+use embedded_menu::items::{MenuLine, MenuListItem};
 use std::fmt::Debug;
 
 pub struct SimpleMenuItem<T, D, M, R>
@@ -52,7 +49,7 @@ where
     }
 }
 
-impl<T, D, M, R> Marker for SimpleMenuItem<T, D, M, R>
+impl<T, D, M, R> embedded_menu::items::Marker for SimpleMenuItem<T, D, M, R>
 where
     T: AsRef<str>,
     D: AsRef<str>,
@@ -60,7 +57,7 @@ where
 {
 }
 
-impl<T, D, M, R> MenuItem<R> for SimpleMenuItem<T, D, M, R>
+impl<T, D, M, R> MenuListItem<R> for SimpleMenuItem<T, D, M, R>
 where
     T: AsRef<str>,
     D: AsRef<str>,
@@ -75,43 +72,21 @@ where
         self.return_value
     }
 
-    fn set_style<C, S, IT, P>(&mut self, style: &MenuStyle<C, S, IT, P, R>)
-    where
-        C: PixelColor,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<R>,
-        P: SelectionIndicatorController,
-    {
+    fn set_style(&mut self, style: &MonoTextStyle<'_, BinaryColor>) {
         self.line = MenuLine::new(self.marker.as_ref(), style);
-    }
-
-    fn title(&self) -> &str {
-        self.title_text.as_ref()
-    }
-
-    fn details(&self) -> &str {
-        self.details.as_ref()
-    }
-
-    fn value(&self) -> &str {
-        self.marker.as_ref()
     }
 
     fn selectable(&self) -> bool {
         self.disabled == false && self.selectable
     }
 
-    fn draw_styled<C, S, IT, P, DIS>(
+    fn draw_styled<DIS>(
         &self,
-        style: &MenuStyle<C, S, IT, P, R>,
+        style: &MonoTextStyle<'static, BinaryColor>,
         display: &mut DIS,
     ) -> Result<(), DIS::Error>
     where
-        C: PixelColor + From<Rgb888>,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<R>,
-        P: SelectionIndicatorController,
-        DIS: DrawTarget<Color = C>,
+        DIS: DrawTarget<Color = BinaryColor>,
     {
         self.line.draw_styled(
             self.title_text.as_ref(),
@@ -273,6 +248,14 @@ where
             self
         }
     }
+
+    pub fn title(&self) -> &str {
+        match self {
+            TextMenuItem::MenuItem(item) => item.title_text,
+            TextMenuItem::Separator(_) => "",
+            TextMenuItem::Empty(_) => "",
+        }
+    }
 }
 
 impl<'a, R1> TextMenuItem<'a, R1>
@@ -307,7 +290,7 @@ where
     }
 }
 
-impl<'a, R> Marker for TextMenuItem<'a, R> where R: MenuReturn + Copy {}
+impl<'a, R> embedded_menu::items::Marker for TextMenuItem<'a, R> where R: MenuReturn + Copy {}
 
 impl<'a, R> View for TextMenuItem<'a, R>
 where
@@ -332,14 +315,14 @@ where
     }
 }
 
-impl<'a, R> MenuItem<SdlMenuAction<R>> for TextMenuItem<'a, R>
+impl<'a, R> MenuListItem<SdlMenuAction<R>> for TextMenuItem<'a, R>
 where
     R: MenuReturn + Copy,
 {
     fn value_of(&self) -> SdlMenuAction<R> {
         match self {
             TextMenuItem::MenuItem(item) => item.value_of(),
-            TextMenuItem::Separator(item) => item.value_of(),
+            TextMenuItem::Separator(_item) => unreachable!(),
             TextMenuItem::Empty(_) => unreachable!(),
         }
     }
@@ -352,41 +335,13 @@ where
         }
     }
 
-    fn set_style<C, S, IT, P>(&mut self, style: &MenuStyle<C, S, IT, P, SdlMenuAction<R>>)
-    where
-        C: PixelColor,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<SdlMenuAction<R>>,
-        P: SelectionIndicatorController,
-    {
+    fn set_style(&mut self, style: &MonoTextStyle<'_, BinaryColor>) {
         match self {
             TextMenuItem::MenuItem(item) => item.set_style(style),
-            TextMenuItem::Separator(item) => item.set_style(style),
+            TextMenuItem::Separator(item) => {
+                <SectionSeparator as MenuListItem<R>>::set_style(item, style)
+            }
             TextMenuItem::Empty(_) => {}
-        }
-    }
-
-    fn title(&self) -> &str {
-        match self {
-            TextMenuItem::MenuItem(item) => item.title(),
-            TextMenuItem::Separator(_item) => "",
-            TextMenuItem::Empty(_) => "",
-        }
-    }
-
-    fn details(&self) -> &str {
-        match self {
-            TextMenuItem::MenuItem(item) => item.details(),
-            TextMenuItem::Separator(_item) => "",
-            TextMenuItem::Empty(_) => "",
-        }
-    }
-
-    fn value(&self) -> &str {
-        match self {
-            TextMenuItem::MenuItem(item) => item.value(),
-            TextMenuItem::Separator(_item) => "",
-            TextMenuItem::Empty(_) => "",
         }
     }
 
@@ -398,21 +353,19 @@ where
         }
     }
 
-    fn draw_styled<C, S, IT, P, DIS>(
+    fn draw_styled<DIS>(
         &self,
-        style: &MenuStyle<C, S, IT, P, SdlMenuAction<R>>,
+        style: &MonoTextStyle<'static, BinaryColor>,
         display: &mut DIS,
     ) -> Result<(), DIS::Error>
     where
-        C: PixelColor + From<Rgb888>,
-        S: IndicatorStyle,
-        IT: InputAdapterSource<SdlMenuAction<R>>,
-        P: SelectionIndicatorController,
-        DIS: DrawTarget<Color = C>,
+        DIS: DrawTarget<Color = BinaryColor>,
     {
         match self {
             TextMenuItem::MenuItem(item) => item.draw_styled(style, display),
-            TextMenuItem::Separator(item) => item.draw_styled(style, display),
+            TextMenuItem::Separator(item) => {
+                <SectionSeparator as MenuListItem<R>>::draw_styled(item, style, display)
+            }
             TextMenuItem::Empty(_) => Ok(()),
         }
     }
@@ -433,7 +386,7 @@ where
     fn to_menu_item(&'a self) -> TextMenuItem<'a, R> {
         match self {
             TextMenuItem::MenuItem(i) => Self::navigation_item(
-                i.title(),
+                i.title_text,
                 i.marker,
                 match i.value_of() {
                     SdlMenuAction::Select(r) => r,

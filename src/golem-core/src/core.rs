@@ -1,5 +1,7 @@
 use std::any::Any;
+use std::cell::UnsafeCell;
 use std::io::{Read, Seek, Write};
+use std::rc::Rc;
 use std::time::SystemTime;
 
 use image::DynamicImage;
@@ -86,6 +88,12 @@ pub enum Error {
 
     #[error("An error occurred: {0}")]
     AnyError(#[from] Box<dyn std::error::Error>),
+}
+
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Error::Generic(value)
+    }
 }
 
 /// An iterator over the save states of a core.
@@ -183,54 +191,25 @@ pub trait Core {
 
     /// Set the keys that are currently pressed, releasing the keys that are not in
     /// the list.
-    fn keys_set(&mut self, keys: &[keyboard::Scancode]) -> Result<(), Error>;
-
-    /// Update the state of the keys.
-    fn keys_update(
-        &mut self,
-        up: &[keyboard::Scancode],
-        down: &[keyboard::Scancode],
-    ) -> Result<(), Error> {
-        for key in up {
-            self.key_up(*key)?;
-        }
-        for key in down {
-            self.key_down(*key)?;
-        }
-        Ok(())
-    }
+    fn keys_set(&mut self, keys: keyboard::ScancodeSet) -> Result<(), Error>;
 
     /// Return a slice of the keys that are currently pressed. The order of the
     /// keys in the slice is not guaranteed.
-    fn keys(&self) -> Result<&[keyboard::Scancode], Error>;
+    fn keys(&self) -> Result<keyboard::ScancodeSet, Error>;
 
     fn gamepad_button_up(&mut self, index: usize, button: gamepad::Button) -> Result<(), Error>;
     fn gamepad_button_down(&mut self, index: usize, button: gamepad::Button) -> Result<(), Error>;
     fn gamepad_buttons_set(
         &mut self,
         index: usize,
-        buttons: &[gamepad::Button],
+        buttons: gamepad::ButtonSet,
     ) -> Result<(), Error>;
-    fn gamepad_buttons_update(
-        &mut self,
-        index: usize,
-        up: &[gamepad::Button],
-        down: &[gamepad::Button],
-    ) -> Result<(), Error> {
-        for button in up {
-            self.gamepad_button_up(index, *button)?;
-        }
-        for button in down {
-            self.gamepad_button_down(index, *button)?;
-        }
-        Ok(())
-    }
 
     /// Returns the gamepad buttons that are currently pressed. The order of the
     /// buttons in the slice is not guaranteed.
     /// If the core does not support gamepads at the index requested, this should
     /// return `None`.
-    fn gamepad_buttons(&self, index: usize) -> Result<Option<&[gamepad::Button]>, Error>;
+    fn gamepad_buttons(&self, index: usize) -> Result<Option<gamepad::ButtonSet>, Error>;
 
     /// Returns the menu items that the core supports. This would correspond to the
     /// top level page of config items. If the core does not support a menu, this
@@ -256,17 +235,20 @@ pub trait Core {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-/// A core that be used in the Golem platform. This is a wrapper around a core
+/// A core that be used in the `Golem` platform. This is a wrapper around a core
 /// that implements the [`Core`] trait. It can be used to pass around a core
 /// without knowing its implementation.
+#[derive(Clone)]
 pub struct GolemCore {
-    inner: Box<dyn Core + 'static>,
+    name: String,
+    inner: Rc<UnsafeCell<dyn Core + 'static>>,
 }
 
 impl GolemCore {
     pub fn new(core: impl Core + 'static) -> Self {
         Self {
-            inner: Box::new(core),
+            name: core.name().to_string(),
+            inner: Rc::new(UnsafeCell::new(core)),
         }
     }
 
@@ -277,102 +259,102 @@ impl GolemCore {
 
 impl Core for GolemCore {
     fn init(&mut self) -> Result<(), Error> {
-        self.inner.init()
+        unsafe { &mut *self.inner.get() }.init()
     }
 
     fn name(&self) -> &str {
-        self.inner.name()
+        &self.name
     }
 
     fn reset(&mut self) -> Result<(), Error> {
-        self.inner.reset()
+        unsafe { &mut *self.inner.get() }.reset()
     }
 
     fn set_volume(&mut self, volume: u8) -> Result<(), Error> {
-        self.inner.set_volume(volume)
+        unsafe { &mut *self.inner.get() }.set_volume(volume)
     }
 
     fn set_rtc(&mut self, time: SystemTime) -> Result<(), Error> {
-        self.inner.set_rtc(time)
+        unsafe { &mut *self.inner.get() }.set_rtc(time)
     }
 
     fn screenshot(&self) -> Result<DynamicImage, Error> {
-        self.inner.screenshot()
+        unsafe { &mut *self.inner.get() }.screenshot()
     }
 
     fn save_state_mut(&mut self, slot: usize) -> Result<Option<&mut dyn SaveState>, Error> {
-        self.inner.save_state_mut(slot)
+        unsafe { &mut *self.inner.get() }.save_state_mut(slot)
     }
 
     fn save_state(&self, slot: usize) -> Result<Option<&dyn SaveState>, Error> {
-        self.inner.save_state(slot)
+        unsafe { &mut *self.inner.get() }.save_state(slot)
     }
 
     fn mounted_file_mut(&mut self, slot: usize) -> Result<Option<&mut dyn MountedFile>, Error> {
-        self.inner.mounted_file_mut(slot)
+        unsafe { &mut *self.inner.get() }.mounted_file_mut(slot)
     }
 
     fn send_rom(&mut self, rom: Rom) -> Result<(), Error> {
-        self.inner.send_rom(rom)
+        unsafe { &mut *self.inner.get() }.send_rom(rom)
     }
 
     fn send_bios(&mut self, bios: Bios) -> Result<(), Error> {
-        self.inner.send_bios(bios)
+        unsafe { &mut *self.inner.get() }.send_bios(bios)
     }
 
     fn key_up(&mut self, key: keyboard::Scancode) -> Result<(), Error> {
-        self.inner.key_up(key)
+        unsafe { &mut *self.inner.get() }.key_up(key)
     }
 
     fn key_down(&mut self, key: keyboard::Scancode) -> Result<(), Error> {
-        self.inner.key_down(key)
+        unsafe { &mut *self.inner.get() }.key_down(key)
     }
 
-    fn keys_set(&mut self, keys: &[keyboard::Scancode]) -> Result<(), Error> {
-        self.inner.keys_set(keys)
+    fn keys_set(&mut self, keys: keyboard::ScancodeSet) -> Result<(), Error> {
+        unsafe { &mut *self.inner.get() }.keys_set(keys)
     }
 
-    fn keys(&self) -> Result<&[keyboard::Scancode], Error> {
-        self.inner.keys()
+    fn keys(&self) -> Result<keyboard::ScancodeSet, Error> {
+        unsafe { &mut *self.inner.get() }.keys()
     }
 
     fn gamepad_button_up(&mut self, index: usize, button: gamepad::Button) -> Result<(), Error> {
-        self.inner.gamepad_button_up(index, button)
+        unsafe { &mut *self.inner.get() }.gamepad_button_up(index, button)
     }
 
     fn gamepad_button_down(&mut self, index: usize, button: gamepad::Button) -> Result<(), Error> {
-        self.inner.gamepad_button_down(index, button)
+        unsafe { &mut *self.inner.get() }.gamepad_button_down(index, button)
     }
 
     fn gamepad_buttons_set(
         &mut self,
         index: usize,
-        buttons: &[gamepad::Button],
+        buttons: gamepad::ButtonSet,
     ) -> Result<(), Error> {
-        self.inner.gamepad_buttons_set(index, buttons)
+        unsafe { &mut *self.inner.get() }.gamepad_buttons_set(index, buttons)
     }
 
-    fn gamepad_buttons(&self, index: usize) -> Result<Option<&[gamepad::Button]>, Error> {
-        self.inner.gamepad_buttons(index)
+    fn gamepad_buttons(&self, index: usize) -> Result<Option<gamepad::ButtonSet>, Error> {
+        unsafe { &mut *self.inner.get() }.gamepad_buttons(index)
     }
 
     fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
-        self.inner.menu()
+        unsafe { &mut *self.inner.get() }.menu()
     }
 
     fn trigger(&mut self, id: ConfigMenuId) -> Result<(), Error> {
-        self.inner.trigger(id)
+        unsafe { &mut *self.inner.get() }.trigger(id)
     }
 
     fn int_option(&mut self, id: ConfigMenuId, value: u32) -> Result<(), Error> {
-        self.inner.int_option(id, value)
+        unsafe { &mut *self.inner.get() }.int_option(id, value)
     }
 
     fn as_any(&self) -> &dyn Any {
-        self.inner.as_any()
+        unsafe { &mut *self.inner.get() }.as_any()
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
-        self.inner.as_any_mut()
+        unsafe { &mut *self.inner.get() }.as_any_mut()
     }
 }

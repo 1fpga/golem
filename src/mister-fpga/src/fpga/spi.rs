@@ -86,6 +86,16 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
+    pub fn write_read_32(&mut self, word1: u16, word2: u16, out: &mut u32) -> &mut Self {
+        let mut high: u16 = 0;
+        let mut low: u16 = 0;
+        self.write_read(word1, &mut low)
+            .write_read(word2, &mut high);
+        *out = (high as u32) << 16 | (low as u32);
+        self
+    }
+
+    #[inline]
     pub fn write_get(&mut self, word: u16) -> u16 {
         let mut out = 0;
         self.spi.write_read(word, &mut out);

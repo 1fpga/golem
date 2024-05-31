@@ -124,7 +124,7 @@ impl OsdDisplay {
             }
         };
 
-        for x in 0..256 {
+        for x in 0..(size.width as i32) {
             line_buffer[x as usize] = px(x, y)
                 + (px(x, y + 1) << 1)
                 + (px(x, y + 2) << 2)

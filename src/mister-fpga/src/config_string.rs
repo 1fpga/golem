@@ -15,7 +15,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tracing::debug;
 
-use golem_core::core::CoreMenuItem;
+use one_fpga::core::CoreMenuItem;
 pub use types::*;
 
 use crate::fpga::user_io;

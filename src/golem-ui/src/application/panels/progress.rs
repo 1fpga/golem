@@ -1,5 +1,5 @@
 use crate::application::GoLEmApp;
-use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
 use embedded_graphics::geometry::{Dimensions, Point, Size};
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -146,9 +146,9 @@ pub fn progress_bar(
     let mut last_update = std::time::Instant::now();
 
     app.event_loop(|app, _state| {
-        let buffer = app.main_buffer();
-        buffer.clear(BinaryColor::Off).unwrap();
-        layout.draw(buffer).unwrap();
+        let mut buffer = app.main_buffer().color_converted();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(&mut buffer);
 
         let now = std::time::Instant::now();
         let elapsed = now - last_update;

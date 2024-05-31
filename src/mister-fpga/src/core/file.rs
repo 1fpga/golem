@@ -26,7 +26,7 @@ enum SdMountFileInner {
     },
 }
 
-impl golem_core::core::MountedFile for SdMountFileInner {}
+impl one_fpga::core::MountedFile for SdMountFileInner {}
 
 impl Read for SdMountFileInner {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
@@ -196,7 +196,7 @@ impl SdCard {
         &mut self.inner
     }
 
-    pub fn as_mounted(&mut self) -> &'_ mut dyn golem_core::core::MountedFile {
+    pub fn as_mounted(&mut self) -> &'_ mut dyn one_fpga::core::MountedFile {
         &mut self.inner
     }
 }

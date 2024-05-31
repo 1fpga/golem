@@ -6,7 +6,6 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
-    "compile": "swc src --out-dir dist",
     "retronomicon-update": "openapi-typescript https://retronomicon.land/api/v1/openapi.json -o ./types/retronomicon.d.ts"
   },
   "keywords": [],
@@ -15,8 +14,6 @@
   "devDependencies": {
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
-    "@swc/cli": "^0.3.12",
-    "@swc/core": "^1.5.5",
     "openapi-typescript": "^6.7.5",
     "prettier": "^3.2.5",
     "rollup": "^4.17.2",

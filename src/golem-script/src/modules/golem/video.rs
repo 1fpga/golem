@@ -1,9 +1,8 @@
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
-use golem_core::Core;
+use one_fpga::Core;
 use std::str::FromStr;
 
-use golem_ui::platform::GoLEmPlatform;
 use mister_fpga::config::edid::DefaultVideoMode;
 use mister_fpga::core::MisterFpgaCore;
 

@@ -92,7 +92,6 @@ fn main() {
     let mut core = MisterFpgaCore::new(fpga.clone()).expect("Could not create the core");
 
     core.init().unwrap();
-    core.init_video(&options, false).unwrap();
     core.send_volume(opts.volume).unwrap();
     core.spi_mut().execute(UserIoButtonSwitch::new()).unwrap();
     core.send_rtc().unwrap();

@@ -1,65 +1,19 @@
-use std::time::Duration;
-
-use tracing::{error, warn};
-
-use cyclone_v::memory::MemoryMapper;
-#[cfg(target_os = "linux")]
-use linux as private;
-
 use crate::config;
 use crate::config::aspect::AspectRatio;
 use crate::config::edid::CustomVideoMode;
 use crate::config::resolution::Resolution;
 use crate::fpga::user_io::UserIoCommands;
 use crate::fpga::Spi;
+use cyclone_v::memory::MemoryMapper;
+use std::time::Duration;
+use tracing::{debug, error, info, warn};
 
-#[cfg(target_os = "linux")]
 mod linux;
-
-#[cfg(not(target_os = "linux"))]
-mod private {
-    use tracing::debug;
-
-    use cyclone_v::memory::MemoryMapper;
-
-    use crate::config;
-    use crate::config::aspect::AspectRatio;
-    use crate::config::edid::CustomVideoMode;
-    use crate::fpga::Spi;
-
-    pub fn hdmi_config_init(config: &config::MisterConfig) -> Result<(), String> {
-        debug!(?config, "HDMI configuration not supported on this platform");
-        Ok(())
-    }
-
-    pub fn init_mode(
-        options: &config::MisterConfig,
-        _core: &mut crate::core::MisterFpgaCore,
-        _is_menu: bool,
-    ) -> Result<(), String> {
-        debug!(
-            ?options,
-            "Video mode configuration not supported on this platform"
-        );
-        Ok(())
-    }
-
-    pub fn select_mode(
-        _mode: CustomVideoMode,
-        _direct_video: bool,
-        _aspect_ratio_1: Option<AspectRatio>,
-        _aspect_ratio_2: Option<AspectRatio>,
-        _spi: &mut Spi<impl MemoryMapper>,
-        _is_menu: bool,
-    ) -> Result<(), String> {
-        Ok(())
-    }
-}
 
 /// Initialize the video Hardware configuration.
 // TODO: this should not take the whole config but a subset of it related only to video.
 pub fn init(options: &config::MisterConfig) {
-    if let Err(error) = private::hdmi_config_init(options) {
+    if let Err(error) = linux::hdmi_config_init(options) {
         error!("Failed to initialize HDMI configuration: {}", error);
         warn!("This is not a fatal error, the application will continue to run.");
     }
@@ -73,7 +27,7 @@ pub fn select_mode(
     spi: &mut Spi<impl MemoryMapper>,
     is_menu: bool,
 ) -> Result<(), String> {
-    private::select_mode(
+    linux::select_mode(
         mode,
         direct_video,
         aspect_ratio_1,
@@ -85,19 +39,27 @@ pub fn select_mode(
 
 pub fn init_mode(
     options: &config::MisterConfig,
-    core: &mut crate::core::MisterFpgaCore,
+    fpga: &mut crate::fpga::MisterFpga,
     is_menu: bool,
 ) {
-    if !is_menu {
-        return;
-    }
-    if let Err(error) = private::init_mode(options, core, is_menu) {
-        error!("Failed to initialize video mode: {}", error);
-        warn!("This is not a fatal error, the application will continue to run.");
+    if is_menu {
+        info!("Initializing video mode for menu");
+
+        if let Err(error) = linux::init_mode_menu(options, fpga) {
+            error!("Failed to initialize video mode: {}", error);
+            warn!("This is not a fatal error, the application will continue to run.");
+        }
+    } else {
+        info!("Initializing video mode for core");
+
+        if let Err(error) = linux::init_mode_core(options, fpga) {
+            error!("Failed to initialize video mode: {}", error);
+            warn!("This is not a fatal error, the application will continue to run.");
+        }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct VideoInfo {
     resolution: Resolution,
     aspect_ratio: AspectRatio,
@@ -108,6 +70,10 @@ pub struct VideoInfo {
     ptime_ms: u32,
     ctime_ms: u32,
     vtimeh: u32,
+
+    pixerep: u16,
+    de_h: u16,
+    de_v: u16,
 
     arx: u16,
     ary: u16,
@@ -129,53 +95,64 @@ pub const UIO_GET_VRES: u16 = 0x23;
 pub const UIO_GET_FB_PAR: u16 = 0x40;
 
 impl VideoInfo {
+    fn read_video(&mut self, spi: &mut Spi<impl MemoryMapper>) -> Result<(), String> {
+        let mut command = spi.command(UserIoCommands::UserIoGetVres);
+
+        command.write_read(0, &mut self.res);
+        let mut resx = 0;
+        let mut resy = 0;
+        command
+            .write_read_32(0, 0, &mut resx)
+            .write_read_32(0, 0, &mut resy);
+        self.resolution = Resolution::new(resx as u16, resy as u16);
+        self.aspect_ratio = self.resolution.aspect_ratio();
+        command
+            .write_read_32(0, 0, &mut self.htime_ms)
+            .write_read_32(0, 0, &mut self.vtime_ms)
+            .write_read_32(0, 0, &mut self.ptime_ms)
+            .write_read_32(0, 0, &mut self.vtimeh)
+            .write_read_32(0, 0, &mut self.ctime_ms)
+            .write_read(0, &mut self.pixerep)
+            .write_read(0, &mut self.de_h)
+            .write_read(0, &mut self.de_v);
+
+        self.interlaced = (self.res & 0x100) != 0;
+        self.rotated = (self.res & 0x200) != 0;
+        Ok(())
+    }
+
+    fn read_fb_param(&mut self, spi: &mut Spi<impl MemoryMapper>) -> Result<(), String> {
+        let mut command = spi.command_read(UserIoCommands::UserIoGetFbParams, &mut self.fb_crc);
+
+        command.write_read(0, &mut self.arx);
+        self.arxy = !!(self.arx & 0x1000);
+        self.arx &= 0xFFF;
+        command.write_read(0, &mut self.ary);
+        self.ary &= 0xFFF;
+
+        command.write_read(0, &mut self.fb_fmt);
+        command.write_read(0, &mut self.fb_width);
+        command.write_read(0, &mut self.fb_height);
+        self.fb_en = !!(self.fb_fmt & 0x40);
+        Ok(())
+    }
+
     /// Create a video info from the FPGA.
     pub(crate) fn create(spi: &mut Spi<impl MemoryMapper>) -> Result<Self, String> {
         let mut result = VideoInfo::default();
+        result.read_video(spi)?;
+        result.read_fb_param(spi)?;
 
-        {
-            let mut command = spi.command(UserIoCommands::UserIoGetVres);
-            let mut new_res = 0;
-            command.write_read(0, &mut new_res);
-            let mut read_u32 = || {
-                let mut high: u16 = 0;
-                let mut low: u16 = 0;
-                command.write_read(0, &mut low).write_read(0, &mut high);
-                (high as u32) << 16 | (low as u32)
-            };
-
-            result.res = new_res;
-            result.resolution = Resolution::new(read_u32() as u16, read_u32() as u16);
-            result.htime_ms = read_u32();
-            result.vtime_ms = read_u32();
-            result.ptime_ms = read_u32();
-            result.vtimeh = read_u32();
-            result.ctime_ms = read_u32();
-            result.interlaced = (new_res & 0x100) != 0;
-            result.rotated = (new_res & 0x200) != 0;
-        }
-
-        {
-            let mut crc: u16 = 0;
-            let mut command = spi.command_read(UserIoCommands::UserIoGetFbParams, &mut crc);
-
-            result.fb_crc = crc;
-            command.write_read(0, &mut result.arx);
-            result.arxy = !!(result.arx & 0x1000);
-            result.arx &= 0xFFF;
-            command.write_read(0, &mut result.ary);
-            result.ary &= 0xFFF;
-
-            command.write_read(0, &mut result.fb_fmt);
-            command.write_read(0, &mut result.fb_width);
-            command.write_read(0, &mut result.fb_height);
-            result.fb_en = !!(result.fb_fmt & 0x40);
-        }
+        debug!("VideoInfo: {:?}", result);
         Ok(result)
     }
 
     pub fn resolution(&self) -> Resolution {
         self.resolution
+    }
+
+    pub fn fb_resolution(&self) -> Resolution {
+        Resolution::new(self.fb_width, self.fb_height)
     }
 
     pub fn aspect_ratio(&self) -> AspectRatio {

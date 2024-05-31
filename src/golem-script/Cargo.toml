@@ -13,7 +13,7 @@ boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script"
 boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 de10-nano = { path = "../de10-nano" }
 diesel = { version = "2.1.5", features = ["sqlite", "extras"] }
-golem-core = { workspace = true }
+one-fpga = { workspace = true }
 golem-ui = { path = "../golem-ui", default-features = false }
 mister-fpga = { path = "../mister-fpga" }
 regex = "1.10.4"

@@ -41,7 +41,7 @@ impl GammaConfiguration {
 }
 
 fn video_fb_config(
-    mode: &config::video::edid::CustomVideoMode,
+    mode: &CustomVideoMode,
     fb_size: FramebufferSizeConfig,
     vscale_border: u16,
     direct_video: bool,
@@ -72,7 +72,7 @@ fn video_fb_config(
     let brd_y = vscale_border / fb_scale_y as u16;
     debug!("video_fb_config: fb_scale_x={}, fb_scale_y={}, fb_width={}, fb_height={}, brd_x={}, brd_y={}", fb_scale_x, fb_scale_y, width, height, brd_x, brd_y);
 
-    let (xoff, yoff) = if direct_video {
+    let (x_offset, y_offset) = if direct_video {
         ((mode.param.hbp - 3) as u16, (mode.param.vbp - 2) as u16)
     } else {
         (0, 0)
@@ -80,8 +80,8 @@ fn video_fb_config(
 
     spi.execute(SetFramebufferToLinux {
         n: 1,
-        xoff,
-        yoff,
+        x_offset,
+        y_offset,
         width,
         height,
         hact: mode.param.hact as u16,
@@ -91,10 +91,7 @@ fn video_fb_config(
     Ok(())
 }
 
-fn hdmi_config_set_mode(
-    direct_video: bool,
-    mode: &config::video::edid::CustomVideoMode,
-) -> Result<(), String> {
+fn hdmi_config_set_mode(direct_video: bool, mode: &CustomVideoMode) -> Result<(), String> {
     let vic_mode = mode.param.vic as u8;
     let pr_flags = if direct_video {
         0 // Automatic Pixel Repetition.
@@ -107,8 +104,8 @@ fn hdmi_config_set_mode(
     let sync_invert = ((!mode.param.hpol as u8) << 5) | ((!mode.param.vpol as u8) << 6);
 
     #[rustfmt::skip]
-        let init_data = [
-        (0x17, (0b00000010 | sync_invert)), // Aspect ratio 16:9 [1]=1, 4:3 [1]=0
+    let init_data = [
+        (0x17, 0b00000010 | sync_invert), // Aspect ratio 16:9 [1]=1, 4:3 [1]=0
         (0x3B, pr_flags),
         (0x3C, vic_mode),                   // VIC
     ];
