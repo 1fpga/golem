@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use boa_engine::class::Class;
 use boa_engine::value::TryFromJs;
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, JsValue, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
@@ -9,7 +10,10 @@ use one_fpga::runner::CoreLaunchInfo;
 
 use golem_ui::application::panels::core_loop::run_core_loop;
 
+use crate::modules::golem::core::js_core::JsCore;
 use crate::HostData;
+
+pub mod js_core;
 
 /// The core type from JavaScript.
 #[derive(Debug, Trace, Finalize, JsData)]
@@ -89,7 +93,11 @@ struct RunOptions {
     autoloop: Option<bool>,
 }
 
-fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
+fn run_(
+    options: RunOptions,
+    ContextData(app): ContextData<HostData>,
+    context: &mut Context,
+) -> JsResult<JsValue> {
     let app = app.app_mut();
     let mut core_options = match &options.core {
         CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path.to_std_string_escaped())),
@@ -124,10 +132,18 @@ fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
 
     if options.autoloop.unwrap_or(true) {
         run_core_loop(&mut *app, &mut core, options.showmenu.unwrap_or(true));
+        Ok(JsValue::undefined())
+    } else {
+        Ok(JsValue::Object(JsCore::from_data(
+            JsCore::new(core),
+            context,
+        )?))
     }
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
+    context.register_global_class::<JsCore>()?;
+
     Ok((
         js_string!("core"),
         [(js_string!("run"), run_.into_js_function_copied(context))].into_js_module(context),

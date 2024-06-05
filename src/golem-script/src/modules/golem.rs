@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use boa_engine::{js_string, Context, JsResult, JsString, Module};
+use boa_macros::js_str;
 
 use crate::module_loader::GolemModuleLoader;
 
@@ -26,7 +27,7 @@ pub(super) fn register_modules(
 
     for create_fn in modules.iter() {
         let (name, module) = create_fn(context)?;
-        let module_name = JsString::concat(&js_string!("@/golem/"), &name);
+        let module_name = JsString::concat(js_str!("@/golem/"), name.as_str());
         loader.insert_named(module_name, module);
     }
 

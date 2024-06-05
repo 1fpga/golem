@@ -5,7 +5,7 @@ use std::rc::Rc;
 use boa_engine::module::{ModuleLoader, Referrer, SimpleModuleLoader};
 use boa_engine::{Context, JsResult, JsString, Module};
 use boa_interop::embed_module;
-use boa_interop::loaders::{HashMapModuleLoader, MergeModuleLoader};
+use boa_interop::loaders::HashMapModuleLoader;
 
 /// A module loader that also understands "freestanding" modules and
 /// special resolution.
@@ -27,10 +27,9 @@ impl GolemModuleLoader {
     fn new_unchecked(root: PathBuf) -> Self {
         Self {
             named_modules: Rc::new(RefCell::new(HashMapModuleLoader::default())),
-            inner: Rc::new(MergeModuleLoader::new(
+            inner: Rc::new(
                 SimpleModuleLoader::new(root).expect("Could not find the script folder."),
-                GolemModuleLoader::default(),
-            )),
+            ),
         }
     }
 

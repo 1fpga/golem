@@ -91,7 +91,6 @@ pub fn run(
                 Some(script_path.as_ref()),
             );
 
-            // Can also pass a `Some(realm)` if you need to execute the module in another realm.
             Module::parse(source, None, &mut context)?
         }
         None => {
@@ -122,6 +121,7 @@ pub fn run(
     let main_fn = module
         .namespace(&mut context)
         .get(js_string!("main"), &mut context)?;
+
     let result = main_fn.as_callable().expect("Main was not callable").call(
         &JsValue::undefined(),
         &[],

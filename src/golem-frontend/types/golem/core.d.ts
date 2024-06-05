@@ -69,10 +69,15 @@ declare module "@/golem/core" {
 
   export interface GolemCore {
     /**
+     * Return the name of the core.
+     */
+    name(): String;
+
+    /**
      * The core's main loop. This function will return when the core is
      * unloaded by the user.
      */
-    loop(): void;
+    loop(showMenu?: boolean): void;
 
     /**
      * Take a screenshot. Output the screenshot to the given path.
@@ -85,5 +90,5 @@ declare module "@/golem/core" {
    * Starts a core with the given options.
    * @param options The options for the core.
    */
-  export function run(options: RunOptions): GolemCore | void;
+  export function run(options: RunOptions): GolemCore | null;
 }

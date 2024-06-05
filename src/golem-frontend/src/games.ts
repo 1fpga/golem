@@ -29,13 +29,17 @@ function start_game(game_id: number) {
     g.id,
   ]);
 
-  core.run({
+  const golem_core = core.run({
     core: { type: "path", path: "" + c.path },
     game: { type: "rom-path", path: "" + g.path },
     files: f.map((file) => "" + file.path),
-    autoloop: true,
-    showmenu: false,
+    autoloop: false,
   });
+  if (golem_core) {
+    console.log("Starting core: " + golem_core.name());
+
+    golem_core.loop(false);
+  }
 }
 
 export function games_menu() {
