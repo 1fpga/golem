@@ -102,22 +102,22 @@ pub fn hdmi_config_init(options: &MisterConfig) -> Result<(), String> {
         // Scan Info [1:0] b00 (No data). 0b01 TV. b10 PC. b11 None.
         (
             0x55,
-            (if options.hdmi_game_mode() {
+            if options.hdmi_game_mode() {
                 0b00010010
             } else {
                 0b00010000
-            }),
+            },
         ),
         // [5:4] Picture Aspect Ratio
         // [3:0] Active Portion Aspect Ratio b1000 = Same as Picture Aspect Ratio
         (
             0x56,
-            (0b00001000
+            0b00001000
                 + if options.hdr().is_enabled() {
                     0b11000000
                 } else {
                     0
-                }),
+                },
         ),
         // [7] IT Content. 0 - No. 1 - Yes (type set in register 0x59).
         // [6:4] Color space (ignored for RGB)
@@ -173,7 +173,7 @@ pub fn hdmi_config_init(options: &MisterConfig) -> Result<(), String> {
         // [0] must be b0!
         (
             0xAF,
-            (0b00000100 | (if options.dvi_mode() { 0 } else { 0b10 })),
+            0b00000100 | (if options.dvi_mode() { 0 } else { 0b10 }),
         ),
         // ADI required Write.
         (0xB9, 0x00),
@@ -411,37 +411,38 @@ fn hdmi_config_set_csc(device: &mut LinuxI2CDevice, options: &MisterConfig) -> R
     };
 
     // Pass to HDMI, use 0xA0 to set a mode of [-2..2] per ADV7513 programming guide
+    #[allow(unused_parens)]
     #[rustfmt::skip]
-        let csc_data: &[(u8, u8)] = &[
+    let csc_data: &[(u8, u8)] = &[
         // csc Coefficients, Channel A
         (0x18, if is_ypbpr { 0x86 } else { 0b10100000 | ((csc_int16[0] >> 8) & 0b00011111) as u8 }),
-        (0x19, if is_ypbpr { 0xDF } else { (csc_int16[0]) as u8 }),
-        (0x1A, if is_ypbpr { 0x1A } else { (csc_int16[1] >> 8) as u8 }),
-        (0x1B, if is_ypbpr { 0x3F } else { (csc_int16[1]) as u8 }),
-        (0x1C, if is_ypbpr { 0x1E } else { (csc_int16[2] >> 8) as u8 }),
-        (0x1D, if is_ypbpr { 0xE2 } else { (csc_int16[2]) as u8 }),
-        (0x1E, if is_ypbpr { 0x07 } else { (csc_int16[3] >> 8) as u8 }),
-        (0x1F, if is_ypbpr { 0xE7 } else { (csc_int16[3]) as u8 }),
+        (0x19, if is_ypbpr { 0xDF } else { (csc_int16[ 0]     ) as u8 }),
+        (0x1A, if is_ypbpr { 0x1A } else { (csc_int16[ 1] >> 8) as u8 }),
+        (0x1B, if is_ypbpr { 0x3F } else { (csc_int16[ 1]     ) as u8 }),
+        (0x1C, if is_ypbpr { 0x1E } else { (csc_int16[ 2] >> 8) as u8 }),
+        (0x1D, if is_ypbpr { 0xE2 } else { (csc_int16[ 2]     ) as u8 }),
+        (0x1E, if is_ypbpr { 0x07 } else { (csc_int16[ 3] >> 8) as u8 }),
+        (0x1F, if is_ypbpr { 0xE7 } else { (csc_int16[ 3]     ) as u8 }),
 
         // csc Coefficients, Channel B
-        (0x20, if is_ypbpr { 0x04 } else { (csc_int16[4] >> 8) as u8 }),
-        (0x21, if is_ypbpr { 0x1C } else { (csc_int16[4]) as u8 }),
-        (0x22, if is_ypbpr { 0x08 } else { (csc_int16[5] >> 8) as u8 }),
-        (0x23, if is_ypbpr { 0x11 } else { (csc_int16[5]) as u8 }),
-        (0x24, if is_ypbpr { 0x01 } else { (csc_int16[6] >> 8) as u8 }),
-        (0x25, if is_ypbpr { 0x91 } else { (csc_int16[6]) as u8 }),
-        (0x26, if is_ypbpr { 0x01 } else { (csc_int16[7] >> 8) as u8 }),
-        (0x27, if is_ypbpr { 0x00 } else { (csc_int16[7]) as u8 }),
+        (0x20, if is_ypbpr { 0x04 } else { (csc_int16[ 4] >> 8) as u8 }),
+        (0x21, if is_ypbpr { 0x1C } else { (csc_int16[ 4]     ) as u8 }),
+        (0x22, if is_ypbpr { 0x08 } else { (csc_int16[ 5] >> 8) as u8 }),
+        (0x23, if is_ypbpr { 0x11 } else { (csc_int16[ 5]     ) as u8 }),
+        (0x24, if is_ypbpr { 0x01 } else { (csc_int16[ 6] >> 8) as u8 }),
+        (0x25, if is_ypbpr { 0x91 } else { (csc_int16[ 6]     ) as u8 }),
+        (0x26, if is_ypbpr { 0x01 } else { (csc_int16[ 7] >> 8) as u8 }),
+        (0x27, if is_ypbpr { 0x00 } else { (csc_int16[ 7]     ) as u8 }),
 
         // csc Coefficients, Channel C
-        (0x28, if is_ypbpr { 0x1D } else { (csc_int16[8] >> 8) as u8 }),
-        (0x29, if is_ypbpr { 0xAE } else { (csc_int16[8]) as u8 }),
-        (0x2A, if is_ypbpr { 0x1B } else { (csc_int16[9] >> 8) as u8 }),
-        (0x2B, if is_ypbpr { 0x73 } else { (csc_int16[9]) as u8 }),
+        (0x28, if is_ypbpr { 0x1D } else { (csc_int16[ 8] >> 8) as u8 }),
+        (0x29, if is_ypbpr { 0xAE } else { (csc_int16[ 8]     ) as u8 }),
+        (0x2A, if is_ypbpr { 0x1B } else { (csc_int16[ 9] >> 8) as u8 }),
+        (0x2B, if is_ypbpr { 0x73 } else { (csc_int16[ 9]     ) as u8 }),
         (0x2C, if is_ypbpr { 0x06 } else { (csc_int16[10] >> 8) as u8 }),
-        (0x2D, if is_ypbpr { 0xDF } else { (csc_int16[10]) as u8 }),
+        (0x2D, if is_ypbpr { 0xDF } else { (csc_int16[10]     ) as u8 }),
         (0x2E, if is_ypbpr { 0x07 } else { (csc_int16[11] >> 8) as u8 }),
-        (0x2F, if is_ypbpr { 0xE7 } else { (csc_int16[11]) as u8 }),
+        (0x2F, if is_ypbpr { 0xE7 } else { (csc_int16[11]     ) as u8 }),
 
         // HDMI limited clamps
         (0xC0, (clip_min >> 8) as u8),
