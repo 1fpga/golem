@@ -91,7 +91,10 @@ fn video_fb_config(
     Ok(())
 }
 
-fn hdmi_config_set_mode(direct_video: bool, mode: &CustomVideoMode) -> Result<(), String> {
+fn hdmi_config_set_mode(
+    direct_video: bool,
+    mode: &config::video::edid::CustomVideoMode,
+) -> Result<(), String> {
     let vic_mode = mode.param.vic as u8;
     let pr_flags = if direct_video {
         0 // Automatic Pixel Repetition.
@@ -104,8 +107,8 @@ fn hdmi_config_set_mode(direct_video: bool, mode: &CustomVideoMode) -> Result<()
     let sync_invert = ((!mode.param.hpol as u8) << 5) | ((!mode.param.vpol as u8) << 6);
 
     #[rustfmt::skip]
-    let init_data = [
-        (0x17, 0b00000010 | sync_invert), // Aspect ratio 16:9 [1]=1, 4:3 [1]=0
+        let init_data = [
+        (0x17, (0b00000010 | sync_invert)), // Aspect ratio 16:9 [1]=1, 4:3 [1]=0
         (0x3B, pr_flags),
         (0x3C, vic_mode),                   // VIC
     ];

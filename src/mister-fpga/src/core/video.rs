@@ -1,19 +1,65 @@
+use std::time::Duration;
+
+use tracing::{error, warn};
+
+use cyclone_v::memory::MemoryMapper;
+#[cfg(target_os = "linux")]
+use linux as private;
+
 use crate::config;
 use crate::config::aspect::AspectRatio;
 use crate::config::edid::CustomVideoMode;
 use crate::config::resolution::Resolution;
 use crate::fpga::user_io::UserIoCommands;
 use crate::fpga::Spi;
-use cyclone_v::memory::MemoryMapper;
-use std::time::Duration;
-use tracing::{debug, error, info, warn};
 
+#[cfg(target_os = "linux")]
 mod linux;
+
+#[cfg(not(target_os = "linux"))]
+mod private {
+    use tracing::debug;
+
+    use cyclone_v::memory::MemoryMapper;
+
+    use crate::config;
+    use crate::config::aspect::AspectRatio;
+    use crate::config::edid::CustomVideoMode;
+    use crate::fpga::Spi;
+
+    pub fn hdmi_config_init(config: &config::MisterConfig) -> Result<(), String> {
+        debug!(?config, "HDMI configuration not supported on this platform");
+        Ok(())
+    }
+
+    pub fn init_mode(
+        options: &config::MisterConfig,
+        _core: &mut crate::core::MisterFpgaCore,
+        _is_menu: bool,
+    ) -> Result<(), String> {
+        debug!(
+            ?options,
+            "Video mode configuration not supported on this platform"
+        );
+        Ok(())
+    }
+
+    pub fn select_mode(
+        _mode: CustomVideoMode,
+        _direct_video: bool,
+        _aspect_ratio_1: Option<AspectRatio>,
+        _aspect_ratio_2: Option<AspectRatio>,
+        _spi: &mut Spi<impl MemoryMapper>,
+        _is_menu: bool,
+    ) -> Result<(), String> {
+        Ok(())
+    }
+}
 
 /// Initialize the video Hardware configuration.
 // TODO: this should not take the whole config but a subset of it related only to video.
 pub fn init(options: &config::MisterConfig) {
-    if let Err(error) = linux::hdmi_config_init(options) {
+    if let Err(error) = private::hdmi_config_init(options) {
         error!("Failed to initialize HDMI configuration: {}", error);
         warn!("This is not a fatal error, the application will continue to run.");
     }
@@ -27,7 +73,7 @@ pub fn select_mode(
     spi: &mut Spi<impl MemoryMapper>,
     is_menu: bool,
 ) -> Result<(), String> {
-    linux::select_mode(
+    private::select_mode(
         mode,
         direct_video,
         aspect_ratio_1,
@@ -39,27 +85,19 @@ pub fn select_mode(
 
 pub fn init_mode(
     options: &config::MisterConfig,
-    fpga: &mut crate::fpga::MisterFpga,
+    core: &mut crate::core::MisterFpgaCore,
     is_menu: bool,
 ) {
-    if is_menu {
-        info!("Initializing video mode for menu");
-
-        if let Err(error) = linux::init_mode_menu(options, fpga) {
-            error!("Failed to initialize video mode: {}", error);
-            warn!("This is not a fatal error, the application will continue to run.");
-        }
-    } else {
-        info!("Initializing video mode for core");
-
-        if let Err(error) = linux::init_mode_core(options, fpga) {
-            error!("Failed to initialize video mode: {}", error);
-            warn!("This is not a fatal error, the application will continue to run.");
-        }
+    if !is_menu {
+        return;
+    }
+    if let Err(error) = private::init_mode(options, core, is_menu) {
+        error!("Failed to initialize video mode: {}", error);
+        warn!("This is not a fatal error, the application will continue to run.");
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct VideoInfo {
     resolution: Resolution,
     aspect_ratio: AspectRatio,
@@ -97,43 +135,40 @@ pub const UIO_GET_FB_PAR: u16 = 0x40;
 impl VideoInfo {
     fn read_video(&mut self, spi: &mut Spi<impl MemoryMapper>) -> Result<(), String> {
         let mut command = spi.command(UserIoCommands::UserIoGetVres);
+        let new_res = command.get();
 
-        command.write_read(0, &mut self.res);
-        let mut resx = 0;
-        let mut resy = 0;
-        command
-            .write_read_32(0, 0, &mut resx)
-            .write_read_32(0, 0, &mut resy);
-        self.resolution = Resolution::new(resx as u16, resy as u16);
-        self.aspect_ratio = self.resolution.aspect_ratio();
-        command
-            .write_read_32(0, 0, &mut self.htime_ms)
-            .write_read_32(0, 0, &mut self.vtime_ms)
-            .write_read_32(0, 0, &mut self.ptime_ms)
-            .write_read_32(0, 0, &mut self.vtimeh)
-            .write_read_32(0, 0, &mut self.ctime_ms)
-            .write_read(0, &mut self.pixerep)
-            .write_read(0, &mut self.de_h)
-            .write_read(0, &mut self.de_v);
+        self.res = new_res;
+        self.resolution = Resolution::new(command.get_32() as u16, command.get_32() as u16);
+        self.htime_ms = command.get_32();
+        self.vtime_ms = command.get_32();
+        self.ptime_ms = command.get_32();
+        self.vtimeh = command.get_32();
+        self.ctime_ms = command.get_32();
+        self.interlaced = (new_res & 0x100) != 0;
+        self.rotated = (new_res & 0x200) != 0;
 
-        self.interlaced = (self.res & 0x100) != 0;
-        self.rotated = (self.res & 0x200) != 0;
+        self.pixerep = command.get();
+        self.de_h = command.get();
+        self.de_v = command.get();
+
         Ok(())
     }
 
     fn read_fb_param(&mut self, spi: &mut Spi<impl MemoryMapper>) -> Result<(), String> {
         let mut command = spi.command_read(UserIoCommands::UserIoGetFbParams, &mut self.fb_crc);
 
-        command.write_read(0, &mut self.arx);
+        self.arx = command.get();
         self.arxy = !!(self.arx & 0x1000);
         self.arx &= 0xFFF;
-        command.write_read(0, &mut self.ary);
+
+        self.ary = command.get();
         self.ary &= 0xFFF;
 
-        command.write_read(0, &mut self.fb_fmt);
-        command.write_read(0, &mut self.fb_width);
-        command.write_read(0, &mut self.fb_height);
+        self.fb_fmt = command.get();
+        self.fb_width = command.get();
+        self.fb_height = command.get();
         self.fb_en = !!(self.fb_fmt & 0x40);
+
         Ok(())
     }
 
@@ -143,7 +178,6 @@ impl VideoInfo {
         result.read_video(spi)?;
         result.read_fb_param(spi)?;
 
-        debug!("VideoInfo: {:?}", result);
         Ok(result)
     }
 
