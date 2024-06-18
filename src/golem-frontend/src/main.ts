@@ -4,11 +4,8 @@ import * as ui from "@/golem/ui";
 
 import { games_menu } from "./games";
 import { cores_menu } from "./cores";
+import { settings_menu } from "./settings";
 import { about } from "./about";
-
-function settings_menu() {
-  ui.alert("Settings", "Not implemented yet.");
-}
 
 function downloads_menu() {
   ui.alert("Downloads", "Not implemented yet.");
@@ -26,10 +23,23 @@ function main_menu() {
   ui.textMenu({
     title: "",
     items: [
-      { label: "Games...", select: games_menu, marker: games_lbl },
+      {
+        label: "Games...",
+        select: () => {
+          console.log("Games...");
+          return games_menu();
+        },
+        marker: games_lbl,
+      },
       { label: "Cores...", select: cores_menu, marker: cores_lbl },
       "---",
-      { label: "Settings...", select: settings_menu },
+      {
+        label: "Settings...",
+        select: () => {
+          console.log("Settings...");
+          return settings_menu();
+        },
+      },
       { label: "Downloads...", select: downloads_menu },
       "---",
       { label: "About", select: about },

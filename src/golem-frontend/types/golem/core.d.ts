@@ -8,7 +8,7 @@ declare module "@/golem/core" {
    * A path to a core file.
    */
   export interface CorePath {
-    type: "path";
+    type: "Path";
     path: string;
   }
 
@@ -21,7 +21,7 @@ declare module "@/golem/core" {
    * A path to a game ROM.
    */
   export interface GameRomPath {
-    type: "rom-path";
+    type: "RomPath";
     path: string;
   }
 
@@ -58,13 +58,13 @@ declare module "@/golem/core" {
     /**
      * Whether to show the core menu or not when launching. True by default.
      */
-    showmenu?: boolean;
+    showMenu?: boolean;
 
     /**
      * Whether to start a loop or to load the core and return it. Default
      * to true.
      */
-    autoloop?: boolean;
+    autoLoop?: boolean;
   }
 
   export interface GolemCore {

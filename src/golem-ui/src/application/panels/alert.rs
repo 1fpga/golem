@@ -86,7 +86,7 @@ pub fn show_error(app: &mut GoLEmApp, error: impl std::error::Error, recoverable
         true
     };
 
-    #[cfg(feature = "platform_de10")]
+    #[cfg(target_arch = "arm")]
     if reboot {
         unsafe {
             libc::reboot(libc::RB_AUTOBOOT);
@@ -154,7 +154,7 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
 
     let menu = SizedMenu::new(
         Size::new(128, 48),
-        Menu::with_style(" ", style::menu_style_simple())
+        Menu::with_style(" ", style::menu_style_simple(app.settings().menu_style()))
             .add_menu_items(&mut choices)
             .build(),
     );

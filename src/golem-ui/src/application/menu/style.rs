@@ -345,6 +345,35 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize, Hash, Eq)]
+pub enum MenuStyleFontSize {
+    #[serde(rename = "small", alias = "Small")]
+    Small,
+
+    #[default]
+    #[serde(rename = "medium", alias = "Medium")]
+    Medium,
+
+    #[serde(rename = "large", alias = "Large")]
+    Large,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct MenuStyleOptions {
+    pub(crate) font_size: MenuStyleFontSize,
+}
+
+impl MenuStyleOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_font_size(mut self, font_size: MenuStyleFontSize) -> Self {
+        self.font_size = font_size;
+        self
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct SimpleMenuTheme;
 
@@ -365,30 +394,41 @@ impl Theme for SimpleMenuTheme {
 }
 
 pub use selection_indicator::style::rectangle::Rectangle as RectangleIndicator;
+use serde::{Deserialize, Serialize};
 
 fn menu_style_inner<I: InputAdapterSource<R> + Default, R>(
+    options: MenuStyleOptions,
 ) -> MenuStyle<RectangleIndicator, I, AnimatedPosition, R, SimpleMenuTheme> {
+    let font = match options.font_size {
+        MenuStyleFontSize::Small => &ascii::FONT_5X8,
+        MenuStyleFontSize::Medium => &ascii::FONT_6X9,
+        MenuStyleFontSize::Large => &ascii::FONT_8X13,
+    };
+
     MenuStyle::new(SimpleMenuTheme)
         .with_input_adapter(I::default())
         .with_animated_selection_indicator(2)
         .with_selection_indicator(RectangleIndicator)
         .with_scrollbar_style(DisplayScrollbar::Auto)
         .with_title_font(&ascii::FONT_8X13)
-        .with_font(&ascii::FONT_5X8)
+        .with_font(font)
 }
 
-pub fn menu_style<R: MenuReturn + Copy>() -> MenuStyle<
+pub fn menu_style<R: MenuReturn + Copy>(
+    options: MenuStyleOptions,
+) -> MenuStyle<
     RectangleIndicator,
     SdlMenuInputAdapter<R>,
     AnimatedPosition,
     SdlMenuAction<R>,
     SimpleMenuTheme,
 > {
-    menu_style_inner()
+    menu_style_inner(options)
 }
 
 pub fn menu_style_simple<R: MenuReturn + Copy>(
+    options: MenuStyleOptions,
 ) -> MenuStyle<RectangleIndicator, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R, SimpleMenuTheme>
 {
-    menu_style_inner()
+    menu_style_inner(options)
 }

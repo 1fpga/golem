@@ -10,13 +10,13 @@ use std::str::FromStr;
 use tracing::info;
 
 #[derive(Debug, Clone, Hash, PartialEq)]
-pub struct MappingSettings {
+pub struct CommandSettings {
     cores: BTreeMap<String, BTreeMap<String, BTreeSet<Shortcut>>>,
 
     shortcuts: BTreeMap<String, BTreeSet<Shortcut>>,
 }
 
-impl Merge for MappingSettings {
+impl Merge for CommandSettings {
     fn merge(&mut self, other: Self) {
         for (k, v) in other.cores {
             let c = self.cores.entry(k).or_default();
@@ -31,7 +31,7 @@ impl Merge for MappingSettings {
     }
 }
 
-impl Serialize for MappingSettings {
+impl Serialize for CommandSettings {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         for (k, v) in &self.shortcuts {
@@ -47,7 +47,7 @@ impl Serialize for MappingSettings {
     }
 }
 
-impl<'de> Deserialize<'de> for MappingSettings {
+impl<'de> Deserialize<'de> for CommandSettings {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -74,7 +74,7 @@ impl<'de> Deserialize<'de> for MappingSettings {
     }
 }
 
-impl Default for MappingSettings {
+impl Default for CommandSettings {
     fn default() -> Self {
         let global_shortcuts = ShortcutCommand::globals();
 
@@ -93,7 +93,7 @@ impl Default for MappingSettings {
     }
 }
 
-impl MappingSettings {
+impl CommandSettings {
     pub fn all_commands(
         &self,
         core_name: &str,
@@ -214,7 +214,7 @@ impl MappingSettings {
 
 #[test]
 fn serializes() {
-    let settings = MappingSettings::default();
+    let settings = CommandSettings::default();
     let serialized = json5::to_string(&settings).unwrap();
     assert_eq!(
         serialized,

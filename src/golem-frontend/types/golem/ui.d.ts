@@ -9,13 +9,18 @@
  */
 declare module "@/golem/ui" {
   /**
+   * Represents the state of a text menu.
+   */
+  export type TextMenuState = {};
+
+  /**
    * Represents a textual menu item.
    */
   export interface TextMenuItem {
     label: string;
     marker?: string;
-    select?: () => any;
-    details?: () => any;
+    select?: (item: TextMenuItem) => any;
+    details?: (item: TextMenuItem) => any;
   }
 
   /**

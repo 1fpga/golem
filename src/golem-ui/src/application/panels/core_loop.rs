@@ -14,12 +14,14 @@ pub mod menu;
 
 fn commands_(app: &mut GoLEmApp, core: &GolemCore) -> Vec<(ShortcutCommand, Shortcut)> {
     let settings = app.settings();
-    settings
-        .inner()
-        .mappings()
-        .all_commands(core.name())
-        .flat_map(|(cmd, shortcut)| shortcut.into_iter().map(move |x| (cmd.clone(), x.clone())))
-        .collect::<Vec<_>>()
+    if let Some(mappings) = settings.inner().mappings() {
+        mappings
+            .all_commands(core.name())
+            .flat_map(|(cmd, shortcut)| shortcut.into_iter().map(move |x| (cmd.clone(), x.clone())))
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    }
 }
 
 fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {

@@ -35,6 +35,10 @@ impl std::fmt::Debug for HostData {
 }
 
 impl HostData {
+    pub fn app(&self) -> &GoLEmApp {
+        unsafe { self.app.as_ref().as_ref().unwrap() }
+    }
+
     pub fn app_mut(&self) -> &mut GoLEmApp {
         unsafe { self.app.as_mut().unwrap() }
     }

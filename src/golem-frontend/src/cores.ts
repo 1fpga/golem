@@ -31,7 +31,7 @@ function download_cores() {
 
 function start_core(db_core: { path: string }) {
   core.run({
-    core: { type: "path", path: db_core.path },
+    core: { type: "Path", path: db_core.path },
   });
 }
 
@@ -43,7 +43,7 @@ function select_core_file() {
 
   if (f !== undefined) {
     core.run({
-      core: { type: "path", path: f },
+      core: { type: "Path", path: f },
     });
   }
 }

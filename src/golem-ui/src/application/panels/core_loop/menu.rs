@@ -10,7 +10,6 @@ use tracing::error;
 
 mod core_debug;
 mod core_settings;
-pub mod input_mapping;
 mod items;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -112,7 +111,7 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
                 core_debug::debug_menu(app, c);
             }
             CoreMenuAction::InputMapping => {
-                input_mapping::menu_inner(app, &Some(c));
+                todo!();
             }
             CoreMenuAction::CoreMenuAction(action) => {
                 if let Some(_) = execute_core_settings(app, c, action) {

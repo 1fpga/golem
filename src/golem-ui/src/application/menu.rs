@@ -152,7 +152,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let show2 = !items_items.is_empty() && !suffix_items.is_empty();
     let show3 = show_back;
 
-    let mut menu_style = style::menu_style();
+    let mut menu_style = style::menu_style(app.settings().menu_style());
     if let Some(font) = title_font {
         menu_style = menu_style.with_title_font(font);
     }

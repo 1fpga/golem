@@ -30,9 +30,10 @@ function start_game(game_id: number) {
   ]);
 
   const golem_core = core.run({
-    core: { type: "path", path: "" + c.path },
-    game: { type: "rom-path", path: "" + g.path },
+    core: { type: "Path", path: "" + c.path },
+    game: { type: "RomPath", path: "" + g.path },
     files: f.map((file) => "" + file.path),
+    showMenu: false,
   });
   if (golem_core) {
     console.log("Starting core: " + golem_core.name());
