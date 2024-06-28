@@ -16,6 +16,7 @@ use embedded_text::TextBox;
 use sdl3::event::Event;
 use sdl3::gamepad::Button;
 use sdl3::keyboard::Keycode;
+use std::time::Instant;
 
 pub fn prompt(
     title: &str,
@@ -30,33 +31,31 @@ pub fn prompt(
         u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
         BinaryColor::On,
     );
-    let textbox_style = TextBoxStyleBuilder::new()
+    let messagebox_style = TextBoxStyleBuilder::new()
         .height_mode(HeightMode::FitToText)
-        .alignment(embedded_text::alignment::HorizontalAlignment::Justified)
+        .alignment(embedded_text::alignment::HorizontalAlignment::Left)
         .paragraph_spacing(1)
         .build();
 
     let text_style = MonoTextStyle::new(&ascii::FONT_8X13, BinaryColor::On);
-    let bottom_row = Size::new(
-        display_area.size.width,
-        text_style.font.character_size.height + 4,
-    );
+
+    let bottom_bar = bottom_bar(Some("Enter"), Some("Back"), None, None, None, None);
+    let bottom_row = bottom_bar.size();
 
     let bottom_area = Rectangle::new(
         display_area.top_left
             + Point::new(
                 0,
-                display_area.size.height as i32 - bottom_row.height as i32 + 1,
+                display_area.size.height as i32 - bottom_row.height as i32 - 1,
             ),
         bottom_row,
     );
 
-    let bottom_bar = bottom_bar(Some("Enter"), Some("Back"), None, None, None, None);
     let message_box = TextBox::with_textbox_style(
         message,
         display_area,
         character_style.clone(),
-        textbox_style.clone(),
+        messagebox_style.clone(),
     );
 
     let layout = LinearLayout::vertical(
@@ -88,6 +87,7 @@ pub fn prompt(
     .into_inner();
 
     let mut result = text;
+    let start = Instant::now();
 
     app.event_loop(move |app, state| {
         let mut text_box = Text::new(&result, Point::zero(), text_style);
@@ -98,7 +98,7 @@ pub fn prompt(
             .bottom_right()
             .unwrap_or(layout_bounds.top_left)
             .y
-            + 12;
+            + 20;
 
         text_box.position = if text_box_size.width < display_area.size.width - 4 {
             Point::new(2, text_box_y)
@@ -115,8 +115,23 @@ pub fn prompt(
         let _ = bottom_bar.draw(&mut buffer.sub_buffer(bottom_area));
         let _ = text_box.draw(buffer);
 
+        let delta = start.elapsed().as_millis() as u32;
+        if delta % 1000 < 500 {
+            let cursor = Line::new(
+                Point::new(
+                    text_box.position.x + text_box_size.width as i32,
+                    text_box_y + 3,
+                ),
+                Point::new(
+                    text_box.position.x + text_box_size.width as i32,
+                    text_box_y - 11,
+                ),
+            )
+            .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1));
+            let _ = cursor.draw(buffer);
+        }
+
         for ev in state.events() {
-            eprintln!("{:?}", ev);
             match ev {
                 Event::KeyDown {
                     keycode: Some(Keycode::Backspace),

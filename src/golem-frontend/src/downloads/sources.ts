@@ -23,9 +23,7 @@ export interface Source {
 
 export class Storage {
   get sources(): Source[] {
-    let sources = storage.get("downloadSources") || [];
-    console.log(JSON.stringify(sources));
-    return sources;
+    return storage.get("downloadSources") || [];
   }
 
   set sources(sources: Source[]) {
@@ -107,6 +105,7 @@ function manage_source(url: string) {
       },
     ],
   });
+  return true;
 }
 
 export function sources_menu() {
@@ -123,7 +122,7 @@ export function sources_menu() {
         "-",
         ...storage.sources.map((source) => ({
           label: source.baseUrl,
-          select: () => {},
+          select: () => manage_source(source.baseUrl),
         })),
       ],
     });

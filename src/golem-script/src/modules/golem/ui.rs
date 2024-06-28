@@ -1,4 +1,3 @@
-use boa_engine::object::builtins::JsArray;
 use boa_engine::value::TryFromJs;
 use boa_engine::{
     js_string, Context, Finalize, JsData, JsNativeError, JsObject, JsResult, JsString, JsValue,
@@ -185,7 +184,6 @@ fn text_menu_(
 
         fn call_callable(
             item: Option<&mut TextMenuItem>,
-            action: JsString,
             maybe_callable: JsValue,
             context: &mut Context,
         ) -> JsResult<Option<JsValue>> {
@@ -205,46 +203,33 @@ fn text_menu_(
                 };
 
                 if result.is_undefined() {
-                    return Ok(None);
+                    Ok(None)
+                } else {
+                    Ok(Some(result))
                 }
-                Ok(Some(result))
             } else {
-                Ok(Some(
-                    JsArray::from_iter([action.into(), maybe_callable], context).into(),
-                ))
+                Ok(Some(maybe_callable))
             }
         }
 
         match result {
             MenuAction::Select(i) => {
                 if let Some(select) = options.items[i].select.clone() {
-                    if let Some(v) = call_callable(
-                        Some(&mut options.items[i]),
-                        js_string!("select"),
-                        select,
-                        context,
-                    )? {
+                    if let Some(v) = call_callable(Some(&mut options.items[i]), select, context)? {
                         return Ok(v);
                     }
                 }
             }
             MenuAction::Details(i) => {
                 if let Some(details) = options.items[i].details.clone() {
-                    if let Some(v) = call_callable(
-                        Some(&mut options.items[i]),
-                        js_string!("select"),
-                        details,
-                        context,
-                    )? {
+                    if let Some(v) = call_callable(Some(&mut options.items[i]), details, context)? {
                         return Ok(v);
                     }
                 }
             }
             MenuAction::Sort => {
                 if let Some(maybe_callable) = options.sort.clone() {
-                    if let Some(v) =
-                        call_callable(None, js_string!("sort"), maybe_callable, context)?
-                    {
+                    if let Some(v) = call_callable(None, maybe_callable, context)? {
                         // In sort, we try to replace partial options with the result of the callable.
                         // If this doesn't work, we return the value.
                         let Ok(mut new_options): JsResult<UiMenuOptions> = v.try_js_into(context)
@@ -262,9 +247,7 @@ fn text_menu_(
             }
             MenuAction::Back => {
                 if let Some(maybe_callable) = options.back.clone() {
-                    if let Some(v) =
-                        call_callable(None, js_string!("back"), maybe_callable, context)?
-                    {
+                    if let Some(v) = call_callable(None, maybe_callable, context)? {
                         return Ok(v);
                     }
                 }
