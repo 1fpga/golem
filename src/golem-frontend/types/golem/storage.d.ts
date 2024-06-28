@@ -6,6 +6,14 @@
  */
 declare module "@/golem/storage" {
   /**
+   * Whether a value is in the storage.
+   *
+   * @param key The key to check.
+   * @returns `true` if the key is in the storage, `false` otherwise.
+   */
+  export function has(key: string): boolean;
+
+  /**
    * Retrieves a value from the storage.
    *
    * @param key The key to retrieve.

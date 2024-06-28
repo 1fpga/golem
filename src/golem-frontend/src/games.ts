@@ -68,7 +68,7 @@ export function games_menu() {
 
   ui.textMenu({
     title: "Games",
-    back: () => true,
+    back: true,
     sort_label: Object.keys(sortOptions)[current_sort],
     sort: () => {
       current_sort = (current_sort + 1) % Object.keys(sortOptions).length;

@@ -34,10 +34,6 @@ pub enum ShortcutCommand {
     /// the label stays the same. The hash is considered safe enough for this purpose
     /// (low risk of collision).
     CoreSpecificCommand(u32),
-
-    /// This is a JavaScript command, which is identified by a `u32` hash of its
-    /// label. This allows JavaScript to execute code on commands.
-    JavaScriptCommand(u32),
 }
 
 pub enum CommandResult {
@@ -59,7 +55,6 @@ impl Display for ShortcutCommand {
             ShortcutCommand::QuitCore => write!(f, "Quit Core"),
             ShortcutCommand::TakeScreenshot => write!(f, "Take Screenshot"),
             ShortcutCommand::CoreSpecificCommand(id) => write!(f, "Core Specific Command {id}"),
-            ShortcutCommand::JavaScriptCommand(id) => write!(f, "JavaScript Command {id}"),
         }
     }
 }
@@ -95,7 +90,6 @@ impl ShortcutCommand {
             ShortcutCommand::QuitCore => Some("quit_core"),
             ShortcutCommand::TakeScreenshot => Some("take_screenshot"),
             ShortcutCommand::CoreSpecificCommand(_) => None,
-            ShortcutCommand::JavaScriptCommand(_) => None,
         }
     }
 
@@ -106,7 +100,6 @@ impl ShortcutCommand {
             ShortcutCommand::QuitCore => Some(Shortcut::default().with_key(Scancode::F10)),
             ShortcutCommand::TakeScreenshot => Some(Shortcut::default().with_key(Scancode::SysReq)),
             ShortcutCommand::CoreSpecificCommand(_) => None,
-            ShortcutCommand::JavaScriptCommand(_) => None,
         }
     }
 
@@ -196,10 +189,6 @@ impl ShortcutCommand {
                     warn!("Core-specific command {} not found", id);
                     CommandResult::Err("Core-specific command not found".to_string())
                 }
-            }
-            ShortcutCommand::JavaScriptCommand(id) => {
-                error!("Not implemented. Command ID: {}", id);
-                CommandResult::Err("Not implemented".to_string())
             }
         }
     }

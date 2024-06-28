@@ -24,7 +24,7 @@ export function about() {
 
   ui.textMenu({
     title: "About",
-    back: () => true,
+    back: true,
     items: [
       {
         label: "< Join the GoLEm FPGA Patreon >",

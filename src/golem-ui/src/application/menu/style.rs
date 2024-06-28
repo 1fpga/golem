@@ -21,7 +21,7 @@ const MENU_ITEMS_PER_PAGE: usize = 10;
 
 /// The action performed by a user. This is used as the return value
 /// for the menu.
-#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Default, Copy, Debug, Clone, Eq, PartialEq)]
 pub enum SdlMenuAction<R> {
     /// The user pressed the "A" button equivalent.
     Select(R),
@@ -33,6 +33,9 @@ pub enum SdlMenuAction<R> {
     /// This can be used to start a filter action, which is normally not possible
     /// using a controller.
     KeyPress(Keycode),
+
+    /// Text was inputted. Can be up to 32 `c_char`, which can be up to 4 characters.
+    TextInput([char; 4]),
 
     /// The user pressed the "B" button equivalent.
     #[default]
@@ -49,8 +52,25 @@ impl<R> SdlMenuAction<R> {
             SdlMenuAction::Select(_) => None,
             SdlMenuAction::ShowOptions => Some(SdlMenuAction::ShowOptions),
             SdlMenuAction::KeyPress(kc) => Some(SdlMenuAction::KeyPress(*kc)),
+            SdlMenuAction::TextInput(t) => Some(SdlMenuAction::TextInput(*t)),
             SdlMenuAction::Back => Some(SdlMenuAction::Back),
             SdlMenuAction::ChangeSort => Some(SdlMenuAction::ChangeSort),
+        }
+    }
+
+    pub fn as_text_input(&self) -> Option<String> {
+        match self {
+            SdlMenuAction::TextInput(t) => {
+                let mut s = String::new();
+                for c in t.iter() {
+                    if *c == 0 as char {
+                        break;
+                    }
+                    s.push(*c);
+                }
+                Some(s)
+            }
+            _ => None,
         }
     }
 }
@@ -171,6 +191,17 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
 
                 kc => Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into(),
             },
+
+            Event::TextInput { text, .. } => {
+                let mut ch = text.chars();
+                let t = [
+                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or(0 as char),
+                ];
+                Interaction::Action(Action::Return(SdlMenuAction::TextInput(t))).into()
+            }
 
             Event::ControllerButtonDown { button, .. } => match button {
                 Button::A => Interaction::Action(Action::Select).into(),
@@ -401,8 +432,8 @@ fn menu_style_inner<I: InputAdapterSource<R> + Default, R>(
 ) -> MenuStyle<RectangleIndicator, I, AnimatedPosition, R, SimpleMenuTheme> {
     let font = match options.font_size {
         MenuStyleFontSize::Small => &ascii::FONT_5X8,
-        MenuStyleFontSize::Medium => &ascii::FONT_6X9,
-        MenuStyleFontSize::Large => &ascii::FONT_8X13,
+        MenuStyleFontSize::Medium => &ascii::FONT_6X10,
+        MenuStyleFontSize::Large => &ascii::FONT_8X13_BOLD,
     };
 
     MenuStyle::new(SimpleMenuTheme)

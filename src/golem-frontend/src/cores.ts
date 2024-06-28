@@ -9,7 +9,7 @@ function download_cores() {
 
   ui.textMenu({
     title: "Download Cores",
-    back: () => true,
+    back: true,
     items: cores.map((core) => ({
       label: "" + core.name,
       select: () => {
@@ -52,7 +52,7 @@ export function cores_menu() {
   const cores = db.query("SELECT * FROM cores");
   ui.textMenu({
     title: "Cores",
-    back: () => true,
+    back: true,
     items: [
       ...cores.map((core) => ({
         label: "" + core.name,

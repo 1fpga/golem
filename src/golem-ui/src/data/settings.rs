@@ -1,7 +1,7 @@
 use crate::application::menu::style::{MenuStyleFontSize, MenuStyleOptions};
 use crate::data::paths;
 use bus::{Bus, BusReader};
-use mappings::CommandSettings;
+use commands::CommandSettings;
 use merge::Merge;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,7 @@ use std::time::Duration;
 use strum::Display;
 use tracing::{debug, error};
 
-pub mod mappings;
+pub mod commands;
 
 fn default_retronomicon_backend_() -> Vec<Url> {
     vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
@@ -51,28 +51,23 @@ fn create_settings_save_thread_(
 pub enum DateTimeFormat {
     /// The default local format for datetime (respecting Locale).
     #[default]
+    #[serde(rename = "default", alias = "Default")]
     Default,
 
     /// Short locale format.
+    #[serde(rename = "short", alias = "Short")]
     Short,
 
     /// Only show the time.
+    #[serde(rename = "timeOnly", alias = "TimeOnly", alias = "time")]
     TimeOnly,
 
     /// Hide the datetime.
+    #[serde(rename = "hidden", alias = "Hidden", alias = "off")]
     Hidden,
 }
 
 impl DateTimeFormat {
-    pub fn next(&self) -> Self {
-        match self {
-            DateTimeFormat::Default => DateTimeFormat::Short,
-            DateTimeFormat::Short => DateTimeFormat::TimeOnly,
-            DateTimeFormat::TimeOnly => DateTimeFormat::Hidden,
-            DateTimeFormat::Hidden => DateTimeFormat::Default,
-        }
-    }
-
     pub fn time_format(&self) -> String {
         match self {
             DateTimeFormat::Default => "%c".to_string(),
@@ -320,14 +315,6 @@ impl Settings {
         let ui = inner.ui.get_or_insert(UiSettings::default());
         let current = ui.invert_toolbar.unwrap_or_default();
         ui.invert_toolbar = Some(!current);
-    }
-
-    #[inline]
-    pub fn toggle_toolbar_datetime_format(&self) {
-        let mut inner = self.inner.write().unwrap();
-        let ui = inner.ui.get_or_insert(UiSettings::default());
-        let current = ui.toolbar_datetime_format.unwrap_or_default();
-        ui.toolbar_datetime_format = Some(current.next());
     }
 
     pub fn update_from_json(&self, json: serde_json::Value) -> Result<(), String> {

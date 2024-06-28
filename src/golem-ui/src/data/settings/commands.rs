@@ -1,19 +1,18 @@
 use crate::input::commands::ShortcutCommand;
 use crate::input::shortcut::Shortcut;
-use either::Either;
 use merge::Merge;
 use mister_fpga::config_string::ConfigMenu;
-use serde::ser::SerializeMap;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 use tracing::info;
 
-#[derive(Debug, Clone, Hash, PartialEq)]
+#[derive(Debug, Clone, Hash, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CommandSettings {
+    #[serde(rename = "perCore")]
     cores: BTreeMap<String, BTreeMap<String, BTreeSet<Shortcut>>>,
-
-    shortcuts: BTreeMap<String, BTreeSet<Shortcut>>,
+    commands: BTreeMap<String, BTreeSet<Shortcut>>,
 }
 
 impl Merge for CommandSettings {
@@ -25,52 +24,9 @@ impl Merge for CommandSettings {
             }
         }
 
-        for (k, mut v) in other.shortcuts {
-            self.shortcuts.entry(k).or_default().append(&mut v);
+        for (k, mut v) in other.commands {
+            self.commands.entry(k).or_default().append(&mut v);
         }
-    }
-}
-
-impl Serialize for CommandSettings {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        for (k, v) in &self.shortcuts {
-            if v.is_empty() {
-                continue;
-            } else if v.len() == 1 {
-                map.serialize_entry(k, &v.first().unwrap())?;
-            } else {
-                map.serialize_entry(k, v)?;
-            }
-        }
-        map.end()
-    }
-}
-
-impl<'de> Deserialize<'de> for CommandSettings {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(serde::Deserialize)]
-        #[serde(transparent)]
-        struct StringOrVec(#[serde(with = "either::serde_untagged")] Either<String, Vec<String>>);
-
-        let mut result = Self::default();
-        let deser = BTreeMap::<String, StringOrVec>::deserialize(deserializer)?;
-
-        for (k, v) in deser {
-            let v = v.0.either(|x| vec![x], |x| x);
-            let mut shortcuts = BTreeSet::new();
-            for s in v {
-                if let Ok(shortcut) = Shortcut::from_str(&s) {
-                    shortcuts.insert(shortcut);
-                }
-            }
-            result.shortcuts.insert(k, shortcuts);
-        }
-
-        Ok(result)
     }
 }
 
@@ -80,7 +36,7 @@ impl Default for CommandSettings {
 
         Self {
             cores: BTreeMap::new(),
-            shortcuts: global_shortcuts
+            commands: global_shortcuts
                 .into_iter()
                 .filter_map(|k| {
                     Some((
@@ -109,7 +65,7 @@ impl CommandSettings {
                     )
                 })
             })
-            .chain(self.shortcuts.iter().filter_map(|(cmd, shortcut)| {
+            .chain(self.commands.iter().filter_map(|(cmd, shortcut)| {
                 ShortcutCommand::from_str(cmd)
                     .ok()
                     .map(|cmd| (cmd, shortcut.iter().collect::<Vec<_>>()))
@@ -140,7 +96,7 @@ impl CommandSettings {
                     None
                 }
             }
-            _ => self.shortcuts.get(command.setting_name()?),
+            _ => self.commands.get(command.setting_name()?),
         }
     }
 
@@ -160,7 +116,7 @@ impl CommandSettings {
             }
             other => {
                 if let Some(x) = other.setting_name() {
-                    if let Some(x) = self.shortcuts.get_mut(x) {
+                    if let Some(x) = self.commands.get_mut(x) {
                         x.retain(|x| *x != shortcut);
                     }
                 }
@@ -182,7 +138,7 @@ impl CommandSettings {
             }
             other => {
                 if let Some(x) = other.setting_name() {
-                    self.shortcuts.remove(x);
+                    self.commands.remove(x);
                 }
             }
         }
@@ -204,7 +160,7 @@ impl CommandSettings {
     pub fn add(&mut self, command: ShortcutCommand, shortcut: Shortcut) {
         info!("Adding shortcut `{shortcut:?}` to global command {command}");
         if let Some(name) = command.setting_name() {
-            self.shortcuts
+            self.commands
                 .entry(name.to_string())
                 .or_default()
                 .insert(shortcut);

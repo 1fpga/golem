@@ -7,6 +7,7 @@ use boa_engine::{
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 
 use golem_ui::application::menu;
+use golem_ui::application::panels::prompt::prompt;
 
 use crate::HostData;
 
@@ -288,6 +289,22 @@ fn alert_(
     golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
 }
 
+fn prompt_(
+    message: String,
+    title: Option<String>,
+    ContextData(data): ContextData<HostData>,
+) -> Option<JsString> {
+    // Swap title and message if title is specified.
+    let (message, title) = if let Some(t) = title {
+        (t, message)
+    } else {
+        (message, "".to_string())
+    };
+
+    let app = data.app_mut();
+    prompt(&title, &message, String::new(), 512, app).map(|r| r.into())
+}
+
 fn show_(message: String, title: Option<String>, ContextData(host_defined): ContextData<HostData>) {
     // Swap title and message if title is specified.
     let (message, title) = if let Some(t) = title {
@@ -323,11 +340,15 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
         js_string!("ui"),
         [
             (js_string!("alert"), alert_.into_js_function_copied(context)),
-            (js_string!("show"), show_.into_js_function_copied(context)),
+            (
+                js_string!("prompt"),
+                prompt_.into_js_function_copied(context),
+            ),
             (
                 js_string!("qrCode"),
                 qr_code_.into_js_function_copied(context),
             ),
+            (js_string!("show"), show_.into_js_function_copied(context)),
             (
                 js_string!("textMenu"),
                 text_menu_.into_js_function_copied(context),

@@ -29,7 +29,7 @@ declare module "@/golem/ui" {
   export interface TextMenuOptions<R> {
     title?: String;
     items: (string | TextMenuItem)[];
-    back?: () => R;
+    back?: R | (() => R);
     sort?: () => Partial<TextMenuOptions<R>> | void;
     sort_label?: string;
   }
@@ -47,6 +47,13 @@ declare module "@/golem/ui" {
    */
   export function alert(message: string): void;
   export function alert(title: string, message: string): void;
+
+  /**
+   * Show a prompt to the user, with OK.
+   * @returns The user input, or `undefined` if the user canceled the operation.
+   */
+  export function prompt(message: string): undefined | string;
+  export function prompt(title: string, message: string): undefined | string;
 
   /**
    * Update the UI but don't let the user interact with it.
