@@ -1,12 +1,12 @@
 import * as storage from "@/golem/storage";
 import * as ui from "@/golem/ui";
 
-import { sources_menu } from "./sources";
+import { sources_menu, Storage } from "./sources";
 
-export function downloads_menu() {
-  const sources = storage.get("downloadSources") || [];
+export async function downloads_menu() {
+  const sources = new Storage().sources;
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "Download Center",
     back: true,
     items: [

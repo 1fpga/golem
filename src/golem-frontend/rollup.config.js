@@ -7,10 +7,10 @@ import json from "@rollup/plugin-json";
 export default {
   input: "src/main.ts",
   output: {
-    file: "dist/main.js",
+    dir: "dist/",
     format: "es",
   },
-  plugins: [commonjs(), json(), typescript(), nodeResolve(), terser()],
+  plugins: [commonjs(), json(), typescript(), nodeResolve(), terser({})],
   external: [
     "@/golem/core",
     "@/golem/db",

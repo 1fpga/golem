@@ -8,7 +8,7 @@ import { settings_menu } from "./settings";
 import { downloads_menu } from "./downloads";
 import { about } from "./about";
 
-function main_menu() {
+async function main_menu() {
   const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")
     ?.count as number;
   const nb_cores = db.queryOne("SELECT COUNT(*) as count FROM cores")
@@ -17,7 +17,7 @@ function main_menu() {
   const games_lbl = nb_games > 0 ? `(${nb_games})` : "";
   const cores_lbl = nb_cores > 0 ? `(${nb_cores})` : "";
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "",
     items: [
       {
@@ -40,13 +40,11 @@ function main_menu() {
   });
 }
 
-export function main() {
-  while (true) {
-    try {
-      return main_menu();
-    } catch (e: any) {
-      console.error(e);
-      ui.alert("Error", e.message);
-    }
+export async function main() {
+  try {
+    return await main_menu();
+  } catch (e: any) {
+    console.error(e);
+    ui.alert("Error", e.message);
   }
 }

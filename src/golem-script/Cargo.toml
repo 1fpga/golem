@@ -6,13 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-boa_engine = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_engine = { git = "https://github.com/hansl/boa.git", branch = "golem-script", features = ["either"] }
 boa_gc = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
+boa_profiler = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 de10-nano = { path = "../de10-nano" }
 diesel = { version = "2.1.5", features = ["sqlite", "extras"] }
+either = "1"
 one-fpga = { workspace = true }
 golem-ui = { path = "../golem-ui", default-features = false }
 mister-fpga = { path = "../mister-fpga" }

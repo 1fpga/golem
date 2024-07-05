@@ -42,7 +42,7 @@ function start_game(game_id: number) {
   }
 }
 
-export function games_menu() {
+export async function games_menu() {
   const sortOptions = {
     "Name (A-Z)": "name ASC",
     "Name (Z-A)": "name DESC",
@@ -66,7 +66,7 @@ export function games_menu() {
     }));
   }
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "Games",
     back: true,
     sort_label: Object.keys(sortOptions)[current_sort],

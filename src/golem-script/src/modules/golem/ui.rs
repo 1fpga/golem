@@ -1,9 +1,12 @@
+use boa_engine::builtins::promise::PromiseState;
+use boa_engine::object::builtins::JsPromise;
 use boa_engine::value::TryFromJs;
 use boa_engine::{
-    js_string, Context, Finalize, JsData, JsNativeError, JsObject, JsResult, JsString, JsValue,
-    Module, Trace, TryIntoJsResult,
+    js_string, Context, Finalize, JsData, JsError, JsNativeError, JsObject, JsResult, JsString,
+    JsValue, Module, Trace, TryIntoJsResult,
 };
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
+use either::Either;
 
 use golem_ui::application::menu;
 use golem_ui::application::panels::prompt::prompt;
@@ -157,7 +160,7 @@ fn text_menu_(
     mut options: UiMenuOptions,
     ContextData(host_defined): ContextData<HostData>,
     context: &mut Context,
-) -> JsResult<JsValue> {
+) -> JsResult<JsPromise> {
     let app = host_defined.app_mut();
 
     let mut state = menu::GolemMenuState::default();
@@ -188,7 +191,7 @@ fn text_menu_(
             context: &mut Context,
         ) -> JsResult<Option<JsValue>> {
             if let Some(callable) = maybe_callable.as_callable() {
-                let result = if let Some(item) = item {
+                let mut result = if let Some(item) = item {
                     let js_item = item.clone().try_js_into(context)?;
 
                     let result =
@@ -201,6 +204,20 @@ fn text_menu_(
                 } else {
                     callable.call(&JsValue::undefined(), &[], context)?
                 };
+
+                while let Some(p) = result.as_promise() {
+                    context.run_jobs();
+                    match JsPromise::from_object(p.clone())?.state() {
+                        PromiseState::Pending => {}
+                        PromiseState::Fulfilled(v) => {
+                            result = v;
+                            break;
+                        }
+                        PromiseState::Rejected(e) => {
+                            return Err(JsError::from_opaque(e));
+                        }
+                    }
+                }
 
                 if result.is_undefined() {
                     Ok(None)
@@ -216,25 +233,26 @@ fn text_menu_(
             MenuAction::Select(i) => {
                 if let Some(select) = options.items[i].select.clone() {
                     if let Some(v) = call_callable(Some(&mut options.items[i]), select, context)? {
-                        return Ok(v);
+                        return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
             MenuAction::Details(i) => {
                 if let Some(details) = options.items[i].details.clone() {
                     if let Some(v) = call_callable(Some(&mut options.items[i]), details, context)? {
-                        return Ok(v);
+                        return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
             MenuAction::Sort => {
                 if let Some(maybe_callable) = options.sort.clone() {
-                    if let Some(v) = call_callable(None, maybe_callable, context)? {
+                    if let Some(result) = call_callable(None, maybe_callable, context)? {
                         // In sort, we try to replace partial options with the result of the callable.
                         // If this doesn't work, we return the value.
-                        let Ok(mut new_options): JsResult<UiMenuOptions> = v.try_js_into(context)
+                        let Ok(mut new_options): JsResult<UiMenuOptions> =
+                            result.try_js_into(context)
                         else {
-                            return Ok(v);
+                            return Ok(JsPromise::resolve(result, context));
                         };
 
                         options.sort_label = new_options.sort_label.clone();
@@ -248,7 +266,7 @@ fn text_menu_(
             MenuAction::Back => {
                 if let Some(maybe_callable) = options.back.clone() {
                     if let Some(v) = call_callable(None, maybe_callable, context)? {
-                        return Ok(v);
+                        return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
@@ -272,20 +290,43 @@ fn alert_(
     golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
 }
 
-fn prompt_(
+#[derive(Clone, Debug, Trace, Finalize, JsData, boa_macros::TryFromJs)]
+pub struct PromptOptions {
     message: String,
     title: Option<String>,
+    default: Option<String>,
+}
+
+fn prompt_(
+    message: Either<String, PromptOptions>,
+    maybe_message: Option<String>,
     ContextData(data): ContextData<HostData>,
 ) -> Option<JsString> {
-    // Swap title and message if title is specified.
-    let (message, title) = if let Some(t) = title {
-        (t, message)
-    } else {
-        (message, "".to_string())
+    let (message, title, default) = match message {
+        Either::Left(ref message) => {
+            // Swap title and message if title is specified.
+            if let Some(ref m) = maybe_message {
+                (m, Some(message), None)
+            } else {
+                (message, None, None)
+            }
+        }
+        Either::Right(PromptOptions {
+            ref message,
+            ref title,
+            ref default,
+        }) => (message, title.as_ref(), default.clone()),
     };
 
     let app = data.app_mut();
-    prompt(&title, &message, String::new(), 512, app).map(|r| r.into())
+    prompt(
+        title.map(String::as_str).unwrap_or(""),
+        message,
+        default.unwrap_or_default(),
+        512,
+        app,
+    )
+    .map(|r| r.into())
 }
 
 fn show_(message: String, title: Option<String>, ContextData(host_defined): ContextData<HostData>) {

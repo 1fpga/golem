@@ -16,10 +16,10 @@ function markerFor(command?: settings.CommandShortcut) {
   }
 }
 
-export function commands_settings_menu() {
+export async function commands_settings_menu() {
   const cores = db.query("SELECT * FROM cores");
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "Commands",
     back: true,
     items: [

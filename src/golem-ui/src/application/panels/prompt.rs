@@ -1,7 +1,7 @@
 use crate::application::menu::bottom_bar;
 use crate::application::GoLEmApp;
 use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::geometry::{Dimensions, Point, Size};
+use embedded_graphics::geometry::{Dimensions, Point};
 use embedded_graphics::mono_font::{ascii, MonoTextStyle};
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::primitives::{Line, Primitive, PrimitiveStyle, Rectangle};

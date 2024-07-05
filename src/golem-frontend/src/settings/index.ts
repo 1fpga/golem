@@ -56,8 +56,8 @@ function updateDateTimeFormat(item: ui.TextMenuItem) {
   item.marker = datetimeFormatMarker();
 }
 
-export function settings_menu() {
-  ui.textMenu({
+export async function settings_menu() {
+  await ui.textMenu({
     back: true,
     title: "Settings",
     items: [

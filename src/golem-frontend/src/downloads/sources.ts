@@ -1,23 +1,14 @@
-import { Ajv } from "ajv";
 import * as storage from "@/golem/storage";
 import * as net from "@/golem/net";
 import * as ui from "@/golem/ui";
-
-const schema = new Ajv();
-
-// A validate source.
-const validateSource = schema.compile({
-  type: "object",
-  properties: {
-    name: { type: "string" },
-    cores: { type: "string" },
-    systems: { type: "string" },
-  },
-  required: ["name"],
-});
+import type { Ajv as AjvType } from "ajv";
 
 export interface Source {
-  baseUrl: string;
+  // The URL loaded for the source.
+  _url: string;
+
+  // The name of the source. This is self identified by the source JSON
+  // so it is not required to be unique.
   name: string;
 }
 
@@ -30,19 +21,43 @@ export class Storage {
     storage.set("downloadSources", sources);
   }
 
-  addSource(source: Source) {
-    if (!this.sources.some((s) => s.baseUrl === source.baseUrl)) {
-      this.sources = [...this.sources, source];
+  addOrUpdateSource(source: Source) {
+    let sources = this.sources;
+    let maybeIndex = sources.findIndex((s) => s._url === source._url);
+    if (maybeIndex !== -1) {
+      sources[maybeIndex] = source;
+    } else {
+      sources = [...this.sources, source];
     }
+    this.sources = sources;
   }
 
-  removeSource(url: string) {
-    this.sources = this.sources.filter((s) => s.baseUrl !== url);
+  deleteSourceByUrl(url: string) {
+    this.sources = this.sources.filter((s) => s._url !== url);
   }
 }
 
-function fetchSource(url: string): any {
-  function inner() {
+let schema: AjvType;
+
+async function fetchSource(url: string): Promise<Source> {
+  while (schema === undefined) {
+    await import("ajv").then(({ Ajv }) => {
+      schema = new Ajv();
+    });
+  }
+
+  // A validate source.
+  const validateSource = schema.compile({
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      cores: { type: "string" },
+      systems: { type: "string" },
+    },
+    required: ["name"],
+  });
+
+  function inner(url: string) {
     try {
       return net.fetchJson(url + "/golem.json");
     } catch (e) {
@@ -54,30 +69,34 @@ function fetchSource(url: string): any {
     }
   }
 
-  const maybeJson = inner();
-  console.log(typeof maybeJson, JSON.stringify(maybeJson));
+  // Normalize the URL.
+  if (!url.startsWith("https://") && !url.startsWith("http://")) {
+    url = "https://" + url;
+  }
+
+  const maybeJson = inner(url);
   const isValid = validateSource(maybeJson);
-  console.log(isValid, JSON.stringify(validateSource.errors));
+
   if (!isValid) {
     throw new Error(
       (validateSource.errors || []).map((e) => e.message || "").join("\n"),
     );
   }
 
-  return maybeJson;
+  return { _url: url, ...maybeJson };
 }
 
-function add_source_menu() {
-  let baseUrl = ui.prompt("Add Source", "Enter the URL of the source:");
+async function addSourceMenu() {
+  let url = ui.prompt("Add Source", "Enter the URL of the source:");
 
-  if (baseUrl === undefined) {
+  if (url === undefined) {
     return;
   }
 
   // Try to reach the source.
   let newSource;
   try {
-    newSource = fetchSource(baseUrl);
+    newSource = await fetchSource(url);
   } catch (e) {
     ui.alert("Error", "" + e);
     return false;
@@ -85,44 +104,62 @@ function add_source_menu() {
 
   // Update the storage.
   const storage = new Storage();
-  storage.addSource({ baseUrl, ...newSource });
+  storage.addOrUpdateSource(newSource);
 
   return true;
 }
 
-function manage_source(url: string) {
+async function manage_source(source: Source) {
   const storage = new Storage();
-  ui.textMenu({
-    title: url,
+  console.log("Managing source", source._url, source.name);
+  await ui.textMenu({
+    title: source.name,
     back: true,
     items: [
+      { label: "Url:", marker: source._url },
+      "-",
       {
-        label: "Remove Source...",
+        label: "Rename...",
         select: () => {
-          storage.removeSource(url);
+          const newName = ui.prompt({
+            title: "Rename Source",
+            message: "Enter the new name:",
+            default: source.name,
+          });
+          if (newName !== undefined) {
+            source.name = newName;
+            storage.addOrUpdateSource(source);
+          }
+        },
+      },
+      {
+        label: "Delete Source...",
+        select: () => {
+          storage.deleteSourceByUrl(source._url);
           return true;
         },
       },
     ],
   });
+
   return true;
 }
 
-export function sources_menu() {
+export async function sources_menu() {
   while (true) {
     const storage = new Storage();
-    const result = ui.textMenu({
+    const result = await ui.textMenu({
       title: "Sources",
       back: false,
       items: [
         {
           label: "Add Source...",
-          select: add_source_menu,
+          select: addSourceMenu,
         },
         "-",
         ...storage.sources.map((source) => ({
-          label: source.baseUrl,
-          select: () => manage_source(source.baseUrl),
+          label: source.name,
+          select: () => manage_source(source),
         })),
       ],
     });

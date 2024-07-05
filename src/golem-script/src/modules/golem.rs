@@ -9,6 +9,7 @@ mod core;
 mod db;
 mod net;
 mod settings;
+mod shortcuts;
 mod storage;
 mod ui;
 mod video;

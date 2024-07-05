@@ -2,7 +2,7 @@
 import * as ui from "@/golem/ui";
 import { default as p } from "@/golem/patrons";
 
-export function about() {
+export async function about() {
   let { patrons, tiers } = p;
 
   // Sort tiers by amount.
@@ -22,7 +22,7 @@ export function about() {
     }
   }
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "About",
     back: true,
     items: [
