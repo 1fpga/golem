@@ -6,9 +6,9 @@ use tracing::{debug, error};
 use cyclone_v::memory::MemoryMapper;
 
 use crate::config;
+use crate::config::{HdmiLimitedConfig, HdrConfig, MisterConfig, VgaMode, video};
 use crate::config::aspect::AspectRatio;
 use crate::config::edid::CustomVideoMode;
-use crate::config::{video, HdmiLimitedConfig, HdrConfig, MisterConfig, VgaMode};
 use crate::fpga::Spi;
 
 mod video_mode;
@@ -114,10 +114,10 @@ pub fn hdmi_config_init(options: &MisterConfig) -> Result<(), String> {
             0x56,
             (0b00001000
                 + if options.hdr().is_enabled() {
-                    0b11000000
-                } else {
-                    0
-                }),
+                0b11000000
+            } else {
+                0
+            }),
         ),
         // [7] IT Content. 0 - No. 1 - Yes (type set in register 0x59).
         // [6:4] Color space (ignored for RGB)
@@ -127,12 +127,12 @@ pub fn hdmi_config_init(options: &MisterConfig) -> Result<(), String> {
             0x57,
             (if options.hdmi_game_mode() { 0x80 } else { 0 })
                 | if options.vga_mode() == VgaMode::Ypbpr || options.hdmi_limited().is_limited() {
-                    0b0000100
-                } else if options.hdr().is_enabled() {
-                    0b1101000
-                } else {
-                    0b0001000
-                },
+                0b0000100
+            } else if options.hdr().is_enabled() {
+                0b1101000
+            } else {
+                0b0001000
+            },
         ),
         // [7:6] [YQ1 YQ0] YCC Quantization Range: b00 = Limited Range, b01 = Full Range
         // [5:4] IT Content Type b11 = Game, b00 = Graphics/None
@@ -562,18 +562,12 @@ fn hdmi_config_set_hdr(device: &mut LinuxI2CDevice, options: &MisterConfig) -> R
     })
 }
 
-pub fn init_mode_menu(
+pub fn init_mode(
     options: &config::MisterConfig,
-    fpga: &mut crate::fpga::MisterFpga,
+    core: &mut crate::core::MisterFpgaCore,
+    is_menu: bool,
 ) -> Result<(), String> {
-    video_mode::init_mode(options, fpga.spi_mut(), true)
-}
-
-pub fn init_mode_core(
-    options: &config::MisterConfig,
-    fpga: &mut crate::fpga::MisterFpga,
-) -> Result<(), String> {
-    video_mode::init_mode(options, fpga.spi_mut(), false)
+    video_mode::init_mode(options, core.spi_mut(), is_menu)
 }
 
 pub fn select_mode(

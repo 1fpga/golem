@@ -1,0 +1,16 @@
+{
+  ui: {
+    menuFontSize: "small"
+  },
+  commands: {
+    resetCore: "F11",
+    showMenu: "F12"
+  },
+  cores: {
+    "nes": {
+      commands: {
+        "0": "F1"
+      }
+    }
+  }
+}

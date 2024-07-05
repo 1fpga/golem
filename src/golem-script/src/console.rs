@@ -4,11 +4,11 @@ use boa_engine::{
     js_string,
     native_function::NativeFunction,
     object::{JsObject, ObjectInitializer},
-    string::utf16,
     value::{JsValue, Numeric},
     Context, JsArgs, JsData, JsResult, JsString,
 };
 use boa_gc::{Finalize, Trace};
+use boa_macros::js_str;
 use rustc_hash::FxHashMap;
 use std::{cell::RefCell, rc::Rc, time::SystemTime};
 
@@ -284,8 +284,8 @@ impl Console {
             } else if !args[0].is_string() {
                 args.insert(0, JsValue::new(message));
             } else {
-                let value: Vec<u16> = args[0].display().to_string().encode_utf16().collect();
-                let concat = js_string!(&message, utf16!(": "), &value);
+                let value = JsString::from(args[0].to_string(context)?);
+                let concat = js_string!(&message, js_str!(": "), &value);
                 args[0] = JsValue::new(concat);
             }
 

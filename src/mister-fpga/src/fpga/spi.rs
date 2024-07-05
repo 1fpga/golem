@@ -103,6 +103,23 @@ impl<'a, S: SpiCommandExt> SpiCommandGuard<'a, S> {
     }
 
     #[inline]
+    pub fn write_get_32(&mut self, word1: u16, word2: u16) -> u32 {
+        let mut out = 0;
+        self.write_read_32(word1, word2, &mut out);
+        out
+    }
+
+    #[inline]
+    pub fn get(&mut self) -> u16 {
+        self.write_get(0)
+    }
+
+    #[inline]
+    pub fn get_32(&mut self) -> u32 {
+        self.write_get_32(0, 0)
+    }
+
+    #[inline]
     pub fn write_cond(&mut self, cond: bool, word: u16) -> &mut Self {
         self.spi.write_cond(cond, word);
         self

@@ -20,8 +20,8 @@ members = [
 lto = true
 overflow-checks = false
 panic = "abort"
-strip = true
-debug = false
+#strip = true
+#debug = false
 
 [profile.dev]
 overflow-checks = false

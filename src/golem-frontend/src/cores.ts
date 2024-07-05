@@ -3,13 +3,13 @@ import * as db from "@/golem/db";
 import * as ui from "@/golem/ui";
 import * as retronomicon from "./retronomicon";
 
-function download_cores() {
+async function download_cores() {
   ui.show("Downloading Cores, please wait...");
   let cores = retronomicon.cores();
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "Download Cores",
-    back: () => true,
+    back: true,
     items: cores.map((core) => ({
       label: "" + core.name,
       select: () => {
@@ -31,7 +31,7 @@ function download_cores() {
 
 function start_core(db_core: { path: string }) {
   core.run({
-    core: { type: "path", path: db_core.path },
+    core: { type: "Path", path: db_core.path },
   });
 }
 
@@ -43,16 +43,16 @@ function select_core_file() {
 
   if (f !== undefined) {
     core.run({
-      core: { type: "path", path: f },
+      core: { type: "Path", path: f },
     });
   }
 }
 
-export function cores_menu() {
+export async function cores_menu() {
   const cores = db.query("SELECT * FROM cores");
-  ui.textMenu({
+  await ui.textMenu({
     title: "Cores",
-    back: () => true,
+    back: true,
     items: [
       ...cores.map((core) => ({
         label: "" + core.name,

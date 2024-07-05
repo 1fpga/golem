@@ -20,6 +20,10 @@ fn remove_(key: String, ContextData(data): ContextData<HostData>) -> JsResult<()
     Ok(())
 }
 
+fn has_item_(key: String, data: ContextData<HostData>, context: &mut Context) -> JsResult<bool> {
+    get_item_(key, data, context).map(|v| !v.is_undefined())
+}
+
 fn set_item_(
     key: String,
     value: JsValue,
@@ -29,7 +33,8 @@ fn set_item_(
     let db = data.app_mut().database();
     let mut db = db.lock().unwrap();
 
-    let value = value.to_string(context)?.to_std_string_escaped();
+    let value = serde_json::to_string(&value.to_json(context)?)
+        .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
 
     diesel::sql_query("INSERT INTO storage (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
         .bind::<diesel::sql_types::Text, _>(key)
@@ -74,9 +79,12 @@ fn get_item_(
                 }
             };
 
-            let serde_value = serde_json::from_str(&json)
-                .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
-            JsValue::from_json(&serde_value, context)
+            let serde_value = serde_json::from_str(&json);
+            if let Ok(serde_value) = serde_value {
+                JsValue::from_json(&serde_value, context)
+            } else {
+                Ok(JsValue::undefined())
+            }
         }
         None => Ok(JsValue::undefined()),
         Some(Err(err)) => Err(JsError::from_opaque(
@@ -94,6 +102,10 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
             (
                 js_string!("get"),
                 get_item_.into_js_function_copied(context),
+            ),
+            (
+                js_string!("has"),
+                has_item_.into_js_function_copied(context),
             ),
             (
                 js_string!("set"),

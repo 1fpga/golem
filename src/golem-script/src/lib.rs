@@ -1,11 +1,13 @@
 use std::path::Path;
 use std::rc::Rc;
+use std::time::Instant;
 
 use boa_engine::builtins::promise::PromiseState;
+use boa_engine::object::builtins::JsPromise;
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use golem_ui::application::GoLEmApp;
 
@@ -35,6 +37,10 @@ impl std::fmt::Debug for HostData {
 }
 
 impl HostData {
+    pub fn app(&self) -> &GoLEmApp {
+        unsafe { self.app.as_ref().as_ref().unwrap() }
+    }
+
     pub fn app_mut(&self) -> &mut GoLEmApp {
         unsafe { self.app.as_mut().unwrap() }
     }
@@ -68,6 +74,9 @@ pub fn run(
     let app = Rc::new((&mut app) as *mut GoLEmApp);
     let host_defined = HostData { app };
 
+    debug!("Loading JavaScript...");
+    let start = Instant::now();
+
     let (mut context, loader) = create_context(script, host_defined)?;
 
     // Initialize the Console object.
@@ -83,7 +92,9 @@ pub fn run(
         .expect("The console object shouldn't exist yet");
 
     modules::register_modules(loader.clone(), &mut context)?;
+    debug!("Context created in {}ms.", start.elapsed().as_millis());
 
+    let start = Instant::now();
     let module = match script {
         Some(script_path) => {
             let source = Source::from_reader(
@@ -91,7 +102,6 @@ pub fn run(
                 Some(script_path.as_ref()),
             );
 
-            // Can also pass a `Some(realm)` if you need to execute the module in another realm.
             Module::parse(source, None, &mut context)?
         }
         None => {
@@ -100,8 +110,16 @@ pub fn run(
         }
     };
 
-    let promise_result = module.load_link_evaluate(&mut context);
+    debug!("Script parsed in {}ms.", start.elapsed().as_millis());
 
+    let start = Instant::now();
+    let promise_result = module.load_link_evaluate(&mut context);
+    debug!(
+        "Script loaded and evaluated in {}ms.",
+        start.elapsed().as_millis()
+    );
+
+    let start = Instant::now();
     loop {
         // Very important to push forward the job queue after queueing promises.
         context.run_jobs();
@@ -119,18 +137,37 @@ pub fn run(
         }
     }
 
+    debug!("Script loaded in {}ms.", start.elapsed().as_millis());
+    let start = Instant::now();
     let main_fn = module
         .namespace(&mut context)
         .get(js_string!("main"), &mut context)?;
-    let result = main_fn.as_callable().expect("Main was not callable").call(
+
+    let mut result = main_fn.as_callable().expect("Main was not callable").call(
         &JsValue::undefined(),
         &[],
         &mut context,
     )?;
 
-    context.run_jobs();
+    // Loop until the promise chain is resolved.
+    while let Some(p) = result.as_promise() {
+        let p = JsPromise::from_object(p.clone())?;
+        context.run_jobs();
+
+        match p.state() {
+            PromiseState::Pending => {}
+            PromiseState::Fulfilled(v) => {
+                result = v;
+            }
+            PromiseState::Rejected(err) => {
+                error!("Javascript Error: {}", err.display());
+                return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
+            }
+        }
+    }
+    debug!("Main executed in {}ms.", start.elapsed().as_millis());
 
     info!(?result, "Script executed successfully.");
-
+    boa_profiler::Profiler::global().drop();
     Ok(())
 }

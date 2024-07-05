@@ -21,7 +21,7 @@ const MENU_ITEMS_PER_PAGE: usize = 10;
 
 /// The action performed by a user. This is used as the return value
 /// for the menu.
-#[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Default, Copy, Debug, Clone, Eq, PartialEq)]
 pub enum SdlMenuAction<R> {
     /// The user pressed the "A" button equivalent.
     Select(R),
@@ -33,6 +33,9 @@ pub enum SdlMenuAction<R> {
     /// This can be used to start a filter action, which is normally not possible
     /// using a controller.
     KeyPress(Keycode),
+
+    /// Text was inputted. Can be up to 32 `c_char`, which can be up to 4 characters.
+    TextInput([char; 4]),
 
     /// The user pressed the "B" button equivalent.
     #[default]
@@ -49,8 +52,25 @@ impl<R> SdlMenuAction<R> {
             SdlMenuAction::Select(_) => None,
             SdlMenuAction::ShowOptions => Some(SdlMenuAction::ShowOptions),
             SdlMenuAction::KeyPress(kc) => Some(SdlMenuAction::KeyPress(*kc)),
+            SdlMenuAction::TextInput(t) => Some(SdlMenuAction::TextInput(*t)),
             SdlMenuAction::Back => Some(SdlMenuAction::Back),
             SdlMenuAction::ChangeSort => Some(SdlMenuAction::ChangeSort),
+        }
+    }
+
+    pub fn as_text_input(&self) -> Option<String> {
+        match self {
+            SdlMenuAction::TextInput(t) => {
+                let mut s = String::new();
+                for c in t.iter() {
+                    if *c == 0 as char {
+                        break;
+                    }
+                    s.push(*c);
+                }
+                Some(s)
+            }
+            _ => None,
         }
     }
 }
@@ -171,6 +191,17 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
 
                 kc => Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into(),
             },
+
+            Event::TextInput { text, .. } => {
+                let mut ch = text.chars();
+                let t = [
+                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or(0 as char),
+                ];
+                Interaction::Action(Action::Return(SdlMenuAction::TextInput(t))).into()
+            }
 
             Event::ControllerButtonDown { button, .. } => match button {
                 Button::A => Interaction::Action(Action::Select).into(),
@@ -345,6 +376,35 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Serialize, Deserialize, Hash, Eq)]
+pub enum MenuStyleFontSize {
+    #[serde(rename = "small", alias = "Small")]
+    Small,
+
+    #[default]
+    #[serde(rename = "medium", alias = "Medium")]
+    Medium,
+
+    #[serde(rename = "large", alias = "Large")]
+    Large,
+}
+
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct MenuStyleOptions {
+    pub(crate) font_size: MenuStyleFontSize,
+}
+
+impl MenuStyleOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_font_size(mut self, font_size: MenuStyleFontSize) -> Self {
+        self.font_size = font_size;
+        self
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct SimpleMenuTheme;
 
@@ -365,30 +425,41 @@ impl Theme for SimpleMenuTheme {
 }
 
 pub use selection_indicator::style::rectangle::Rectangle as RectangleIndicator;
+use serde::{Deserialize, Serialize};
 
 fn menu_style_inner<I: InputAdapterSource<R> + Default, R>(
+    options: MenuStyleOptions,
 ) -> MenuStyle<RectangleIndicator, I, AnimatedPosition, R, SimpleMenuTheme> {
+    let font = match options.font_size {
+        MenuStyleFontSize::Small => &ascii::FONT_5X8,
+        MenuStyleFontSize::Medium => &ascii::FONT_6X10,
+        MenuStyleFontSize::Large => &ascii::FONT_8X13_BOLD,
+    };
+
     MenuStyle::new(SimpleMenuTheme)
         .with_input_adapter(I::default())
         .with_animated_selection_indicator(2)
         .with_selection_indicator(RectangleIndicator)
         .with_scrollbar_style(DisplayScrollbar::Auto)
         .with_title_font(&ascii::FONT_8X13)
-        .with_font(&ascii::FONT_5X8)
+        .with_font(font)
 }
 
-pub fn menu_style<R: MenuReturn + Copy>() -> MenuStyle<
+pub fn menu_style<R: MenuReturn + Copy>(
+    options: MenuStyleOptions,
+) -> MenuStyle<
     RectangleIndicator,
     SdlMenuInputAdapter<R>,
     AnimatedPosition,
     SdlMenuAction<R>,
     SimpleMenuTheme,
 > {
-    menu_style_inner()
+    menu_style_inner(options)
 }
 
 pub fn menu_style_simple<R: MenuReturn + Copy>(
+    options: MenuStyleOptions,
 ) -> MenuStyle<RectangleIndicator, SimpleSdlMenuInputAdapter<R>, AnimatedPosition, R, SimpleMenuTheme>
 {
-    menu_style_inner()
+    menu_style_inner(options)
 }

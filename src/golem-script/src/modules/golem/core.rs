@@ -1,104 +1,66 @@
 use std::path::PathBuf;
 
+use boa_engine::class::Class;
 use boa_engine::value::TryFromJs;
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, JsValue, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::{Finalize, JsData, Trace};
 use one_fpga::core::Rom;
 use one_fpga::runner::CoreLaunchInfo;
+use serde::Deserialize;
 
 use golem_ui::application::panels::core_loop::run_core_loop;
 
+use crate::modules::golem::core::js_core::JsCore;
 use crate::HostData;
 
-/// The core type from JavaScript.
-#[derive(Debug, Trace, Finalize, JsData)]
-pub enum CoreType {
-    Path { path: JsString },
-}
+pub mod js_core;
 
-impl TryFromJs for CoreType {
-    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
-        match value {
-            JsValue::Object(object) => {
-                match object
-                    .get(js_string!("type"), context)?
-                    .to_string(context)?
-                    .to_std_string_escaped()
-                    .as_str()
-                {
-                    "path" => {
-                        let path = object
-                            .get(js_string!("path"), context)?
-                            .to_string(context)?;
-                        Ok(CoreType::Path { path })
-                    }
-                    _ => Err(JsError::from_opaque(
-                        js_string!("Invalid core type.").into(),
-                    )),
-                }
-            }
-            _ => Err(JsError::from_opaque(
-                js_string!("Invalid core type.").into(),
-            )),
-        }
-    }
+/// The core type from JavaScript.
+#[derive(Debug, Trace, Finalize, JsData, Deserialize)]
+#[serde(tag = "type")]
+pub enum CoreType {
+    Path { path: String },
 }
 
 /// The game type for JavaScript.
-#[derive(Debug, Trace, Finalize, JsData)]
+#[derive(Debug, Trace, Finalize, JsData, Deserialize)]
+#[serde(tag = "type")]
 pub enum GameType {
-    RomPath { path: JsString },
+    RomPath { path: String },
 }
 
-impl TryFromJs for GameType {
-    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
-        match value {
-            JsValue::Object(object) => {
-                match object
-                    .get(js_string!("type"), context)?
-                    .to_string(context)?
-                    .to_std_string_escaped()
-                    .as_str()
-                {
-                    "rom-path" => {
-                        let path = object
-                            .get(js_string!("path"), context)?
-                            .to_string(context)?;
-                        Ok(GameType::RomPath { path })
-                    }
-                    _ => Err(JsError::from_opaque(
-                        js_string!("Invalid core type.").into(),
-                    )),
-                }
-            }
-            _ => Err(JsError::from_opaque(
-                js_string!("Invalid core type.").into(),
-            )),
-        }
-    }
-}
-
-#[derive(Debug, Trace, Finalize, JsData, TryFromJs)]
+#[derive(Debug, Trace, Finalize, JsData, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct RunOptions {
     core: CoreType,
     game: Option<GameType>,
     files: Option<Vec<Option<String>>>,
     savestate: Option<String>,
-    showmenu: Option<bool>,
-    autoloop: Option<bool>,
+    show_menu: Option<bool>,
+    auto_loop: Option<bool>,
 }
 
-fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
+impl TryFromJs for RunOptions {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
+        serde_json::from_value(value.to_json(context)?)
+            .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))
+    }
+}
+
+fn run_(
+    options: RunOptions,
+    ContextData(app): ContextData<HostData>,
+    context: &mut Context,
+) -> JsResult<JsValue> {
     let app = app.app_mut();
     let mut core_options = match &options.core {
-        CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path.to_std_string_escaped())),
+        CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path)),
     };
 
     match &options.game {
         Some(GameType::RomPath { path }) => {
-            core_options =
-                core_options.with_rom(Rom::File(PathBuf::from(path.to_std_string_escaped())));
+            core_options = core_options.with_rom(Rom::File(PathBuf::from(path)));
         }
         None => {}
     };
@@ -122,12 +84,20 @@ fn run_(options: RunOptions, ContextData(app): ContextData<HostData>) {
         .launch(core_options)
         .unwrap();
 
-    if options.autoloop.unwrap_or(true) {
-        run_core_loop(&mut *app, &mut core, options.showmenu.unwrap_or(true));
+    if options.auto_loop.unwrap_or(true) {
+        run_core_loop(&mut *app, &mut core, options.show_menu.unwrap_or(true));
+        Ok(JsValue::undefined())
+    } else {
+        Ok(JsValue::Object(JsCore::from_data(
+            JsCore::new(core),
+            context,
+        )?))
     }
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
+    context.register_global_class::<JsCore>()?;
+
     Ok((
         js_string!("core"),
         [(js_string!("run"), run_.into_js_function_copied(context))].into_js_module(context),

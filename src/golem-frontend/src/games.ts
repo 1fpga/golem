@@ -29,16 +29,20 @@ function start_game(game_id: number) {
     g.id,
   ]);
 
-  core.run({
-    core: { type: "path", path: "" + c.path },
-    game: { type: "rom-path", path: "" + g.path },
+  const golem_core = core.run({
+    core: { type: "Path", path: "" + c.path },
+    game: { type: "RomPath", path: "" + g.path },
     files: f.map((file) => "" + file.path),
-    autoloop: true,
-    showmenu: false,
+    showMenu: false,
   });
+  if (golem_core) {
+    console.log("Starting core: " + golem_core.name());
+
+    golem_core.loop(false);
+  }
 }
 
-export function games_menu() {
+export async function games_menu() {
   const sortOptions = {
     "Name (A-Z)": "name ASC",
     "Name (Z-A)": "name DESC",
@@ -62,9 +66,9 @@ export function games_menu() {
     }));
   }
 
-  ui.textMenu({
+  await ui.textMenu({
     title: "Games",
-    back: () => true,
+    back: true,
     sort_label: Object.keys(sortOptions)[current_sort],
     sort: () => {
       current_sort = (current_sort + 1) % Object.keys(sortOptions).length;

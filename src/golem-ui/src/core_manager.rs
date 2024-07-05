@@ -2,6 +2,7 @@ use std::path::Path;
 use std::time::SystemTime;
 
 use byteorder::{LittleEndian, ReadBytesExt};
+use tracing::info;
 
 use mister_fpga::core::file::SdCard;
 use mister_fpga::core::{MenuCore, MisterFpgaCore};
@@ -72,6 +73,7 @@ impl CoreManager {
     }
 
     pub fn load_menu(&mut self) -> Result<GolemCore, String> {
+        info!("Loading menu");
         let bytes = include_bytes!("../assets/menu.rbf");
 
         let mut core = self.load(bytes, true)?;
@@ -96,6 +98,7 @@ impl CoreManager {
     }
 
     pub fn load_core(&mut self, path: impl AsRef<Path>) -> Result<GolemCore, String> {
+        info!("Loading core from: {:?}", path.as_ref().display());
         let bytes = std::fs::read(path.as_ref()).map_err(|e| e.to_string())?;
         let core = self.load(&bytes, false)?;
         Ok(core)

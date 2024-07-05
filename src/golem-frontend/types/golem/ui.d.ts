@@ -9,13 +9,18 @@
  */
 declare module "@/golem/ui" {
   /**
+   * Represents the state of a text menu.
+   */
+  export type TextMenuState = {};
+
+  /**
    * Represents a textual menu item.
    */
   export interface TextMenuItem {
     label: string;
     marker?: string;
-    select?: () => any;
-    details?: () => any;
+    select?: (item: TextMenuItem) => any;
+    details?: (item: TextMenuItem) => any;
   }
 
   /**
@@ -24,8 +29,8 @@ declare module "@/golem/ui" {
   export interface TextMenuOptions<R> {
     title?: String;
     items: (string | TextMenuItem)[];
-    back?: () => R;
-    sort?: () => Partial<TextMenuOptions<R>> | void;
+    back?: R | Promise<R> | (() => R) | (() => Promise<R>);
+    sort?: () => Partial<TextMenuOptions<Promise<R>>> | void;
     sort_label?: string;
   }
 
@@ -34,14 +39,29 @@ declare module "@/golem/ui" {
    * waiting for the user to select an option. The function will return a
    * tuple with the action string and the `id` of the selected option.
    * @param options The options for the textual menu.
+   * @returns The result of the selected option, as a Promise.
    */
-  export function textMenu<R>(options: TextMenuOptions<R>): R;
+  export function textMenu<R>(
+    options: TextMenuOptions<R | Promise<R>>,
+  ): Promise<R>;
 
   /**
    * Show an alert to the user, with OK.
    */
   export function alert(message: string): void;
   export function alert(title: string, message: string): void;
+
+  /**
+   * Show a prompt to the user, with OK.
+   * @returns The user input, or `undefined` if the user canceled the operation.
+   */
+  export function prompt(message: string): undefined | string;
+  export function prompt(title: string, message: string): undefined | string;
+  export function prompt(options: {
+    title?: string;
+    message: string;
+    default?: string;
+  }): undefined | string;
 
   /**
    * Update the UI but don't let the user interact with it.

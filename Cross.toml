@@ -2,5 +2,10 @@
 # Install dependencies
 pre-build = [
     "dpkg --add-architecture $CROSS_DEB_ARCH",
-    "apt-get update && apt-get --assume-yes install libsqlite3-dev:$CROSS_DEB_ARCH fbi",
+    "apt-get update",
+    # TODO: figure out how to install clang and use it.
+    #    "apt-get install --assume-yes clang:$CROSS_DEB_ARCH clang-10:$CROSS_DEB_ARCH lld:$CROSS_DEB_ARCH",
+    "apt-get install --assume-yes libsqlite3-dev:$CROSS_DEB_ARCH fbi",
+    "apt-get install --assume-yes linux-tools-common:$CROSS_DEB_ARCH linux-tools-generic:$CROSS_DEB_ARCH",
 ]
+

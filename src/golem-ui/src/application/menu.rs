@@ -33,59 +33,46 @@ pub mod style;
 pub type GolemMenuState<R> =
     MenuState<style::SdlMenuInputAdapter<R>, AnimatedPosition, RectangleIndicator>;
 
-fn bottom_bar_<'a>(
-    show_back_button: bool,
-    show_sort: bool,
-    sort_field: &'a str,
-    show_details: bool,
-    detail_label: Option<&'a str>,
+fn bottom_bar_button<'a>(
+    name: &'a str,
+    label: Option<&'a str>,
 ) -> impl embedded_layout::view_group::ViewGroup + 'a + Drawable<Color = BinaryColor> {
     type Font = u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic;
 
     LinearLayout::horizontal(
-        Chain::<EmptyView>::new(EmptyView::default())
-            .append(ControllerButton::new("a", &ascii::FONT_6X10))
-            .append(FontRendererView::new::<Font>(
+        Chain::new(OptionalView::new(
+            label.is_some(),
+            ControllerButton::new(name, &ascii::FONT_6X10),
+        ))
+        .append(OptionalView::new(
+            label.is_some(),
+            FontRendererView::new::<Font>(
                 VerticalPosition::Baseline,
                 HorizontalAlignment::Left,
-                "Select",
-            ))
-            .append(OptionalView::new(
-                show_back_button,
-                ControllerButton::new("b", &ascii::FONT_6X10),
-            ))
-            .append(OptionalView::new(
-                show_back_button,
-                FontRendererView::new::<Font>(
-                    VerticalPosition::Baseline,
-                    HorizontalAlignment::Left,
-                    "Back",
-                ),
-            ))
-            .append(OptionalView::new(
-                show_details,
-                ControllerButton::new("x", &ascii::FONT_6X10),
-            ))
-            .append(OptionalView::new(
-                show_details,
-                FontRendererView::new::<Font>(
-                    VerticalPosition::Baseline,
-                    HorizontalAlignment::Left,
-                    detail_label.unwrap_or("Details"),
-                ),
-            ))
-            .append(OptionalView::new(
-                show_sort,
-                ControllerButton::new("y", &ascii::FONT_6X10),
-            ))
-            .append(OptionalView::new(
-                show_sort,
-                FontRendererView::new::<Font>(
-                    VerticalPosition::Baseline,
-                    HorizontalAlignment::Left,
-                    sort_field,
-                ),
-            )),
+                label.unwrap_or(name),
+            ),
+        )),
+    )
+    .with_spacing(spacing::FixedMargin(2))
+    .arrange()
+}
+
+pub fn bottom_bar<'a>(
+    a_button: Option<&'a str>,
+    b_button: Option<&'a str>,
+    x_button: Option<&'a str>,
+    y_button: Option<&'a str>,
+    l_button: Option<&'a str>,
+    r_button: Option<&'a str>,
+) -> impl embedded_layout::view_group::ViewGroup + 'a + Drawable<Color = BinaryColor> {
+    LinearLayout::horizontal(
+        Chain::<EmptyView>::new(EmptyView::default())
+            .append(bottom_bar_button("a", a_button))
+            .append(bottom_bar_button("b", b_button))
+            .append(bottom_bar_button("x", x_button))
+            .append(bottom_bar_button("y", y_button))
+            .append(bottom_bar_button("l", l_button))
+            .append(bottom_bar_button("r", r_button)),
     )
     .with_spacing(spacing::FixedMargin(2))
     .arrange()
@@ -152,7 +139,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let show2 = !items_items.is_empty() && !suffix_items.is_empty();
     let show3 = show_back;
 
-    let mut menu_style = style::menu_style();
+    let mut menu_style = style::menu_style(app.settings().menu_style());
     if let Some(font) = title_font {
         menu_style = menu_style.with_title_font(font);
     }
@@ -168,12 +155,13 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
             sort_by.map(|f| format!(" - {f}")).unwrap_or("".to_string())
         );
 
-        let bottom_bar = bottom_bar_(
-            show_back_button,
-            show_sort,
-            sort_field.as_str(),
-            show_details,
-            detail_label,
+        let bottom_bar = bottom_bar(
+            Some("Select"),
+            show_back_button.then_some("Back"),
+            show_sort.then_some(sort_field.as_str()),
+            show_details.then_some(()).and(detail_label),
+            None,
+            None,
         );
 
         for f in items_items.iter_mut() {
@@ -268,20 +256,23 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                             }
                             _ => {}
                         },
-                        SdlMenuAction::KeyPress(kc) => {
-                            match kc {
-                                Keycode::Backspace => {
-                                    filter.pop();
-                                }
-                                x if x.name().len() == 1 => {
-                                    filter.push_str(&x.name());
-                                }
-                                _ => {}
-                            }
+                        SdlMenuAction::KeyPress(Keycode::Backspace)
+                        | SdlMenuAction::KeyPress(Keycode::KpBackspace) => {
+                            filter.pop();
 
                             info!("filter: {}", filter);
                             return Some((None, menu.state()));
                         }
+                        SdlMenuAction::TextInput(text) => {
+                            for c in text.iter() {
+                                if *c == 0 as char {
+                                    break;
+                                }
+                                filter.push(*c);
+                            }
+                            return Some((None, menu.state()));
+                        }
+                        _ => {}
                     }
                 }
             }

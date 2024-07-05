@@ -613,7 +613,7 @@ impl Core for MisterFpgaCore {
         self.spi_mut().execute(switches).unwrap();
 
         video::init(&options);
-        video::init_mode(&options, &mut self.fpga, self.is_menu);
+        video::init_mode(&options, self, self.is_menu);
         self.framebuffer.update_type_from_core();
 
         Ok(())

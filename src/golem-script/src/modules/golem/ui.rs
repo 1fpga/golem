@@ -1,11 +1,15 @@
-use boa_engine::object::builtins::JsArray;
+use boa_engine::builtins::promise::PromiseState;
+use boa_engine::object::builtins::JsPromise;
+use boa_engine::value::TryFromJs;
 use boa_engine::{
-    js_string, Context, Finalize, JsData, JsNativeError, JsResult, JsString, JsValue, Module, Trace,
+    js_string, Context, Finalize, JsData, JsError, JsNativeError, JsObject, JsResult, JsString,
+    JsValue, Module, Trace, TryIntoJsResult,
 };
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
-use boa_macros::TryFromJs;
+use either::Either;
 
 use golem_ui::application::menu;
+use golem_ui::application::panels::prompt::prompt;
 
 use crate::HostData;
 
@@ -36,7 +40,7 @@ impl menu::style::MenuReturn for MenuAction {
     }
 }
 
-#[derive(Debug, Trace, Finalize, JsData)]
+#[derive(Debug, Clone, Trace, Finalize, JsData)]
 pub struct TextMenuItem {
     label: String,
     marker: Option<String>,
@@ -45,7 +49,7 @@ pub struct TextMenuItem {
     index: usize,
 }
 
-impl boa_engine::value::TryFromJs for TextMenuItem {
+impl TryFromJs for TextMenuItem {
     fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let object = match value {
             JsValue::Object(o) => o,
@@ -114,8 +118,36 @@ impl<'a> menu::IntoTextMenuItem<'a, MenuAction> for TextMenuItem {
     }
 }
 
+impl TextMenuItem {
+    fn try_js_into(self, context: &mut Context) -> JsResult<JsValue> {
+        let object = JsObject::with_null_proto();
+        object.set(
+            js_string!("label"),
+            JsValue::String(self.label.clone().into()),
+            false,
+            context,
+        )?;
+        if let Some(ref marker) = self.marker {
+            object.set(
+                js_string!("marker"),
+                JsValue::String(marker.clone().into()),
+                false,
+                context,
+            )?;
+        }
+        if let Some(ref select) = self.select {
+            object.set(js_string!("select"), select.clone(), false, context)?;
+        }
+        if let Some(ref details) = self.details {
+            object.set(js_string!("details"), details.clone(), false, context)?;
+        }
+
+        object.try_into_js_result(context)
+    }
+}
+
 /// Menu options being passed to [`text_menu`].
-#[derive(Debug, Trace, Finalize, JsData, TryFromJs)]
+#[derive(Debug, Trace, Finalize, JsData, boa_macros::TryFromJs)]
 struct UiMenuOptions {
     title: Option<String>,
     items: Vec<TextMenuItem>,
@@ -128,14 +160,15 @@ fn text_menu_(
     mut options: UiMenuOptions,
     ContextData(host_defined): ContextData<HostData>,
     context: &mut Context,
-) -> JsResult<JsValue> {
+) -> JsResult<JsPromise> {
     let app = host_defined.app_mut();
-    for (i, item) in options.items.iter_mut().enumerate() {
-        item.index = i;
-    }
 
     let mut state = menu::GolemMenuState::default();
     loop {
+        for (i, item) in options.items.iter_mut().enumerate() {
+            item.index = i;
+        }
+
         let sort_label = options.sort_label.as_deref();
 
         let menu_options = menu::TextMenuOptions::default()
@@ -153,46 +186,73 @@ fn text_menu_(
         state = new_state;
 
         fn call_callable(
-            action: JsString,
-            maybe_callable: &JsValue,
+            item: Option<&mut TextMenuItem>,
+            maybe_callable: JsValue,
             context: &mut Context,
         ) -> JsResult<Option<JsValue>> {
             if let Some(callable) = maybe_callable.as_callable() {
-                let result = callable.call(&JsValue::null(), &[], context)?;
-                if result.is_undefined() {
-                    return Ok(None);
+                let mut result = if let Some(item) = item {
+                    let js_item = item.clone().try_js_into(context)?;
+
+                    let result =
+                        callable.call(&JsValue::undefined(), &[js_item.clone()], context)?;
+                    if let Ok(new_item) = TryFromJs::try_from_js(&js_item, context) {
+                        *item = new_item;
+                    }
+
+                    result
+                } else {
+                    callable.call(&JsValue::undefined(), &[], context)?
+                };
+
+                while let Some(p) = result.as_promise() {
+                    context.run_jobs();
+                    match JsPromise::from_object(p.clone())?.state() {
+                        PromiseState::Pending => {}
+                        PromiseState::Fulfilled(v) => {
+                            result = v;
+                            break;
+                        }
+                        PromiseState::Rejected(e) => {
+                            return Err(JsError::from_opaque(e));
+                        }
+                    }
                 }
-                Ok(Some(result))
+
+                if result.is_undefined() {
+                    Ok(None)
+                } else {
+                    Ok(Some(result))
+                }
             } else {
-                Ok(Some(
-                    JsArray::from_iter([action.into(), maybe_callable.clone()], context).into(),
-                ))
+                Ok(Some(maybe_callable))
             }
         }
 
         match result {
             MenuAction::Select(i) => {
-                if let Some(ref select) = options.items[i].select {
-                    if let Some(v) = call_callable(js_string!("select"), select, context)? {
-                        return Ok(v);
+                if let Some(select) = options.items[i].select.clone() {
+                    if let Some(v) = call_callable(Some(&mut options.items[i]), select, context)? {
+                        return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
             MenuAction::Details(i) => {
-                if let Some(ref details) = options.items[i].details {
-                    if let Some(v) = call_callable(js_string!("select"), details, context)? {
-                        return Ok(v);
+                if let Some(details) = options.items[i].details.clone() {
+                    if let Some(v) = call_callable(Some(&mut options.items[i]), details, context)? {
+                        return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
             MenuAction::Sort => {
-                if let Some(ref maybe_callable) = options.sort {
-                    if let Some(v) = call_callable(js_string!("sort"), maybe_callable, context)? {
+                if let Some(maybe_callable) = options.sort.clone() {
+                    if let Some(result) = call_callable(None, maybe_callable, context)? {
                         // In sort, we try to replace partial options with the result of the callable.
                         // If this doesn't work, we return the value.
-                        let Ok(mut new_options): JsResult<UiMenuOptions> = v.try_js_into(context)
+                        let Ok(mut new_options): JsResult<UiMenuOptions> =
+                            result.try_js_into(context)
                         else {
-                            return Ok(v);
+                            return Ok(JsPromise::resolve(result, context));
                         };
 
                         options.sort_label = new_options.sort_label.clone();
@@ -200,16 +260,13 @@ fn text_menu_(
                             options.title = Some(new_title);
                         }
                         std::mem::swap(&mut options.items, &mut new_options.items);
-                        for (i, item) in options.items.iter_mut().enumerate() {
-                            item.index = i;
-                        }
                     }
                 }
             }
             MenuAction::Back => {
-                if let Some(ref maybe_callable) = options.back {
-                    if let Some(v) = call_callable(js_string!("back"), maybe_callable, context)? {
-                        return Ok(v);
+                if let Some(maybe_callable) = options.back.clone() {
+                    if let Some(v) = call_callable(None, maybe_callable, context)? {
+                        return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
@@ -233,6 +290,45 @@ fn alert_(
     golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
 }
 
+#[derive(Clone, Debug, Trace, Finalize, JsData, boa_macros::TryFromJs)]
+pub struct PromptOptions {
+    message: String,
+    title: Option<String>,
+    default: Option<String>,
+}
+
+fn prompt_(
+    message: Either<String, PromptOptions>,
+    maybe_message: Option<String>,
+    ContextData(data): ContextData<HostData>,
+) -> Option<JsString> {
+    let (message, title, default) = match message {
+        Either::Left(ref message) => {
+            // Swap title and message if title is specified.
+            if let Some(ref m) = maybe_message {
+                (m, Some(message), None)
+            } else {
+                (message, None, None)
+            }
+        }
+        Either::Right(PromptOptions {
+            ref message,
+            ref title,
+            ref default,
+        }) => (message, title.as_ref(), default.clone()),
+    };
+
+    let app = data.app_mut();
+    prompt(
+        title.map(String::as_str).unwrap_or(""),
+        message,
+        default.unwrap_or_default(),
+        512,
+        app,
+    )
+    .map(|r| r.into())
+}
+
 fn show_(message: String, title: Option<String>, ContextData(host_defined): ContextData<HostData>) {
     // Swap title and message if title is specified.
     let (message, title) = if let Some(t) = title {
@@ -251,7 +347,8 @@ fn qr_code_(
     title: Option<String>,
     ContextData(host_defined): ContextData<HostData>,
 ) {
-    // Swap title and message if title is specified.
+    // Swap title and message if title is specified. This is a JavaScript function,
+    // so we need to do this here.
     let (message, title) = if let Some(t) = title {
         (t, message)
     } else {
@@ -267,11 +364,15 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
         js_string!("ui"),
         [
             (js_string!("alert"), alert_.into_js_function_copied(context)),
-            (js_string!("show"), show_.into_js_function_copied(context)),
+            (
+                js_string!("prompt"),
+                prompt_.into_js_function_copied(context),
+            ),
             (
                 js_string!("qrCode"),
                 qr_code_.into_js_function_copied(context),
             ),
+            (js_string!("show"), show_.into_js_function_copied(context)),
             (
                 js_string!("textMenu"),
                 text_menu_.into_js_function_copied(context),

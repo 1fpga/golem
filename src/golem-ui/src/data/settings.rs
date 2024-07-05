@@ -1,19 +1,21 @@
+use crate::application::menu::style::{MenuStyleFontSize, MenuStyleOptions};
 use crate::data::paths;
 use bus::{Bus, BusReader};
+use commands::CommandSettings;
 use merge::Merge;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 use strum::Display;
 use tracing::{debug, error};
 
-pub mod mappings;
-use mappings::MappingSettings;
+pub mod commands;
 
 fn default_retronomicon_backend_() -> Vec<Url> {
     vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
@@ -21,14 +23,13 @@ fn default_retronomicon_backend_() -> Vec<Url> {
 
 fn create_settings_save_thread_(
     mut update_recv: BusReader<()>,
-    _path: Arc<RwLock<PathBuf>>,
+    path: Arc<RwLock<PathBuf>>,
     inner: Arc<RwLock<InnerSettings>>,
 ) -> crossbeam_channel::Sender<()> {
     let (drop_send, drop_recv) = crossbeam_channel::bounded(1);
     let debouncer = debounce::thread::EventDebouncer::new(Duration::from_millis(500), move |_| {
-        // let path = path.read().unwrap();
-        let path = paths::settings_path();
-        if let Err(e) = inner.read().unwrap().save(path.as_path()) {
+        let path = path.read().unwrap().clone();
+        if let Err(e) = inner.read().unwrap().save(&path) {
             // Still ignore error. Maybe filesystem is readonly?
             error!("Failed to save settings: {}", e);
         }
@@ -46,40 +47,27 @@ fn create_settings_save_thread_(
     drop_send
 }
 
-fn show_fps_default_() -> bool {
-    true
-}
-
-fn invert_toolbar_() -> bool {
-    true
-}
-
 #[derive(Default, Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize, Deserialize, Display)]
 pub enum DateTimeFormat {
     /// The default local format for datetime (respecting Locale).
     #[default]
+    #[serde(rename = "default", alias = "Default")]
     Default,
 
     /// Short locale format.
+    #[serde(rename = "short", alias = "Short")]
     Short,
 
     /// Only show the time.
+    #[serde(rename = "timeOnly", alias = "TimeOnly", alias = "time")]
     TimeOnly,
 
     /// Hide the datetime.
+    #[serde(rename = "hidden", alias = "Hidden", alias = "off")]
     Hidden,
 }
 
 impl DateTimeFormat {
-    pub fn next(&self) -> Self {
-        match self {
-            DateTimeFormat::Default => DateTimeFormat::Short,
-            DateTimeFormat::Short => DateTimeFormat::TimeOnly,
-            DateTimeFormat::TimeOnly => DateTimeFormat::Hidden,
-            DateTimeFormat::Hidden => DateTimeFormat::Default,
-        }
-    }
-
     pub fn time_format(&self) -> String {
         match self {
             DateTimeFormat::Default => "%c".to_string(),
@@ -90,38 +78,37 @@ impl DateTimeFormat {
     }
 }
 
-#[derive(Debug, Clone, Hash, Serialize, Deserialize, Merge)]
-pub struct InnerSettings {
-    #[serde(default = "show_fps_default_")]
-    #[merge(strategy = merge::overwrite)]
-    show_fps: bool,
+#[derive(Debug, Default, Clone, Hash, Serialize, Deserialize, Merge)]
+#[serde(rename_all = "camelCase")]
+pub struct UiSettings {
+    #[merge(strategy = merge::option::overwrite_some)]
+    show_fps: Option<bool>,
 
-    #[serde(default = "invert_toolbar_")]
-    #[merge(strategy = merge::overwrite)]
-    invert_toolbar: bool,
+    #[merge(strategy = merge::option::overwrite_some)]
+    invert_toolbar: Option<bool>,
 
-    #[serde(default)]
-    #[merge(strategy = merge::overwrite)]
-    toolbar_datetime_format: DateTimeFormat,
+    #[merge(strategy = merge::option::overwrite_some)]
+    toolbar_datetime_format: Option<DateTimeFormat>,
 
-    #[serde(default)]
-    mappings: MappingSettings,
+    #[merge(strategy = merge::option::overwrite_some)]
+    menu_font_size: Option<MenuStyleFontSize>,
 
-    #[serde(default)]
-    #[merge(strategy = merge::overwrite)]
+    #[merge(strategy = merge::option::overwrite_some)]
     language: Option<String>,
 }
 
-impl Default for InnerSettings {
-    fn default() -> Self {
-        Self {
-            show_fps: false,
-            invert_toolbar: true,
-            toolbar_datetime_format: DateTimeFormat::default(),
-            mappings: MappingSettings::default(),
-            language: None,
-        }
-    }
+#[derive(Debug, Default, Clone, Hash, Serialize, Deserialize, Merge)]
+#[serde(rename_all = "camelCase")]
+pub struct InnerSettings {
+    #[merge(strategy = merge::option::recurse)]
+    ui: Option<UiSettings>,
+
+    #[merge(strategy = merge::option::recurse)]
+    commands: Option<CommandSettings>,
+
+    #[serde(default)]
+    #[merge(strategy = merge::overwrite)]
+    retronomicon_backend: Vec<Url>,
 }
 
 impl InnerSettings {
@@ -162,12 +149,12 @@ impl InnerSettings {
         std::fs::write(path, content)
     }
 
-    pub fn mappings(&self) -> &MappingSettings {
-        &self.mappings
+    pub fn mappings(&self) -> Option<&CommandSettings> {
+        self.commands.as_ref()
     }
 
-    pub fn mappings_mut(&mut self) -> &mut MappingSettings {
-        &mut self.mappings
+    pub fn mappings_mut(&mut self) -> &mut CommandSettings {
+        self.commands.get_or_insert(CommandSettings::default())
     }
 }
 
@@ -270,40 +257,72 @@ impl Settings {
 
     #[inline]
     pub fn show_fps(&self) -> bool {
-        self.inner.read().unwrap().show_fps
+        self.inner
+            .read()
+            .unwrap()
+            .ui
+            .as_ref()
+            .and_then(|ui| ui.show_fps)
+            .unwrap_or_default()
     }
 
     #[inline]
     pub fn invert_toolbar(&self) -> bool {
-        self.inner.read().unwrap().invert_toolbar
+        self.inner
+            .read()
+            .unwrap()
+            .ui
+            .as_ref()
+            .and_then(|ui| ui.invert_toolbar)
+            .unwrap_or_default()
     }
 
     #[inline]
     pub fn toolbar_datetime_format(&self) -> DateTimeFormat {
-        self.inner.read().unwrap().toolbar_datetime_format
+        self.inner
+            .read()
+            .unwrap()
+            .ui
+            .as_ref()
+            .and_then(|ui| ui.toolbar_datetime_format)
+            .unwrap_or_default()
     }
 
     #[inline]
     pub fn toggle_show_fps(&self) {
         let mut inner = self.inner.write().unwrap();
-        inner.show_fps = !inner.show_fps;
+        let ui = inner.ui.get_or_insert(UiSettings::default());
+        let current = ui.show_fps.unwrap_or_default();
+        ui.show_fps = Some(!current);
+    }
+
+    #[inline]
+    pub fn menu_style(&self) -> MenuStyleOptions {
+        let font_size = self
+            .inner
+            .read()
+            .unwrap()
+            .ui
+            .as_ref()
+            .and_then(|ui| ui.menu_font_size)
+            .unwrap_or_default();
+        MenuStyleOptions { font_size }
     }
 
     #[inline]
     pub fn toggle_invert_toolbar(&self) {
         let mut inner = self.inner.write().unwrap();
-        inner.invert_toolbar = !inner.invert_toolbar;
+        let ui = inner.ui.get_or_insert(UiSettings::default());
+        let current = ui.invert_toolbar.unwrap_or_default();
+        ui.invert_toolbar = Some(!current);
     }
 
-    #[inline]
-    pub fn toggle_toolbar_datetime_format(&self) {
-        let mut inner = self.inner.write().unwrap();
-        inner.toolbar_datetime_format = inner.toolbar_datetime_format.next();
-    }
+    pub fn update_from_json(&self, json: serde_json::Value) -> Result<(), String> {
+        debug!(from = ?self.inner.read().unwrap(), ?json, "Update settings");
 
-    #[inline]
-    pub fn set_toolbar_datetime_format(&self, v: DateTimeFormat) {
-        self.inner.write().unwrap().toolbar_datetime_format = v;
+        let value: InnerSettings = serde_json::from_value(json).map_err(|e| e.to_string())?;
+        self.update(value);
+        Ok(())
     }
 
     #[inline]
@@ -339,16 +358,24 @@ impl Settings {
             libc::reboot(libc::RB_AUTOBOOT);
         }
     }
+
+    #[inline]
+    pub fn as_json_value(&self) -> serde_json::Value {
+        serde_json::to_value(self.inner.read().unwrap().deref()).unwrap()
+    }
 }
 
 #[test]
 fn serializes() {
     let mut settings = InnerSettings::default();
     let mut other_serialized = InnerSettings::default();
-    other_serialized.mappings.add(
-        crate::input::commands::ShortcutCommand::ShowCoreMenu,
-        crate::input::shortcut::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
-    );
+    other_serialized
+        .commands
+        .get_or_insert_with(CommandSettings::default)
+        .add(
+            crate::input::commands::ShortcutCommand::ShowCoreMenu,
+            crate::input::shortcut::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
+        );
 
     settings.merge(other_serialized);
     let serialized = json5::to_string(&settings).unwrap();
@@ -356,4 +383,23 @@ fn serializes() {
         serialized,
         r#"{"show_fps":false,"invert_toolbar":true,"toolbar_datetime_format":"Default","mappings":{"quit_core":"'F10'","reset_core":"'F11'","show_menu":["'A'","'F12'"],"take_screenshot":"'SysReq'"},"language":null}"#
     );
+}
+
+#[test]
+fn update_from_json() {
+    let inner = InnerSettings::default();
+    let settings = Settings::default_with_inner(inner);
+    assert_eq!(settings.show_fps(), false);
+
+    settings
+        .update_from_json(serde_json::json! {
+            {
+                "ui": {
+                    "showFps": true
+                }
+            }
+        })
+        .unwrap();
+
+    assert_eq!(settings.show_fps(), true);
 }
