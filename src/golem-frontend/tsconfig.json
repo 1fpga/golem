@@ -4,12 +4,17 @@
     "baseUrl": ".",
     "module": "ESNext",
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDirs": [
+      "src"
+    ],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "paths": {
+      "$schemas:Source": [
+        "ajv-build-tools/types"
+      ],
       "@/*": [
         "types/*"
       ]

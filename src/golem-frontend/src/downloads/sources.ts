@@ -1,7 +1,6 @@
 import * as storage from "@/golem/storage";
 import * as net from "@/golem/net";
 import * as ui from "@/golem/ui";
-import type { Ajv as AjvType } from "ajv";
 
 export interface Source {
   // The URL loaded for the source.
@@ -37,25 +36,10 @@ export class Storage {
   }
 }
 
-let schema: AjvType;
-
 async function fetchSource(url: string): Promise<Source> {
-  while (schema === undefined) {
-    await import("ajv").then(({ Ajv }) => {
-      schema = new Ajv();
-    });
-  }
-
   // A validate source.
-  const validateSource = schema.compile({
-    type: "object",
-    properties: {
-      name: { type: "string" },
-      cores: { type: "string" },
-      systems: { type: "string" },
-    },
-    required: ["name"],
-  });
+  const validateSource: any = await import("$schemas:Source");
+  console.log(validateSource);
 
   function inner(url: string) {
     try {
@@ -79,11 +63,11 @@ async function fetchSource(url: string): Promise<Source> {
 
   if (!isValid) {
     throw new Error(
-      (validateSource.errors || []).map((e) => e.message || "").join("\n"),
+      (validateSource.errors || []).map((e: any) => e.message || "").join("\n"),
     );
   }
 
-  return { _url: url, ...maybeJson };
+  return { _url: url, ...maybeJson } as any;
 }
 
 async function addSourceMenu() {
