@@ -5,15 +5,16 @@
     "module": "ESNext",
     "outDir": "dist",
     "rootDirs": [
-      "src"
+      "src",
+      "codegen"
     ],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "paths": {
-      "$schemas:Source": [
-        "ajv-build-tools/types"
+      "$schemas:*": [
+        "codegen/schemas/*"
       ],
       "@/*": [
         "types/*"

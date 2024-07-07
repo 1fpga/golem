@@ -18,7 +18,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "ajv": "^8.16.0",
-    "ajv-build-tools": "^1.0.0-next.8",
+    "change-case": "^5.4.4",
     "glob": "^10.4.2",
     "json-schema-to-typescript": "^14.1.0",
     "openapi-typescript": "^6.7.5",
