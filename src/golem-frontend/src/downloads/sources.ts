@@ -1,26 +1,22 @@
 import * as storage from "@/golem/storage";
 import * as net from "@/golem/net";
 import * as ui from "@/golem/ui";
+import type {Source} from "$schemas:source";
 
-export interface Source {
-    // The URL loaded for the source.
+export interface SourceWithUrl extends Source {
     _url: string;
-
-    // The name of the source. This is self identified by the source JSON
-    // so it is not required to be unique.
-    name: string;
 }
 
 export class Storage {
-    get sources(): Source[] {
+    get sources(): SourceWithUrl[] {
         return storage.get("downloadSources") || [];
     }
 
-    set sources(sources: Source[]) {
+    set sources(sources: SourceWithUrl[]) {
         storage.set("downloadSources", sources);
     }
 
-    addOrUpdateSource(source: Source) {
+    addOrUpdateSource(source: SourceWithUrl) {
         let sources = this.sources;
         let maybeIndex = sources.findIndex((s) => s._url === source._url);
         if (maybeIndex !== -1) {
@@ -36,7 +32,7 @@ export class Storage {
     }
 }
 
-async function fetchSource(url: string): Promise<Source> {
+async function fetchSource(url: string): Promise<SourceWithUrl> {
     // A validate source.
     const validateSource = await import("$schemas:source").then((m) => m.default);
 
@@ -44,11 +40,7 @@ async function fetchSource(url: string): Promise<Source> {
         try {
             return net.fetchJson(url + "/golem.json");
         } catch (e) {
-            if (url.startsWith("http://")) {
-                return fetchSource(url.replace("http://", "https://"));
-            } else if (!url.startsWith("https://")) {
-                return fetchSource("https://" + url);
-            }
+            return fetchSource(url.replace("http://", "https://"));
         }
     }
 
@@ -58,15 +50,14 @@ async function fetchSource(url: string): Promise<Source> {
     }
 
     const maybeJson = inner(url);
-    const isValid = validateSource(maybeJson);
 
-    if (!isValid) {
-        throw new Error(
-            (validateSource.errors || []).map((e: any) => e.message || "").join("\n"),
-        );
+    if (validateSource(maybeJson)) {
+        return {_url: url, ...maybeJson};
     }
 
-    return {_url: url, ...maybeJson};
+    throw new Error(
+        (validateSource.errors || []).map((e) => e.message || "").join("\n"),
+    );
 }
 
 async function addSourceMenu() {
@@ -92,9 +83,8 @@ async function addSourceMenu() {
     return true;
 }
 
-async function manage_source(source: Source) {
+async function manage_source(source: SourceWithUrl) {
     const storage = new Storage();
-    console.log("Managing source", source._url, source.name);
     await ui.textMenu({
         title: source.name,
         back: true,

@@ -37,8 +37,9 @@ export default function (baseDir = process.cwd()) {
                 let ts = await schema_to_ts.compile(schema, outputFile);
                 let content = `
                     ${ts}
-                    
-                    export default function validate(data: unknown): data is ${capitalCase(outputFile)};
+                    import { ValidateFunction } from "ajv";
+                    const validate: ValidateFunction<${outputFile}>; 
+                    export default validate;
                 `;
 
                 fs.writeFileSync(`${outputDir}/${outputFile}.d.ts`, content);
@@ -55,9 +56,6 @@ export default function (baseDir = process.cwd()) {
                 return fs.readFileSync(path.resolve(`${baseDir}/codegen/schemas/${source.substring(9)}.js`), 'utf-8');
             }
             return null;
-        },
-        closeBundle() {
-            console.log("Codegen complete.")
         }
     };
 }
