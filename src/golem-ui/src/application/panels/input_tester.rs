@@ -18,7 +18,7 @@ pub fn input_tester(app: &mut GoLEmApp) {
     let bounds = app.main_buffer().bounding_box();
 
     let mut current = InputState::default();
-    app.event_loop(move |app, state| {
+    app.draw_loop(move |app, state| {
         let character_style = u8g2_fonts::U8g2TextStyle::new(
             u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
             BinaryColor::On,

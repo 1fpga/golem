@@ -22,6 +22,20 @@ declare module "@/golem/commands" {
   export type Command = GeneralCommand | CoreCommand | CoreSpecificCommand;
 
   /**
+   * A command definition. Contains all information about a command.
+   */
+  export type CommandDef =
+    | (Omit<GeneralCommand, "shortcuts" | "execute"> & {
+        action: GeneralCommandAction;
+      })
+    | (Omit<CoreCommand, "shortcuts" | "execute"> & {
+        action: CoreCommandAction;
+      })
+    | (Omit<CoreSpecificCommand, "shortcuts" | "execute"> & {
+        action: CoreSpecificCommandAction;
+      });
+
+  /**
    * A base interface for all commands.
    */
   export interface CommandBase {
@@ -33,18 +47,13 @@ declare module "@/golem/commands" {
      * Execute the command. Will throw if the command is not valid in the
      * current context (e.g. trying to execute a core command when not running
      * a core).
+     * @throws If the command is not valid in the current context.
      */
     execute(): void;
 
-    /**
-     * List all shortcuts for this command.
-     */
-    listShortcuts(): string[];
+    get shortcuts(): string[];
 
-    /**
-     * Set the shortcuts for this command.
-     */
-    setShortcuts(shortcuts: string[]): void;
+    set shortcuts(shortcuts: string[]);
   }
 
   export interface GeneralCommand extends CommandBase {
@@ -63,17 +72,19 @@ declare module "@/golem/commands" {
   /**
    * A general command action. A function that handles the command itself.
    */
-  export type GeneralCommandAction = (core?: GolemCore) => void;
+  export type GeneralCommandAction = (core?: GolemCore) => void | Promise<void>;
 
   /**
    * A core command action. A function that handles the command itself.
    */
-  export type CoreCommandAction = (core: GolemCore) => void;
+  export type CoreCommandAction = (core: GolemCore) => void | Promise<void>;
 
   /**
    * A core specific command action. A function that handles the command itself.
    */
-  export type CoreSpecificCommandAction = (core: GolemCore) => void;
+  export type CoreSpecificCommandAction = (
+    core: GolemCore,
+  ) => void | Promise<void>;
 
   /**
    * List all commands available.

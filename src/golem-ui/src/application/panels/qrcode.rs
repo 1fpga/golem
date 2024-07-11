@@ -106,7 +106,7 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     .arrange()
     .align_to(&display_area, horizontal::Center, vertical::Center);
 
-    app.event_loop(move |app, state| {
+    app.draw_loop(move |app, state| {
         let buffer = app.osd_buffer();
         let _ = buffer.clear(BinaryColor::Off);
         let _ = layout.draw(buffer);

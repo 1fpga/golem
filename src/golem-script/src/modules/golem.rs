@@ -5,6 +5,7 @@ use boa_macros::js_str;
 
 use crate::module_loader::GolemModuleLoader;
 
+mod commands;
 mod core;
 mod db;
 mod net;
@@ -19,6 +20,7 @@ pub(super) fn register_modules(
     context: &mut Context,
 ) -> JsResult<()> {
     let modules = [
+        commands::create_module,
         core::create_module,
         db::create_module,
         net::create_module,

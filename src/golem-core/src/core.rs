@@ -2,6 +2,7 @@ use std::any::Any;
 use std::cell::UnsafeCell;
 use std::io::{Read, Seek, Write};
 use std::rc::Rc;
+use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
 
 use image::DynamicImage;
@@ -233,6 +234,12 @@ pub trait Core {
 
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
+
+    /// Returns true if the core should quit. Some cores might want to quit
+    /// back to the main menu by themselves.
+    fn should_quit(&self) -> bool {
+        false
+    }
 }
 
 /// A core that be used in the `Golem` platform. This is a wrapper around a core
@@ -241,6 +248,7 @@ pub trait Core {
 #[derive(Clone)]
 pub struct GolemCore {
     name: String,
+    should_quit: bool,
     inner: Rc<UnsafeCell<dyn Core + 'static>>,
 }
 
@@ -248,12 +256,17 @@ impl GolemCore {
     pub fn new(core: impl Core + 'static) -> Self {
         Self {
             name: core.name().to_string(),
+            should_quit: false,
             inner: Rc::new(UnsafeCell::new(core)),
         }
     }
 
     pub fn null() -> Self {
         Self::new(NullCore)
+    }
+
+    pub fn quit(&mut self) {
+        self.should_quit = true;
     }
 }
 
@@ -356,5 +369,9 @@ impl Core for GolemCore {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         unsafe { &mut *self.inner.get() }.as_any_mut()
+    }
+
+    fn should_quit(&self) -> bool {
+        self.should_quit || unsafe { &*self.inner.get() }.should_quit()
     }
 }

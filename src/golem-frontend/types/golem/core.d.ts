@@ -84,6 +84,16 @@ declare module "@/golem/core" {
      * This is a blocking operation.
      */
     screenshot(path: string): void;
+
+    /**
+     * Show the menu for the core. This is different from just the OSD.
+     */
+    showMenu(): void;
+
+    /**
+     * Quit the core and returns to the main menu.
+     */
+    quit(): void;
   }
 
   /**

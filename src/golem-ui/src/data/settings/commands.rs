@@ -7,44 +7,47 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 use tracing::info;
 
-#[derive(Debug, Clone, Hash, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[repr(transparent)]
+pub struct CommandId(u32);
+
+impl CommandId {
+    pub fn id_from_str(str: &str) -> u32 {
+        let mut s: u32 = 0;
+        for c in str.as_bytes() {
+            s = s.wrapping_mul(223).wrapping_add(*c as u32);
+        }
+        s
+    }
+}
+
+impl FromStr for CommandId {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(CommandId(CommandId::id_from_str(s)))
+    }
+}
+
+#[derive(Debug, Default, Clone, Hash, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CommandSettings {
-    #[serde(rename = "perCore")]
-    cores: BTreeMap<String, BTreeMap<String, BTreeSet<Shortcut>>>,
-    commands: BTreeMap<String, BTreeSet<Shortcut>>,
+    core_specific: BTreeMap<String, BTreeMap<String, BTreeSet<Shortcut>>>,
+    core: BTreeMap<String, BTreeSet<Shortcut>>,
+    general: BTreeMap<String, BTreeSet<Shortcut>>,
 }
 
 impl Merge for CommandSettings {
     fn merge(&mut self, other: Self) {
-        for (k, v) in other.cores {
-            let c = self.cores.entry(k).or_default();
+        for (k, v) in other.core_specific {
+            let c = self.core_specific.entry(k).or_default();
             for (k, mut v) in v {
                 c.entry(k).or_default().append(&mut v);
             }
         }
 
-        for (k, mut v) in other.commands {
-            self.commands.entry(k).or_default().append(&mut v);
-        }
-    }
-}
-
-impl Default for CommandSettings {
-    fn default() -> Self {
-        let global_shortcuts = ShortcutCommand::globals();
-
-        Self {
-            cores: BTreeMap::new(),
-            commands: global_shortcuts
-                .into_iter()
-                .filter_map(|k| {
-                    Some((
-                        k.setting_name().unwrap().to_string(),
-                        BTreeSet::from([k.default_shortcut()?]),
-                    ))
-                })
-                .collect(),
+        for (k, mut v) in other.general {
+            self.general.entry(k).or_default().append(&mut v);
         }
     }
 }
@@ -54,7 +57,7 @@ impl CommandSettings {
         &self,
         core_name: &str,
     ) -> impl Iterator<Item = (ShortcutCommand, Vec<&Shortcut>)> {
-        self.cores
+        self.core_specific
             .get(core_name)
             .into_iter()
             .flat_map(|core| {
@@ -65,7 +68,7 @@ impl CommandSettings {
                     )
                 })
             })
-            .chain(self.commands.iter().filter_map(|(cmd, shortcut)| {
+            .chain(self.general.iter().filter_map(|(cmd, shortcut)| {
                 ShortcutCommand::from_str(cmd)
                     .ok()
                     .map(|cmd| (cmd, shortcut.iter().collect::<Vec<_>>()))
@@ -89,14 +92,14 @@ impl CommandSettings {
         match command {
             ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
-                    self.cores
+                    self.core_specific
                         .get(core)
                         .and_then(|core| Self::find_core_command_for_id(core, id).map(|(_, v)| v))
                 } else {
                     None
                 }
             }
-            _ => self.commands.get(command.setting_name()?),
+            _ => self.general.get(command.setting_name()?),
         }
     }
 
@@ -104,7 +107,7 @@ impl CommandSettings {
         match command {
             ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
-                    if let Some(core) = self.cores.get_mut(core) {
+                    if let Some(core) = self.core_specific.get_mut(core) {
                         if let Some((key, _)) = Self::find_core_command_for_id(core, id) {
                             let key = key.to_string();
                             if let Some(x) = core.get_mut(&key) {
@@ -116,7 +119,7 @@ impl CommandSettings {
             }
             other => {
                 if let Some(x) = other.setting_name() {
-                    if let Some(x) = self.commands.get_mut(x) {
+                    if let Some(x) = self.general.get_mut(x) {
                         x.retain(|x| *x != shortcut);
                     }
                 }
@@ -128,7 +131,7 @@ impl CommandSettings {
         match command {
             ShortcutCommand::CoreSpecificCommand(id) => {
                 if let Some(core) = core {
-                    if let Some(core) = self.cores.get_mut(core) {
+                    if let Some(core) = self.core_specific.get_mut(core) {
                         if let Some((key, _)) = Self::find_core_command_for_id(core, id) {
                             let key = key.to_string();
                             core.remove(&key);
@@ -138,7 +141,7 @@ impl CommandSettings {
             }
             other => {
                 if let Some(x) = other.setting_name() {
-                    self.commands.remove(x);
+                    self.general.remove(x);
                 }
             }
         }
@@ -149,7 +152,7 @@ impl CommandSettings {
             "Setting core-specific command {} for core {} to {:?}",
             command, core, shortcut
         );
-        self.cores
+        self.core_specific
             .entry(core.to_string())
             .or_default()
             .entry(command.to_string())
@@ -160,7 +163,7 @@ impl CommandSettings {
     pub fn add(&mut self, command: ShortcutCommand, shortcut: Shortcut) {
         info!("Adding shortcut `{shortcut:?}` to global command {command}");
         if let Some(name) = command.setting_name() {
-            self.commands
+            self.general
                 .entry(name.to_string())
                 .or_default()
                 .insert(shortcut);

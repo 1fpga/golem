@@ -219,7 +219,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         .with_alignment(horizontal::Left)
         .arrange();
 
-        let (result, new_state) = app.event_loop(|_, state| {
+        let (result, new_state) = app.draw_loop(|_, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
             let _ = buffer.clear(Rgb888::BLACK.into());

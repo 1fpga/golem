@@ -151,6 +151,13 @@ impl GoLEmApp {
         result
     }
 
+    pub fn draw_loop<R>(
+        &mut self,
+        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
+    ) -> R {
+        self.event_loop(|s, state| s.draw(|s| loop_fn(s, state)))
+    }
+
     pub fn event_loop<R>(
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
@@ -213,7 +220,7 @@ impl GoLEmApp {
 
             let mut state = EventLoopState::new(events);
 
-            if let Some(r) = self.draw_inner(|s| loop_fn(s, &mut state)) {
+            if let Some(r) = loop_fn(self, &mut state) {
                 break r;
             }
 

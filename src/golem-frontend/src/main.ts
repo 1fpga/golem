@@ -7,6 +7,7 @@ import { cores_menu } from "./cores";
 import { settings_menu } from "./settings";
 import { downloads_menu } from "./downloads";
 import { about } from "./about";
+import { initCommands } from "./commands";
 
 async function main_menu() {
   const nb_games = db.queryOne("SELECT COUNT(*) as count FROM games")
@@ -42,6 +43,8 @@ async function main_menu() {
 
 export async function main() {
   try {
+    await initCommands();
+
     return await main_menu();
   } catch (e: any) {
     console.error(e);

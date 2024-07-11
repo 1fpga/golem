@@ -194,7 +194,7 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
     .align_to(&display_area, horizontal::Center, vertical::Top)
     .into_inner();
 
-    app.event_loop(move |app, state| {
+    app.draw_loop(move |app, state| {
         let buffer = app.osd_buffer();
         let _ = buffer.clear(BinaryColor::Off);
         let _ = layout.draw(buffer);
