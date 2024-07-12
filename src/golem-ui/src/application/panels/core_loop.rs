@@ -114,7 +114,7 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
                     CommandResult::Err(err) => {
                         error!("Error executing command: {}", err);
                     }
-                    CommandResult::QuitCore => return Some(()),
+                    CommandResult::QuitCore => core.quit(),
                 };
             }
         }
@@ -165,6 +165,10 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
 
                 trace!("Saved save states in {}msec.", start.elapsed().as_millis());
             }
+        }
+
+        if core.should_quit() {
+            return Some(());
         }
 
         None

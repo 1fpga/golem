@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use embedded_graphics::draw_target::DrawTarget;
@@ -13,7 +14,9 @@ use golem_db::Connection;
 use crate::application::coordinator::Coordinator;
 use crate::application::toolbar::Toolbar;
 use crate::data::paths;
+use crate::data::settings::commands::CommandId;
 use crate::data::settings::Settings;
+use crate::input::shortcut::Shortcut;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::platform::de10::De10Platform;
