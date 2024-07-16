@@ -2,7 +2,6 @@ use std::any::Any;
 use std::cell::UnsafeCell;
 use std::io::{Read, Seek, Write};
 use std::rc::Rc;
-use std::sync::atomic::AtomicBool;
 use std::time::SystemTime;
 
 use image::DynamicImage;

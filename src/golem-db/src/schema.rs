@@ -69,10 +69,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    storage (id) {
-        id -> Integer,
-        key -> Text,
+    storage (key) {
+        key -> Nullable<Text>,
         value -> Text,
+        username -> Nullable<Text>,
     }
 }
 
@@ -84,5 +84,10 @@ diesel::joinable!(savestates -> cores (core_id));
 diesel::joinable!(savestates -> games (game_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    core_files, cores, dat_files, games, savestates, storage,
+    core_files,
+    cores,
+    dat_files,
+    games,
+    savestates,
+    storage,
 );

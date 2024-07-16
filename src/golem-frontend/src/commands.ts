@@ -1,4 +1,5 @@
 import * as commands from "@/golem/commands";
+import * as storage from "@/golem/storage";
 
 export const BASIC_COMMANDS: commands.CommandDef[] = [
   {
@@ -32,9 +33,11 @@ export const BASIC_COMMANDS: commands.CommandDef[] = [
 
 export async function initCommands() {
   for (const cmd of BASIC_COMMANDS) {
-    let settingsName = `${cmd.shortName}`;
+    let settingsName = `shortcuts-${cmd.shortName}`;
+    let shortcuts = storage.get(settingsName);
 
-    await addCommand_(cmd);
+    let command = await addCommand_(cmd);
+    command.shortcuts = Array.isArray(shortcuts) ? shortcuts : [];
   }
 }
 

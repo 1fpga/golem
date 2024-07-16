@@ -46,6 +46,9 @@ pub struct GoLEmApp {
 
     toolbar_buffer: DrawBuffer<BinaryColor>,
     osd_buffer: DrawBuffer<BinaryColor>,
+
+    commands: HashMap<Shortcut, CommandId>,
+    command_handler: Option<Box<dyn Fn(CommandId) -> ()>>,
 }
 
 impl GoLEmApp {
@@ -85,6 +88,26 @@ impl GoLEmApp {
             platform,
             toolbar_buffer: DrawBuffer::new(toolbar_size),
             osd_buffer: DrawBuffer::new(osd_size),
+            commands: HashMap::new(),
+            command_handler: None,
+        }
+    }
+
+    pub fn set_command_handler(&mut self, handler: impl Fn(CommandId) -> () + 'static) {
+        self.command_handler = Some(Box::new(handler));
+    }
+
+    pub fn commands(&self) -> &HashMap<Shortcut, CommandId> {
+        &self.commands
+    }
+
+    pub fn commands_mut(&mut self) -> &mut HashMap<Shortcut, CommandId> {
+        &mut self.commands
+    }
+
+    pub fn execute_command(&mut self, command_id: CommandId) {
+        if let Some(handler) = &self.command_handler {
+            handler(command_id);
         }
     }
 
@@ -122,6 +145,14 @@ impl GoLEmApp {
 
     pub fn coordinator_mut(&mut self) -> Coordinator {
         self.coordinator.clone()
+    }
+
+    pub fn add_shortcut(&mut self, shortcut: Shortcut, command: CommandId) {
+        self.commands.insert(shortcut, command);
+    }
+
+    pub fn remove_shortcut(&mut self, shortcut: Shortcut) {
+        self.commands.remove(&shortcut);
     }
 
     fn draw_inner<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {

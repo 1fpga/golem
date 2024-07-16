@@ -1,5 +1,5 @@
 use crate::HostData;
-use boa_engine::{JsError, JsResult, JsString, JsValue};
+use boa_engine::{js_error, JsError, JsResult, JsString, JsValue};
 use boa_interop::{js_class, ContextData, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::panels::core_loop;
@@ -19,9 +19,7 @@ impl JsCore {
     }
 
     fn reset(&mut self) -> JsResult<()> {
-        self.core
-            .reset()
-            .map_err(|e| JsError::from_opaque(JsValue::from(JsString::from(e.to_string()))))
+        self.core.reset().map_err(JsError::from_std)
     }
 
     fn r#loop(&mut self, host_defined: HostData, show_menu: bool) {

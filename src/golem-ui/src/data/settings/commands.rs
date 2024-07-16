@@ -7,7 +7,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::str::FromStr;
 use tracing::info;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 #[repr(transparent)]
 pub struct CommandId(u32);
 

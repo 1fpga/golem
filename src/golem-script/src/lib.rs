@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 use std::time::Instant;
@@ -9,9 +10,9 @@ use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
 use tracing::{debug, error, info};
 
-use golem_ui::application::GoLEmApp;
-
 use crate::module_loader::GolemModuleLoader;
+use golem_ui::application::GoLEmApp;
+use golem_ui::data::settings::commands::CommandId;
 
 mod module_loader;
 

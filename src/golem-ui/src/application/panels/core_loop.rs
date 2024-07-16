@@ -6,22 +6,17 @@ use tracing::{debug, error, info, trace};
 use one_fpga::{Core, GolemCore};
 
 use crate::application::GoLEmApp;
-use crate::input::commands::{CommandResult, ShortcutCommand};
+use crate::data::settings::commands::CommandId;
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
 
 pub mod menu;
 
-fn commands_(app: &mut GoLEmApp, core: &GolemCore) -> Vec<(ShortcutCommand, Shortcut)> {
-    let settings = app.settings();
-    if let Some(mappings) = settings.inner().mappings() {
-        mappings
-            .all_commands(core.name())
-            .flat_map(|(cmd, shortcut)| shortcut.into_iter().map(move |x| (cmd.clone(), x.clone())))
-            .collect::<Vec<_>>()
-    } else {
-        Vec::new()
-    }
+fn commands_(app: &mut GoLEmApp, _core: &GolemCore) -> Vec<(Shortcut, CommandId)> {
+    app.commands()
+        .iter()
+        .map(|(k, v)| (k.clone(), *v))
+        .collect::<Vec<_>>()
 }
 
 fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
@@ -102,20 +97,14 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
 
         // Check if any action needs to be taken.
         let mut update_commands = false;
-        for (command, mapping) in &commands {
-            if mapping.matches(&inputs) {
-                info!(?mapping, ?inputs, "Command {:?} triggered", command);
+        for (shortcut, id) in &commands {
+            if shortcut.matches(&inputs) {
+                info!(?shortcut, ?inputs, "Command {:?} triggered", *id);
                 // TODO: do not clear the inputs, instead record inputs in the application.
                 inputs.clear();
                 update_commands = true;
 
-                match command.execute(app, core) {
-                    CommandResult::Ok => {}
-                    CommandResult::Err(err) => {
-                        error!("Error executing command: {}", err);
-                    }
-                    CommandResult::QuitCore => core.quit(),
-                };
+                app.execute_command(*id);
             }
         }
         if update_commands {
