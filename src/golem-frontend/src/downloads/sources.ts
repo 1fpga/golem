@@ -33,9 +33,6 @@ export class Storage {
 }
 
 async function fetchSource(url: string): Promise<SourceWithUrl> {
-    // A validate source.
-    const validateSource = await import("$schemas:source").then((m) => m.default);
-
     function inner(url: string) {
         try {
             return net.fetchJson(url + "/golem.json");
@@ -51,6 +48,8 @@ async function fetchSource(url: string): Promise<SourceWithUrl> {
 
     const maybeJson = inner(url);
 
+    // Validate source function.
+    const validateSource = await import("$schemas:source").then((m) => m.default);
     if (validateSource(maybeJson)) {
         return {_url: url, ...maybeJson};
     }

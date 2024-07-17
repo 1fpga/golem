@@ -22,6 +22,7 @@ export default {
         terser({}),
     ],
     external: [
+        "@/golem/commands",
         "@/golem/core",
         "@/golem/db",
         "@/golem/net",

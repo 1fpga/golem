@@ -38,7 +38,7 @@ export default function (baseDir = process.cwd()) {
                 let content = `
                     ${ts}
                     import { ValidateFunction } from "ajv";
-                    const validate: ValidateFunction<${outputFile}>; 
+                    declare const validate: ValidateFunction<${capitalCase(outputFile)}>; 
                     export default validate;
                 `;
 
