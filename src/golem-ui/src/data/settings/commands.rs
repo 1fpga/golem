@@ -12,6 +12,10 @@ use tracing::info;
 pub struct CommandId(u32);
 
 impl CommandId {
+    pub fn new(str: &str) -> Self {
+        CommandId(CommandId::id_from_str(str))
+    }
+
     pub fn id_from_str(str: &str) -> u32 {
         let mut s: u32 = 0;
         for c in str.as_bytes() {

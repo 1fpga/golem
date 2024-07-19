@@ -19,34 +19,46 @@ fn commands_(app: &mut GoLEmApp, _core: &GolemCore) -> Vec<(Shortcut, CommandId)
         .collect::<Vec<_>>()
 }
 
-fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
+fn core_loop<C, E>(
+    app: &mut GoLEmApp,
+    core: &mut GolemCore,
+    context: &mut C,
+    mut shortcut_handler: impl FnMut(
+        &mut GoLEmApp,
+        &mut GolemCore,
+        Shortcut,
+        CommandId,
+        &mut C,
+    ) -> Result<(), E>,
+) -> Result<(), E> {
     let mut inputs = InputState::default();
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
 
     let mut commands = commands_(app, &core);
+    eprintln!("Commands: {:?}", commands);
 
-    let mut i = 0;
     let mut prev = Instant::now();
 
     let mut should_check_savestates = matches!(core.save_state(0), Ok(Some(_)));
 
     let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+    let mut i = 0;
 
     // This is a special loop that forwards everything to the core,
     // except for the menu button(s).
     app.event_loop(move |app, state| {
-        i += 1;
         // Check for things that might be expensive once every some frames, to reduce lag.
-        if i % 100 == 0 {
+        if prev.elapsed().as_secs() >= 1 {
             let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
                 commands = commands_(app, &core);
                 debug!("Settings updated...");
             }
 
-            // Every 500 frames, show FPS.
-            if trace_enabled && i % 500 == 0 {
+            // Every 5 settings update, output the logs.
+            i += 1;
+            if trace_enabled && i % 5 == 0 {
                 trace!("Settings update took {:?}", now.elapsed());
                 trace!(
                     "FPS: {}",
@@ -104,7 +116,9 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
                 inputs.clear();
                 update_commands = true;
 
-                app.execute_command(*id);
+                if let Err(e) = shortcut_handler(app, core, shortcut.clone(), *id, context) {
+                    return Some(Err(e));
+                }
             }
         }
         if update_commands {
@@ -157,15 +171,27 @@ fn core_loop(app: &mut GoLEmApp, core: &mut GolemCore) {
         }
 
         if core.should_quit() {
-            return Some(());
+            return Some(Ok(()));
         }
 
         None
-    });
+    })
 }
 
 /// Run the core loop and send events to the core.
-pub fn run_core_loop(app: &mut GoLEmApp, core: &mut GolemCore, should_show_menu: bool) {
+pub fn run_core_loop<C, E>(
+    app: &mut GoLEmApp,
+    core: &mut GolemCore,
+    context: &mut C,
+    shortcut_handler: impl FnMut(
+        &mut GoLEmApp,
+        &mut GolemCore,
+        Shortcut,
+        CommandId,
+        &mut C,
+    ) -> Result<(), E>,
+    should_show_menu: bool,
+) -> Result<(), E> {
     let mut should_run_loop = true;
     debug!("Starting core loop...");
 
@@ -177,12 +203,15 @@ pub fn run_core_loop(app: &mut GoLEmApp, core: &mut GolemCore, should_show_menu:
         should_run_loop = !menu::core_menu(app, core);
     }
 
+    let mut result = Ok(());
     if should_run_loop {
-        core_loop(app, core);
+        result = core_loop(app, core, context, shortcut_handler);
     }
 
     debug!("Core loop ended");
     info!("Loading Main Menu");
     app.platform_mut().core_manager_mut().load_menu().unwrap();
     app.show_toolbar();
+
+    result
 }

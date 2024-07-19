@@ -65,11 +65,25 @@ impl JsCommand {
         }
     }
 
-    pub fn set_shortcuts(&mut self, shortcuts: Vec<String>) -> JsResult<()> {
+    pub fn set_shortcuts(&mut self, shortcuts: Vec<String>, app: &mut GoLEmApp) -> JsResult<()> {
+        // Remove previous shortcuts.
+        let this_id = CommandId::new(&self.command.short_name);
+        for shortcut in self.command.shortcuts.iter() {
+            // Make sure the shortcut isn't registered to another command.
+            if app.commands().get(shortcut) == Some(&this_id) {
+                app.commands_mut().remove(shortcut);
+            }
+        }
+
         self.command.shortcuts = shortcuts
             .into_iter()
             .map(|s| Shortcut::from_str(s.as_str()).map_err(|e| js_error!(js_string!(e))))
             .collect::<JsResult<Vec<Shortcut>>>()?;
+
+        for shortcut in self.command.shortcuts.iter() {
+            app.commands_mut().insert(shortcut.clone(), this_id);
+        }
+
         Ok(())
     }
 }
@@ -106,8 +120,12 @@ js_class! {
                 Ok(shortcuts.into())
             }
 
-            fn set(this: JsClass<JsCommand>, new_shortcuts: Vec<String>) -> JsResult<()> {
-                this.borrow_mut().set_shortcuts(new_shortcuts)
+            fn set(
+                this: JsClass<JsCommand>,
+                new_shortcuts: Vec<String>,
+                host: ContextData<HostData>
+            ) -> JsResult<()> {
+                this.borrow_mut().set_shortcuts(new_shortcuts, host.0.app_mut())
             }
         }
 
@@ -151,7 +169,29 @@ pub struct Command {
     pub shortcuts: Vec<Shortcut>,
 }
 
+impl Command {
+    pub fn execute(
+        &mut self,
+        app: &mut GoLEmApp,
+        running_core: Option<&GolemCore>,
+        context: &mut Context,
+    ) -> JsResult<()> {
+        if self.ty.matches(running_core) {
+            let core = running_core.map_or(JsValue::undefined(), |c| {
+                JsValue::Object(JsCore::from_data(JsCore::new(c.clone()), context).unwrap())
+            });
+            self.action.call(&JsValue::undefined(), &[core], context)?;
+            context.run_jobs();
+
+            Ok(())
+        } else {
+            Err(js_error!("Command does not match the current core"))
+        }
+    }
+}
+
 fn create_general_command_(
+    ContextData(data): ContextData<HostData>,
     short_name: JsString,
     name: JsString,
     description: JsString,
@@ -166,6 +206,8 @@ fn create_general_command_(
         action,
         shortcuts: Default::default(),
     };
+    data.command_map_mut()
+        .insert(CommandId::new(command.short_name.as_str()), command.clone());
 
     Ok(JsCommand::new(command).into_object(context)?)
 }

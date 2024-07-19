@@ -24,7 +24,7 @@ declare module "@/golem/commands" {
   /**
    * A command definition. Contains all information about a command.
    */
-  export type CommandDef =
+  export type CommandDef = (
     | (Omit<GeneralCommand, "shortcuts" | "execute"> & {
         action: GeneralCommandAction;
       })
@@ -33,7 +33,8 @@ declare module "@/golem/commands" {
       })
     | (Omit<CoreSpecificCommand, "shortcuts" | "execute"> & {
         action: CoreSpecificCommandAction;
-      });
+      })
+  ) & { defaultShortcuts?: string[] };
 
   /**
    * A base interface for all commands.

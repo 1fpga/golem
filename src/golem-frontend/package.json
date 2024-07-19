@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
+    "build-ts": "tsc",
     "retronomicon-update": "openapi-typescript https://retronomicon.land/api/v1/openapi.json -o ./types/retronomicon.d.ts"
   },
   "keywords": [],

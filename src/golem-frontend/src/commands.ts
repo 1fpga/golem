@@ -10,6 +10,7 @@ export const BASIC_COMMANDS: commands.CommandDef[] = [
     action: async (core) => {
       core.showMenu();
     },
+    defaultShortcuts: ["'F12'"],
   },
   {
     type: "core",
@@ -19,6 +20,7 @@ export const BASIC_COMMANDS: commands.CommandDef[] = [
     action: async (core) => {
       core.quit();
     },
+    defaultShortcuts: ["'F10'"],
   },
   {
     type: "core",
@@ -28,16 +30,33 @@ export const BASIC_COMMANDS: commands.CommandDef[] = [
     action: async (core) => {
       core.screenshot("screenshot.png");
     },
+    defaultShortcuts: ["'F4'"],
+  },
+  {
+    type: "general",
+    shortName: "debugLog",
+    name: "Debug Log",
+    description: "Print a line in debug.",
+    action: async () => {
+      console.log("Debug log.");
+    },
+    defaultShortcuts: ["'D' + 'F1'"],
   },
 ];
 
 export async function initCommands() {
+  let validate = (await import("$schemas:shortcut")).default;
+
   for (const cmd of BASIC_COMMANDS) {
     let settingsName = `shortcuts-${cmd.shortName}`;
-    let shortcuts = storage.get(settingsName);
 
     let command = await addCommand_(cmd);
-    command.shortcuts = Array.isArray(shortcuts) ? shortcuts : [];
+    const maybeShortcuts = storage.get(settingsName);
+    if (validate(maybeShortcuts)) {
+      command.shortcuts = maybeShortcuts;
+    } else if (cmd.defaultShortcuts !== undefined) {
+      command.shortcuts = cmd.defaultShortcuts;
+    }
   }
 }
 

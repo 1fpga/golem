@@ -1,18 +1,17 @@
-use std::collections::HashMap;
-use std::path::Path;
-use std::rc::Rc;
-use std::time::Instant;
-
+use crate::module_loader::GolemModuleLoader;
+use crate::modules::CommandMap;
 use boa_engine::builtins::promise::PromiseState;
 use boa_engine::object::builtins::JsPromise;
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
-use tracing::{debug, error, info};
-
-use crate::module_loader::GolemModuleLoader;
 use golem_ui::application::GoLEmApp;
 use golem_ui::data::settings::commands::CommandId;
+use std::collections::HashMap;
+use std::path::Path;
+use std::rc::Rc;
+use std::time::Instant;
+use tracing::{debug, error, info};
 
 mod module_loader;
 
@@ -29,6 +28,10 @@ pub(crate) struct HostData {
     /// The GoLEm application.
     #[unsafe_ignore_trace]
     app: Rc<*mut GoLEmApp>,
+
+    /// A command map that needs to be shared.
+    #[unsafe_ignore_trace]
+    command_map: Rc<*mut CommandMap>,
 }
 
 impl std::fmt::Debug for HostData {
@@ -44,6 +47,14 @@ impl HostData {
 
     pub fn app_mut(&self) -> &mut GoLEmApp {
         unsafe { self.app.as_mut().unwrap() }
+    }
+
+    pub fn command_map(&self) -> &CommandMap {
+        unsafe { self.command_map.as_ref().as_ref().unwrap() }
+    }
+
+    pub fn command_map_mut(&self) -> &mut CommandMap {
+        unsafe { self.command_map.as_mut().unwrap() }
     }
 }
 
@@ -73,7 +84,11 @@ pub fn run(
 ) -> Result<(), Box<dyn std::error::Error>> {
     app.init_platform();
     let app = Rc::new((&mut app) as *mut GoLEmApp);
-    let host_defined = HostData { app };
+    let mut command_map = CommandMap::default();
+    let host_defined = HostData {
+        app,
+        command_map: Rc::new(&mut command_map as *mut CommandMap),
+    };
 
     debug!("Loading JavaScript...");
     let start = Instant::now();

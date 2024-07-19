@@ -50,10 +50,11 @@ impl TryFromJs for RunOptions {
 
 fn run_(
     options: RunOptions,
-    ContextData(app): ContextData<HostData>,
+    host_data: ContextData<HostData>,
     context: &mut Context,
 ) -> JsResult<JsValue> {
-    let app = app.app_mut();
+    let app = host_data.0.app_mut();
+    let command_map = host_data.0.command_map_mut();
     let mut core_options = match &options.core {
         CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path)),
     };
@@ -85,8 +86,21 @@ fn run_(
         .unwrap();
 
     if options.auto_loop.unwrap_or(true) {
-        run_core_loop(&mut *app, &mut core, options.show_menu.unwrap_or(true));
-        Ok(JsValue::undefined())
+        run_core_loop(
+            &mut *app,
+            &mut core,
+            &mut (command_map, context),
+            |app, core, _, id, (command_map, context)| {
+                eprintln!("Shortcut: {:?}", id);
+                if let Some(command) = command_map.get_mut(id) {
+                    command.execute(&mut *app, Some(core), context)
+                } else {
+                    Ok(())
+                }
+            },
+            options.show_menu.unwrap_or(true),
+        )
+        .map(|_| JsValue::undefined())
     } else {
         Ok(JsValue::Object(JsCore::from_data(
             JsCore::new(core),

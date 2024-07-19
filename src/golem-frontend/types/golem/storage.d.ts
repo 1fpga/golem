@@ -5,6 +5,14 @@
  * It allows scripts to store and retrieve JS values from the storage.
  */
 declare module "@/golem/storage" {
+  export type StorageItem =
+    | number
+    | string
+    | boolean
+    | { [key: string]: StorageItem }
+    | Array<StorageItem>
+    | null;
+
   /**
    * Whether a value is in the storage.
    *
@@ -23,7 +31,7 @@ declare module "@/golem/storage" {
    *             global for all users.
    * @returns The value stored at the key, or `undefined` if no value is stored.
    */
-  export function get(key: string, user?: string): any;
+  export function get(key: string, user?: string): StorageItem;
 
   /**
    * Stores a value in the storage.
@@ -33,7 +41,7 @@ declare module "@/golem/storage" {
    *             global for all users.
    * @param value The value to store.
    */
-  export function set(key: string, value: any, user?: string): void;
+  export function set(key: string, value: StorageItem, user?: string): void;
 
   /**
    * Removes a value from the storage.

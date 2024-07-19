@@ -15,6 +15,8 @@ mod storage;
 mod ui;
 mod video;
 
+pub use commands::CommandMap;
+
 pub(super) fn register_modules(
     loader: Rc<GolemModuleLoader>,
     context: &mut Context,
