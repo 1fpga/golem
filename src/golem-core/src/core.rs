@@ -234,11 +234,14 @@ pub trait Core {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
 
+    /// Indicates to the core that it needs to prepare quitting.
+    /// This is used to perform any cleanup that the core needs to do before quitting.
+    /// When the core is ready, [should_quit()] should return true.
+    fn quit(&mut self);
+
     /// Returns true if the core should quit. Some cores might want to quit
     /// back to the main menu by themselves.
-    fn should_quit(&self) -> bool {
-        false
-    }
+    fn should_quit(&self) -> bool;
 }
 
 /// A core that be used in the `Golem` platform. This is a wrapper around a core
@@ -247,7 +250,6 @@ pub trait Core {
 #[derive(Clone)]
 pub struct GolemCore {
     name: String,
-    should_quit: bool,
     inner: Rc<UnsafeCell<dyn Core + 'static>>,
 }
 
@@ -255,17 +257,12 @@ impl GolemCore {
     pub fn new(core: impl Core + 'static) -> Self {
         Self {
             name: core.name().to_string(),
-            should_quit: false,
             inner: Rc::new(UnsafeCell::new(core)),
         }
     }
 
     pub fn null() -> Self {
         Self::new(NullCore)
-    }
-
-    pub fn quit(&mut self) {
-        self.should_quit = true;
     }
 }
 
@@ -370,7 +367,11 @@ impl Core for GolemCore {
         unsafe { &mut *self.inner.get() }.as_any_mut()
     }
 
+    fn quit(&mut self) {
+        unsafe { &mut *self.inner.get() }.quit();
+    }
+
     fn should_quit(&self) -> bool {
-        self.should_quit || unsafe { &*self.inner.get() }.should_quit()
+        unsafe { &*self.inner.get() }.should_quit()
     }
 }

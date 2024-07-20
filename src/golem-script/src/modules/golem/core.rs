@@ -11,10 +11,7 @@ use serde::Deserialize;
 
 use golem_ui::application::panels::core_loop::run_core_loop;
 
-use crate::modules::golem::core::js_core::JsCore;
 use crate::HostData;
-
-pub mod js_core;
 
 /// The core type from JavaScript.
 #[derive(Debug, Trace, Finalize, JsData, Deserialize)]
@@ -110,8 +107,6 @@ fn run_(
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
-    context.register_global_class::<JsCore>()?;
-
     Ok((
         js_string!("core"),
         [(js_string!("run"), run_.into_js_function_copied(context))].into_js_module(context),

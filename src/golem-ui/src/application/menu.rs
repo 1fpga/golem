@@ -158,8 +158,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         let bottom_bar = bottom_bar(
             Some("Select"),
             show_back_button.then_some("Back"),
-            show_sort.then_some(sort_field.as_str()),
             show_details.then_some(()).and(detail_label),
+            show_sort.then_some(sort_field.as_str()),
             None,
             None,
         );

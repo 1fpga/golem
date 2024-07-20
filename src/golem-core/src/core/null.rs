@@ -101,4 +101,10 @@ impl Core for NullCore {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+
+    fn quit(&mut self) {}
+
+    fn should_quit(&self) -> bool {
+        false
+    }
 }

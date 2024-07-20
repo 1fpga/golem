@@ -1,26 +1,23 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-
-use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
-use embedded_graphics::Drawable;
-use sdl3::event::Event;
-use sdl3::gamepad::Gamepad;
-use sdl3::joystick::Joystick;
-use tracing::{info, warn};
-
-use golem_db::Connection;
-
 use crate::application::coordinator::Coordinator;
 use crate::application::toolbar::Toolbar;
 use crate::data::paths;
-use crate::data::settings::commands::CommandId;
 use crate::data::settings::Settings;
+use crate::input::commands::CommandId;
 use crate::input::shortcut::Shortcut;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::platform::de10::De10Platform;
 use crate::platform::WindowManager;
+use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
+use embedded_graphics::Drawable;
+use golem_db::Connection;
+use sdl3::event::Event;
+use sdl3::gamepad::Gamepad;
+use sdl3::joystick::Joystick;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use tracing::{info, warn};
 
 pub mod menu;
 

@@ -1,14 +1,11 @@
-use std::time::Instant;
-
-use sdl3::event::Event;
-use tracing::{debug, error, info, trace};
-
-use one_fpga::{Core, GolemCore};
-
 use crate::application::GoLEmApp;
-use crate::data::settings::commands::CommandId;
+use crate::input::commands::CommandId;
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
+use one_fpga::{Core, GolemCore};
+use sdl3::event::Event;
+use std::time::Instant;
+use tracing::{debug, error, info, trace};
 
 pub mod menu;
 
@@ -36,8 +33,6 @@ fn core_loop<C, E>(
     let mut on_setting_update = settings.on_update();
 
     let mut commands = commands_(app, &core);
-    eprintln!("Commands: {:?}", commands);
-
     let mut prev = Instant::now();
 
     let mut should_check_savestates = matches!(core.save_state(0), Ok(Some(_)));

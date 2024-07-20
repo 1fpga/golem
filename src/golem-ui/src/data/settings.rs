@@ -1,7 +1,6 @@
 use crate::application::menu::style::{MenuStyleFontSize, MenuStyleOptions};
 use crate::data::paths;
 use bus::{Bus, BusReader};
-use commands::CommandSettings;
 use merge::Merge;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -14,8 +13,6 @@ use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::Duration;
 use strum::Display;
 use tracing::{debug, error};
-
-pub mod commands;
 
 fn default_retronomicon_backend_() -> Vec<Url> {
     vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
@@ -103,9 +100,6 @@ pub struct InnerSettings {
     #[merge(strategy = merge::option::recurse)]
     ui: Option<UiSettings>,
 
-    #[merge(strategy = merge::option::recurse)]
-    commands: Option<CommandSettings>,
-
     #[serde(default)]
     #[merge(strategy = merge::overwrite)]
     retronomicon_backend: Vec<Url>,
@@ -147,14 +141,6 @@ impl InnerSettings {
         .unwrap();
 
         std::fs::write(path, content)
-    }
-
-    pub fn mappings(&self) -> Option<&CommandSettings> {
-        self.commands.as_ref()
-    }
-
-    pub fn mappings_mut(&mut self) -> &mut CommandSettings {
-        self.commands.get_or_insert(CommandSettings::default())
     }
 }
 
@@ -363,26 +349,6 @@ impl Settings {
     pub fn as_json_value(&self) -> serde_json::Value {
         serde_json::to_value(self.inner.read().unwrap().deref()).unwrap()
     }
-}
-
-#[test]
-fn serializes() {
-    let mut settings = InnerSettings::default();
-    let mut other_serialized = InnerSettings::default();
-    other_serialized
-        .commands
-        .get_or_insert_with(CommandSettings::default)
-        .add(
-            crate::input::commands::ShortcutCommand::ShowCoreMenu,
-            crate::input::shortcut::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
-        );
-
-    settings.merge(other_serialized);
-    let serialized = json5::to_string(&settings).unwrap();
-    assert_eq!(
-        serialized,
-        r#"{"show_fps":false,"invert_toolbar":true,"toolbar_datetime_format":"Default","mappings":{"quit_core":"'F10'","reset_core":"'F11'","show_menu":["'A'","'F12'"],"take_screenshot":"'SysReq'"},"language":null}"#
-    );
 }
 
 #[test]

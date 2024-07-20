@@ -15,6 +15,8 @@ mod storage;
 mod ui;
 mod video;
 
+mod globals;
+
 pub use commands::CommandMap;
 
 pub(super) fn register_modules(
@@ -46,6 +48,8 @@ pub(super) fn register_modules(
             context,
         )?,
     );
+
+    globals::register_globals(context)?;
 
     Ok(())
 }

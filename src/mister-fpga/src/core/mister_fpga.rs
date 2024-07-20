@@ -93,6 +93,9 @@ pub struct MisterFpgaCore {
 
     // A cache for the video_info.
     video_info: Option<VideoInfo>,
+
+    // Whether we should quit.
+    should_quit: bool,
 }
 
 impl MisterFpgaCore {
@@ -140,6 +143,7 @@ impl MisterFpgaCore {
             status_counter: 0,
             framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
             video_info: None,
+            should_quit: false,
         })
     }
 
@@ -748,5 +752,13 @@ impl Core for MisterFpgaCore {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn quit(&mut self) {
+        self.should_quit = true;
+    }
+
+    fn should_quit(&self) -> bool {
+        self.should_quit
     }
 }

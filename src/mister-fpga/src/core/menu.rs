@@ -159,4 +159,10 @@ impl Core for MenuCore {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
+
+    fn quit(&mut self) {}
+
+    fn should_quit(&self) -> bool {
+        false
+    }
 }

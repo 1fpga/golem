@@ -6,7 +6,6 @@ use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::GoLEmApp;
-use golem_ui::data::settings::commands::CommandId;
 use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
