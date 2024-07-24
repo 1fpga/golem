@@ -1,18 +1,4 @@
-use image::GenericImageView;
-use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use std::time::Instant;
-
-use sdl3::keyboard::Scancode;
-use tracing::{debug, error, info, warn};
-
-use mister_fpga::core::MisterFpgaCore;
-use one_fpga::Core;
-
-use crate::application::panels::core_loop::menu::core_menu;
-use crate::application::GoLEmApp;
-use crate::data::paths;
-use crate::input::shortcut::Shortcut;
 
 /// A command ID that can be associated with a shortcut.
 /// Passing strings around is hard across all languages and subsystems.

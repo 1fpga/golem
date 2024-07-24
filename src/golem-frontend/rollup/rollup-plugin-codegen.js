@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { globSync } from "glob";
-import { Ajv } from "ajv";
+import { _, Ajv } from "ajv";
 import * as schema_to_ts from "json-schema-to-typescript";
 import standaloneCode from "ajv/dist/standalone/index.js";
 import { capitalCase } from "change-case";
@@ -26,8 +26,13 @@ export default function (baseDir = process.cwd()) {
         fs.mkdirSync(outputDir, { recursive: true });
 
         const ajv = new Ajv({
-          code: { esm: true, source: true },
+          useDefaults: true,
+          code: {
+            esm: true,
+            source: true,
+          },
         });
+
         const validate = ajv.compile(schema);
         let moduleCode = standaloneCode(ajv, validate);
 
@@ -50,7 +55,6 @@ export default function (baseDir = process.cwd()) {
           `${baseDir}/codegen/schemas/${source.substring(9)}.js`,
         );
       }
-      return null;
     },
   };
 }

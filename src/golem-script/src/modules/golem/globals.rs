@@ -1,9 +1,9 @@
 mod commands;
-mod js_core;
+mod core;
 
-mod classes {
+pub mod classes {
     pub use super::commands::JsCommand;
-    pub use super::js_core::JsCore;
+    pub use super::core::JsCore;
 }
 
 pub fn register_globals(context: &mut boa_engine::Context) -> boa_engine::JsResult<()> {

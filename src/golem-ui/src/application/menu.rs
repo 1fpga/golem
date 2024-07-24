@@ -104,15 +104,15 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let display_area = buffer.bounding_box();
 
     let mut prefix_items = prefix
-        .into_iter()
+        .iter()
         .map(|item| item.to_menu_item())
         .collect::<Vec<TextMenuItem<_>>>();
     let mut items_items = items
-        .into_iter()
+        .iter()
         .map(|item| OptionalMenuItem::new(true, item.to_menu_item()))
         .collect::<Vec<OptionalMenuItem<_, _>>>();
     let mut suffix_items = suffix
-        .into_iter()
+        .iter()
         .map(|item| item.to_menu_item())
         .collect::<Vec<TextMenuItem<_>>>();
 
@@ -213,7 +213,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                     Point::new(0, 0),
                     Point::new(display_area.size.width as i32, 0),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On.into(), 1)),
+                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
             ),
         )
         .with_alignment(horizontal::Left)

@@ -21,6 +21,32 @@ pub mod rom;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigMenuId(u32);
 
+impl From<u32> for ConfigMenuId {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
+impl Into<u32> for ConfigMenuId {
+    fn into(self) -> u32 {
+        self.0
+    }
+}
+
+impl ConfigMenuId {
+    pub fn new(id: u32) -> Self {
+        Self(id)
+    }
+
+    pub fn from_label(label: &str) -> Self {
+        let mut s: u32 = 0;
+        for c in label.as_bytes() {
+            s = s.wrapping_mul(223).wrapping_add(*c as u32);
+        }
+        s
+    }
+}
+
 /// A menu item that can be displayed in the core's menu.
 /// This is used to configure the core's settings, in an abstract
 /// way.
@@ -30,7 +56,6 @@ pub struct ConfigMenuId(u32);
 pub enum CoreMenuItem {
     /// A menu page that contains more menu items. This is purely cosmetic.
     Page {
-        sort: i32,
         label: String,
         title: String,
         items: Vec<CoreMenuItem>,
@@ -46,14 +71,25 @@ pub enum CoreMenuItem {
     /// A trigger that can be used to perform an action.
     Trigger { id: ConfigMenuId, label: String },
 
+    /// An option that can be selected by the user and contains a boolean
+    /// value (on or off).
+    BoolOption {
+        id: ConfigMenuId,
+        label: String,
+        value: bool,
+    },
+
     /// An option that can be selected by the user and contains an integer
-    /// value. Booleans are represented as integers with 0 being false and
-    /// 1 being true.
+    /// value. This is used for options that have a range of values, but
+    /// can also represent options with 2 choices.
+    ///
+    /// It is an error to have choices less than 2 items (and will result
+    /// in an error when dealing with core menus).
     IntOption {
         id: ConfigMenuId,
         label: String,
         choices: Vec<String>,
-        value: u32,
+        value: usize,
     },
 }
 

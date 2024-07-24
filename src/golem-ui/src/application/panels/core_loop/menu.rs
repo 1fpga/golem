@@ -66,7 +66,7 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
             .menu_options()
             .iter()
             .filter(|o| o.as_load_file().is_some())
-            .filter_map(|i| into_text_menu_item(i, &status))
+            .filter_map(|i| into_text_menu_item(i, status))
             .map(|i| i.map_action(CoreMenuAction::CoreMenuAction))
             .chain([
                 ("-", "", CoreMenuAction::Unselectable).to_menu_item(),
@@ -114,7 +114,7 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
                 todo!();
             }
             CoreMenuAction::CoreMenuAction(action) => {
-                if let Some(_) = execute_core_settings(app, c, action) {
+                if execute_core_settings(app, c, action).is_some() {
                     break false;
                 }
             }

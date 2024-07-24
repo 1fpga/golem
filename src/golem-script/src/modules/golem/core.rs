@@ -9,8 +9,7 @@ use one_fpga::core::Rom;
 use one_fpga::runner::CoreLaunchInfo;
 use serde::Deserialize;
 
-use golem_ui::application::panels::core_loop::run_core_loop;
-
+use crate::modules::golem::globals::classes::JsCore;
 use crate::HostData;
 
 /// The core type from JavaScript.
@@ -35,7 +34,6 @@ struct RunOptions {
     files: Option<Vec<Option<String>>>,
     savestate: Option<String>,
     show_menu: Option<bool>,
-    auto_loop: Option<bool>,
 }
 
 impl TryFromJs for RunOptions {
@@ -76,34 +74,16 @@ fn run_(
     }
 
     eprintln!("Launching core: {:?}", core_options);
-    let mut core = app
+    let core = app
         .platform_mut()
         .core_manager_mut()
         .launch(core_options)
         .unwrap();
 
-    if options.auto_loop.unwrap_or(true) {
-        run_core_loop(
-            &mut *app,
-            &mut core,
-            &mut (command_map, context),
-            |app, core, _, id, (command_map, context)| {
-                eprintln!("Shortcut: {:?}", id);
-                if let Some(command) = command_map.get_mut(id) {
-                    command.execute(&mut *app, Some(core), context)
-                } else {
-                    Ok(())
-                }
-            },
-            options.show_menu.unwrap_or(true),
-        )
-        .map(|_| JsValue::undefined())
-    } else {
-        Ok(JsValue::Object(JsCore::from_data(
-            JsCore::new(core),
-            context,
-        )?))
-    }
+    Ok(JsValue::Object(JsCore::from_data(
+        JsCore::new(core),
+        context,
+    )?))
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {

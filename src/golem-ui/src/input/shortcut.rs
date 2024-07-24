@@ -78,7 +78,7 @@ impl AxisValue {
             AxisValue::Idle => (-10..10).contains(&value),
             AxisValue::LowPositive => ((i16::MAX / 4)..(i16::MAX / 2)).contains(&value),
             AxisValue::HighPositive => ((i16::MAX / 2)..).contains(&value),
-            AxisValue::LowNegative => (i16::MIN / 4..i16::MIN / 2).contains(&value),
+            AxisValue::LowNegative => (i16::MIN / 2..i16::MIN / 4).rev().contains(&value),
             AxisValue::HighNegative => (..(i16::MIN / 2)).contains(&value),
         }
     }

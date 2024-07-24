@@ -15,7 +15,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tracing::debug;
 
-use one_fpga::core::CoreMenuItem;
+use one_fpga::core::{ConfigMenuId, CoreMenuItem};
 pub use types::*;
 
 use crate::fpga::user_io;
@@ -231,6 +231,39 @@ impl ConfigMenu {
         }
     }
 
+    pub fn as_core_menu_item(&self) -> Option<CoreMenuItem> {
+        match self {
+            ConfigMenu::Option { label, choices, .. } => {
+                if choices.len() < 2 {
+                    None
+                } else if choices.len() == 2 {
+                    CoreMenuItem::BoolOption {
+                    id: ConfigMenuId::from_label(label),    
+                    
+                        label: label.clone(),
+                        value: false,
+                                            }
+                } else {
+                CoreMenuItem::BoolOption {
+                    label: label.clone(),
+                    choices: choices.clone(),
+                }
+            },
+            ConfigMenu::Trigger { label, .. } => CoreMenuItem::Trigger {
+                label: label.clone(),
+            },
+            ConfigMenu::Page { index, label } => CoreMenuItem::Page {
+                index: *index,
+                label: label.clone(),
+            },
+            ConfigMenu::PageItem(index, sub) => CoreMenuItem::PageItem {
+                index: *index,
+                items: sub.as_core_menu(),
+            },
+            _ => CoreMenuItem::Empty,
+        }
+    }
+
     pub fn as_load_file(&self) -> Option<&Self> {
         match self {
             ConfigMenu::LoadFile(_) | ConfigMenu::LoadFileAndRemember(_) => Some(self),
@@ -366,7 +399,14 @@ impl Config {
     }
 
     pub fn as_core_menu(&self) -> Vec<CoreMenuItem> {
-        todo!()
+        let mut result = Vec::new();
+        let mut page_stack = Vec::new();
+
+        for menu_item in &self.menu {
+            let i = menu_item.as_core_menu_item();
+        }
+
+        result
     }
 }
 

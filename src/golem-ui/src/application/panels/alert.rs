@@ -48,7 +48,7 @@ pub fn report_issue(app: &mut GoLEmApp, error: &impl std::error::Error) {
             "body",
             &format!(
                 "**Describe what you were doing**\n\n\n{}",
-                error.to_string()
+                error
             ),
         )
         .append_pair("labels", "qr-code");
@@ -147,7 +147,7 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
     let display_area = app.main_buffer().bounding_box();
 
     let mut choices = choices
-        .into_iter()
+        .iter()
         .enumerate()
         .map(|(i, ch)| MenuItem::new(ch, MenuAction::Select(i)).with_value_converter(identity))
         .collect::<Vec<_>>();

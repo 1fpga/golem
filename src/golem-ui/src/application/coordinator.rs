@@ -180,7 +180,7 @@ impl CoordinatorInner {
                 .ok_or("Savestate not found")?;
 
             if let Some(state) = c.save_states_mut().and_then(|x| x.slots_mut().get_mut(0)) {
-                let mut f = std::fs::File::open(&savestate.path).map_err(|e| e.to_string())?;
+                let mut f = std::fs::File::open(savestate.path).map_err(|e| e.to_string())?;
                 state.load(&mut f).map_err(|e| e.to_string())?;
             }
         }

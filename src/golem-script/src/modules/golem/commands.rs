@@ -1,16 +1,16 @@
-use crate::modules::golem::core::js_core::JsCore;
+use crate::modules::golem::globals::classes::{JsCommand, JsCore};
 use crate::HostData;
 use boa_engine::class::Class;
-use boa_engine::object::builtins::{JsArray, JsFunction};
+use boa_engine::object::builtins::JsFunction;
 use boa_engine::{js_error, js_string, Context, JsResult, JsString, JsValue, Module};
-use boa_interop::{js_class, ContextData, IntoJsFunctionCopied, IntoJsModule, JsClass};
+use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::GoLEmApp;
 use golem_ui::input::commands::CommandId;
 use golem_ui::input::shortcut::Shortcut;
 use one_fpga::{Core, GolemCore};
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::time::Instant;
 use tracing::debug;
 
 #[derive(Clone, Default, Trace, Finalize, JsData)]
@@ -70,7 +70,7 @@ impl Command {
         running_core: Option<&GolemCore>,
         context: &mut Context,
     ) -> JsResult<()> {
-        debug!("Executing command: {:?}", self.short_name);
+        let start = Instant::now();
 
         if self.ty.matches(running_core) {
             let core = running_core.map_or(JsValue::undefined(), |c| {
@@ -79,9 +79,14 @@ impl Command {
             self.action.call(&JsValue::undefined(), &[core], context)?;
             context.run_jobs();
 
+            debug!(elapsed = ?start.elapsed(), "Command {:?} executed successfully", self.short_name);
             Ok(())
         } else {
-            Err(js_error!("Command does not match the current core"))
+            debug!(
+                "Command {:?} does not match the current core",
+                self.short_name
+            );
+            Ok(())
         }
     }
 }

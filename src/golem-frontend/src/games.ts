@@ -33,7 +33,6 @@ function start_game(game_id: number) {
     core: { type: "Path", path: "" + c.path },
     game: { type: "RomPath", path: "" + g.path },
     files: f.map((file) => "" + file.path),
-    showMenu: false,
   });
   if (golem_core) {
     console.log("Starting core: " + golem_core.name());

@@ -26,7 +26,7 @@ fn create_settings_save_thread_(
     let (drop_send, drop_recv) = crossbeam_channel::bounded(1);
     let debouncer = debounce::thread::EventDebouncer::new(Duration::from_millis(500), move |_| {
         let path = path.read().unwrap().clone();
-        if let Err(e) = inner.read().unwrap().save(&path) {
+        if let Err(e) = inner.read().unwrap().save(path) {
             // Still ignore error. Maybe filesystem is readonly?
             error!("Failed to save settings: {}", e);
         }
@@ -355,7 +355,7 @@ impl Settings {
 fn update_from_json() {
     let inner = InnerSettings::default();
     let settings = Settings::default_with_inner(inner);
-    assert_eq!(settings.show_fps(), false);
+    assert!(!settings.show_fps());
 
     settings
         .update_from_json(serde_json::json! {
@@ -367,5 +367,5 @@ fn update_from_json() {
         })
         .unwrap();
 
-    assert_eq!(settings.show_fps(), true);
+    assert!(settings.show_fps());
 }

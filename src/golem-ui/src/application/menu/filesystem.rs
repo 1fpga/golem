@@ -258,7 +258,7 @@ pub fn select_file_path_menu(
             .with_title_font(&ascii::FONT_6X9)
             .with_back("Cancel");
 
-        let up = [("..", "", MenuAction::UpDir).into()];
+        let up = [("..", "", MenuAction::UpDir)];
         if path.parent().is_some() && (allow_back || path != initial.as_ref()) {
             menu_options = menu_options.with_prefix(&up);
         }
@@ -267,8 +267,7 @@ pub fn select_file_path_menu(
             "Select Current Directory",
             "",
             MenuAction::SelectCurrentDirectory,
-        )
-            .into()];
+        )];
         if directory {
             menu_options = menu_options.with_suffix(&select_curr_dir);
         }

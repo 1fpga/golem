@@ -1,18 +1,17 @@
-use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
-use std::time::Duration;
-
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
-use tracing::{debug, error, info, trace, Level};
-use tracing_subscriber::fmt::Subscriber;
-
 use fce_movie_format::{FceInputButton, FceInputGamepad};
 use mister_fpga::config::Config;
 use mister_fpga::core::buttons::{ButtonMap, MisterFpgaButtons};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::user_io::UserIoButtonSwitch;
+use one_fpga::Core;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+use tracing::{debug, error, info, trace, Level};
+use tracing_subscriber::fmt::Subscriber;
 
 /// `taser` is a simple command-line interface to the GoLEm Mister core
 /// library. It is intended to be used as a standalone application, or as a

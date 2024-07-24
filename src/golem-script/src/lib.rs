@@ -1,12 +1,11 @@
 use crate::module_loader::GolemModuleLoader;
 use crate::modules::CommandMap;
 use boa_engine::builtins::promise::PromiseState;
-use boa_engine::object::builtins::JsPromise;
+use boa_engine::object::builtins::{JsFunction, JsPromise};
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::GoLEmApp;
-use std::collections::HashMap;
 use std::path::Path;
 use std::rc::Rc;
 use std::time::Instant;
@@ -71,7 +70,6 @@ fn create_context(
     };
 
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
-
     context.insert_data(host_defined);
 
     Ok((context, loader))

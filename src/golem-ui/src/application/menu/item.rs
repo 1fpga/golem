@@ -77,7 +77,7 @@ where
     }
 
     fn selectable(&self) -> bool {
-        self.disabled == false && self.selectable
+        !self.disabled && self.selectable
     }
 
     fn draw_styled<DIS>(

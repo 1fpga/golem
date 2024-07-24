@@ -1,6 +1,6 @@
 use crate::HostData;
 use boa_engine::class::Class;
-use boa_engine::{js_error, Context, JsError, JsResult, JsString, JsValue};
+use boa_engine::{Context, JsError, JsResult, JsString, JsValue};
 use boa_interop::{js_class, ContextData, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::panels::core_loop;

@@ -54,17 +54,6 @@ declare module "@/golem/core" {
      * The savestate file to load. If savestates are not supported, this will be ignored.
      */
     savestate?: string;
-
-    /**
-     * Whether to show the core menu or not when launching. True by default.
-     */
-    showMenu?: boolean;
-
-    /**
-     * Whether to start a loop or to load the core and return it. Default
-     * to true.
-     */
-    autoLoop?: boolean;
   }
 
   export interface GolemCore {

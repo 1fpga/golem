@@ -55,7 +55,7 @@ pub fn prompt(
         message,
         display_area,
         character_style.clone(),
-        messagebox_style.clone(),
+        messagebox_style,
     );
 
     let layout = LinearLayout::vertical(

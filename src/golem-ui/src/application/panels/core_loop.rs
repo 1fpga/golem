@@ -32,7 +32,7 @@ fn core_loop<C, E>(
     let settings = app.settings();
     let mut on_setting_update = settings.on_update();
 
-    let mut commands = commands_(app, &core);
+    let mut commands = commands_(app, core);
     let mut prev = Instant::now();
 
     let mut should_check_savestates = matches!(core.save_state(0), Ok(Some(_)));
@@ -47,7 +47,7 @@ fn core_loop<C, E>(
         if prev.elapsed().as_secs() >= 1 {
             let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
-                commands = commands_(app, &core);
+                commands = commands_(app, core);
                 debug!("Settings updated...");
             }
 
@@ -117,7 +117,7 @@ fn core_loop<C, E>(
             }
         }
         if update_commands {
-            commands = commands_(app, &core);
+            commands = commands_(app, core);
         }
 
         // Check Savestates and SD Card every 5 loop. This should still be under every

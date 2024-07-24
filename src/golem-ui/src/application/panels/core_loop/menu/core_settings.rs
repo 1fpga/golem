@@ -77,19 +77,11 @@ pub fn into_text_menu_item<'a>(
         ConfigMenu::DisableIf(b, sub) => {
             if status.get(*b as usize) {
                 into_text_menu_item(sub, status)
-            } else if let Some(item) = into_text_menu_item(sub, status) {
-                Some(item.disabled())
-            } else {
-                None
-            }
+            } else { into_text_menu_item(sub, status).map(|item| item.disabled()) }
         }
         ConfigMenu::DisableUnless(b, sub) => {
             if status.get(*b as usize) {
-                if let Some(item) = into_text_menu_item(sub, status) {
-                    Some(item.disabled())
-                } else {
-                    None
-                }
+                into_text_menu_item(sub, status).map(|item| item.disabled())
             } else {
                 into_text_menu_item(sub, status)
             }
@@ -148,9 +140,7 @@ pub fn execute_core_settings(
                     _ => None,
                 })
                 .next();
-            if maybe_info.is_none() {
-                return None;
-            }
+            maybe_info?;
             let info = maybe_info.unwrap().as_ref().clone();
 
             let path = select_file_path_menu(

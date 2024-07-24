@@ -1,8 +1,10 @@
 use crate::modules::golem::commands::Command;
 use crate::modules::golem::globals::classes::JsCore;
+use crate::HostData;
 use boa_engine::class::Class;
-use boa_engine::{js_error, Context, JsResult, JsValue};
-use boa_interop::js_class;
+use boa_engine::object::builtins::JsArray;
+use boa_engine::{js_error, js_string, Context, JsResult, JsString, JsValue};
+use boa_interop::{js_class, ContextData, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::GoLEmApp;
 use golem_ui::input::commands::CommandId;

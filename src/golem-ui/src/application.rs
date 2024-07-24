@@ -45,7 +45,13 @@ pub struct GoLEmApp {
     osd_buffer: DrawBuffer<BinaryColor>,
 
     commands: HashMap<Shortcut, CommandId>,
-    command_handler: Option<Box<dyn Fn(CommandId) -> ()>>,
+    command_handler: Option<Box<dyn Fn(CommandId)>>,
+}
+
+impl Default for GoLEmApp {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GoLEmApp {
@@ -90,7 +96,7 @@ impl GoLEmApp {
         }
     }
 
-    pub fn set_command_handler(&mut self, handler: impl Fn(CommandId) -> () + 'static) {
+    pub fn set_command_handler(&mut self, handler: impl Fn(CommandId) + 'static) {
         self.command_handler = Some(Box::new(handler));
     }
 
