@@ -550,7 +550,7 @@ impl Console {
             None => "default".into(),
         };
 
-        if console.timer_map.get(&label).is_some() {
+        if console.timer_map.contains_key(&label) {
             logger(
                 LogMessage::Warn(format!(
                     "Timer '{}' already exist",

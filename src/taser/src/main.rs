@@ -215,7 +215,7 @@ fn read_frames(
         Some("fm2") => {
             info!("Reading FM2 file: {}", tas.display());
             // Read the file and decode it.
-            let file = std::fs::File::open(&tas).expect("Could not open TAS file");
+            let file = std::fs::File::open(tas).expect("Could not open TAS file");
             let fm = fce_movie_format::FceFile::load_stream(BufReader::new(file)).unwrap();
 
             let frames = fm.frames().map(|f| {
@@ -223,12 +223,12 @@ fn read_frames(
                     .port0
                     .as_ref()
                     .and_then(|p| p.as_gamepad())
-                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map.clone()));
+                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map));
                 let p1 = f
                     .port1
                     .as_ref()
                     .and_then(|p| p.as_gamepad())
-                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map.clone()));
+                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map));
                 (p0, p1)
             });
 

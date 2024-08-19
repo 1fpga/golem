@@ -35,7 +35,9 @@ function start_game(game_id: number) {
     files: f.map((file) => "" + file.path),
   });
   if (golem_core) {
-    console.log("Starting core: " + golem_core.name());
+    console.log("Starting core: " + golem_core.name);
+
+    console.log("Core menu: " + JSON.stringify(golem_core.menu, null, 2));
 
     golem_core.loop(false);
   }

@@ -10,7 +10,9 @@ use image::DynamicImage;
 use tracing::{debug, info, trace};
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::core::{
+    Bios, ConfigMenuId, CoreMenu, CoreMenuItem, Error, MountedFile, Rom, SaveState,
+};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::{Button, Scancode};
@@ -734,7 +736,7 @@ impl Core for MisterFpgaCore {
         todo!()
     }
 
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
+    fn menu(&self) -> Result<CoreMenu, Error> {
         Ok(self.config.as_core_menu())
     }
 
@@ -743,6 +745,10 @@ impl Core for MisterFpgaCore {
     }
 
     fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn bool_option(&mut self, _id: ConfigMenuId, _value: bool) -> Result<(), Error> {
         todo!()
     }
 

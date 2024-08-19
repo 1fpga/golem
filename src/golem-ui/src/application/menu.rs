@@ -250,11 +250,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                         SdlMenuAction::ChangeSort => {
                             return R::sort().map(|r| (Some(r), menu.state()));
                         }
-                        SdlMenuAction::ShowOptions => match menu.selected_value() {
-                            SdlMenuAction::Select(r) => {
-                                return r.into_details().map(|r| (Some(r), menu.state()));
-                            }
-                            _ => {}
+                        SdlMenuAction::ShowOptions => if let SdlMenuAction::Select(r) = menu.selected_value() {
+                            return r.into_details().map(|r| (Some(r), menu.state()));
                         },
                         SdlMenuAction::KeyPress(Keycode::Backspace)
                         | SdlMenuAction::KeyPress(Keycode::KpBackspace) => {

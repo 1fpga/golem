@@ -4,11 +4,11 @@ use std::io::{Read, Seek, Write};
 use std::rc::Rc;
 use std::time::SystemTime;
 
-use image::DynamicImage;
-
 pub use bios::Bios;
+use image::DynamicImage;
 pub use null::NullCore;
 pub use rom::Rom;
+use serde::Serialize;
 
 use crate::inputs::{gamepad, keyboard};
 
@@ -21,15 +21,33 @@ pub mod rom;
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigMenuId(u32);
 
+impl Serialize for ConfigMenuId {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(serializer)
+    }
+}
+
 impl From<u32> for ConfigMenuId {
     fn from(value: u32) -> Self {
         Self(value)
     }
 }
 
-impl Into<u32> for ConfigMenuId {
-    fn into(self) -> u32 {
-        self.0
+impl From<ConfigMenuId> for u32 {
+    fn from(value: ConfigMenuId) -> Self {
+        value.0
+    }
+}
+
+impl From<&str> for ConfigMenuId {
+    fn from(value: &str) -> Self {
+        Self::from_label(value)
+    }
+}
+
+impl From<&String> for ConfigMenuId {
+    fn from(value: &String) -> Self {
+        Self::from_label(value)
     }
 }
 
@@ -43,7 +61,26 @@ impl ConfigMenuId {
         for c in label.as_bytes() {
             s = s.wrapping_mul(223).wrapping_add(*c as u32);
         }
-        s
+        Self(s)
+    }
+}
+
+/// A Core Menu, which is a list of menu items that can be displayed
+/// in the core's menu. This is used to configure the core's settings,
+/// in an abstract way.
+#[derive(Debug, Serialize)]
+pub struct CoreMenu {
+    title: String,
+    items: Vec<CoreMenuItem>,
+}
+
+impl CoreMenu {
+    pub fn new(title: String, items: Vec<CoreMenuItem>) -> Self {
+        Self { title, items }
+    }
+
+    pub fn items(&self) -> &[CoreMenuItem] {
+        &self.items
     }
 }
 
@@ -53,12 +90,21 @@ impl ConfigMenuId {
 ///
 /// Please note that a core can create menu items that don't have actual
 /// effect on the core's behavior.
+#[derive(Debug, Serialize)]
 pub enum CoreMenuItem {
     /// A menu page that contains more menu items. This is purely cosmetic.
     Page {
+        /// The label that would be shown in a top-level menu.
         label: String,
+
+        /// The title of this menu. Can be different than label.
         title: String,
+
+        /// Menu Items contained by this menu.
         items: Vec<CoreMenuItem>,
+
+        /// Whether this page is disabled from being selected.
+        disabled: bool,
     },
 
     /// A separator (horizontal line normally). Cosmetic.
@@ -66,10 +112,24 @@ pub enum CoreMenuItem {
 
     /// A simple label that might be selectable, but is not considered
     /// actionable. This is used to display information to the user.
-    Label { selectable: bool, label: String },
+    Label {
+        selectable: bool,
+        label: String,
+        disabled: bool,
+    },
+
+    FileSelect {
+        id: ConfigMenuId,
+        label: String,
+        extensions: Vec<String>,
+    },
 
     /// A trigger that can be used to perform an action.
-    Trigger { id: ConfigMenuId, label: String },
+    Trigger {
+        id: ConfigMenuId,
+        label: String,
+        disabled: bool,
+    },
 
     /// An option that can be selected by the user and contains a boolean
     /// value (on or off).
@@ -77,6 +137,7 @@ pub enum CoreMenuItem {
         id: ConfigMenuId,
         label: String,
         value: bool,
+        disabled: bool,
     },
 
     /// An option that can be selected by the user and contains an integer
@@ -90,7 +151,111 @@ pub enum CoreMenuItem {
         label: String,
         choices: Vec<String>,
         value: usize,
+        disabled: bool,
     },
+}
+
+impl CoreMenuItem {
+    pub fn with_disabled(mut self, disabled: bool) -> Self {
+        if disabled {
+            self.disable();
+        }
+        self
+    }
+
+    pub fn disable(&mut self) {
+        match self {
+            CoreMenuItem::Page { disabled, .. }
+            | CoreMenuItem::Label { disabled, .. }
+            | CoreMenuItem::Trigger { disabled, .. }
+            | CoreMenuItem::BoolOption { disabled, .. }
+            | CoreMenuItem::IntOption { disabled, .. } => {
+                *disabled = true;
+            }
+            _ => {}
+        }
+    }
+
+    pub fn page(label: &str, title: &str, items: Vec<CoreMenuItem>) -> Self {
+        CoreMenuItem::Page {
+            label: label.to_string(),
+            title: title.to_string(),
+            items,
+            disabled: false,
+        }
+    }
+
+    pub fn items(&self) -> Option<&Vec<CoreMenuItem>> {
+        match self {
+            CoreMenuItem::Page { items, .. } => Some(items),
+            _ => None,
+        }
+    }
+
+    pub fn items_mut(&mut self) -> Option<&mut Vec<CoreMenuItem>> {
+        match self {
+            CoreMenuItem::Page { items, .. } => Some(items),
+            _ => None,
+        }
+    }
+
+    pub fn separator() -> Self {
+        CoreMenuItem::Separator
+    }
+
+    pub fn label(selectable: bool, label: &str) -> Self {
+        CoreMenuItem::Label {
+            selectable,
+            label: label.to_string(),
+            disabled: false,
+        }
+    }
+
+    pub fn file_select(id: impl Into<ConfigMenuId>, label: &str, extensions: Vec<String>) -> Self {
+        CoreMenuItem::FileSelect {
+            id: id.into(),
+            label: label.to_string(),
+            extensions,
+        }
+    }
+
+    pub fn trigger(id: impl Into<ConfigMenuId>, label: &str) -> Self {
+        CoreMenuItem::Trigger {
+            id: id.into(),
+            label: label.to_string(),
+            disabled: false,
+        }
+    }
+
+    pub fn bool_option(id: impl Into<ConfigMenuId>, label: &str, value: Option<bool>) -> Self {
+        CoreMenuItem::BoolOption {
+            id: id.into(),
+            label: label.to_string(),
+            value: value.unwrap_or_default(),
+            disabled: false,
+        }
+    }
+
+    pub fn int_option(
+        id: impl Into<ConfigMenuId>,
+        label: &str,
+        choices: Vec<String>,
+        value: Option<usize>,
+    ) -> Self {
+        CoreMenuItem::IntOption {
+            id: id.into(),
+            label: label.to_string(),
+            choices,
+            value: value.unwrap_or_default(),
+            disabled: false,
+        }
+    }
+
+    pub fn add_item(&mut self, sub: CoreMenuItem) {
+        if let CoreMenuItem::Page { items, .. } = self {
+            items.push(sub);
+        }
+    }
 }
 
 /// A save state, if cores support it. This is used to save the state of the
@@ -250,22 +415,19 @@ pub trait Core {
     /// Returns the menu items that the core supports. This would correspond to the
     /// top level page of config items. If the core does not support a menu, this
     /// should return an empty vector.
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error>;
+    fn menu(&self) -> Result<CoreMenu, Error>;
 
     /// Trigger a menu item in the core. This is used to perform an action based on
     /// the menu item selected by the user. It can also be linked to a shortcut.
-    fn trigger(&mut self, id: ConfigMenuId) -> Result<(), Error> {
-        let _ = id;
-        Ok(())
-    }
+    fn trigger(&mut self, id: ConfigMenuId) -> Result<(), Error>;
 
     /// Set an integer option in the core. This is used to set an option that has a
     /// list of choices that can be selected by the user.
-    fn int_option(&mut self, id: ConfigMenuId, value: u32) -> Result<(), Error> {
-        let _ = id;
-        let _ = value;
-        Ok(())
-    }
+    fn int_option(&mut self, id: ConfigMenuId, value: u32) -> Result<(), Error>;
+
+    /// Set a boolean option in the core. This is used to set an option that has a
+    /// boolean value that can be toggled by the user.
+    fn bool_option(&mut self, id: ConfigMenuId, value: bool) -> Result<(), Error>;
 
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -383,7 +545,7 @@ impl Core for GolemCore {
         unsafe { &mut *self.inner.get() }.gamepad_buttons(index)
     }
 
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
+    fn menu(&self) -> Result<CoreMenu, Error> {
         unsafe { &mut *self.inner.get() }.menu()
     }
 
@@ -393,6 +555,10 @@ impl Core for GolemCore {
 
     fn int_option(&mut self, id: ConfigMenuId, value: u32) -> Result<(), Error> {
         unsafe { &mut *self.inner.get() }.int_option(id, value)
+    }
+
+    fn bool_option(&mut self, id: ConfigMenuId, value: bool) -> Result<(), Error> {
+        unsafe { &mut *self.inner.get() }.bool_option(id, value)
     }
 
     fn as_any(&self) -> &dyn Any {

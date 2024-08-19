@@ -3,7 +3,7 @@ use std::time::SystemTime;
 
 use image::{ColorType, DynamicImage};
 
-use crate::core::{Bios, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use crate::core::{Bios, ConfigMenuId, CoreMenu, Error, MountedFile, Rom, SaveState};
 use crate::inputs::gamepad::ButtonSet;
 use crate::inputs::keyboard::ScancodeSet;
 use crate::inputs::{Button, Scancode};
@@ -89,9 +89,21 @@ impl Core for NullCore {
         Ok(None)
     }
 
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
+    fn menu(&self) -> Result<CoreMenu, Error> {
         // TODO: add some basic items.
-        Ok(Vec::new())
+        Ok(CoreMenu::new("null".to_string(), vec![]))
+    }
+
+    fn trigger(&mut self, _id: ConfigMenuId) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn bool_option(&mut self, _id: ConfigMenuId, _value: bool) -> Result<(), Error> {
+        Ok(())
     }
 
     fn as_any(&self) -> &dyn Any {

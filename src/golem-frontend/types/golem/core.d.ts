@@ -60,7 +60,12 @@ declare module "@/golem/core" {
     /**
      * Return the name of the core.
      */
-    name(): String;
+    readonly name: String;
+
+    /**
+     * The core menu. Contains all options for the core.
+     */
+    readonly menu: any;
 
     /**
      * The core's main loop. This function will return when the core is

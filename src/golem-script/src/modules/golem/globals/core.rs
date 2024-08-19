@@ -60,6 +60,12 @@ impl JsCore {
         }
     }
 
+    fn menu(&self, context: &mut Context) -> JsResult<JsValue> {
+        let menu = self.core.menu().map_err(JsError::from_std)?;
+        let json = serde_json::to_value(&menu).map_err(JsError::from_std)?;
+        JsValue::from_json(&json, context).map_err(JsError::from_std)
+    }
+
     fn quit(&mut self) {
         self.core.quit();
     }
@@ -67,6 +73,18 @@ impl JsCore {
 
 js_class! {
     class JsCore as "GolemCore" {
+        property menu {
+            fn get(this: JsClass<JsCore>, context: &mut Context) -> JsResult<JsValue> {
+                this.borrow().menu(context)
+            }
+        }
+
+        property name {
+            fn get(this: JsClass<JsCore>) -> JsResult<JsString> {
+                Ok(JsString::from(this.borrow().core.name()))
+            }
+        }
+
         constructor(data: ContextData<HostData>) {
             let host_defined = data.0;
             Ok(JsCore::new(host_defined.app_mut().platform_mut().core_manager_mut().get_current_core().unwrap().clone()))
@@ -74,10 +92,6 @@ js_class! {
 
         fn reset(this: JsClass<JsCore>) -> JsResult<()> {
             this.borrow_mut().reset()
-        }
-
-        fn name(this: JsClass<JsCore>) -> JsResult<JsString> {
-            Ok(JsString::from(this.borrow().core.name()))
         }
 
         fn run_loop as "loop"(

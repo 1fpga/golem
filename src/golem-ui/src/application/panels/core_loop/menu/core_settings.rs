@@ -77,7 +77,9 @@ pub fn into_text_menu_item<'a>(
         ConfigMenu::DisableIf(b, sub) => {
             if status.get(*b as usize) {
                 into_text_menu_item(sub, status)
-            } else { into_text_menu_item(sub, status).map(|item| item.disabled()) }
+            } else {
+                into_text_menu_item(sub, status).map(|item| item.disabled())
+            }
         }
         ConfigMenu::DisableUnless(b, sub) => {
             if status.get(*b as usize) {
@@ -90,7 +92,7 @@ pub fn into_text_menu_item<'a>(
             const DEFAULT_LABEL: &str = "Load File";
             Some(TextMenuItem::navigation_item(
                 info.label.as_deref().unwrap_or(DEFAULT_LABEL),
-                info.marker.as_str(),
+                "..",
                 CoreMenuAction::LoadFile(info.index),
             ))
         }
@@ -98,7 +100,7 @@ pub fn into_text_menu_item<'a>(
             const DEFAULT_LABEL: &str = "Load File";
             Some(TextMenuItem::navigation_item(
                 info.label.as_deref().unwrap_or(DEFAULT_LABEL),
-                info.marker.as_str(),
+                "..",
                 CoreMenuAction::LoadFile(info.index),
             ))
         }

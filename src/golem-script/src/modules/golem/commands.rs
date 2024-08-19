@@ -110,7 +110,7 @@ fn create_general_command_(
     data.command_map_mut()
         .insert(CommandId::new(command.short_name.as_str()), command.clone());
 
-    Ok(JsCommand::new(command).into_object(context)?)
+    JsCommand::new(command).into_object(context)
 }
 
 fn create_core_command_(
@@ -132,7 +132,7 @@ fn create_core_command_(
     data.command_map_mut()
         .insert(CommandId::new(command.short_name.as_str()), command.clone());
 
-    Ok(JsCommand::new(command).into_object(context)?)
+    JsCommand::new(command).into_object(context)
 }
 
 fn create_core_specific_command_(
@@ -155,7 +155,7 @@ fn create_core_specific_command_(
     data.command_map_mut()
         .insert(CommandId::new(command.short_name.as_str()), command.clone());
 
-    Ok(JsCommand::new(command).into_object(context)?)
+    JsCommand::new(command).into_object(context)
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {

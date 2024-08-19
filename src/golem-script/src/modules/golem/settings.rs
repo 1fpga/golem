@@ -37,10 +37,6 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
                 js_string!("updateSettings"),
                 update_settings_.into_js_function_copied(context),
             ),
-            (
-                js_string!("setSetting"),
-                set_setting_.into_js_function_copied(context),
-            ),
         ]
         .into_js_module(context),
     ))

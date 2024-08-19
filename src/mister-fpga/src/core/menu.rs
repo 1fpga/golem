@@ -4,7 +4,9 @@ use crate::types::units::UnitConversion;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::buffer::ConvertBuffer;
 use image::{DynamicImage, Rgba};
-use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::core::{
+    Bios, ConfigMenuId, CoreMenu, CoreMenuItem, Error, MountedFile, Rom, SaveState,
+};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::Button;
@@ -140,8 +142,8 @@ impl Core for MenuCore {
         unreachable!("Menu core does not support inputs")
     }
 
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
-        Ok(vec![])
+    fn menu(&self) -> Result<CoreMenu, Error> {
+        unreachable!("Menu core does not have a core menu")
     }
 
     fn trigger(&mut self, _id: ConfigMenuId) -> Result<(), Error> {
@@ -149,6 +151,10 @@ impl Core for MenuCore {
     }
 
     fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn bool_option(&mut self, _id: ConfigMenuId, _value: bool) -> Result<(), Error> {
         todo!()
     }
 
