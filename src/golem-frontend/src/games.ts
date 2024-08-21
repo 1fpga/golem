@@ -37,9 +37,7 @@ function start_game(game_id: number) {
   if (golem_core) {
     console.log("Starting core: " + golem_core.name);
 
-    console.log("Core menu: " + JSON.stringify(golem_core.menu, null, 2));
-
-    golem_core.loop(false);
+    golem_core.loop();
   }
 }
 

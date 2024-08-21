@@ -200,8 +200,6 @@ impl GoLEmApp {
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
     ) -> R {
         loop {
-            self.platform.start_loop();
-
             let events = self.platform.events();
             for event in events.iter() {
                 match event {
@@ -260,8 +258,6 @@ impl GoLEmApp {
             if let Some(r) = loop_fn(self, &mut state) {
                 break r;
             }
-
-            self.platform.end_loop();
         }
     }
 }

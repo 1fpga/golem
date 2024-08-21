@@ -16,7 +16,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use tracing::{debug, warn};
 
-use one_fpga::core::{CoreMenu, CoreMenuItem};
+use one_fpga::core::{CoreSettingItem, CoreSettings, SettingId};
 pub use types::*;
 
 use crate::fpga::user_io;
@@ -94,6 +94,15 @@ pub struct LoadFileInfo {
     /// ioctl_index from hps_io will be: ioctl_index[5:0] = index(explicit or auto),
     /// ioctl_index[7:6] = extension index
     pub address: Option<FpgaRamMemoryAddress>,
+}
+
+impl LoadFileInfo {
+    pub fn setting_id(&self) -> SettingId {
+        self.label.as_ref().map_or_else(
+            || SettingId::new(self.index as u32),
+            |l| SettingId::from_label(&l),
+        )
+    }
 }
 
 /// A component of a Core config string.
@@ -230,8 +239,17 @@ impl ConfigMenu {
         }
     }
 
-    pub fn as_core_menu_item(&self, status: &StatusBitMap) -> Option<Vec<CoreMenuItem>> {
+    pub fn as_core_menu_item(&self, status: &StatusBitMap) -> Vec<CoreSettingItem> {
         match self {
+            ConfigMenu::LoadFile(info) | ConfigMenu::LoadFileAndRemember(info) => {
+                vec![CoreSettingItem::file_select(
+                    info.setting_id(),
+                    info.label
+                        .as_ref()
+                        .map_or_else(|| "Load File", String::as_str),
+                    info.extensions.iter().map(|e| e.to_string()).collect(),
+                )]
+            }
             ConfigMenu::Option {
                 label,
                 choices,
@@ -239,64 +257,58 @@ impl ConfigMenu {
             } => {
                 let value = status.get_range(bits.clone());
                 match choices.len() {
-                    0 => None,
-                    1 => Some(vec![CoreMenuItem::trigger(label, label)]),
-                    2 => Some(vec![CoreMenuItem::bool_option(
-                        label,
-                        label,
-                        Some(value != 0),
-                    )]),
-                    _ => Some(vec![CoreMenuItem::int_option(
+                    0 => vec![],
+                    1 => vec![CoreSettingItem::trigger(label, label)],
+                    2 => vec![CoreSettingItem::bool_option(label, label, Some(value != 0))],
+                    _ => vec![CoreSettingItem::int_option(
                         label,
                         label,
                         choices.clone(),
                         Some(value as usize % choices.len()),
-                    )]),
+                    )],
                 }
             }
-            ConfigMenu::Trigger { label, .. } => Some(vec![CoreMenuItem::trigger(label, label)]),
+            ConfigMenu::Trigger { label, .. } => vec![CoreSettingItem::trigger(label, label)],
             ConfigMenu::Page { label, .. } => {
-                Some(vec![CoreMenuItem::page(label, label, Vec::new())])
+                vec![CoreSettingItem::page(label, label, Vec::new())]
             }
             ConfigMenu::PageItem(_, sub) => sub.as_core_menu_item(status),
             ConfigMenu::HideIf(mask, sub) => {
                 if status.get(*mask as usize) {
-                    None
+                    vec![]
                 } else {
                     sub.as_core_menu_item(status)
                 }
             }
             ConfigMenu::HideUnless(mask, sub) => {
                 if !status.get(*mask as usize) {
-                    None
+                    vec![]
                 } else {
                     sub.as_core_menu_item(status)
                 }
             }
-            ConfigMenu::DisableIf(mask, sub) => sub.as_core_menu_item(status).map(|items| {
-                items
-                    .into_iter()
-                    .map(|item| item.with_disabled(status.get(*mask as usize)))
-                    .collect()
-            }),
-            ConfigMenu::DisableUnless(mask, sub) => sub.as_core_menu_item(status).map(|items| {
-                items
-                    .into_iter()
-                    .map(|item| item.with_disabled(!status.get(*mask as usize)))
-                    .collect()
-            }),
+            ConfigMenu::DisableIf(mask, sub) => sub
+                .as_core_menu_item(status)
+                .into_iter()
+                .map(|item| item.with_disabled(status.get(*mask as usize)))
+                .collect(),
+            ConfigMenu::DisableUnless(mask, sub) => sub
+                .as_core_menu_item(status)
+                .into_iter()
+                .map(|item| item.with_disabled(!status.get(*mask as usize)))
+                .collect(),
             ConfigMenu::Empty(label) => {
                 if let Some(label) = label {
-                    Some(vec![CoreMenuItem::label(false, label)])
+                    vec![CoreSettingItem::label(false, label)]
                 } else {
-                    Some(vec![CoreMenuItem::Separator])
+                    vec![CoreSettingItem::Separator]
                 }
             }
-            ConfigMenu::Info(_) => None,
+            ConfigMenu::Info(_) => vec![],
             ConfigMenu::Version(v) => {
-                Some(vec![CoreMenuItem::label(false, &format!("Version: {}", v))])
+                vec![CoreSettingItem::label(false, &format!("Version: {}", v))]
             }
-            _ => None,
+            _ => vec![],
         }
     }
 
@@ -327,9 +339,9 @@ impl ConfigMenu {
             | ConfigMenu::HideUnless(_, sub) => sub.label(),
             // TODO: add those.
             // ConfigMenu::Cheat(name) => name.as_ref().map(|x| x.as_str()),
-            // ConfigMenu::LoadFileAndRemember(info) | ConfigMenu::LoadFile(info) => {
-            //     info.label.as_ref().map(|l| l.as_str())
-            // }
+            ConfigMenu::LoadFileAndRemember(info) | ConfigMenu::LoadFile(info) => {
+                info.label.as_ref().map(|l| l.as_str())
+            }
             ConfigMenu::Option { label, .. } => Some(label.as_str()),
             ConfigMenu::Trigger { label, .. } => Some(label.as_str()),
             ConfigMenu::PageItem(_, sub) => sub.label(),
@@ -433,15 +445,12 @@ impl Config {
         None
     }
 
-    pub fn as_core_menu(&self) -> CoreMenu {
-        let it = self
-            .menu
-            .iter()
-            .filter_map(|item| {
-                item.as_core_menu_item(&self.status_bit_map_mask())
-                    .map(move |x| (item, x))
-            })
-            .flat_map(|(item, items)| items.into_iter().map(move |i| (item, i)));
+    pub fn as_core_settings(&self, bits: &StatusBitMap) -> CoreSettings {
+        let it = self.menu.iter().flat_map(|item| {
+            item.as_core_menu_item(bits)
+                .into_iter()
+                .map(move |i| (item, i))
+        });
 
         let mut root = Vec::new();
         let mut pages: HashMap<u8, usize> = HashMap::new();
@@ -466,7 +475,7 @@ impl Config {
             }
         }
 
-        CoreMenu::new(self.name.clone(), root)
+        CoreSettings::new(self.name.clone(), root)
     }
 }
 
@@ -577,7 +586,7 @@ fn config_string_nes() {
 #[test]
 fn config_string_nes_menu() {
     let config = Config::from_str(CONFIG_STRING_NES).unwrap();
-    config.as_core_menu();
+    config.as_core_settings(&StatusBitMap::new());
 }
 
 #[test]

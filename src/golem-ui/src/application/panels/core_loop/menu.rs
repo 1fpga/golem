@@ -39,7 +39,7 @@ impl MenuReturn for CoreMenuAction {
 /// This will return `true` if the user decided to quit the core (in which case the
 /// main MENU should be reloaded).
 pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
-    app.platform_mut().core_manager_mut().show_menu();
+    app.platform_mut().core_manager_mut().show_osd();
 
     let Some(c) = core.as_any_mut().downcast_mut::<MisterFpgaCore>() else {
         error!("Core is not a MisterFPGA core.");
@@ -129,6 +129,6 @@ pub fn core_menu(app: &mut GoLEmApp, core: &mut GolemCore) -> bool {
         }
     };
 
-    app.platform_mut().core_manager_mut().hide_menu();
+    app.platform_mut().core_manager_mut().hide_osd();
     result
 }

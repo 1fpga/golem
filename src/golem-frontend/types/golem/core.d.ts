@@ -56,6 +56,85 @@ declare module "@/golem/core" {
     savestate?: string;
   }
 
+  /**
+   * The core settings.
+   */
+  export interface CoreSettings {
+    title: string;
+    items: CoreSettingsItem[];
+  }
+
+  export interface CoreSettingPage {
+    kind: "page";
+    label: string;
+    items: CoreSettingsItem[];
+    disabled: boolean;
+  }
+
+  export interface CoreSettingSeparator {
+    kind: "separator";
+  }
+
+  export interface CoreSettingLabel {
+    kind: "label";
+    selectable: boolean;
+    label: string;
+  }
+
+  export interface CoreSettingFileSelect {
+    kind: "file";
+    id: number;
+    label: string;
+    extensions: string[];
+    disabled: boolean;
+  }
+
+  export interface CoreSettingTrigger {
+    kind: "trigger";
+    id: number;
+    label: string;
+    disabled: boolean;
+  }
+
+  export interface CoreSettingBoolOption {
+    kind: "bool";
+    id: number;
+    label: string;
+    value: boolean;
+    disabled: boolean;
+  }
+
+  export interface CoreSettingIntOption {
+    kind: "int";
+    id: number;
+    label: string;
+    choices: string[];
+    value: number;
+    disabled: boolean;
+  }
+
+  /**
+   * A core setting menu item.
+   */
+  export type CoreSettingsItem =
+    | CoreSettingPage
+    | CoreSettingSeparator
+    | CoreSettingLabel
+    | CoreSettingFileSelect
+    | CoreSettingTrigger
+    | CoreSettingBoolOption
+    | CoreSettingIntOption;
+
+  /**
+   * The result of the OSD, whether to quit the core or not.
+   */
+  export type OsdResult = boolean;
+
+  /*
+   * A function that shows UI on the Core OSD.
+   */
+  export type CoreOsdFunction = () => Promise<OsdResult>;
+
   export interface GolemCore {
     /**
      * Return the name of the core.
@@ -65,13 +144,14 @@ declare module "@/golem/core" {
     /**
      * The core menu. Contains all options for the core.
      */
-    readonly menu: any;
+    readonly settings: CoreSettings;
 
     /**
-     * The core's main loop. This function will return when the core is
-     * unloaded by the user.
+     * The core's main loop, sending any inputs to the core, and checking for
+     * shortcuts. This function will return when the core is unloaded by the
+     * user.
      */
-    loop(showMenu?: boolean): void;
+    loop(): void;
 
     /**
      * Take a screenshot. Output the screenshot to the given path.
@@ -82,7 +162,23 @@ declare module "@/golem/core" {
     /**
      * Show the menu for the core. This is different from just the OSD.
      */
-    showMenu(): void;
+    showOsd(handler: CoreOsdFunction): void;
+
+    /**
+     * Trigger a menu item in the core.
+     * @param id The ID of the menu item to trigger.
+     */
+    trigger(id: number): void;
+
+    /**
+     * Select a file in the core.
+     */
+    fileSelect(id: number, path: string): void;
+
+    /**
+     * Reset the core.
+     */
+    reset(): void;
 
     /**
      * Quit the core and returns to the main menu.

@@ -1,12 +1,15 @@
 use crate::HostData;
 use boa_engine::class::Class;
+use boa_engine::object::builtins::JsFunction;
 use boa_engine::{Context, JsError, JsResult, JsString, JsValue};
 use boa_interop::{js_class, ContextData, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
-use golem_ui::application::panels::core_loop;
 use golem_ui::application::panels::core_loop::run_core_loop;
 use golem_ui::application::GoLEmApp;
+use mister_fpga::core::MisterFpgaCore;
+use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
+use tracing::error;
 
 #[derive(Clone, Trace, Finalize, JsData)]
 pub struct JsCore {
@@ -24,15 +27,10 @@ impl JsCore {
     }
 
     fn reset(&mut self) -> JsResult<()> {
-        self.core.reset().map_err(JsError::from_std)
+        self.core.reset().map_err(JsError::from_rust)
     }
 
-    fn r#loop(
-        &mut self,
-        host_defined: HostData,
-        show_menu: bool,
-        context: &mut Context,
-    ) -> JsResult<()> {
+    fn r#loop(&mut self, host_defined: HostData, context: &mut Context) -> JsResult<()> {
         let app = host_defined.app_mut();
         let command_map = host_defined.command_map_mut();
         let mut core = self.core.clone();
@@ -50,20 +48,53 @@ impl JsCore {
                     Ok(())
                 }
             },
-            show_menu,
         )
     }
 
-    fn show_menu(&mut self, app: &mut GoLEmApp) {
-        if core_loop::menu::core_menu(app, &mut self.core) {
+    fn show_osd(
+        &mut self,
+        app: &mut GoLEmApp,
+        handler: JsFunction,
+        context: &mut Context,
+    ) -> JsResult<()> {
+        app.platform_mut().core_manager_mut().show_osd();
+
+        // Update saves on Mister Cores.
+        if let Some(c) = self.core.as_any_mut().downcast_mut::<MisterFpgaCore>() {
+            loop {
+                match c.poll_mounts() {
+                    Ok(true) => {}
+                    Ok(false) => break,
+                    Err(e) => {
+                        error!(?e, "Error updating the SD card.");
+                        break;
+                    }
+                }
+            }
+        }
+
+        let mut v = handler.call(&JsValue::undefined(), &[], context)?;
+        while let Some(p) = v.as_promise() {
+            match p.await_blocking(context) {
+                Ok(new_v) => {
+                    v = new_v;
+                }
+                Err(e) => return Err(JsError::from_opaque(e)),
+            }
+        }
+
+        if v.to_boolean() {
             self.quit();
         }
+
+        app.platform_mut().core_manager_mut().hide_osd();
+        Ok(())
     }
 
-    fn menu(&self, context: &mut Context) -> JsResult<JsValue> {
-        let menu = self.core.menu().map_err(JsError::from_std)?;
-        let json = serde_json::to_value(&menu).map_err(JsError::from_std)?;
-        JsValue::from_json(&json, context).map_err(JsError::from_std)
+    fn settings(&self, context: &mut Context) -> JsResult<JsValue> {
+        let settings = self.core.settings().map_err(JsError::from_rust)?;
+        let json = serde_json::to_value(&settings).map_err(JsError::from_rust)?;
+        JsValue::from_json(&json, context).map_err(JsError::from_rust)
     }
 
     fn quit(&mut self) {
@@ -73,9 +104,9 @@ impl JsCore {
 
 js_class! {
     class JsCore as "GolemCore" {
-        property menu {
+        property settings {
             fn get(this: JsClass<JsCore>, context: &mut Context) -> JsResult<JsValue> {
-                this.borrow().menu(context)
+                this.borrow().settings(context)
             }
         }
 
@@ -91,24 +122,43 @@ js_class! {
         }
 
         fn reset(this: JsClass<JsCore>) -> JsResult<()> {
-            this.borrow_mut().reset()
+            this.clone_inner().reset()
         }
 
         fn run_loop as "loop"(
             this: JsClass<JsCore>,
             data: ContextData<HostData>,
-            show_menu: Option<bool>,
-            context: &mut Context
+            context: &mut Context,
         ) -> JsResult<()> {
-            this.borrow_mut().r#loop(data.0, show_menu.unwrap_or(false), context)
+            this.clone_inner().r#loop(data.0, context)
         }
 
-        fn show_menu as "showMenu"(this: JsClass<JsCore>, data: ContextData<HostData>) -> () {
-            this.borrow_mut().show_menu(data.0.app_mut())
+        fn show_osd as "showOsd"(
+            this: JsClass<JsCore>,
+            data: ContextData<HostData>,
+            handler: JsFunction,
+            context: &mut Context,
+        ) -> JsResult<()> {
+            this.clone_inner().show_osd(data.0.app_mut(), handler, context)
+        }
+
+        fn file_select as "fileSelect"(
+            this: JsClass<JsCore>,
+            id: u32,
+            path: JsString,
+        ) -> JsResult<()> {
+            this.clone_inner().core.file_select(SettingId::from(id), path.to_std_string_escaped()).map_err(JsError::from_rust)
+        }
+
+        fn trigger(
+            this: JsClass<JsCore>,
+            id: u32,
+        ) -> JsResult<()> {
+            this.clone_inner().core.trigger(SettingId::from(id)).map_err(JsError::from_rust)
         }
 
         fn quit(this: JsClass<JsCore>) -> () {
-            this.borrow_mut().quit()
+            this.clone_inner().quit()
         }
     }
 }

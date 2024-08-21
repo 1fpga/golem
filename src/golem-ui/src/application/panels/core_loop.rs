@@ -43,7 +43,9 @@ fn core_loop<C, E>(
     // This is a special loop that forwards everything to the core,
     // except for the menu button(s).
     app.event_loop(move |app, state| {
-        // Check for things that might be expensive once every some frames, to reduce lag.
+        i += 1;
+
+        // Check for things that might be expensive once every some second, to reduce lag.
         if prev.elapsed().as_secs() >= 1 {
             let now = Instant::now();
             if on_setting_update.try_recv().is_ok() {
@@ -51,14 +53,10 @@ fn core_loop<C, E>(
                 debug!("Settings updated...");
             }
 
-            // Every 5 settings update, output the logs.
-            i += 1;
-            if trace_enabled && i % 5 == 0 {
+            if trace_enabled {
                 trace!("Settings update took {:?}", now.elapsed());
-                trace!(
-                    "FPS: {}",
-                    500.0 / ((now - prev).as_millis() as f32 / 1000.0)
-                );
+                trace!("FPS: ~{}", i);
+                i = 0;
             }
 
             prev = now;
@@ -165,8 +163,10 @@ fn core_loop<C, E>(
             }
         }
 
-        if core.should_quit() {
-            return Some(Ok(()));
+        if i % 10 == 0 {
+            if core.should_quit() {
+                return Some(Ok(()));
+            }
         }
 
         None
@@ -185,18 +185,13 @@ pub fn run_core_loop<C, E>(
         CommandId,
         &mut C,
     ) -> Result<(), E>,
-    should_show_menu: bool,
 ) -> Result<(), E> {
     let mut should_run_loop = true;
     debug!("Starting core loop...");
 
     // Hide the OSD
     app.hide_toolbar();
-    if !should_show_menu {
-        app.platform_mut().core_manager_mut().hide_menu();
-    } else {
-        should_run_loop = !menu::core_menu(app, core);
-    }
+    app.platform_mut().core_manager_mut().hide_osd();
 
     let mut result = Ok(());
     if should_run_loop {

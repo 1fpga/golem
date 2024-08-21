@@ -17,7 +17,7 @@ fn set_mode_(mode: String, ContextData(data): ContextData<HostData>) -> JsResult
         .downcast_mut::<MisterFpgaCore>()
         .unwrap();
 
-    let video_mode = DefaultVideoMode::from_str(&mode).map_err(JsError::from_std)?;
+    let video_mode = DefaultVideoMode::from_str(&mode).map_err(JsError::from_rust)?;
 
     eprintln!("Setting video mode: {:?}", video_mode);
     mister_fpga::core::video::select_mode(

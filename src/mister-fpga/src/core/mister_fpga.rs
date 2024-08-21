@@ -10,9 +10,7 @@ use image::DynamicImage;
 use tracing::{debug, info, trace};
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use one_fpga::core::{
-    Bios, ConfigMenuId, CoreMenu, CoreMenuItem, Error, MountedFile, Rom, SaveState,
-};
+use one_fpga::core::{Bios, CoreSettings, Error, MountedFile, Rom, SaveState, SettingId};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::{Button, Scancode};
@@ -39,6 +37,7 @@ use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
 
+#[derive(Debug)]
 pub enum MisterFpgaSendFileInfo {
     Memory {
         index: u8,
@@ -119,7 +118,7 @@ impl MisterFpgaCore {
             "Status bit map (mask):\n{}",
             config.status_bit_map_mask().debug_string(true)
         );
-        info!("Core config: {:#?}", config);
+        info!("Core config {:#?}", config);
 
         let core_type = fpga.core_type().ok_or("Could not get core type.")?;
         let spi_type = fpga
@@ -186,10 +185,12 @@ impl MisterFpgaCore {
         path: &Path,
         file_info: Option<LoadFileInfo>,
     ) -> Result<(), String> {
+        info!(?path, ?file_info, "Loading file");
         let info = file_info.map_or_else(
             || MisterFpgaSendFileInfo::from_path(path, self),
             MisterFpgaSendFileInfo::from_file_info,
         )?;
+        info!(?info, "info_send_file_info");
 
         let ext = path
             .extension()
@@ -736,19 +737,35 @@ impl Core for MisterFpgaCore {
         todo!()
     }
 
-    fn menu(&self) -> Result<CoreMenu, Error> {
-        Ok(self.config.as_core_menu())
+    fn settings(&self) -> Result<CoreSettings, Error> {
+        Ok(self.config.as_core_settings(self.status_bits()))
     }
 
-    fn trigger(&mut self, _id: ConfigMenuId) -> Result<(), Error> {
+    fn trigger(&mut self, _id: SettingId) -> Result<(), Error> {
         todo!()
     }
 
-    fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
+    fn file_select(&mut self, id: SettingId, path: String) -> Result<(), Error> {
+        if let Some(mut info) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_load_file_info)
+            .find(|info| info.setting_id() == id)
+            .cloned()
+        {
+            self.load_file(&Path::new(&path), Some(info))
+                .map_err(Error::Message)?;
+            self.end_send_file()?;
+            self.poll_mounts()?;
+        }
+        Ok(())
+    }
+
+    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<(), Error> {
         todo!()
     }
 
-    fn bool_option(&mut self, _id: ConfigMenuId, _value: bool) -> Result<(), Error> {
+    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<(), Error> {
         todo!()
     }
 

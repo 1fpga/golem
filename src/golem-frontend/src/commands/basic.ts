@@ -1,4 +1,5 @@
 import commands from "@/golem/commands";
+import { coreOsdMenu } from "../menus/core_osd";
 
 const BASIC_COMMANDS: commands.CommandDef[] = [
   {
@@ -7,7 +8,7 @@ const BASIC_COMMANDS: commands.CommandDef[] = [
     name: "Show Core Menu",
     description: "Show the running core's menu.",
     action: async (core) => {
-      core.showMenu();
+      core.showOsd(() => coreOsdMenu(core));
     },
     defaultShortcuts: ["'F12'"],
   },

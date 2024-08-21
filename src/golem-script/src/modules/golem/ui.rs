@@ -1,4 +1,3 @@
-use boa_engine::builtins::promise::PromiseState;
 use boa_engine::object::builtins::JsPromise;
 use boa_engine::value::TryFromJs;
 use boa_engine::{
@@ -206,17 +205,7 @@ fn text_menu_(
                 };
 
                 while let Some(p) = result.as_promise() {
-                    context.run_jobs();
-                    match JsPromise::from_object(p.clone())?.state() {
-                        PromiseState::Pending => {}
-                        PromiseState::Fulfilled(v) => {
-                            result = v;
-                            break;
-                        }
-                        PromiseState::Rejected(e) => {
-                            return Err(JsError::from_opaque(e));
-                        }
-                    }
+                    result = p.await_blocking(context).map_err(JsError::from_opaque)?;
                 }
 
                 if result.is_undefined() {

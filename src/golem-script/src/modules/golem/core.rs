@@ -49,7 +49,6 @@ fn run_(
     context: &mut Context,
 ) -> JsResult<JsValue> {
     let app = host_data.0.app_mut();
-    let command_map = host_data.0.command_map_mut();
     let mut core_options = match &options.core {
         CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path)),
     };

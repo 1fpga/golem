@@ -1,7 +1,5 @@
 use crate::module_loader::GolemModuleLoader;
 use crate::modules::CommandMap;
-use boa_engine::builtins::promise::PromiseState;
-use boa_engine::object::builtins::{JsFunction, JsPromise};
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
@@ -126,29 +124,19 @@ pub fn run(
     debug!("Script parsed in {}ms.", start.elapsed().as_millis());
 
     let start = Instant::now();
-    let promise_result = module.load_link_evaluate(&mut context);
+    if let Err(e) = module
+        .load_link_evaluate(&mut context)
+        .await_blocking(&mut context)
+    {
+        error!("Error loading script: {}", e.display());
+        return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
+    }
     debug!(
         "Script loaded and evaluated in {}ms.",
         start.elapsed().as_millis()
     );
 
     let start = Instant::now();
-    loop {
-        // Very important to push forward the job queue after queueing promises.
-        context.run_jobs();
-
-        // Checking if the final promise didn't return an error.
-        match promise_result.state() {
-            PromiseState::Pending => {}
-            PromiseState::Fulfilled(_) => {
-                break;
-            }
-            PromiseState::Rejected(err) => {
-                error!("Javascript Error: {}", err.display());
-                return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
-            }
-        }
-    }
 
     debug!("Script loaded in {}ms.", start.elapsed().as_millis());
     let start = Instant::now();
@@ -164,23 +152,19 @@ pub fn run(
 
     // Loop until the promise chain is resolved.
     while let Some(p) = result.as_promise() {
-        let p = JsPromise::from_object(p.clone())?;
-        context.run_jobs();
-
-        match p.state() {
-            PromiseState::Pending => {}
-            PromiseState::Fulfilled(v) => {
+        match p.await_blocking(&mut context) {
+            Ok(v) => {
+                // If `v` is not a promise this will simply break the `while`.
                 result = v;
             }
-            PromiseState::Rejected(err) => {
-                error!("Javascript Error: {}", err.display());
-                return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
+            Err(e) => {
+                error!("Javascript Error: {}", e.display());
+                return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
             }
         }
     }
-    debug!("Main executed in {}ms.", start.elapsed().as_millis());
 
+    debug!("Main executed in {}ms.", start.elapsed().as_millis());
     info!(?result, "Script executed successfully.");
-    boa_profiler::Profiler::global().drop();
     Ok(())
 }

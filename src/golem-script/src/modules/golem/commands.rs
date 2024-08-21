@@ -66,7 +66,7 @@ pub struct Command {
 impl Command {
     pub fn execute(
         &mut self,
-        app: &mut GoLEmApp,
+        _app: &mut GoLEmApp,
         running_core: Option<&GolemCore>,
         context: &mut Context,
     ) -> JsResult<()> {
