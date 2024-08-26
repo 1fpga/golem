@@ -102,12 +102,12 @@ impl Core for NullCore {
         Ok(())
     }
 
-    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<(), Error> {
-        Ok(())
+    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<u32, Error> {
+        Ok(0)
     }
 
-    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<(), Error> {
-        Ok(())
+    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<bool, Error> {
+        Ok(false)
     }
 
     fn as_any(&self) -> &dyn Any {

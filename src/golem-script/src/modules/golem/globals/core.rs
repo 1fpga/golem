@@ -6,7 +6,7 @@ use boa_interop::{js_class, ContextData, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::panels::core_loop::run_core_loop;
 use golem_ui::application::GoLEmApp;
-use mister_fpga::core::MisterFpgaCore;
+use mister_fpga::core::{AsMisterCore, MisterFpgaCore};
 use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
 use tracing::error;
@@ -100,19 +100,46 @@ impl JsCore {
     fn quit(&mut self) {
         self.core.quit();
     }
+
+    fn get_status_bits(&self) -> Option<Vec<u16>> {
+        self.core
+            .as_mister_core()
+            .map(|core| core.status_bits().as_raw_slice().to_vec())
+    }
+
+    fn set_status_bits(&mut self, bits: Vec<u16>) -> JsResult<()> {
+        if let Some(core) = self.core.as_mister_core() {
+            let mut slice = core.status_bits().as_raw_slice();
+            if slice.len() != bits.len() {
+                return Err(JsError::new_type_error("Invalid status bits length"));
+            }
+            slice.copy_from_slice(&bits);
+        }
+        Ok(())
+    }
 }
 
 js_class! {
     class JsCore as "GolemCore" {
+        property name {
+            fn get(this: JsClass<JsCore>) -> JsResult<JsString> {
+                Ok(JsString::from(this.borrow().core.name()))
+            }
+        }
+
         property settings {
             fn get(this: JsClass<JsCore>, context: &mut Context) -> JsResult<JsValue> {
                 this.borrow().settings(context)
             }
         }
 
-        property name {
-            fn get(this: JsClass<JsCore>) -> JsResult<JsString> {
-                Ok(JsString::from(this.borrow().core.name()))
+        property status_bits as "statusBits" {
+            fn get(this: JsClass<JsCore>) -> Option<Vec<u16>> {
+                this.borrow().get_status_bits()
+            }
+
+            fn set(this: JsClass<JsCore>, value: Vec<u16>) -> JsResult<()> {
+                this.borrow_mut().set_status_bits(value)
             }
         }
 
@@ -155,6 +182,22 @@ js_class! {
             id: u32,
         ) -> JsResult<()> {
             this.clone_inner().core.trigger(SettingId::from(id)).map_err(JsError::from_rust)
+        }
+
+        fn bool_select as "boolSelect"(
+            this: JsClass<JsCore>,
+            id: u32,
+            value: bool,
+        ) -> JsResult<bool> {
+            this.clone_inner().core.bool_option(SettingId::from(id), value).map_err(JsError::from_rust)
+        }
+
+        fn int_select as "intSelect"(
+            this: JsClass<JsCore>,
+            id: u32,
+            value: u32,
+        ) -> JsResult<u32> {
+            this.clone_inner().core.int_option(SettingId::from(id), value).map_err(JsError::from_rust)
         }
 
         fn quit(this: JsClass<JsCore>) -> () {

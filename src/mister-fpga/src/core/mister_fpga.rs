@@ -741,12 +741,21 @@ impl Core for MisterFpgaCore {
         Ok(self.config.as_core_settings(self.status_bits()))
     }
 
-    fn trigger(&mut self, _id: SettingId) -> Result<(), Error> {
-        todo!()
+    fn trigger(&mut self, id: SettingId) -> Result<(), Error> {
+        if let Some(ConfigMenu::Trigger { index, .. }) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_trigger)
+            .find(|item| item.setting_id() == Some(id))
+        {
+            self.status_pulse(*index as usize);
+        }
+
+        Ok(())
     }
 
     fn file_select(&mut self, id: SettingId, path: String) -> Result<(), Error> {
-        if let Some(mut info) = self
+        if let Some(info) = self
             .menu_options()
             .iter()
             .filter_map(ConfigMenu::as_load_file_info)
@@ -761,12 +770,41 @@ impl Core for MisterFpgaCore {
         Ok(())
     }
 
-    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<(), Error> {
-        todo!()
+    fn int_option(&mut self, id: SettingId, value: u32) -> Result<u32, Error> {
+        if let Some(ConfigMenu::Option { bits, choices, .. }) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_option)
+            .find(|item| item.setting_id() == Some(id))
+        {
+            let (from, to) = (bits.start, bits.end);
+            let mut bits = *self.status_bits();
+            let max = choices.len();
+            bits.set_range(from..to, (value as usize % max) as u32);
+            let new_value = bits.get_range(from..to);
+            self.send_status_bits(bits);
+            Ok(new_value)
+        } else {
+            Ok(0)
+        }
     }
 
-    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<(), Error> {
-        todo!()
+    fn bool_option(&mut self, id: SettingId, value: bool) -> Result<bool, Error> {
+        if let Some(ConfigMenu::Option { bits, .. }) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_option)
+            .find(|item| item.setting_id() == Some(id))
+        {
+            let (from, to) = (bits.start, bits.end);
+            let mut bits = *self.status_bits();
+            bits.set_range(from..to, if value { 1 } else { 0 });
+            let new_value = bits.get_range(from..to) != 0;
+            self.send_status_bits(bits);
+            Ok(new_value)
+        } else {
+            Ok(false)
+        }
     }
 
     fn as_any(&self) -> &dyn Any {

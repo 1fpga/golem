@@ -270,7 +270,7 @@ impl ConfigMenu {
             }
             ConfigMenu::Trigger { label, .. } => vec![CoreSettingItem::trigger(label, label)],
             ConfigMenu::Page { label, .. } => {
-                vec![CoreSettingItem::page(label, label, Vec::new())]
+                vec![CoreSettingItem::page(label, label, label, Vec::new())]
             }
             ConfigMenu::PageItem(_, sub) => sub.as_core_menu_item(status),
             ConfigMenu::HideIf(mask, sub) => {
@@ -327,6 +327,20 @@ impl ConfigMenu {
     pub fn as_load_file_info(&self) -> Option<&LoadFileInfo> {
         match self {
             ConfigMenu::LoadFile(info) | ConfigMenu::LoadFileAndRemember(info) => Some(info),
+            _ => None,
+        }
+    }
+
+    pub fn setting_id(&self) -> Option<SettingId> {
+        match self {
+            ConfigMenu::Page { label, .. } => Some(SettingId::from_label(&label)),
+            ConfigMenu::Option { label, .. } => Some(SettingId::from_label(&label)),
+            ConfigMenu::Trigger { label, .. } => Some(SettingId::from_label(&label)),
+            ConfigMenu::PageItem(_, sub) => sub.setting_id(),
+            ConfigMenu::HideIf(_, sub)
+            | ConfigMenu::DisableIf(_, sub)
+            | ConfigMenu::HideUnless(_, sub)
+            | ConfigMenu::DisableUnless(_, sub) => sub.setting_id(),
             _ => None,
         }
     }

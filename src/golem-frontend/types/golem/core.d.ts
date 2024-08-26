@@ -147,6 +147,11 @@ declare module "@/golem/core" {
     readonly settings: CoreSettings;
 
     /**
+     * The core's current status bits. Only if the core supports it.
+     */
+    statusBits: number;
+
+    /**
      * The core's main loop, sending any inputs to the core, and checking for
      * shortcuts. This function will return when the core is unloaded by the
      * user.
@@ -174,6 +179,16 @@ declare module "@/golem/core" {
      * Select a file in the core.
      */
     fileSelect(id: number, path: string): void;
+
+    /**
+     * Select a boolean option in the core.
+     */
+    boolSelect(id: number, value: boolean): boolean;
+
+    /**
+     * Select an integer option in the core.
+     */
+    intSelect(id: number, value: number): number;
 
     /**
      * Reset the core.

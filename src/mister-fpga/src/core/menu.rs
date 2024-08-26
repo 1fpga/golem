@@ -148,15 +148,15 @@ impl Core for MenuCore {
         todo!()
     }
 
-    fn file_select(&mut self, id: SettingId, path: String) -> Result<(), Error> {
+    fn file_select(&mut self, _id: SettingId, _path: String) -> Result<(), Error> {
         todo!()
     }
 
-    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<(), Error> {
+    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<u32, Error> {
         todo!()
     }
 
-    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<(), Error> {
+    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<bool, Error> {
         todo!()
     }
 

@@ -80,7 +80,7 @@ export async function settings_menu() {
         marker: datetimeFormatMarker(),
       },
       {
-        label: "Commands...",
+        label: "Shortcuts...",
         marker: ">",
         select: commands_settings_menu,
       },

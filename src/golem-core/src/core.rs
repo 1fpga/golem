@@ -98,6 +98,9 @@ impl CoreSettings {
 pub enum CoreSettingItem {
     /// A menu page that contains more menu items. This is purely cosmetic.
     Page {
+        /// A unique ID for this page.
+        id: SettingId,
+
         /// The label that would be shown in a top-level menu.
         label: String,
 
@@ -185,8 +188,14 @@ impl CoreSettingItem {
         }
     }
 
-    pub fn page(label: &str, title: &str, items: Vec<CoreSettingItem>) -> Self {
+    pub fn page(
+        id: impl Into<SettingId>,
+        label: &str,
+        title: &str,
+        items: Vec<CoreSettingItem>,
+    ) -> Self {
         CoreSettingItem::Page {
+            id: id.into(),
             label: label.to_string(),
             title: title.to_string(),
             items,
@@ -435,12 +444,14 @@ pub trait Core {
     fn file_select(&mut self, id: SettingId, path: String) -> Result<(), Error>;
 
     /// Set an integer option in the core. This is used to set an option that has a
-    /// list of choices that can be selected by the user.
-    fn int_option(&mut self, id: SettingId, value: u32) -> Result<(), Error>;
+    /// positive integer value. Returns the new value (e.g. if value is out of bound,
+    /// the core might clip it or reset it).
+    fn int_option(&mut self, id: SettingId, value: u32) -> Result<u32, Error>;
 
     /// Set a boolean option in the core. This is used to set an option that has a
-    /// boolean value that can be toggled by the user.
-    fn bool_option(&mut self, id: SettingId, value: bool) -> Result<(), Error>;
+    /// boolean value that can be toggled by the user. Returns the new value
+    /// (e.g. if the core cannot change the value, returns the previous one).
+    fn bool_option(&mut self, id: SettingId, value: bool) -> Result<bool, Error>;
 
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
@@ -570,11 +581,11 @@ impl Core for GolemCore {
         unsafe { &mut *self.inner.get() }.file_select(id, path)
     }
 
-    fn int_option(&mut self, id: SettingId, value: u32) -> Result<(), Error> {
+    fn int_option(&mut self, id: SettingId, value: u32) -> Result<u32, Error> {
         unsafe { &mut *self.inner.get() }.int_option(id, value)
     }
 
-    fn bool_option(&mut self, id: SettingId, value: bool) -> Result<(), Error> {
+    fn bool_option(&mut self, id: SettingId, value: bool) -> Result<bool, Error> {
         unsafe { &mut *self.inner.get() }.bool_option(id, value)
     }
 
