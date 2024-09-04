@@ -149,7 +149,7 @@ declare module "@/golem/core" {
     /**
      * The core's current status bits. Only if the core supports it.
      */
-    statusBits: number;
+    statusBits: number[];
 
     /**
      * The core's main loop, sending any inputs to the core, and checking for

@@ -10,9 +10,7 @@ members = [
     "src/golem-db",
     "src/golem-script",
     "src/golem-ui",
-    "src/junior",
     "src/mister-fpga",
-    "src/senior",
     "src/taser",
 ]
 

@@ -17,10 +17,16 @@ export default function (baseDir = process.cwd()) {
       fs.mkdirSync(path.resolve(baseDir, "codegen"), { recursive: true });
 
       // Create the JSON schema files.
-      const files = globSync("schemas/**.json");
+      const files = globSync("schemas/**/*.json");
 
       for (const file of files) {
         const schema = JSON.parse(fs.readFileSync(file, "utf8"));
+
+        // Remove definitions only files.
+        if (schema["type"] === undefined) {
+          continue;
+        }
+
         const outputDir = path.join("codegen", path.dirname(file));
         const outputFile = path.basename(file, ".json");
         fs.mkdirSync(outputDir, { recursive: true });
@@ -31,18 +37,34 @@ export default function (baseDir = process.cwd()) {
             esm: true,
             source: true,
           },
+          schemas: [
+            ...files.map((file) => JSON.parse(fs.readFileSync(file, "utf8"))),
+          ],
         });
 
-        const validate = ajv.compile(schema);
+        const validate = ajv.getSchema(schema["$id"]);
         let moduleCode = standaloneCode(ajv, validate);
 
         fs.writeFileSync(`${outputDir}/${outputFile}.js`, moduleCode);
 
-        let ts = await schema_to_ts.compile(schema, outputFile);
+        let id = path.basename(schema["$id"], "json");
+        let ts = await schema_to_ts.compile(schema, outputFile, {
+          cwd: path.dirname(file),
+          customName(schema, name) {
+            if (name !== undefined) {
+              return name;
+            } else if (schema["$id"] !== undefined) {
+              return path.basename(schema["$id"], "json");
+            } else {
+              return "Unknown";
+            }
+          },
+        });
+
         let content = `
+                    import type { ValidateFunction } from "ajv";
                     ${ts}
-                    import { ValidateFunction } from "ajv";
-                    export const validate: ValidateFunction<${capitalCase(outputFile)}>; 
+                    export const validate: ValidateFunction<${capitalCase(id)}>; 
                     export default validate;
                 `;
 

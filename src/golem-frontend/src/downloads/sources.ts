@@ -1,7 +1,7 @@
 import * as storage from "@/golem/storage";
 import * as net from "@/golem/net";
 import * as ui from "@/golem/ui";
-import { validate as validateSource, Source } from "$schemas:source";
+import { validate as validateSource, Source } from "$schemas:source/source";
 
 export interface SourceWithUrl extends Source {
   _url: string;
@@ -92,6 +92,17 @@ async function addSourceMenu() {
   return true;
 }
 
+async function exploreSource(source: SourceWithUrl) {
+  await ui.textMenu({
+    title: source._url,
+    back: true,
+    items: [
+      { label: "Name:", marker: source.name },
+      { label: "Url:", marker: source._url },
+    ],
+  });
+}
+
 async function manage_source(source: SourceWithUrl) {
   const storage = new Storage();
   await ui.textMenu({
@@ -112,6 +123,13 @@ async function manage_source(source: SourceWithUrl) {
             source.name = newName;
             storage.addOrUpdateSource(source);
           }
+        },
+      },
+      {
+        label: "Explore...",
+        select: () => {
+          ui.alert("Explore", "Not implemented yet.");
+          return true;
         },
       },
       {

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://1fpga.cloud/schemas/defs.json",
+  "definitions": {
+    "links": {
+      "type": "object",
+      "properties": {
+        "homepage": {
+          "description": "URL of the homepage",
+          "type": "string"
+        },
+        "github": {
+          "description": "URL of the github",
+          "type": "string"
+        }
+      }
+    }
+  }
+}
