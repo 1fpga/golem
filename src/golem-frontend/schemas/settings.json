@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://golem.1fpga.cloud/schemas/settings.json",
+  "type": "object",
+  "properties": {
+    "ui": {
+      "type": "object",
+      "properties": {
+        "menuFontSize": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 10
+            },
+            {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            }
+          ]
+        },
+        "theme": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark",
+            "toolbarLight"
+          ]
+        },
+        "toolbar": {
+          "type": "object",
+          "properties": {
+            "datetimeFormat": {
+              "type": "string",
+              "enum": [
+                "default",
+                "short",
+                "timeOnly",
+                "hidden"
+              ]
+            },
+            "showFps": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "en"
+      ]
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "enum": [
+              "1fpga"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "pattern": "^https?://.*$"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "default": [
+        "1fpga"
+      ]
+    }
+  }
+}

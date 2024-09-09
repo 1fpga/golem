@@ -30,9 +30,10 @@ async function download_cores() {
 }
 
 function start_core(db_core: { path: string }) {
-  core.run({
+  let c = core.load({
     core: { type: "Path", path: db_core.path },
   });
+  c.loop();
 }
 
 function select_core_file() {
@@ -42,9 +43,10 @@ function select_core_file() {
   });
 
   if (f !== undefined) {
-    core.run({
+    let c = core.load({
       core: { type: "Path", path: f },
     });
+    c.loop();
   }
 }
 

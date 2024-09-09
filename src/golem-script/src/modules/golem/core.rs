@@ -9,12 +9,8 @@ use one_fpga::core::Rom;
 use one_fpga::runner::CoreLaunchInfo;
 use serde::Deserialize;
 
-use golem_ui::application::panels::core_loop::run_core_loop;
-
-use crate::modules::golem::core::js_core::JsCore;
+use crate::modules::golem::globals::classes::JsCore;
 use crate::HostData;
-
-pub mod js_core;
 
 /// The core type from JavaScript.
 #[derive(Debug, Trace, Finalize, JsData, Deserialize)]
@@ -38,7 +34,6 @@ struct RunOptions {
     files: Option<Vec<Option<String>>>,
     savestate: Option<String>,
     show_menu: Option<bool>,
-    auto_loop: Option<bool>,
 }
 
 impl TryFromJs for RunOptions {
@@ -48,12 +43,12 @@ impl TryFromJs for RunOptions {
     }
 }
 
-fn run_(
+fn load_(
     options: RunOptions,
-    ContextData(app): ContextData<HostData>,
+    host_data: ContextData<HostData>,
     context: &mut Context,
 ) -> JsResult<JsValue> {
-    let app = app.app_mut();
+    let app = host_data.0.app_mut();
     let mut core_options = match &options.core {
         CoreType::Path { path } => CoreLaunchInfo::rbf(PathBuf::from(path)),
     };
@@ -78,28 +73,21 @@ fn run_(
     }
 
     eprintln!("Launching core: {:?}", core_options);
-    let mut core = app
+    let core = app
         .platform_mut()
         .core_manager_mut()
         .launch(core_options)
         .unwrap();
 
-    if options.auto_loop.unwrap_or(true) {
-        run_core_loop(&mut *app, &mut core, options.show_menu.unwrap_or(true));
-        Ok(JsValue::undefined())
-    } else {
-        Ok(JsValue::Object(JsCore::from_data(
-            JsCore::new(core),
-            context,
-        )?))
-    }
+    Ok(JsValue::Object(JsCore::from_data(
+        JsCore::new(core),
+        context,
+    )?))
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
-    context.register_global_class::<JsCore>()?;
-
     Ok((
         js_string!("core"),
-        [(js_string!("run"), run_.into_js_function_copied(context))].into_js_module(context),
+        [(js_string!("load"), load_.into_js_function_copied(context))].into_js_module(context),
     ))
 }

@@ -1,7 +1,7 @@
 use std::cell::UnsafeCell;
 use std::io::Read;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use strum::{Display, EnumIter, FromRepr};
@@ -155,6 +155,9 @@ impl MisterFpga {
             info!("Initializing FPGA");
 
             let soc = cyclone_v::SocFpga::default();
+
+            // TODO: Remove UnsafeCell here.
+            #[allow(clippy::arc_with_non_send_sync)]
             let soc = Arc::new(UnsafeCell::new(soc));
             let mut fpga = Self::new(soc.clone());
 
@@ -228,13 +231,12 @@ impl MisterFpga {
     }
 
     /// Send a reset signal to the core.
-    pub fn core_reset(&mut self) -> Result<(), ()> {
+    pub fn core_reset(&mut self) {
         let fpga_manager = self.regs_mut();
 
         // Core Reset.
         let gpo = fpga_manager.gpo() & (!0xC000_0000);
         fpga_manager.set_gpo(gpo | 0x4000_0000);
-        Ok(())
     }
 
     #[inline]
@@ -267,19 +269,19 @@ impl MisterFpga {
     }
 
     #[inline]
-    fn wait_for(&mut self, mut f: impl FnMut(&mut Self) -> bool) -> Result<(), ()> {
+    fn wait_for(&mut self, mut f: impl FnMut(&mut Self) -> bool) -> Option<()> {
         let now = Instant::now();
         let timeout = Duration::from_secs(10);
 
         while now.elapsed() < timeout {
             if f(self) {
-                return Ok(());
+                return Some(());
             }
 
             std::thread::sleep(Duration::from_millis(1));
         }
 
-        Err(())
+        None
     }
 
     #[inline]
@@ -330,7 +332,7 @@ impl MisterFpga {
                 false
             }
         })
-        .map_err(|_| FpgaError::Timeout)
+        .ok_or(FpgaError::Timeout)
     }
 
     pub fn load(&mut self, program: impl Program) -> Result<(), FpgaError> {
@@ -392,7 +394,7 @@ impl MisterFpga {
 
         // (1) wait until FPGA enter reset phase
         self.wait_for(|fpga| fpga.regs_mut().stat().mode() == StatusRegisterMode::ResetPhase)
-            .map_err(|_| FpgaError::CouldNotReset)?;
+            .ok_or(FpgaError::CouldNotReset)?;
 
         // Release FPGA from reset phase.
         self.regs_mut()
@@ -400,7 +402,7 @@ impl MisterFpga {
 
         // (2) wait until FPGA enter configuration phase
         self.wait_for(|fpga| fpga.regs_mut().stat().mode() == StatusRegisterMode::ConfigPhase)
-            .map_err(|_| FpgaError::CouldNotEnterConfigurationPhase)?;
+            .ok_or(FpgaError::CouldNotEnterConfigurationPhase)?;
 
         // Clear all interrupts in CB Monitor.
         self.regs_mut().set_gpio_porta_eoi(0xFFF);
@@ -446,7 +448,7 @@ impl MisterFpga {
         self.wait_for(|fpga| {
             fpga.regs_mut().gpio_ext_porta().ns() || fpga.regs_mut().gpio_ext_porta().cd()
         })
-        .map_err(|_| FpgaError::CouldNotConfigure)?;
+        .ok_or(FpgaError::CouldNotConfigure)?;
 
         // Disable AXI configuration
         self.regs_mut().update_ctrl(|ctrl| ctrl.set_axicfgen(false));
@@ -466,7 +468,7 @@ impl MisterFpga {
                 StatusRegisterMode::InitPhase | StatusRegisterMode::UserMode
             )
         })
-        .map_err(|_| FpgaError::CouldNotEnterInitPhase)?;
+        .ok_or(FpgaError::CouldNotEnterInitPhase)?;
 
         Ok(())
     }
@@ -477,7 +479,7 @@ impl MisterFpga {
 
         // (5) wait until FPGA enter user mode
         self.wait_for(|fpga| fpga.regs_mut().stat().mode() == StatusRegisterMode::UserMode)
-            .map_err(|_| FpgaError::CouldNotEnterUserMode)?;
+            .ok_or(FpgaError::CouldNotEnterUserMode)?;
 
         // To release FPGA Manager drive over configuration line.
         self.regs_mut()

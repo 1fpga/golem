@@ -35,7 +35,7 @@ impl GolemModuleLoader {
 
     /// Creates a new `GolemModuleLoader` from a root module path.
     pub fn new(root: impl Into<PathBuf>) -> Result<Self, std::io::Error> {
-        Ok(Self::new_unchecked(root.into().canonicalize()?))
+        root.into().canonicalize().map(Self::new_unchecked)
     }
 
     /// Inserts a module in the named module map.

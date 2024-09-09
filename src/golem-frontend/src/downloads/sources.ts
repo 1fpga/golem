@@ -1,27 +1,33 @@
 import * as storage from "@/golem/storage";
 import * as net from "@/golem/net";
 import * as ui from "@/golem/ui";
-import type { Ajv as AjvType } from "ajv";
+import { validate as validateSource, Source } from "$schemas:source/source";
 
-export interface Source {
-  // The URL loaded for the source.
+export interface SourceWithUrl extends Source {
   _url: string;
-
-  // The name of the source. This is self identified by the source JSON
-  // so it is not required to be unique.
-  name: string;
 }
 
 export class Storage {
-  get sources(): Source[] {
-    return storage.get("downloadSources") || [];
+  get sources(): SourceWithUrl[] {
+    const sources = storage.get("downloadSources") || [];
+
+    // Validate sources because people can mess with storage outside the application.
+    if (!Array.isArray(sources)) {
+      return [];
+    }
+
+    if (sources.every((s) => validateSource(s) && typeof s._url === "string")) {
+      return sources as SourceWithUrl[];
+    } else {
+      return [];
+    }
   }
 
-  set sources(sources: Source[]) {
-    storage.set("downloadSources", sources);
+  set sources(sources: SourceWithUrl[]) {
+    storage.set("downloadSources", sources as storage.StorageItem);
   }
 
-  addOrUpdateSource(source: Source) {
+  addOrUpdateSource(source: SourceWithUrl) {
     let sources = this.sources;
     let maybeIndex = sources.findIndex((s) => s._url === source._url);
     if (maybeIndex !== -1) {
@@ -37,35 +43,12 @@ export class Storage {
   }
 }
 
-let schema: AjvType;
-
-async function fetchSource(url: string): Promise<Source> {
-  while (schema === undefined) {
-    await import("ajv").then(({ Ajv }) => {
-      schema = new Ajv();
-    });
-  }
-
-  // A validate source.
-  const validateSource = schema.compile({
-    type: "object",
-    properties: {
-      name: { type: "string" },
-      cores: { type: "string" },
-      systems: { type: "string" },
-    },
-    required: ["name"],
-  });
-
+async function fetchSource(url: string): Promise<SourceWithUrl> {
   function inner(url: string) {
     try {
       return net.fetchJson(url + "/golem.json");
     } catch (e) {
-      if (url.startsWith("http://")) {
-        return fetchSource(url.replace("http://", "https://"));
-      } else if (!url.startsWith("https://")) {
-        return fetchSource("https://" + url);
-      }
+      return fetchSource(url.replace("http://", "https://"));
     }
   }
 
@@ -75,15 +58,15 @@ async function fetchSource(url: string): Promise<Source> {
   }
 
   const maybeJson = inner(url);
-  const isValid = validateSource(maybeJson);
 
-  if (!isValid) {
-    throw new Error(
-      (validateSource.errors || []).map((e) => e.message || "").join("\n"),
-    );
+  // Validate source function.
+  if (validateSource(maybeJson)) {
+    return { _url: url, ...maybeJson };
   }
 
-  return { _url: url, ...maybeJson };
+  throw new Error(
+    (validateSource.errors || []).map((e) => e.message || "").join("\n"),
+  );
 }
 
 async function addSourceMenu() {
@@ -109,9 +92,19 @@ async function addSourceMenu() {
   return true;
 }
 
-async function manage_source(source: Source) {
+async function exploreSource(source: SourceWithUrl) {
+  await ui.textMenu({
+    title: source._url,
+    back: true,
+    items: [
+      { label: "Name:", marker: source.name },
+      { label: "Url:", marker: source._url },
+    ],
+  });
+}
+
+async function manage_source(source: SourceWithUrl) {
   const storage = new Storage();
-  console.log("Managing source", source._url, source.name);
   await ui.textMenu({
     title: source.name,
     back: true,
@@ -130,6 +123,13 @@ async function manage_source(source: Source) {
             source.name = newName;
             storage.addOrUpdateSource(source);
           }
+        },
+      },
+      {
+        label: "Explore...",
+        select: () => {
+          ui.alert("Explore", "Not implemented yet.");
+          return true;
         },
       },
       {

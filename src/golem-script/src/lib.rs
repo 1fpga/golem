@@ -1,17 +1,13 @@
-use std::path::Path;
-use std::rc::Rc;
-use std::time::Instant;
-
-use boa_engine::builtins::promise::PromiseState;
-use boa_engine::object::builtins::JsPromise;
+use crate::module_loader::GolemModuleLoader;
+use crate::modules::CommandMap;
 use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
-use tracing::{debug, error, info};
-
 use golem_ui::application::GoLEmApp;
-
-use crate::module_loader::GolemModuleLoader;
+use std::path::Path;
+use std::rc::Rc;
+use std::time::Instant;
+use tracing::{debug, error, info};
 
 mod module_loader;
 
@@ -28,6 +24,10 @@ pub(crate) struct HostData {
     /// The GoLEm application.
     #[unsafe_ignore_trace]
     app: Rc<*mut GoLEmApp>,
+
+    /// A command map that needs to be shared.
+    #[unsafe_ignore_trace]
+    command_map: Rc<*mut CommandMap>,
 }
 
 impl std::fmt::Debug for HostData {
@@ -43,6 +43,14 @@ impl HostData {
 
     pub fn app_mut(&self) -> &mut GoLEmApp {
         unsafe { self.app.as_mut().unwrap() }
+    }
+
+    pub fn command_map(&self) -> &CommandMap {
+        unsafe { self.command_map.as_ref().as_ref().unwrap() }
+    }
+
+    pub fn command_map_mut(&self) -> &mut CommandMap {
+        unsafe { self.command_map.as_mut().unwrap() }
     }
 }
 
@@ -60,7 +68,6 @@ fn create_context(
     };
 
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
-
     context.insert_data(host_defined);
 
     Ok((context, loader))
@@ -72,7 +79,11 @@ pub fn run(
 ) -> Result<(), Box<dyn std::error::Error>> {
     app.init_platform();
     let app = Rc::new((&mut app) as *mut GoLEmApp);
-    let host_defined = HostData { app };
+    let mut command_map = CommandMap::default();
+    let host_defined = HostData {
+        app,
+        command_map: Rc::new(&mut command_map as *mut CommandMap),
+    };
 
     debug!("Loading JavaScript...");
     let start = Instant::now();
@@ -113,29 +124,19 @@ pub fn run(
     debug!("Script parsed in {}ms.", start.elapsed().as_millis());
 
     let start = Instant::now();
-    let promise_result = module.load_link_evaluate(&mut context);
+    if let Err(e) = module
+        .load_link_evaluate(&mut context)
+        .await_blocking(&mut context)
+    {
+        error!("Error loading script: {}", e.display());
+        return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
+    }
     debug!(
         "Script loaded and evaluated in {}ms.",
         start.elapsed().as_millis()
     );
 
     let start = Instant::now();
-    loop {
-        // Very important to push forward the job queue after queueing promises.
-        context.run_jobs();
-
-        // Checking if the final promise didn't return an error.
-        match promise_result.state() {
-            PromiseState::Pending => {}
-            PromiseState::Fulfilled(_) => {
-                break;
-            }
-            PromiseState::Rejected(err) => {
-                error!("Javascript Error: {}", err.display());
-                return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
-            }
-        }
-    }
 
     debug!("Script loaded in {}ms.", start.elapsed().as_millis());
     let start = Instant::now();
@@ -151,23 +152,19 @@ pub fn run(
 
     // Loop until the promise chain is resolved.
     while let Some(p) = result.as_promise() {
-        let p = JsPromise::from_object(p.clone())?;
-        context.run_jobs();
-
-        match p.state() {
-            PromiseState::Pending => {}
-            PromiseState::Fulfilled(v) => {
+        match p.await_blocking(&mut context) {
+            Ok(v) => {
+                // If `v` is not a promise this will simply break the `while`.
                 result = v;
             }
-            PromiseState::Rejected(err) => {
-                error!("Javascript Error: {}", err.display());
-                return Err(JsError::from_opaque(err).try_native(&mut context)?.into());
+            Err(e) => {
+                error!("Javascript Error: {}", e.display());
+                return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
             }
         }
     }
-    debug!("Main executed in {}ms.", start.elapsed().as_millis());
 
+    debug!("Main executed in {}ms.", start.elapsed().as_millis());
     info!(?result, "Script executed successfully.");
-    boa_profiler::Profiler::global().drop();
     Ok(())
 }

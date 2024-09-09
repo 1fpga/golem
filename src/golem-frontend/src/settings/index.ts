@@ -15,7 +15,7 @@ function fontSizeMarker() {
   }
 }
 
-function updateFontSize(item: ui.TextMenuItem) {
+function updateFontSize(item: ui.TextMenuItem<void>) {
   const current = settings.getSettings().ui?.menuFontSize || "medium";
   const next = fontSizes[(fontSizes.indexOf(current) + 1) % fontSizes.length];
   settings.updateSettings({ ui: { menuFontSize: next } });
@@ -46,7 +46,7 @@ function datetimeFormatMarker() {
   }
 }
 
-function updateDateTimeFormat(item: ui.TextMenuItem) {
+function updateDateTimeFormat(item: ui.TextMenuItem<void>) {
   const current = datetimeFormat();
   const next =
     datetimeFormats[
@@ -58,7 +58,7 @@ function updateDateTimeFormat(item: ui.TextMenuItem) {
 
 export async function settings_menu() {
   await ui.textMenu({
-    back: true,
+    back: () => {},
     title: "Settings",
     items: [
       {
@@ -80,7 +80,7 @@ export async function settings_menu() {
         marker: datetimeFormatMarker(),
       },
       {
-        label: "Commands...",
+        label: "Shortcuts...",
         marker: ">",
         select: commands_settings_menu,
       },

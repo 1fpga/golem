@@ -1,3 +1,4 @@
+#![allow(clippy::missing_safety_doc)]
 //! Types for Cyclone V devices.
 //! Derived from https://www.intel.com/content/www/us/en/programmable/hps/cyclone-v/index_frames.html
 //!
@@ -144,6 +145,9 @@ create_memory_locations! {
     /// System Manager Module
     sysmgr(SYSMGR):             sysmgr::SystemManagerModule     => 0xFFD08000 .. 0xFFD08FFF;
 }
+
+// Safety: [`SocFpga`] is safe to send across threads if its memory mapper is safe as well.
+unsafe impl<T: MemoryMapper + Send> Send for SocFpga<T> {}
 
 #[cfg(feature = "std")]
 impl Default for SocFpga<memory::DevMemMemoryMapper> {

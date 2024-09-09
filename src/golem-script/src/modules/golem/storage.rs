@@ -3,30 +3,42 @@ use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use diesel::connection::LoadConnection;
 use diesel::deserialize::FromSql;
 use diesel::row::{Field, Row};
+use diesel::sql_types;
 use diesel::sqlite::SqliteType;
 use diesel::{RunQueryDsl, SqliteConnection};
 
 use crate::HostData;
 
-fn remove_(key: String, ContextData(data): ContextData<HostData>) -> JsResult<()> {
+fn remove_(
+    key: String,
+    user: Option<String>,
+    ContextData(data): ContextData<HostData>,
+) -> JsResult<()> {
     let db = data.app_mut().database();
     let mut db = db.lock().unwrap();
 
-    diesel::sql_query("DELETE FROM storage WHERE key = ?;")
-        .bind::<diesel::sql_types::Text, _>(key)
+    diesel::sql_query("DELETE FROM storage WHERE key = ? AND username = ?;")
+        .bind::<sql_types::Text, _>(key)
+        .bind::<sql_types::Nullable<sql_types::Text>, _>(user)
         .execute(&mut *db)
         .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
 
     Ok(())
 }
 
-fn has_item_(key: String, data: ContextData<HostData>, context: &mut Context) -> JsResult<bool> {
-    get_item_(key, data, context).map(|v| !v.is_undefined())
+fn has_item_(
+    key: String,
+    user: Option<String>,
+    data: ContextData<HostData>,
+    context: &mut Context,
+) -> JsResult<bool> {
+    get_item_(key, user, data, context).map(|v| !v.is_undefined())
 }
 
 fn set_item_(
     key: String,
     value: JsValue,
+    user: Option<String>,
     ContextData(data): ContextData<HostData>,
     context: &mut Context,
 ) -> JsResult<()> {
@@ -36,9 +48,10 @@ fn set_item_(
     let value = serde_json::to_string(&value.to_json(context)?)
         .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
 
-    diesel::sql_query("INSERT INTO storage (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
-        .bind::<diesel::sql_types::Text, _>(key)
-        .bind::<diesel::sql_types::Text, _>(value)
+    diesel::sql_query("INSERT INTO storage (key, value, username) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+        .bind::<sql_types::Text, _>(key)
+        .bind::<sql_types::Text, _>(value)
+        .bind::<sql_types::Nullable<sql_types::Text>, _>(user)
         .execute(&mut *db)
         .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?;
 
@@ -47,14 +60,16 @@ fn set_item_(
 
 fn get_item_(
     key: String,
+    user: Option<String>,
     ContextData(data): ContextData<HostData>,
     context: &mut Context,
 ) -> JsResult<JsValue> {
     let db = data.app_mut().database();
     let mut db = db.lock().unwrap();
 
-    let query = diesel::sql_query("SELECT value FROM storage WHERE key = ?")
-        .bind::<diesel::sql_types::Text, _>(key);
+    let query = diesel::sql_query("SELECT value FROM storage WHERE key = ? AND username = ?")
+        .bind::<sql_types::Text, _>(key)
+        .bind::<sql_types::Nullable<sql_types::Text>, _>(user);
     let mut cursor: <SqliteConnection as LoadConnection<_>>::Cursor<'_, '_> =
         db.load(query).map_err(|err| {
             JsError::from_opaque(
@@ -72,7 +87,7 @@ fn get_item_(
             };
 
             let json: String = match value.value_type() {
-                Some(SqliteType::Text) => FromSql::<diesel::sql_types::Text, _>::from_sql(value)
+                Some(SqliteType::Text) => FromSql::<sql_types::Text, _>::from_sql(value)
                     .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?,
                 _ => {
                     return Ok(JsValue::undefined());

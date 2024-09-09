@@ -23,7 +23,7 @@ pub fn get_root_dir() -> *const u8 {
 }
 
 pub fn root_dir() -> PathBuf {
-    #[cfg(any(target_os = "linux", target_os = "macos", target_os = "unix"))]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     unsafe {
         use std::os::unix::ffi::OsStrExt;
 
@@ -32,7 +32,7 @@ pub fn root_dir() -> PathBuf {
     }
 
     // Unoptimized version for other OSes.
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "unix")))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     unsafe {
         let root_dir = std::ffi::CStr::from_ptr(get_root_dir() as *const c_char);
         PathBuf::from(root_dir.to_str().unwrap())

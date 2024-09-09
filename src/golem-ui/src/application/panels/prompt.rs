@@ -55,7 +55,7 @@ pub fn prompt(
         message,
         display_area,
         character_style.clone(),
-        messagebox_style.clone(),
+        messagebox_style,
     );
 
     let layout = LinearLayout::vertical(
@@ -89,7 +89,7 @@ pub fn prompt(
     let mut result = text;
     let start = Instant::now();
 
-    app.event_loop(move |app, state| {
+    app.draw_loop(move |app, state| {
         let mut text_box = Text::new(&result, Point::zero(), text_style);
         let text_box_size = text_box.bounding_box().size;
         let layout_bounds = layout.bounds();

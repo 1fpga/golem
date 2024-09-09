@@ -1,23 +1,23 @@
-use std::sync::{Arc, Mutex};
-
-use embedded_graphics::draw_target::DrawTarget;
-use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
-use embedded_graphics::Drawable;
-use sdl3::event::Event;
-use sdl3::gamepad::Gamepad;
-use sdl3::joystick::Joystick;
-use tracing::{info, warn};
-
-use golem_db::Connection;
-
 use crate::application::coordinator::Coordinator;
 use crate::application::toolbar::Toolbar;
 use crate::data::paths;
 use crate::data::settings::Settings;
+use crate::input::commands::CommandId;
+use crate::input::shortcut::Shortcut;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::platform::de10::De10Platform;
 use crate::platform::WindowManager;
+use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
+use embedded_graphics::Drawable;
+use golem_db::Connection;
+use sdl3::event::Event;
+use sdl3::gamepad::Gamepad;
+use sdl3::joystick::Joystick;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use tracing::{info, warn};
 
 pub mod menu;
 
@@ -43,6 +43,15 @@ pub struct GoLEmApp {
 
     toolbar_buffer: DrawBuffer<BinaryColor>,
     osd_buffer: DrawBuffer<BinaryColor>,
+
+    commands: HashMap<Shortcut, CommandId>,
+    command_handler: Option<Box<dyn Fn(CommandId)>>,
+}
+
+impl Default for GoLEmApp {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GoLEmApp {
@@ -82,6 +91,26 @@ impl GoLEmApp {
             platform,
             toolbar_buffer: DrawBuffer::new(toolbar_size),
             osd_buffer: DrawBuffer::new(osd_size),
+            commands: HashMap::new(),
+            command_handler: None,
+        }
+    }
+
+    pub fn set_command_handler(&mut self, handler: impl Fn(CommandId) + 'static) {
+        self.command_handler = Some(Box::new(handler));
+    }
+
+    pub fn commands(&self) -> &HashMap<Shortcut, CommandId> {
+        &self.commands
+    }
+
+    pub fn commands_mut(&mut self) -> &mut HashMap<Shortcut, CommandId> {
+        &mut self.commands
+    }
+
+    pub fn execute_command(&mut self, command_id: CommandId) {
+        if let Some(handler) = &self.command_handler {
+            handler(command_id);
         }
     }
 
@@ -121,6 +150,14 @@ impl GoLEmApp {
         self.coordinator.clone()
     }
 
+    pub fn add_shortcut(&mut self, shortcut: Shortcut, command: CommandId) {
+        self.commands.insert(shortcut, command);
+    }
+
+    pub fn remove_shortcut(&mut self, shortcut: Shortcut) {
+        self.commands.remove(&shortcut);
+    }
+
     fn draw_inner<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
         self.osd_buffer.clear(BinaryColor::Off).unwrap();
         let result = drawer_fn(self);
@@ -151,13 +188,18 @@ impl GoLEmApp {
         result
     }
 
+    pub fn draw_loop<R>(
+        &mut self,
+        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
+    ) -> R {
+        self.event_loop(|s, state| s.draw(|s| loop_fn(s, state)))
+    }
+
     pub fn event_loop<R>(
         &mut self,
         mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
     ) -> R {
         loop {
-            self.platform.start_loop();
-
             let events = self.platform.events();
             for event in events.iter() {
                 match event {
@@ -213,11 +255,9 @@ impl GoLEmApp {
 
             let mut state = EventLoopState::new(events);
 
-            if let Some(r) = self.draw_inner(|s| loop_fn(s, &mut state)) {
+            if let Some(r) = loop_fn(self, &mut state) {
                 break r;
             }
-
-            self.platform.end_loop();
         }
     }
 }

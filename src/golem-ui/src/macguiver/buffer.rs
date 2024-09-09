@@ -73,7 +73,7 @@ impl<C: PixelColor> DrawBufferInner<C> {
             DrawBufferInner::MemoryBuffer(slice, _) => {
                 let index = self.point_to_index(point);
 
-                slice[index.expect("Point is outside the buffer size")].clone()
+                slice[index.expect("Point is outside the buffer size")]
             }
         }
     }

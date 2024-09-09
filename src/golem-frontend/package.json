@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build": "rollup -c",
+    "build-ts": "tsc",
     "retronomicon-update": "openapi-typescript https://retronomicon.land/api/v1/openapi.json -o ./types/retronomicon.d.ts"
   },
   "keywords": [],
@@ -18,9 +19,13 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-typescript": "^11.1.6",
     "ajv": "^8.16.0",
+    "change-case": "^5.4.4",
+    "glob": "^10.4.2",
+    "json-schema-to-typescript": "^14.1.0",
     "openapi-typescript": "^6.7.5",
     "prettier": "^3.2.5",
     "rollup": "^4.17.2",
+    "rollup-plugin-delete": "^2.0.0",
     "tslib": "^2.6.2",
     "typescript": "^5.4.5"
   }

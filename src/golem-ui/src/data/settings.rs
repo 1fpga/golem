@@ -1,7 +1,6 @@
 use crate::application::menu::style::{MenuStyleFontSize, MenuStyleOptions};
 use crate::data::paths;
 use bus::{Bus, BusReader};
-use commands::CommandSettings;
 use merge::Merge;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
@@ -15,8 +14,6 @@ use std::time::Duration;
 use strum::Display;
 use tracing::{debug, error};
 
-pub mod commands;
-
 fn default_retronomicon_backend_() -> Vec<Url> {
     vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
 }
@@ -29,7 +26,7 @@ fn create_settings_save_thread_(
     let (drop_send, drop_recv) = crossbeam_channel::bounded(1);
     let debouncer = debounce::thread::EventDebouncer::new(Duration::from_millis(500), move |_| {
         let path = path.read().unwrap().clone();
-        if let Err(e) = inner.read().unwrap().save(&path) {
+        if let Err(e) = inner.read().unwrap().save(path) {
             // Still ignore error. Maybe filesystem is readonly?
             error!("Failed to save settings: {}", e);
         }
@@ -103,9 +100,6 @@ pub struct InnerSettings {
     #[merge(strategy = merge::option::recurse)]
     ui: Option<UiSettings>,
 
-    #[merge(strategy = merge::option::recurse)]
-    commands: Option<CommandSettings>,
-
     #[serde(default)]
     #[merge(strategy = merge::overwrite)]
     retronomicon_backend: Vec<Url>,
@@ -147,14 +141,6 @@ impl InnerSettings {
         .unwrap();
 
         std::fs::write(path, content)
-    }
-
-    pub fn mappings(&self) -> Option<&CommandSettings> {
-        self.commands.as_ref()
-    }
-
-    pub fn mappings_mut(&mut self) -> &mut CommandSettings {
-        self.commands.get_or_insert(CommandSettings::default())
     }
 }
 
@@ -366,30 +352,10 @@ impl Settings {
 }
 
 #[test]
-fn serializes() {
-    let mut settings = InnerSettings::default();
-    let mut other_serialized = InnerSettings::default();
-    other_serialized
-        .commands
-        .get_or_insert_with(CommandSettings::default)
-        .add(
-            crate::input::commands::ShortcutCommand::ShowCoreMenu,
-            crate::input::shortcut::Shortcut::default().with_key(sdl3::keyboard::Scancode::A),
-        );
-
-    settings.merge(other_serialized);
-    let serialized = json5::to_string(&settings).unwrap();
-    assert_eq!(
-        serialized,
-        r#"{"show_fps":false,"invert_toolbar":true,"toolbar_datetime_format":"Default","mappings":{"quit_core":"'F10'","reset_core":"'F11'","show_menu":["'A'","'F12'"],"take_screenshot":"'SysReq'"},"language":null}"#
-    );
-}
-
-#[test]
 fn update_from_json() {
     let inner = InnerSettings::default();
     let settings = Settings::default_with_inner(inner);
-    assert_eq!(settings.show_fps(), false);
+    assert!(!settings.show_fps());
 
     settings
         .update_from_json(serde_json::json! {
@@ -401,5 +367,5 @@ fn update_from_json() {
         })
         .unwrap();
 
-    assert_eq!(settings.show_fps(), true);
+    assert!(settings.show_fps());
 }

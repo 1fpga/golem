@@ -10,7 +10,7 @@ use image::DynamicImage;
 use tracing::{debug, info, trace};
 
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::core::{Bios, CoreSettings, Error, MountedFile, Rom, SaveState, SettingId};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::{Button, Scancode};
@@ -37,6 +37,7 @@ use crate::keyboard::Ps2Scancode;
 use crate::savestate::SaveStateManager;
 use crate::types::StatusBitMap;
 
+#[derive(Debug)]
 pub enum MisterFpgaSendFileInfo {
     Memory {
         index: u8,
@@ -93,6 +94,9 @@ pub struct MisterFpgaCore {
 
     // A cache for the video_info.
     video_info: Option<VideoInfo>,
+
+    // Whether we should quit.
+    should_quit: bool,
 }
 
 impl MisterFpgaCore {
@@ -114,7 +118,7 @@ impl MisterFpgaCore {
             "Status bit map (mask):\n{}",
             config.status_bit_map_mask().debug_string(true)
         );
-        info!("Core config: {:#?}", config);
+        info!("Core config {:#?}", config);
 
         let core_type = fpga.core_type().ok_or("Could not get core type.")?;
         let spi_type = fpga
@@ -140,6 +144,7 @@ impl MisterFpgaCore {
             status_counter: 0,
             framebuffer: crate::framebuffer::FpgaFramebuffer::default(),
             video_info: None,
+            should_quit: false,
         })
     }
 
@@ -180,10 +185,12 @@ impl MisterFpgaCore {
         path: &Path,
         file_info: Option<LoadFileInfo>,
     ) -> Result<(), String> {
+        info!(?path, ?file_info, "Loading file");
         let info = file_info.map_or_else(
             || MisterFpgaSendFileInfo::from_path(path, self),
             MisterFpgaSendFileInfo::from_file_info,
         )?;
+        info!(?info, "info_send_file_info");
 
         let ext = path
             .extension()
@@ -730,16 +737,74 @@ impl Core for MisterFpgaCore {
         todo!()
     }
 
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
-        Ok(self.config.as_core_menu())
+    fn settings(&self) -> Result<CoreSettings, Error> {
+        Ok(self.config.as_core_settings(self.status_bits()))
     }
 
-    fn trigger(&mut self, _id: ConfigMenuId) -> Result<(), Error> {
-        todo!()
+    fn trigger(&mut self, id: SettingId) -> Result<(), Error> {
+        if let Some(ConfigMenu::Trigger { index, .. }) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_trigger)
+            .find(|item| item.setting_id() == Some(id))
+        {
+            self.status_pulse(*index as usize);
+        }
+
+        Ok(())
     }
 
-    fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
-        todo!()
+    fn file_select(&mut self, id: SettingId, path: String) -> Result<(), Error> {
+        if let Some(info) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_load_file_info)
+            .find(|info| info.setting_id() == id)
+            .cloned()
+        {
+            self.load_file(&Path::new(&path), Some(info))
+                .map_err(Error::Message)?;
+            self.end_send_file()?;
+            self.poll_mounts()?;
+        }
+        Ok(())
+    }
+
+    fn int_option(&mut self, id: SettingId, value: u32) -> Result<u32, Error> {
+        if let Some(ConfigMenu::Option { bits, choices, .. }) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_option)
+            .find(|item| item.setting_id() == Some(id))
+        {
+            let (from, to) = (bits.start, bits.end);
+            let mut bits = *self.status_bits();
+            let max = choices.len();
+            bits.set_range(from..to, (value as usize % max) as u32);
+            let new_value = bits.get_range(from..to);
+            self.send_status_bits(bits);
+            Ok(new_value)
+        } else {
+            Ok(0)
+        }
+    }
+
+    fn bool_option(&mut self, id: SettingId, value: bool) -> Result<bool, Error> {
+        if let Some(ConfigMenu::Option { bits, .. }) = self
+            .menu_options()
+            .iter()
+            .filter_map(ConfigMenu::as_option)
+            .find(|item| item.setting_id() == Some(id))
+        {
+            let (from, to) = (bits.start, bits.end);
+            let mut bits = *self.status_bits();
+            bits.set_range(from..to, if value { 1 } else { 0 });
+            let new_value = bits.get_range(from..to) != 0;
+            self.send_status_bits(bits);
+            Ok(new_value)
+        } else {
+            Ok(false)
+        }
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -748,5 +813,13 @@ impl Core for MisterFpgaCore {
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
+    }
+
+    fn quit(&mut self) {
+        self.should_quit = true;
+    }
+
+    fn should_quit(&self) -> bool {
+        self.should_quit
     }
 }

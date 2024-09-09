@@ -16,11 +16,15 @@ declare module "@/golem/ui" {
   /**
    * Represents a textual menu item.
    */
-  export interface TextMenuItem {
+  export interface TextMenuItem<R> {
     label: string;
     marker?: string;
-    select?: (item: TextMenuItem) => any;
-    details?: (item: TextMenuItem) => any;
+    select?: (
+      item: TextMenuItem<R>,
+    ) => undefined | void | R | Promise<undefined | void | R>;
+    details?: (
+      item: TextMenuItem<R>,
+    ) => undefined | void | R | Promise<undefined | void | R>;
   }
 
   /**
@@ -28,9 +32,9 @@ declare module "@/golem/ui" {
    */
   export interface TextMenuOptions<R> {
     title?: String;
-    items: (string | TextMenuItem)[];
-    back?: R | Promise<R> | (() => R) | (() => Promise<R>);
-    sort?: () => Partial<TextMenuOptions<Promise<R>>> | void;
+    items: (string | TextMenuItem<R>)[];
+    back?: R | (() => undefined | void | R | Promise<undefined | void | R>);
+    sort?: () => Partial<TextMenuOptions<R>> | void;
     sort_label?: string;
   }
 
@@ -41,9 +45,7 @@ declare module "@/golem/ui" {
    * @param options The options for the textual menu.
    * @returns The result of the selected option, as a Promise.
    */
-  export function textMenu<R>(
-    options: TextMenuOptions<R | Promise<R>>,
-  ): Promise<R>;
+  export function textMenu<R>(options: TextMenuOptions<R>): Promise<R>;
 
   /**
    * Show an alert to the user, with OK.
@@ -52,7 +54,8 @@ declare module "@/golem/ui" {
   export function alert(title: string, message: string): void;
 
   /**
-   * Show a prompt to the user, with OK.
+   * Show a prompt to the user, which the user can input any text, and an OK/Cancel
+   * choices.
    * @returns The user input, or `undefined` if the user canceled the operation.
    */
   export function prompt(message: string): undefined | string;

@@ -6,6 +6,8 @@ use crate::module_loader::GolemModuleLoader;
 
 mod golem;
 
+pub use golem::CommandMap;
+
 pub(super) fn register_modules(
     loader: Rc<GolemModuleLoader>,
     context: &mut boa_engine::Context,

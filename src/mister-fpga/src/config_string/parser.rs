@@ -152,7 +152,6 @@ fn file<'a>(line: u8) -> impl FnMut(Input<'a>) -> Result<'a, ConfigMenu> {
                     .iter()
                     .map(|i| FileExtension::from_str(i.fragment()).unwrap())
                     .collect();
-                let marker = extensions.iter().map(|x| x.to_string()).join(",");
                 let address = address.map(|a| FpgaRamMemoryAddress::try_from(a).unwrap());
                 let index = match index {
                     Some(i) => i as u8,
@@ -162,7 +161,6 @@ fn file<'a>(line: u8) -> impl FnMut(Input<'a>) -> Result<'a, ConfigMenu> {
                     save_support: save.is_some(),
                     index,
                     extensions,
-                    marker,
                     label: text.map(|s: Input| s.to_string()),
                     address,
                 };

@@ -5,6 +5,7 @@ use boa_macros::js_str;
 
 use crate::module_loader::GolemModuleLoader;
 
+mod commands;
 mod core;
 mod db;
 mod net;
@@ -14,11 +15,16 @@ mod storage;
 mod ui;
 mod video;
 
+mod globals;
+
+pub use commands::CommandMap;
+
 pub(super) fn register_modules(
     loader: Rc<GolemModuleLoader>,
     context: &mut Context,
 ) -> JsResult<()> {
     let modules = [
+        commands::create_module,
         core::create_module,
         db::create_module,
         net::create_module,
@@ -42,6 +48,8 @@ pub(super) fn register_modules(
             context,
         )?,
     );
+
+    globals::register_globals(context)?;
 
     Ok(())
 }

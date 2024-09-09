@@ -4,7 +4,7 @@ use crate::types::units::UnitConversion;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
 use image::buffer::ConvertBuffer;
 use image::{DynamicImage, Rgba};
-use one_fpga::core::{Bios, ConfigMenuId, CoreMenuItem, Error, MountedFile, Rom, SaveState};
+use one_fpga::core::{Bios, CoreSettings, Error, MountedFile, Rom, SaveState, SettingId};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
 use one_fpga::inputs::Button;
@@ -140,15 +140,23 @@ impl Core for MenuCore {
         unreachable!("Menu core does not support inputs")
     }
 
-    fn menu(&self) -> Result<Vec<CoreMenuItem>, Error> {
-        Ok(vec![])
+    fn settings(&self) -> Result<CoreSettings, Error> {
+        unreachable!("Menu core does not have a core menu")
     }
 
-    fn trigger(&mut self, _id: ConfigMenuId) -> Result<(), Error> {
+    fn trigger(&mut self, _id: SettingId) -> Result<(), Error> {
         todo!()
     }
 
-    fn int_option(&mut self, _id: ConfigMenuId, _value: u32) -> Result<(), Error> {
+    fn file_select(&mut self, _id: SettingId, _path: String) -> Result<(), Error> {
+        todo!()
+    }
+
+    fn int_option(&mut self, _id: SettingId, _value: u32) -> Result<u32, Error> {
+        todo!()
+    }
+
+    fn bool_option(&mut self, _id: SettingId, _value: bool) -> Result<bool, Error> {
         todo!()
     }
 
@@ -158,5 +166,11 @@ impl Core for MenuCore {
 
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
         self
+    }
+
+    fn quit(&mut self) {}
+
+    fn should_quit(&self) -> bool {
+        false
     }
 }

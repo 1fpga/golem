@@ -104,15 +104,15 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let display_area = buffer.bounding_box();
 
     let mut prefix_items = prefix
-        .into_iter()
+        .iter()
         .map(|item| item.to_menu_item())
         .collect::<Vec<TextMenuItem<_>>>();
     let mut items_items = items
-        .into_iter()
+        .iter()
         .map(|item| OptionalMenuItem::new(true, item.to_menu_item()))
         .collect::<Vec<OptionalMenuItem<_, _>>>();
     let mut suffix_items = suffix
-        .into_iter()
+        .iter()
         .map(|item| item.to_menu_item())
         .collect::<Vec<TextMenuItem<_>>>();
 
@@ -158,8 +158,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         let bottom_bar = bottom_bar(
             Some("Select"),
             show_back_button.then_some("Back"),
-            show_sort.then_some(sort_field.as_str()),
             show_details.then_some(()).and(detail_label),
+            show_sort.then_some(sort_field.as_str()),
             None,
             None,
         );
@@ -213,13 +213,13 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                     Point::new(0, 0),
                     Point::new(display_area.size.width as i32, 0),
                 )
-                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On.into(), 1)),
+                .into_styled(PrimitiveStyle::with_stroke(BinaryColor::On, 1)),
             ),
         )
         .with_alignment(horizontal::Left)
         .arrange();
 
-        let (result, new_state) = app.event_loop(|_, state| {
+        let (result, new_state) = app.draw_loop(|_, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
 
             let _ = buffer.clear(Rgb888::BLACK.into());
@@ -250,11 +250,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                         SdlMenuAction::ChangeSort => {
                             return R::sort().map(|r| (Some(r), menu.state()));
                         }
-                        SdlMenuAction::ShowOptions => match menu.selected_value() {
-                            SdlMenuAction::Select(r) => {
-                                return r.into_details().map(|r| (Some(r), menu.state()));
-                            }
-                            _ => {}
+                        SdlMenuAction::ShowOptions => if let SdlMenuAction::Select(r) = menu.selected_value() {
+                            return r.into_details().map(|r| (Some(r), menu.state()));
                         },
                         SdlMenuAction::KeyPress(Keycode::Backspace)
                         | SdlMenuAction::KeyPress(Keycode::KpBackspace) => {

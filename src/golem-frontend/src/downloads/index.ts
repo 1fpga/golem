@@ -1,4 +1,3 @@
-import * as storage from "@/golem/storage";
 import * as ui from "@/golem/ui";
 
 import { sources_menu, Storage } from "./sources";

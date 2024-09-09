@@ -65,9 +65,7 @@ impl CoreManager {
         self.fpga
             .load(program)
             .map_err(|e| format!("Could not load program: {e:?}"))?;
-        self.fpga
-            .core_reset()
-            .map_err(|_| "Could not reset the Core".to_string())?;
+        self.fpga.core_reset();
 
         self.create_core(is_menu)
     }
@@ -159,11 +157,11 @@ impl CoreManager {
         self.current_core.clone()
     }
 
-    pub fn show_menu(&mut self) {
+    pub fn show_osd(&mut self) {
         self.fpga_mut().osd_enable();
     }
 
-    pub fn hide_menu(&mut self) {
+    pub fn hide_osd(&mut self) {
         self.fpga_mut().osd_disable();
     }
 }

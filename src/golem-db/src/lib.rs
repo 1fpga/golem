@@ -2,9 +2,6 @@ pub use diesel;
 use diesel::sqlite::Sqlite;
 use diesel::{sql_query, RunQueryDsl};
 
-pub mod models;
-pub mod schema;
-
 pub use diesel::sqlite::SqliteConnection as Connection;
 
 pub fn establish_connection(

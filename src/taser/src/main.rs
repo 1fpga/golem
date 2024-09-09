@@ -1,18 +1,17 @@
-use std::io::{BufReader, Read};
-use std::path::{Path, PathBuf};
-use std::time::Duration;
-
 use clap::Parser;
 use clap_verbosity_flag::Level as VerbosityLevel;
 use clap_verbosity_flag::Verbosity;
-use tracing::{debug, error, info, trace, Level};
-use tracing_subscriber::fmt::Subscriber;
-
 use fce_movie_format::{FceInputButton, FceInputGamepad};
 use mister_fpga::config::Config;
 use mister_fpga::core::buttons::{ButtonMap, MisterFpgaButtons};
 use mister_fpga::core::MisterFpgaCore;
 use mister_fpga::fpga::user_io::UserIoButtonSwitch;
+use one_fpga::Core;
+use std::io::{BufReader, Read};
+use std::path::{Path, PathBuf};
+use std::time::Duration;
+use tracing::{debug, error, info, trace, Level};
+use tracing_subscriber::fmt::Subscriber;
 
 /// `taser` is a simple command-line interface to the GoLEm Mister core
 /// library. It is intended to be used as a standalone application, or as a
@@ -216,7 +215,7 @@ fn read_frames(
         Some("fm2") => {
             info!("Reading FM2 file: {}", tas.display());
             // Read the file and decode it.
-            let file = std::fs::File::open(&tas).expect("Could not open TAS file");
+            let file = std::fs::File::open(tas).expect("Could not open TAS file");
             let fm = fce_movie_format::FceFile::load_stream(BufReader::new(file)).unwrap();
 
             let frames = fm.frames().map(|f| {
@@ -224,12 +223,12 @@ fn read_frames(
                     .port0
                     .as_ref()
                     .and_then(|p| p.as_gamepad())
-                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map.clone()));
+                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map));
                 let p1 = f
                     .port1
                     .as_ref()
                     .and_then(|p| p.as_gamepad())
-                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map.clone()));
+                    .map(|buttons| fce_gamepad_to_button_map(*buttons, base_map));
                 (p0, p1)
             });
 
