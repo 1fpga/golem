@@ -35,8 +35,8 @@
           "type": "string"
         },
         "@id": {
-          "description": "ID of the game",
-          "type": "number"
+          "description": "ID of the game. Must be unique per system.",
+          "type": "string"
         },
         "description": {
           "description": "Description of the game",
@@ -53,7 +53,8 @@
         }
       },
       "required": [
-        "name",
+        "@name",
+        "@id",
         "size",
         "sha1",
         "date"

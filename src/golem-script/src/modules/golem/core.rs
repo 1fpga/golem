@@ -43,7 +43,7 @@ impl TryFromJs for RunOptions {
     }
 }
 
-fn run_(
+fn load_(
     options: RunOptions,
     host_data: ContextData<HostData>,
     context: &mut Context,
@@ -88,6 +88,6 @@ fn run_(
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
         js_string!("core"),
-        [(js_string!("run"), run_.into_js_function_copied(context))].into_js_module(context),
+        [(js_string!("load"), load_.into_js_function_copied(context))].into_js_module(context),
     ))
 }

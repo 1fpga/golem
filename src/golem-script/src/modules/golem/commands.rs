@@ -2,7 +2,7 @@ use crate::modules::golem::globals::classes::{JsCommand, JsCore};
 use crate::HostData;
 use boa_engine::class::Class;
 use boa_engine::object::builtins::JsFunction;
-use boa_engine::{js_error, js_string, Context, JsResult, JsString, JsValue, Module};
+use boa_engine::{js_string, Context, JsResult, JsString, JsValue, Module};
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use boa_macros::{Finalize, JsData, Trace};
 use golem_ui::application::GoLEmApp;

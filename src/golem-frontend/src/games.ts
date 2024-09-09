@@ -29,7 +29,7 @@ function start_game(game_id: number) {
     g.id,
   ]);
 
-  const golem_core = core.run({
+  const golem_core = core.load({
     core: { type: "Path", path: "" + c.path },
     game: { type: "RomPath", path: "" + g.path },
     files: f.map((file) => "" + file.path),

@@ -2,12 +2,13 @@ use crate::application::GoLEmApp;
 use crate::input::commands::CommandId;
 use crate::input::shortcut::Shortcut;
 use crate::input::InputState;
+use image::DynamicImage;
 use one_fpga::{Core, GolemCore};
 use sdl3::event::Event;
+use std::fmt::Debug;
+use std::path::Path;
 use std::time::Instant;
 use tracing::{debug, error, info, trace};
-
-pub mod menu;
 
 fn commands_(app: &mut GoLEmApp, _core: &GolemCore) -> Vec<(Shortcut, CommandId)> {
     app.commands()
@@ -16,7 +17,7 @@ fn commands_(app: &mut GoLEmApp, _core: &GolemCore) -> Vec<(Shortcut, CommandId)
         .collect::<Vec<_>>()
 }
 
-fn core_loop<C, E>(
+fn core_loop<C, E: Debug>(
     app: &mut GoLEmApp,
     core: &mut GolemCore,
     context: &mut C,
@@ -25,6 +26,13 @@ fn core_loop<C, E>(
         &mut GolemCore,
         Shortcut,
         CommandId,
+        &mut C,
+    ) -> Result<(), E>,
+    mut savestate_handler: impl FnMut(
+        &mut GoLEmApp,
+        &mut GolemCore,
+        Option<&DynamicImage>,
+        &[u8],
         &mut C,
     ) -> Result<(), E>,
 ) -> Result<(), E> {
@@ -143,14 +151,28 @@ fn core_loop<C, E>(
                     match core.save_state_mut(i) {
                         Ok(Some(ss)) => {
                             if ss.is_dirty() {
-                                match app
-                                    .coordinator_mut()
-                                    .create_savestate(i, screenshot.as_ref())
-                                {
-                                    Ok(mut f) => ss.save(&mut f).unwrap(),
+                                let mut buffer = vec![];
+                                match ss.save(&mut buffer) {
+                                    Ok(_) => ss,
                                     Err(err) => {
-                                        error!(?err, "Error creating savestate. Will stop trying.");
+                                        error!(?err, "Error saving savestate. Will stop trying.");
                                         should_check_savestates = false;
+                                        break;
+                                    }
+                                };
+
+                                match savestate_handler(
+                                    app,
+                                    core,
+                                    screenshot.as_ref(),
+                                    &buffer,
+                                    context,
+                                ) {
+                                    Ok(_) => {}
+                                    Err(err) => {
+                                        error!(?err, "Error saving savestate. Will stop trying.");
+                                        should_check_savestates = false;
+                                        break;
                                     }
                                 }
                             }
@@ -174,7 +196,7 @@ fn core_loop<C, E>(
 }
 
 /// Run the core loop and send events to the core.
-pub fn run_core_loop<C, E>(
+pub fn run_core_loop<C, E: Debug>(
     app: &mut GoLEmApp,
     core: &mut GolemCore,
     context: &mut C,
@@ -185,8 +207,14 @@ pub fn run_core_loop<C, E>(
         CommandId,
         &mut C,
     ) -> Result<(), E>,
+    savestate_handler: impl FnMut(
+        &mut GoLEmApp,
+        &mut GolemCore,
+        Option<&DynamicImage>,
+        &[u8],
+        &mut C,
+    ) -> Result<(), E>,
 ) -> Result<(), E> {
-    let mut should_run_loop = true;
     debug!("Starting core loop...");
 
     // Hide the OSD
@@ -194,9 +222,7 @@ pub fn run_core_loop<C, E>(
     app.platform_mut().core_manager_mut().hide_osd();
 
     let mut result = Ok(());
-    if should_run_loop {
-        result = core_loop(app, core, context, shortcut_handler);
-    }
+    result = core_loop(app, core, context, shortcut_handler, savestate_handler);
 
     debug!("Core loop ended");
     info!("Loading Main Menu");

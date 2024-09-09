@@ -1,15 +1,21 @@
 use crate::HostData;
 use boa_engine::class::Class;
-use boa_engine::object::builtins::JsFunction;
-use boa_engine::{Context, JsError, JsResult, JsString, JsValue};
+use boa_engine::object::builtins::{JsFunction, JsUint8Array, TypedJsFunction};
+use boa_engine::{js_error, Context, JsError, JsResult, JsString, JsValue};
 use boa_interop::{js_class, ContextData, JsClass};
-use boa_macros::{Finalize, JsData, Trace};
+use boa_macros::{Finalize, JsData, Trace, TryFromJs};
 use golem_ui::application::panels::core_loop::run_core_loop;
 use golem_ui::application::GoLEmApp;
 use mister_fpga::core::{AsMisterCore, MisterFpgaCore};
 use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
 use tracing::error;
+
+#[derive(Clone, Trace, Finalize, TryFromJs)]
+struct LoopOptions {
+    #[boa(rename = "onSaveState")]
+    on_save_state: Option<TypedJsFunction<(JsUint8Array, JsUint8Array), ()>>,
+}
 
 #[derive(Clone, Trace, Finalize, JsData)]
 pub struct JsCore {
@@ -30,7 +36,12 @@ impl JsCore {
         self.core.reset().map_err(JsError::from_rust)
     }
 
-    fn r#loop(&mut self, host_defined: HostData, context: &mut Context) -> JsResult<()> {
+    fn r#loop(
+        &mut self,
+        host_defined: HostData,
+        options: Option<LoopOptions>,
+        context: &mut Context,
+    ) -> JsResult<()> {
         let app = host_defined.app_mut();
         let command_map = host_defined.command_map_mut();
         let mut core = self.core.clone();
@@ -40,13 +51,20 @@ impl JsCore {
             &mut core,
             &mut (command_map, context),
             |app, core, _, id, (command_map, context)| -> JsResult<()> {
-                eprintln!("Shortcut: {:?}", id);
                 if let Some(command) = command_map.get_mut(id) {
-                    eprintln!("Command: {:?}", command);
                     command.execute(app, Some(core), context)
                 } else {
                     Ok(())
                 }
+            },
+            |app, core, screenshot, savestate, (command_map, context)| {
+                eprintln!("Saving state");
+                if let Some(f) = options.as_ref().and_then(|o| o.on_save_state.as_ref()) {
+                    let ss = JsUint8Array::from_iter(vec![].into_iter(), context)?;
+                    let image = JsUint8Array::from_iter(vec![].into_iter(), context)?;
+                    f.call(context, (ss, image))?;
+                }
+                Ok(())
             },
         )
     }
@@ -101,19 +119,24 @@ impl JsCore {
         self.core.quit();
     }
 
-    fn get_status_bits(&self) -> Option<Vec<u16>> {
-        self.core
-            .as_mister_core()
-            .map(|core| core.status_bits().as_raw_slice().to_vec())
+    fn get_status_bits(&self, context: &mut Context) -> Option<JsUint8Array> {
+        if let Some(core) = self.core.as_mister_core() {
+            JsUint8Array::from_iter(
+                core.status_bits().iter().map(|b| if b { 1 } else { 0 }),
+                context,
+            )
+            .ok()
+        } else {
+            None
+        }
     }
 
-    fn set_status_bits(&mut self, bits: Vec<u16>) -> JsResult<()> {
+    fn set_status_bits(&mut self, bits: JsUint8Array, context: &mut Context) -> JsResult<()> {
         if let Some(core) = self.core.as_mister_core() {
-            let mut slice = core.status_bits().as_raw_slice();
-            if slice.len() != bits.len() {
-                return Err(JsError::new_type_error("Invalid status bits length"));
+            let mut slice = *core.status_bits();
+            for bit in 0..slice.len() {
+                slice.set(bit, bits.at(bit as i64, context)?.to_uint8(context)? != 0);
             }
-            slice.copy_from_slice(&bits);
         }
         Ok(())
     }
@@ -134,12 +157,12 @@ js_class! {
         }
 
         property status_bits as "statusBits" {
-            fn get(this: JsClass<JsCore>) -> Option<Vec<u16>> {
-                this.borrow().get_status_bits()
+            fn get(this: JsClass<JsCore>, context: &mut Context) -> Option<JsUint8Array> {
+                this.borrow().get_status_bits(context)
             }
 
-            fn set(this: JsClass<JsCore>, value: Vec<u16>) -> JsResult<()> {
-                this.borrow_mut().set_status_bits(value)
+            fn set(this: JsClass<JsCore>, value: JsUint8Array, context: &mut Context) -> JsResult<()> {
+                this.borrow_mut().set_status_bits(value, context)
             }
         }
 
@@ -155,9 +178,10 @@ js_class! {
         fn run_loop as "loop"(
             this: JsClass<JsCore>,
             data: ContextData<HostData>,
+            // options: Option<LoopOptions>,
             context: &mut Context,
         ) -> JsResult<()> {
-            this.clone_inner().r#loop(data.0, context)
+            this.clone_inner().r#loop(data.0, None, context)
         }
 
         fn show_osd as "showOsd"(

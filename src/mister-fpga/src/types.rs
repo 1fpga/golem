@@ -87,6 +87,14 @@ impl StatusBitMap {
         self.0[idx]
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     pub fn get_range(&self, range: impl IntoIterator<Item = u8>) -> u32 {
         let mut result = 0;
         let mut iter = range.into_iter().peekable();
@@ -159,6 +167,10 @@ impl StatusBitMap {
 
         result.push('\n');
         result
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = bool> + '_ {
+        self.0.iter().by_vals()
     }
 }
 

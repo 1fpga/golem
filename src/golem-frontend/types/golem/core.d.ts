@@ -4,6 +4,8 @@
  * This module provides functions to interact with cores in Golem Script.
  */
 declare module "@/golem/core" {
+  import { Image } from "@/golem/util";
+
   /**
    * A path to a core file.
    */
@@ -126,6 +128,18 @@ declare module "@/golem/core" {
     | CoreSettingIntOption;
 
   /**
+   * Options for the core loop.
+   */
+  export interface LoopOptions {
+    /**
+     * Callback for when the core wants to save a savestate.
+     * @param path
+     * @param screenshot
+     */
+    onSaveState?(savestate: Uint8Array, screenshot: Image): void;
+  }
+
+  /**
    * The result of the OSD, whether to quit the core or not.
    */
   export type OsdResult = boolean;
@@ -156,7 +170,7 @@ declare module "@/golem/core" {
      * shortcuts. This function will return when the core is unloaded by the
      * user.
      */
-    loop(): void;
+    loop(options?: LoopOptions): void;
 
     /**
      * Take a screenshot. Output the screenshot to the given path.
@@ -205,5 +219,5 @@ declare module "@/golem/core" {
    * Starts a core with the given options.
    * @param options The options for the core.
    */
-  export function run(options: RunOptions): GolemCore | null;
+  export function load(options: RunOptions): GolemCore;
 }

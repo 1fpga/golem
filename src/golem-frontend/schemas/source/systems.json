@@ -42,38 +42,41 @@
       ]
     },
     "core": {
-      "name": {
-        "description": "Name of the core",
-        "type": "string"
-      },
-      "version": {
-        "description": "Version of the core",
-        "type": "string"
-      },
-      "links": {
-        "$ref": "defs.json#/definitions/links"
-      },
-      "releases": {
-        "description": "List of releases for the core",
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "files": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "array",
-                  "items": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Name of the core",
+          "type": "string"
+        },
+        "version": {
+          "description": "Version of the core",
+          "type": "string"
+        },
+        "links": {
+          "$ref": "defs.json#/definitions/links"
+        },
+        "releases": {
+          "description": "List of releases for the core",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "files": {
+                "oneOf": [
+                  {
                     "type": "string"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
-                }
-              ]
-            },
-            "date": {
-              "type": "string"
+                ]
+              },
+              "date": {
+                "type": "string"
+              }
             }
           }
         }
