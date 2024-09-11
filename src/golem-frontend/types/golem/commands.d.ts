@@ -13,8 +13,8 @@
  * 3. a `CoreSpecificCommand` is a command that is executed only when the user
  *    is running a specific core.
  */
-declare module "@/golem/commands" {
-  import { GolemCore } from "@/golem/core";
+declare module "@:golem/commands" {
+  import { GolemCore } from "@:golem/core";
 
   /**
    * A command type containing all information about a command.

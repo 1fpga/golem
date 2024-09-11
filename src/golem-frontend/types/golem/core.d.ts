@@ -3,8 +3,8 @@
 /**
  * This module provides functions to interact with cores in Golem Script.
  */
-declare module "@/golem/core" {
-  import { Image } from "@/golem/util";
+declare module "@:golem/core" {
+  import { Image } from "@:golem/util";
 
   /**
    * A path to a core file.
@@ -136,7 +136,10 @@ declare module "@/golem/core" {
      * @param path
      * @param screenshot
      */
-    onSaveState?(savestate: Uint8Array, screenshot: Image): void;
+    onSaveState?(
+      savestate: Uint8Array,
+      screenshot: Image,
+    ): void | Promise<void>;
   }
 
   /**

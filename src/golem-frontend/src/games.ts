@@ -1,6 +1,8 @@
-import * as core from "@/golem/core";
-import * as db from "@/golem/db";
-import * as ui from "@/golem/ui";
+import * as core from "@:golem/core";
+import * as db from "@:golem/db";
+import * as ui from "@:golem/ui";
+import { Image } from "@:golem/util";
+import { writeFile } from "@:fs";
 
 function start_game(game_id: number) {
   const db_game = db.queryOne("SELECT * FROM games WHERE id = ?", [game_id])!;
@@ -37,7 +39,21 @@ function start_game(game_id: number) {
   if (golem_core) {
     console.log("Starting core: " + golem_core.name);
 
-    golem_core.loop();
+    golem_core.loop({
+      async onSaveState(savestate: Uint8Array, screenshot: Image) {
+        console.log(
+          "savestate: ",
+          savestate.byteLength,
+          screenshot.width,
+          screenshot.height,
+        );
+        try {
+          await writeFile("/media/fat/savestate.ss", savestate);
+        } catch (e) {
+          console.error(e);
+        }
+      },
+    });
   }
 }
 

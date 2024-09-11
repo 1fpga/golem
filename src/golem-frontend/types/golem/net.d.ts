@@ -4,7 +4,7 @@
  * This module provides functions for accessing the internet. It can download
  * JSON data or files from URLs.
  */
-declare module "@/golem/net" {
+declare module "@:golem/net" {
   /**
    * Download a JSON file from a URL. Returns the parsed JSON.
    * Will throw an error if the request fails or the response is not JSON.

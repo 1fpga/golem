@@ -1,4 +1,4 @@
-import * as ui from "@/golem/ui";
+import * as ui from "@:golem/ui";
 
 import { sources_menu, Storage } from "./sources";
 

@@ -1,6 +1,7 @@
 // The root file being executed by Golem by default.
-import * as db from "@/golem/db";
-import * as ui from "@/golem/ui";
+import * as fs from "@:fs";
+import * as db from "@:golem/db";
+import * as ui from "@:golem/ui";
 
 import { games_menu } from "./games";
 import { cores_menu } from "./cores";

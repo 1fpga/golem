@@ -1,3 +1,4 @@
+use crate::modules::golem::globals::classes::JsImage;
 use crate::HostData;
 use boa_engine::class::Class;
 use boa_engine::object::builtins::{JsFunction, JsUint8Array, TypedJsFunction};
@@ -11,10 +12,10 @@ use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
 use tracing::error;
 
-#[derive(Clone, Trace, Finalize, TryFromJs)]
+#[derive(Debug, Clone, Trace, Finalize, TryFromJs)]
 struct LoopOptions {
     #[boa(rename = "onSaveState")]
-    on_save_state: Option<TypedJsFunction<(JsUint8Array, JsUint8Array), ()>>,
+    on_save_state: Option<TypedJsFunction<(JsUint8Array, Option<JsValue>), JsValue>>,
 }
 
 #[derive(Clone, Trace, Finalize, JsData)]
@@ -45,6 +46,7 @@ impl JsCore {
         let app = host_defined.app_mut();
         let command_map = host_defined.command_map_mut();
         let mut core = self.core.clone();
+        eprintln!("Running loop: {:?}", options);
 
         run_core_loop(
             app,
@@ -58,11 +60,18 @@ impl JsCore {
                 }
             },
             |app, core, screenshot, savestate, (command_map, context)| {
-                eprintln!("Saving state");
-                if let Some(f) = options.as_ref().and_then(|o| o.on_save_state.as_ref()) {
-                    let ss = JsUint8Array::from_iter(vec![].into_iter(), context)?;
-                    let image = JsUint8Array::from_iter(vec![].into_iter(), context)?;
-                    f.call(context, (ss, image))?;
+                eprintln!("Saving state: {:?}", options);
+                if let Some(options) = options.as_ref() {
+                    if let Some(f) = options.on_save_state.as_ref() {
+                        let ss = JsUint8Array::from_iter(savestate.iter().copied(), context)?;
+                        let image = screenshot
+                            .and_then(|i| JsImage::new(i.clone()).into_object(context).ok());
+                        let result = f.call(context, (ss, image))?;
+
+                        if let Some(p) = result.as_promise() {
+                            p.await_blocking(context).map_err(JsError::from_opaque)?;
+                        }
+                    }
                 }
                 Ok(())
             },
@@ -178,10 +187,10 @@ js_class! {
         fn run_loop as "loop"(
             this: JsClass<JsCore>,
             data: ContextData<HostData>,
-            // options: Option<LoopOptions>,
+            options: Option<LoopOptions>,
             context: &mut Context,
         ) -> JsResult<()> {
-            this.clone_inner().r#loop(data.0, None, context)
+            this.clone_inner().r#loop(data.0, options, context)
         }
 
         fn show_osd as "showOsd"(

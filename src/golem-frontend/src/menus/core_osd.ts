@@ -1,6 +1,6 @@
-import * as ui from "@/golem/ui";
-import * as core from "@/golem/core";
-import { CoreSettingPage } from "@/golem/core";
+import * as ui from "@:golem/ui";
+import * as core from "@:golem/core";
+import { CoreSettingPage } from "@:golem/core";
 
 enum SettingReturn {
   Continue,

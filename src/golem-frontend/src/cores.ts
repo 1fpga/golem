@@ -1,6 +1,6 @@
-import * as core from "@/golem/core";
-import * as db from "@/golem/db";
-import * as ui from "@/golem/ui";
+import * as core from "@:golem/core";
+import * as db from "@:golem/db";
+import * as ui from "@:golem/ui";
 import * as retronomicon from "./retronomicon";
 
 async function download_cores() {

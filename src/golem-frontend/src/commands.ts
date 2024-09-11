@@ -1,5 +1,5 @@
-import * as commands from "@/golem/commands";
-import * as storage from "@/golem/storage";
+import * as commands from "@:golem/commands";
+import * as storage from "@:golem/storage";
 import BASIC_COMMANDS from "./commands/basic";
 
 export async function initCommands() {

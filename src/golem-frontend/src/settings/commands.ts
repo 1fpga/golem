@@ -1,6 +1,6 @@
-import * as db from "@/golem/db";
-import * as ui from "@/golem/ui";
-import * as settings from "@/golem/settings";
+import * as db from "@:golem/db";
+import * as ui from "@:golem/ui";
+import * as settings from "@:golem/settings";
 
 const MAX_COMMAND_LENGTH = 6;
 

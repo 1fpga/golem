@@ -3,7 +3,7 @@
 /**
  * This module provides functions to interact with the settings of the Golem frontend.
  */
-declare module "@/golem/settings" {
+declare module "@:golem/settings" {
   /*
    * A command shortcut is an array of strings that represent the key sequence
    * to trigger the command. Any string can trigger a command. The string format

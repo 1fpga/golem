@@ -1,6 +1,6 @@
-import * as storage from "@/golem/storage";
-import * as net from "@/golem/net";
-import * as ui from "@/golem/ui";
+import * as storage from "@:golem/storage";
+import * as net from "@:golem/net";
+import * as ui from "@:golem/ui";
 import { validate as validateSource, Source } from "$schemas:source/source";
 
 export interface SourceWithUrl extends Source {

@@ -1,5 +1,5 @@
-import * as ui from "@/golem/ui";
-import * as settings from "@/golem/settings";
+import * as ui from "@:golem/ui";
+import * as settings from "@:golem/settings";
 import { commands_settings_menu } from "./commands";
 
 const fontSizes: settings.FontSize[] = ["small", "medium", "large"];

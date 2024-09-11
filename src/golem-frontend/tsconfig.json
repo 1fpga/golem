@@ -16,7 +16,7 @@
       "$schemas:*": [
         "codegen/schemas/*"
       ],
-      "@/*": [
+      "@:*": [
         "types/*"
       ]
     }

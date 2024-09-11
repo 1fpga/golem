@@ -1,4 +1,5 @@
-use boa_engine::js_error;
+use boa_engine::class::Class;
+use boa_engine::{js_error, Context, JsResult, JsValue};
 use boa_interop::{js_class, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
 use std::rc::Rc;
@@ -16,6 +17,10 @@ impl JsImage {
         Self {
             inner: Rc::new(inner),
         }
+    }
+
+    pub fn into_object(self, context: &mut Context) -> JsResult<JsValue> {
+        Self::from_data(self, context).map(JsValue::Object)
     }
 
     /// Get the inner `DynamicImage`.

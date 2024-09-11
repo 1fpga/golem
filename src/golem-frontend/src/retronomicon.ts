@@ -1,5 +1,5 @@
-import type * as retronomicon from "@/retronomicon";
-import * as net from "@/golem/net";
+import type * as retronomicon from "@:retronomicon";
+import * as net from "@:golem/net";
 
 export type CoreList =
   retronomicon.paths["/cores"]["get"]["responses"]["200"]["content"]["application/json"];

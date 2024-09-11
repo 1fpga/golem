@@ -1,6 +1,6 @@
 // The about page.
-import * as ui from "@/golem/ui";
-import { default as p } from "@/golem/patrons";
+import * as ui from "@:golem/ui";
+import { default as p } from "@:golem/patrons";
 
 export async function about() {
   let { patrons, tiers } = p;

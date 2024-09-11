@@ -1,4 +1,4 @@
-import commands from "@/golem/commands";
+import commands from "@:golem/commands";
 import { coreOsdMenu } from "../menus/core_osd";
 
 const BASIC_COMMANDS: commands.CommandDef[] = [
