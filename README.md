@@ -12,8 +12,6 @@ This repo also contains the twin packages `senior` and `junior`, which are the c
 They are meant to be used together to replace the MiSTer firmware into a client/server architecture to help debug and develop cores and firmware features that don't require user interface.
 Basically, running `junior` on the DE10-Nano, it starts a webserver and does not provide an interactive interface.
 The webserver provides a full REST API to interact with the FPGA, and the `senior` client can be used as a client CLI to interact with it (though not needed).
-For more details, see the `junior` and `senior` respective READMEs.
-
 ## FAQ
 
 ### What is this?
@@ -40,12 +38,6 @@ For example,
 ### How can I help?
 
 Try it, get up to speed with the MiSTer project itself, and get ready to contribute when the time comes.
-
-## Wiki
-
-For the purposes of getting google to crawl the wiki, here's a link to the (not for humans) [crawlable wiki](https://github-wiki-see.page/m/MiSTer-devel/Wiki_MiSTer/wiki).
-
-If you're a human looking for the wiki, that's [here](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki)
 
 ## Development
 
