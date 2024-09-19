@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { globSync } from "glob";
 import { _, Ajv } from "ajv";
+import addFormats from "ajv-formats";
 import * as schema_to_ts from "json-schema-to-typescript";
 import standaloneCode from "ajv/dist/standalone/index.js";
 import { capitalCase } from "change-case";
@@ -41,6 +42,7 @@ export default function (baseDir = process.cwd()) {
             ...files.map((file) => JSON.parse(fs.readFileSync(file, "utf8"))),
           ],
         });
+        addFormats(ajv);
 
         const validate = ajv.getSchema(schema["$id"]);
         let moduleCode = standaloneCode(ajv, validate);
@@ -77,6 +79,7 @@ export default function (baseDir = process.cwd()) {
           `${baseDir}/codegen/schemas/${source.substring(9)}.js`,
         );
       }
+      return null;
     },
   };
 }

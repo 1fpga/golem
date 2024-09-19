@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://1fpga.cloud/schemas/catalog.json",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "Name of the catalog",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "systems": {
+      "description": "URL for downloading system metadata from this catalog",
+      "type": "string"
+    },
+    "lastUpdated": {
+      "description": "Date of the last update",
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "name"
+  ]
+}

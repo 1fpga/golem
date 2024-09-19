@@ -146,7 +146,7 @@ impl<R: Copy> Default for SdlMenuInputAdapter<R> {
     }
 }
 
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum AxisState {
     #[default]
     Idle,

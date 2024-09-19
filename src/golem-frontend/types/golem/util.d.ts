@@ -3,19 +3,20 @@
 /**
  * Represents an image that can be saved or loaded.
  */
-export interface Image {
+export declare class Image {
   readonly width: number;
   readonly height: number;
 
   /**
    * Load an image from the given path.
    * @param path The path to the image file.
+   * @returns The loaded image.
    */
-  load(path: string): void;
+  static load(path: string): Promise<Image>;
 
   /**
    * Save the image to the given path.
    * @param path The path to save the image to.
    */
-  save(path: string): void;
+  save(path: string): Promise<void>;
 }

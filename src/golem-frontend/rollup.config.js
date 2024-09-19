@@ -15,11 +15,14 @@ export default {
   plugins: [
     del({ targets: "dist/*" }),
     codegen(),
-    commonjs(),
-    json(),
-    typescript(),
+    typescript({}),
     nodeResolve(),
-    terser({}),
+    commonjs({
+      extensions: [".js", ".ts", ".cjs"],
+      transformMixedEsModules: true,
+    }),
+    json(),
+    terser({ compress: true }),
   ],
   external: [
     "@:fs",

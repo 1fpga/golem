@@ -1,7 +1,9 @@
+use boa_engine::object::builtins::JsPromise;
 use boa_engine::{js_string, Context, JsError, JsResult, JsString, JsValue, Module};
 use boa_interop::{IntoJsFunctionCopied, IntoJsModule};
 use reqwest::header::CONTENT_DISPOSITION;
 use std::str::FromStr;
+use std::time::Duration;
 
 fn fetch_json_(url: String, ctx: &mut Context) -> JsResult<JsValue> {
     reqwest::blocking::get(&url)
@@ -54,10 +56,27 @@ fn download_file_(url: String) -> JsResult<JsString> {
     Ok(JsString::from(path.display().to_string()))
 }
 
+fn is_online_(ctx: &mut Context) -> JsPromise {
+    let is_online = ping::ping(
+        [1, 1, 1, 1].into(),
+        Some(Duration::from_secs(1)),
+        None,
+        None,
+        None,
+        None,
+    )
+    .is_ok();
+    JsPromise::resolve(is_online, ctx)
+}
+
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
         js_string!("net"),
         [
+            (
+                js_string!("isOnline"),
+                is_online_.into_js_function_copied(context),
+            ),
             (
                 js_string!("fetchJson"),
                 fetch_json_.into_js_function_copied(context),

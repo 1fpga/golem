@@ -3,6 +3,10 @@ name = "golem-script"
 version = "0.1.0"
 edition = "2021"
 
+[build-dependencies]
+glob = "0.3.1"
+regex = "1.10.6"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -14,15 +18,18 @@ boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script
 boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 de10-nano = { path = "../de10-nano" }
-diesel = { version = "2.1.5", features = ["sqlite", "extras"] }
+directories = "5.0.1"
 either = "1"
+include_dir = "0.7.4"
 one-fpga = { workspace = true }
 golem-ui = { path = "../golem-ui", default-features = false }
 mister-fpga = { path = "../mister-fpga" }
+ping = "0.5.2"
 regex = "1.10.4"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
+sqlite = { version = "0.36.1", features = ["bundled"] }
 tempdir = "0.3.7"
 tracing = "0.1.40"
 reqwest = { version = "0.11.22", features = ["blocking", "json", "rustls-tls"], default-features = false }

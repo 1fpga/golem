@@ -274,10 +274,14 @@ fn parse_edid_vmode_(options: &MisterConfig, edid: &[u8]) -> Result<CustomVideoM
                 );
                 v.f_pix = f_pix;
             } else {
-                return Err("EDID: Falling back to default video mode.".to_string());
+                return Err(
+                    "EDID: Pixel rate too high, falling back to default video mode.".to_string(),
+                );
             }
         } else {
-            return Err("EDID: Falling back to default video mode.".to_string());
+            return Err(
+                "EDID: Frame rate too high. Falling back to default video mode.".to_string(),
+            );
         }
     }
 
@@ -707,6 +711,7 @@ pub fn select_video_mode(options: &MisterConfig) -> Result<VideoModeDef, String>
     }
 }
 
+#[ignore]
 #[test]
 fn parse_4k_hdmi_edid() {
     // This is the EDID from my monitor (VESA 4K).

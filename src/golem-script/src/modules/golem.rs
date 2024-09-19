@@ -11,7 +11,6 @@ mod db;
 mod net;
 mod settings;
 mod shortcuts;
-mod storage;
 mod ui;
 mod video;
 
@@ -29,7 +28,6 @@ pub(super) fn register_modules(
         db::create_module,
         net::create_module,
         settings::create_module,
-        storage::create_module,
         video::create_module,
         ui::create_module,
     ];

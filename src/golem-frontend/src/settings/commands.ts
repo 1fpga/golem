@@ -1,6 +1,6 @@
-import * as db from "@:golem/db";
 import * as ui from "@:golem/ui";
 import * as settings from "@:golem/settings";
+import { getDb } from "../services/database";
 
 const MAX_COMMAND_LENGTH = 6;
 
@@ -17,7 +17,8 @@ function markerFor(command?: settings.CommandShortcut) {
 }
 
 export async function commands_settings_menu() {
-  const cores = db.query("SELECT * FROM cores");
+  let coreDb = await getDb();
+  const cores = await coreDb.query("SELECT * FROM cores");
 
   await ui.textMenu({
     title: "Commands",
