@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://1fpga.cloud/schemas/cores.json",
+  "$id": "http://1fpga.cloud/schemas/core.json",
   "type": "object",
   "additionalProperties": {
     "$ref": "#/definitions/core"

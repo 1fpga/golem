@@ -1,7 +1,6 @@
-import { DEFAULT_USERNAME, User } from "../../services/user";
 import * as ui from "@:golem/ui";
 import * as net from "@:golem/net";
-import { Catalog, RemoteCatalog } from "../../services/catalog";
+import { DEFAULT_USERNAME, User, Catalog, RemoteCatalog } from "../../services";
 import {
   conditional,
   message,
@@ -16,7 +15,10 @@ import {
   ignore,
   call,
   last,
+  generate,
+  StepOptions,
 } from "./wizard";
+import { TextMenuItem } from "@:golem/ui";
 
 function password(
   title: string,
@@ -182,14 +184,67 @@ const catalogAddStep = last(
   ),
 );
 
+const selectCores = async (catalog: RemoteCatalog) => {
+  let selected = new Set<string>();
+  let systems = await catalog.fetchSystems(undefined, true);
+
+  let shouldInstall = await ui.textMenu({
+    title: "Choose cores to install",
+    back: false,
+    items: [
+      ...Object.entries(systems).map(([_key, catalog]) => ({
+        label: catalog.name,
+        marker: selected.has(catalog.url) ? "install" : "",
+        select: (item: TextMenuItem<boolean>) => {
+          if (selected.has(catalog.url)) {
+            selected.delete(catalog.url);
+          } else {
+            selected.add(catalog.url);
+          }
+          item.marker = selected.has(catalog.url) ? "" : "install";
+        },
+      })),
+      "-",
+      { label: "Install selected cores", select: () => true },
+      { label: "Back", select: () => false },
+    ],
+  });
+
+  if (shouldInstall) {
+    for (let url of selected) {
+      await ui.alert("Installing " + url);
+    }
+  } else {
+    await ui.alert("Skipping core installation");
+  }
+};
+
 const catalogSetup = sequence(
-  message(
-    "Catalogs - Installing Cores",
-    "Choose cores to install from the catalog.",
+  ignore(
+    message(
+      "Catalogs - Installing Cores",
+      "Choose cores to install from the catalog.",
+    ),
   ),
-  message(
-    "Catalogs",
-    "Catalogs have been set up. You can always add more catalogs later in the Download Center.",
+  generate(async () => {
+    const catalogs = await Catalog.listCatalogs();
+    const catalog = await catalogs[0]?.checkForUpdates();
+    if (!catalog) {
+      throw new Error("Should be at least 1 catalog in tutorial.");
+    }
+
+    return [
+      async (options: StepOptions) => {
+        const selected = await selectCores(catalog);
+        return;
+      },
+    ];
+  }),
+  ignore(
+    message(
+      "Catalogs",
+      "Catalogs have been set up. You can always add more catalogs later in the Download Center.",
+    ),
   ),
 );
 

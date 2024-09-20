@@ -56,13 +56,18 @@ CREATE TABLE savestates
 
 CREATE TABLE catalogs
 (
-    id                INTEGER PRIMARY KEY,
-    name              VARCHAR(255) NOT NULL,
-    url               TEXT         NOT NULL UNIQUE,
-    last_updated_at   TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    latest_downloaded VARCHAR(255),
-    latest_release    VARCHAR(255),
-    priority          INTEGER      NOT NULL DEFAULT 0
+    id               INTEGER PRIMARY KEY,
+    name             VARCHAR(255) NOT NULL UNIQUE,
+    url              TEXT         NOT NULL UNIQUE,
+    -- The last time this was checked for updates.
+    latest_check_at  TIMESTAMP,
+    -- The last time this was updated.
+    latest_update_at TIMESTAMP,
+    -- The `lastUpdated` field.
+    last_updated     VARCHAR(255),
+    -- The `version` field.
+    version          VARCHAR(255),
+    priority         INTEGER      NOT NULL DEFAULT 0
 );
 
 CREATE TABLE catalog_systems

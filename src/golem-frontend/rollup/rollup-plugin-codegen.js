@@ -63,13 +63,11 @@ export default function (baseDir = process.cwd()) {
           },
         });
 
-        let content = `
-                    import type { ValidateFunction } from "ajv";
-                    ${ts}
-                    export const validate: ValidateFunction<${capitalCase(id)}>; 
-                    export default validate;
-                `;
-
+        let content =
+          'import type { ValidateFunction } from "ajv";\n\n' +
+          `${ts}\n\n` +
+          `export const validate: ValidateFunction<${capitalCase(id)}>;\n` +
+          "export default validate;";
         fs.writeFileSync(`${outputDir}/${outputFile}.d.ts`, content);
       }
     },

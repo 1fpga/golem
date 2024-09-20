@@ -5,8 +5,8 @@ use reqwest::header::CONTENT_DISPOSITION;
 use std::str::FromStr;
 use std::time::Duration;
 
-fn fetch_json_(url: String, ctx: &mut Context) -> JsResult<JsValue> {
-    reqwest::blocking::get(&url)
+fn fetch_json_(url: String, ctx: &mut Context) -> JsResult<JsPromise> {
+    let result = reqwest::blocking::get(&url)
         .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?
         .text()
         .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))
@@ -16,7 +16,11 @@ fn fetch_json_(url: String, ctx: &mut Context) -> JsResult<JsValue> {
                     .map_err(|e| JsError::from_opaque(JsString::from(e.to_string()).into()))?,
                 ctx,
             )
-        })
+        });
+    Ok(match result {
+        Ok(v) => JsPromise::resolve(v, ctx),
+        Err(e) => JsPromise::reject(e, ctx),
+    })
 }
 
 fn download_file_(url: String) -> JsResult<JsString> {

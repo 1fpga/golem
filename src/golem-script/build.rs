@@ -7,14 +7,10 @@ fn main() {
         .join("../golem-frontend/migrations");
     let in_glob = in_dir.join("**/*.sql");
 
-    eprintln!("OUT_DIR: {:?}", std::env::var("OUT_DIR"));
-    eprintln!("CARGO_TARGET_DIR: {:?}", std::env::var("CARGO_TARGET_DIR"));
-    eprintln!("out_dir: {:?}", out_dir);
-    eprintln!("in_dir: {:?}", in_dir);
-
     for file in glob::glob(in_glob.to_string_lossy().as_ref()).unwrap() {
         let file = file.unwrap();
-        eprintln!("cargo:rerun-if-changed={}", file.display());
+        println!("cargo::rerun-if-changed={}", file.display());
+        println!("cargo::rerun-if-changed={}", in_dir.display());
         let rel_path = file.strip_prefix(&in_dir).unwrap();
         let out_path = out_dir.join(rel_path);
 

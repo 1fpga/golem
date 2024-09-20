@@ -16,5 +16,5 @@ declare module "@:golem/net" {
    *
    * @param url The URL to download.
    */
-  export function fetchJson<R extends object = any>(url: string): R;
+  export function fetchJson<R extends object = any>(url: string): Promise<R>;
 }

@@ -15,7 +15,7 @@ export default {
   plugins: [
     del({ targets: "dist/*" }),
     codegen(),
-    typescript({}),
+    typescript(),
     nodeResolve(),
     commonjs({
       extensions: [".js", ".ts", ".cjs"],

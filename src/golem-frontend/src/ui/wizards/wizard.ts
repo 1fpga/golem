@@ -42,8 +42,8 @@ export function conditional<T>(
   };
 }
 
-export function vector<T>(value: T): WizardStep<T> {
-  return async (options) => value;
+export function value<T>(value: T | Promise<T>): WizardStep<T> {
+  return async (options) => await value;
 }
 
 export function call<T>(fn: () => Promise<T>): WizardStep<T> {
@@ -52,6 +52,27 @@ export function call<T>(fn: () => Promise<T>): WizardStep<T> {
 
 export function noop(): WizardStep<undefined> {
   return async (options) => {};
+}
+
+/**
+ * Generate a step from a function that returns a list of steps, at the time
+ * the wizard is running. If this step is skipped, the function will not be
+ * called and those steps will not be shown.
+ * @param fn
+ */
+export function generate<T>(
+  fn: () => Promise<WizardStep<T | undefined> | WizardStep<T | undefined>[]>,
+): WizardStep<T[]> {
+  return async (options) => {
+    const steps = await fn();
+    let results;
+    if (Array.isArray(steps)) {
+      results = await sequence(...steps)(options);
+    } else {
+      results = await sequence(steps)(options);
+    }
+    return results.filter((r) => r !== undefined);
+  };
 }
 
 export function skipIf<T>(

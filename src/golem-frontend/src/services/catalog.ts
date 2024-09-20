@@ -1,53 +1,31 @@
-import * as net from "@:golem/net";
-import * as ui from "@:golem/ui";
 import { getDb } from "./database";
 import { Row } from "@:golem/db";
-import type { Catalog as CatalogSchema } from "$schemas:catalog/catalog";
+import { RemoteCatalog } from "./remote/catalog";
 
-export class RemoteCatalog {
-  public static async fetch1Fpga(): Promise<RemoteCatalog> {
-    return RemoteCatalog.fetch("https://golem.1fpga.cloud");
+/**
+ * Compare two versions in the catalog JSONs.
+ * @param a The first version.
+ * @param b The second version.
+ * @returns -1 if a < b, 0 if a == b, 1 if a > b.
+ */
+export function compareVersions(a: string, b: string): number {
+  const aParts = a.split(".");
+  const bParts = b.split(".");
+
+  for (let i = 0; i < aParts.length || i < bParts.length; i++) {
+    const aPart = aParts[i];
+    const bPart = bParts[i];
+    if (aPart === undefined) {
+      return bPart === undefined ? 0 : -1;
+    }
+
+    const maybeResult = aPart.localeCompare(bPart);
+    if (maybeResult !== 0) {
+      return maybeResult;
+    }
   }
 
-  public static async fetch(url: string): Promise<RemoteCatalog> {
-    ui.show("Fetching catalog...\n" + url);
-
-    // Dynamic loading to allow for code splitting.
-    let validateCatalog = (await import("$schemas:catalog/catalog")).validate;
-
-    function inner(url: string) {
-      try {
-        return net.fetchJson(url + "/catalog.json");
-      } catch (e) {
-        if (url.startsWith("http://")) {
-          return inner(url.replace(/^http:\/\//, "https://"));
-        } else {
-          // Propagate the exception.
-          throw e;
-        }
-      }
-    }
-
-    // Normalize the URL.
-    if (!url.startsWith("https://") && !url.startsWith("http://")) {
-      url = "https://" + url;
-    }
-
-    const maybeJson = inner(url);
-
-    if (validateCatalog(maybeJson)) {
-      return new RemoteCatalog(url, maybeJson);
-    }
-
-    throw new Error(
-      (validateCatalog.errors || []).map((e) => e.message || "").join("\n"),
-    );
-  }
-
-  private constructor(
-    public readonly url: string,
-    public readonly catalog: CatalogSchema,
-  ) {}
+  return 0;
 }
 
 /**
@@ -65,10 +43,11 @@ export class Catalog {
       +row.id,
       "" + row.name,
       "" + row.url,
-      new Date("" + row.last_updated_at),
-      "" + row.latest_downloaded,
-      "" + row.latest_release,
-      row.priority === null ? 0 : +row.priority,
+      row.latest_check_at ? new Date("" + row.latest_check_at) : null,
+      row.latest_update_at ? new Date("" + row.latest_update_at) : null,
+      "" + row.last_updated,
+      "" + row.version,
+      +(row.priority || 0),
     );
   }
 
@@ -105,10 +84,16 @@ export class Catalog {
       throw new Error("Catalog already exists");
     }
 
-    const lastUpdatedAt = new Date().toISOString();
     await db.execute(
-      "INSERT INTO catalogs (name, url, last_updated_at, priority) VALUES (?, ?, ?, ?)",
-      [remote.catalog.name, remote.url, lastUpdatedAt, priority],
+      "INSERT INTO catalogs (name, url, latest_check_at, latest_update_at, last_updated, version, priority) VALUES (?, ?, ?, ?, ?)",
+      [
+        remote.catalog.name,
+        remote.url,
+        null, // latest_check_at. This hasn't been checked yet.
+        remote.catalog.lastUpdated || null,
+        remote.catalog.version,
+        priority,
+      ],
     );
 
     return Catalog.getByUrl(remote.url);
@@ -118,13 +103,30 @@ export class Catalog {
     public readonly id: number,
     public readonly name: string,
     public readonly url: string,
-    public readonly lastUpdatedAt: Date,
-    public readonly latestDownloaded: string | undefined,
-    public readonly latestRelease: string | undefined,
+    public readonly latestCheckAt: Date | null,
+    public readonly latestUpdateAt: Date | null,
+    public readonly lastUpdated: string,
+    public readonly version: string,
     public readonly priority: number,
   ) {}
 
-  public async checkForUpdates(): Promise<void> {
+  /**
+   * Check for updates in the catalog.
+   * @returns Return the remote catalog if there's an update, otherwise null.
+   */
+  public async checkForUpdates(): Promise<RemoteCatalog | null> {
+    if (
+      this.latestCheckAt === null ||
+      this.latestCheckAt.getTime() > Date.now()
+    ) {
+      return null;
+    }
+
     let remote = await RemoteCatalog.fetch(this.url);
+    if (compareVersions(remote.catalog.version, this.version) > 0) {
+      return remote;
+    } else {
+      return null;
+    }
   }
 }
