@@ -17,4 +17,14 @@ declare module "@:golem/net" {
    * @param url The URL to download.
    */
   export function fetchJson<R extends object = any>(url: string): Promise<R>;
+
+  /**
+   * Download a file from a URL. Returns the file location.
+   * Will throw an error if the request fails.
+   *
+   * @param url The URL to download.
+   * @param destination The destination directory. If not provided, a temporary file will be created.
+   * @returns The path to the downloaded file.
+   */
+  export function download(url: string, destination?: string): Promise<string>;
 }

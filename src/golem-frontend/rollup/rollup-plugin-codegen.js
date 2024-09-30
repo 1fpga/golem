@@ -77,6 +77,10 @@ export default function (baseDir = process.cwd()) {
           `${baseDir}/codegen/schemas/${source.substring(9)}.js`,
         );
       }
+      if (source.startsWith("node:")) {
+        // return path.resolve(`${baseDir}/node_modules/${source.substring(5)}`);
+        return this.resolve(source.substring(5));
+      }
       return null;
     },
   };

@@ -60,10 +60,10 @@ CREATE TABLE catalogs
     name             VARCHAR(255) NOT NULL UNIQUE,
     url              TEXT         NOT NULL UNIQUE,
     -- The last time this was checked for updates.
-    latest_check_at  TIMESTAMP,
+    latest_check_at  TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
     -- The last time this was updated.
-    latest_update_at TIMESTAMP,
-    -- The `lastUpdated` field.
+    latest_update_at TIMESTAMP             DEFAULT CURRENT_TIMESTAMP,
+    -- The `lastUpdated` field from the JSON.
     last_updated     VARCHAR(255),
     -- The `version` field.
     version          VARCHAR(255),
@@ -73,9 +73,10 @@ CREATE TABLE catalogs
 CREATE TABLE catalog_systems
 (
     id          INTEGER PRIMARY KEY,
+    catalog_id  INTEGER      NOT NULL REFERENCES catalogs (id),
     name        VARCHAR(255) NOT NULL,
-    shortname   VARCHAR(255) NOT NULL,
-    description TEXT         NOT NULL,
+    unique_name VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
     icon_path   TEXT,
     image_path  TEXT
 );
@@ -90,15 +91,21 @@ CREATE TABLE catalog_games
     description TEXT         NOT NULL,
     executable  TEXT         NOT NULL,
     icon_path   TEXT,
-    image_path  TEXT
+    image_path  TEXT,
+    CONSTRAINT catalog_games_system_id_unique_id UNIQUE (system_id, catalog_id, unique_id)
 );
 
-CREATE TABLE catalog_cores
+-- Installed cores from a catalog.
+CREATE TABLE cores
 (
     id          INTEGER PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL,
     system_id   INTEGER      NOT NULL REFERENCES catalog_systems (id),
-    description TEXT         NOT NULL,
+    catalog_id  INTEGER      NOT NULL REFERENCES catalogs (id),
+    name        VARCHAR(255) NOT NULL,
+    unique_name VARCHAR(255) NOT NULL UNIQUE,
+    rbf_path    VARCHAR(255),
+    description TEXT,
+    version     VARCHAR(255),
     icon_path   TEXT,
     image_path  TEXT
 );

@@ -7,17 +7,44 @@
       "properties": {
         "homepage": {
           "description": "URL of the homepage",
-          "type": "string"
+          "type": "string",
+          "format": "uri-reference"
         },
         "github": {
           "description": "URL of the github",
-          "type": "string"
+          "type": "string",
+          "format": "uri-reference"
         }
+      },
+      "additionalProperties": {
+        "type": "string",
+        "format": "uri-reference"
       }
     },
-    "version": {
+    "shortName": {
       "type": "string",
-      "pattern": "^[-0-9a-zA-Z._@()+]+$"
+      "minLength": 3,
+      "maxLength": 32,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 32,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "version": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[-0-9a-zA-Z._@()+]+$"
+        }
+      ]
     }
   }
 }

@@ -135,13 +135,18 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
     // Only show once, return immediately.
     app.draw(move |app| {
         let buffer = app.osd_buffer();
-        let _ = buffer.clear(BinaryColor::On);
+        let _ = buffer.clear(BinaryColor::Off);
         let _ = layout.draw(buffer);
     });
 }
 
 pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -> Option<usize> {
     let display_area = app.main_buffer().bounding_box();
+
+    let character_style = u8g2_fonts::U8g2TextStyle::new(
+        u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
+        BinaryColor::On,
+    );
 
     let mut choices = choices
         .iter()
@@ -151,7 +156,7 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
 
     let menu = SizedMenu::new(
         Size::new(128, 48),
-        Menu::with_style(" ", style::menu_style_simple(app.settings().menu_style()))
+        Menu::with_style("", style::menu_style_simple(app.settings().menu_style()))
             .add_menu_items(&mut choices)
             .build(),
     );

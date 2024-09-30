@@ -1,8 +1,9 @@
+use crate::console::TracingLogger;
 use crate::module_loader::GolemModuleLoader;
 use crate::modules::CommandMap;
-use boa_engine::property::Attribute;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
 use boa_macros::{Finalize, JsData, Trace};
+use boa_runtime::RegisterOptions;
 use golem_ui::application::GoLEmApp;
 use std::path::Path;
 use std::rc::Rc;
@@ -89,18 +90,10 @@ pub fn run(
     let start = Instant::now();
 
     let (mut context, loader) = create_context(script, host_defined)?;
-
-    // Initialize the Console object.
-    let console = console::Console::init(&mut context);
-
-    // Register the console as a global property to the context.
-    context
-        .register_global_property(
-            js_string!(console::Console::NAME),
-            console,
-            Attribute::all(),
-        )
-        .expect("The console object shouldn't exist yet");
+    boa_runtime::register(
+        &mut context,
+        RegisterOptions::new().with_console_logger(TracingLogger),
+    )?;
 
     modules::register_modules(loader.clone(), &mut context)?;
     debug!("Context created in {}ms.", start.elapsed().as_millis());

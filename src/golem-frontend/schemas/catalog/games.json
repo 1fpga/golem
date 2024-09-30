@@ -56,8 +56,7 @@
         "@name",
         "@id",
         "size",
-        "sha1",
-        "date"
+        "sha1"
       ]
     },
     "rom": {

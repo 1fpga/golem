@@ -1,13 +1,11 @@
 use boa_engine::builtins::typed_array::TypedArray;
-use boa_engine::object::builtins::{JsArray, JsUint8Array};
+use boa_engine::object::builtins::{JsArray, JsPromise, JsUint8Array};
 use boa_engine::value::TryFromJs;
 use boa_engine::{js_error, Context, JsObject, JsResult, JsString, JsValue};
 use boa_interop::{js_class, JsClass};
 use boa_macros::{Finalize, JsData, Trace};
 use std::path::PathBuf;
 use tracing::trace;
-
-mod migrations;
 
 /// A value in a column in SQL, compatible with JavaScript.
 pub enum SqlValue {
@@ -174,9 +172,6 @@ impl JsDb {
         let connection =
             sqlite::Connection::open(path).map_err(|e| js_error!("SQL Error: {}", e))?;
 
-        migrations::apply_migrations(&connection, name)
-            .map_err(|e| js_error!("SQL Error: {}", e))?;
-
         Ok(Self { connection })
     }
 
@@ -185,11 +180,20 @@ impl JsDb {
         query: String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
-    ) -> JsResult<JsArray> {
-        let statement = build_query_(&self.connection, query, bindings, context)?;
+    ) -> JsPromise {
+        JsPromise::new(
+            move |fns, context| {
+                let statement = build_query_(&self.connection, query, bindings, context)?;
 
-        let result = create_row_object_array(statement, context)?;
-        Ok(result)
+                let rows = create_row_object_array(statement, context)?;
+                let result = JsObject::with_null_proto();
+                result.set(JsString::from("rows"), rows, true, context)?;
+                fns.resolve
+                    .call(&JsValue::null(), &[result.into()], context)?;
+                Ok(JsValue::undefined())
+            },
+            context,
+        )
     }
 
     pub fn query_one(
@@ -221,11 +225,23 @@ impl JsDb {
         context: &mut Context,
     ) -> JsResult<usize> {
         let mut statement = build_query_(&self.connection, query, bindings, context)?;
-        statement
+
+        if statement
             .next()
-            .map_err(|e| js_error!("SQL Error: {}", e))?;
+            .map_err(|e| js_error!(Error: "SQL Error: {}", e))?
+            != sqlite::State::Done
+        {
+            return Err(js_error!(Error: "SQL Error: query did not complete"));
+        }
 
         Ok(self.connection.change_count())
+    }
+
+    pub fn execute_raw(&self, query: String) -> JsResult<()> {
+        self.connection
+            .execute(query)
+            .map_err(|e| js_error!("SQL Error: {}", e))?;
+        Ok(())
     }
 }
 
@@ -235,7 +251,7 @@ js_class! {
             JsDb::new(name.to_std_string().map_err(|_| js_error!("Invalid db name"))?.as_str())
         }
 
-        fn query(this: JsClass<JsDb>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsResult<JsArray> {
+        fn query(this: JsClass<JsDb>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsPromise {
             this.borrow().query(query, bindings, context)
         }
 
@@ -245,6 +261,10 @@ js_class! {
 
         fn execute(this: JsClass<JsDb>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsResult<usize> {
             this.borrow().execute(query, bindings, context)
+        }
+
+        fn execute_raw as "executeRaw"(this: JsClass<JsDb>, query: String) -> JsResult<()> {
+            this.borrow().execute_raw(query)
         }
     }
 }

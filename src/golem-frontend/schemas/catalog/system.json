@@ -9,11 +9,21 @@
     },
     "uniqueName": {
       "description": "Unique short name of the system",
-      "type": "string"
+      "$ref": "defs.json#/definitions/shortName"
     },
     "description": {
       "description": "Description of the system",
       "type": "string"
+    },
+    "icon": {
+      "description": "URL of the icon",
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "image": {
+      "description": "URL of the image for the system",
+      "type": "string",
+      "format": "uri-reference"
     },
     "gamesDb": {
       "description": "List of games supported by the system",
@@ -24,6 +34,13 @@
       "type": "object",
       "additionalProperties": {
         "$ref": "#/definitions/core"
+      }
+    },
+    "tags": {
+      "description": "List of tags for the system",
+      "type": "array",
+      "items": {
+        "$ref": "defs.json#/definitions/tag"
       }
     },
     "links": {
@@ -41,7 +58,7 @@
         "url": {
           "description": "URL of the game database",
           "type": "string",
-          "format": "uri"
+          "format": "uri-reference"
         },
         "description": {
           "description": "Description of the game",
@@ -55,9 +72,9 @@
           "description": "SHA1 of the game database",
           "type": "string"
         },
-        "date": {
-          "description": "Date of the game database",
-          "type": "string"
+        "version": {
+          "description": "Version of the game database",
+          "$ref": "defs.json#/definitions/version"
         },
         "links": {
           "$ref": "defs.json#/definitions/links"
@@ -67,7 +84,7 @@
         "url",
         "size",
         "sha1",
-        "date"
+        "version"
       ]
     },
     "core": {
@@ -83,50 +100,12 @@
         "url": {
           "description": "URL of the core",
           "type": "string",
-          "format": "uri"
+          "format": "uri-reference"
         }
       },
       "required": [
         "version",
         "url"
-      ]
-    },
-    "system": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "description": "Name of the system",
-          "type": "string"
-        },
-        "uniqueName": {
-          "description": "Unique short name of the system",
-          "type": "string"
-        },
-        "description": {
-          "description": "Description of the system",
-          "type": "string"
-        },
-        "gamesDb": {
-          "description": "List of games supported by the system",
-          "$ref": "#/definitions/gamesDb"
-        },
-        "cores": {
-          "description": "List of cores for the system",
-          "$ref": "#/definitions/core"
-        },
-        "version": {
-          "description": "Version of the core",
-          "type": "string"
-        },
-        "links": {
-          "$ref": "defs.json#/definitions/links"
-        }
-      },
-      "required": [
-        "uniqueName",
-        "name",
-        "version",
-        "downloadUrl"
       ]
     }
   }

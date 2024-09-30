@@ -22,7 +22,7 @@ async function start_game(game_id: number) {
     return;
   }
 
-  const db_files = await gameDb.query(
+  const { rows: db_files } = await gameDb.query(
     "SELECT * from core_files WHERE game_id = ? AND core_id = ?",
     [game_id, db_game.core_id],
   );
@@ -82,12 +82,13 @@ export async function games_menu() {
 
   async function buildItems() {
     let gameDb = await getDb();
-    let games = await gameDb.query(
-      `SELECT games.id as id, games.name as name, cores.system_slug as system
-             FROM games
-                      LEFT JOIN cores ON games.core_id = cores.id
-             ORDER BY ${Object.values(sortOptions)[current_sort]}`,
-    );
+    // let games = await gameDb.query(
+    //   `SELECT games.id as id, games.name as name, cores.system_slug as system
+    //          FROM games
+    //                   LEFT JOIN cores ON games.core_id = cores.id
+    //          ORDER BY ${Object.values(sortOptions)[current_sort]}`,
+    // );
+    let games: any[] = [];
     return games.map((game) => ({
       label: "" + game.name,
       select: () => start_game(game.id as number),

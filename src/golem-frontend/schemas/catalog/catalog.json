@@ -19,7 +19,7 @@
           "url": {
             "description": "URL of the system metadata",
             "type": "string",
-            "format": "uri"
+            "format": "uri-reference"
           },
           "version": {
             "description": "Version of the system metadata",
@@ -35,7 +35,7 @@
     "lastUpdated": {
       "description": "Date of the last update",
       "type": "string",
-      "format": "date-time"
+      "format": "iso-date-time"
     },
     "version": {
       "description": "Version of the catalog. This is used to determine if the catalog needs to be updated locally. This can be any string that can be compared with the version of the catalog on the server. Before comparing, the version strings are split by `.` and each component is compared, allowing for using semver.",

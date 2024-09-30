@@ -21,6 +21,7 @@ enum MenuAction {
     Details(usize),
     Sort,
     Back,
+    Noop,
 }
 
 impl menu::style::MenuReturn for MenuAction {
@@ -113,7 +114,10 @@ impl<'a> menu::IntoTextMenuItem<'a, MenuAction> for TextMenuItem {
                 MenuAction::Select(self.index),
             )
         } else {
-            menu::TextMenuItem::unselectable(self.label.as_str())
+            menu::TextMenuItem::unselectable_with_marker(
+                self.label.as_str(),
+                self.marker.as_ref().map(|m| m.as_str()).unwrap_or_default(),
+            )
         }
     }
 }
@@ -264,6 +268,7 @@ fn text_menu_(
                     }
                 }
             }
+            MenuAction::Noop => {}
         }
     }
 }

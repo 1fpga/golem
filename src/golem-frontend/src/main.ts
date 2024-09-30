@@ -10,14 +10,15 @@ import { initCommands } from "./ui/commands";
 import { getDb } from "./services/database";
 import { login } from "./ui/login";
 
+// Polyfill for events.
+globalThis.performance = <any>{
+  now: () => Date.now(),
+};
+
 async function main_menu() {
   let coreDb = await getDb();
-  const nb_games = (
-    await coreDb.queryOne("SELECT COUNT(*) as count FROM games")
-  )?.count as number;
-  const nb_cores = (
-    await coreDb.queryOne("SELECT COUNT(*) as count FROM cores")
-  )?.count as number;
+  const nb_games = 0;
+  const nb_cores = 0;
 
   const games_lbl = nb_games > 0 ? `(${nb_games})` : "";
   const cores_lbl = nb_cores > 0 ? `(${nb_cores})` : "";

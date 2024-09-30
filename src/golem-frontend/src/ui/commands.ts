@@ -1,9 +1,9 @@
 import * as commands from "@:golem/commands";
 import BASIC_COMMANDS from "../commands/basic";
-import { LocalStorage } from "../services/storage";
+import { LocalStorage } from "../services";
 
 export async function initCommands() {
-  const storage = await LocalStorage.user();
+  const storage = await LocalStorage.global();
   let validate = (await import("$schemas:shortcut")).default;
 
   for (const cmd of BASIC_COMMANDS) {

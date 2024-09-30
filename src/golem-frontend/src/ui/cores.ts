@@ -1,10 +1,11 @@
 import * as core from "@:golem/core";
 import * as ui from "@:golem/ui";
-import { getDb } from "../services/database";
+import { Core } from "../services/database/core";
 
-function start_core(db_core: { path: string }) {
+function start_core(path: string) {
+  console.log(`Starting core: ${JSON.stringify(path)}`);
   let c = core.load({
-    core: { type: "Path", path: db_core.path },
+    core: { type: "Path", path },
   });
   c.loop();
 }
@@ -24,8 +25,7 @@ function select_core_file() {
 }
 
 export async function cores_menu() {
-  const userDb = await getDb();
-  const cores = await userDb.query("SELECT * FROM cores");
+  const cores = await Core.list();
 
   await ui.textMenu({
     title: "Cores",
@@ -33,7 +33,13 @@ export async function cores_menu() {
     items: [
       ...cores.map((core) => ({
         label: "" + core.name,
-        select: () => start_core(core as any),
+        select: async () => {
+          if (core.rbfPath) {
+            start_core(core.rbfPath);
+          } else {
+            await ui.alert("Core is not an RBF core?");
+          }
+        },
       })),
       "-",
       { label: "Select File...", select: select_core_file },

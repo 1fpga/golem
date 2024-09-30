@@ -4,16 +4,16 @@ import { getDb } from "../services/database";
 
 export async function login(): Promise<User | null> {
   let db = await getDb();
-  let allUsers = await db.query("SELECT * FROM users");
+  let { rows } = await db.query("SELECT * FROM users");
 
   // Check if there's no user in the database. If so, return null.
-  if (allUsers.length === 0) {
+  if (rows.length === 0) {
     return null;
   }
 
   // Check if there's only 1 user in the database.
-  if (allUsers.length === 1) {
-    return await User.login("" + allUsers[0].username);
+  if (rows.length === 1) {
+    return await User.login("" + rows[0].username);
   }
 
   // If there are multiple users, prompt the user to select one.
@@ -22,7 +22,7 @@ export async function login(): Promise<User | null> {
   while (user === null) {
     user = await ui.textMenu({
       title: "Select User",
-      items: allUsers.map((u) => ({
+      items: rows.map((u) => ({
         label: "" + u.username,
         marker: u.password ? ">>" : "",
         select: async () => {

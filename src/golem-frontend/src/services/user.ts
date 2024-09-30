@@ -1,9 +1,17 @@
 import * as ui from "@:golem/ui";
-import { getDb } from "./database";
+import { sql } from "./database";
 
 let loggedInUser: User | null = null;
 
 export const DEFAULT_USERNAME = "admin";
+
+export interface UserRow {
+  id: number;
+  username: string;
+  password: string | null;
+  createdAt: Date;
+  admin: boolean;
+}
 
 export class User {
   /**
@@ -36,12 +44,11 @@ export class User {
     username: string,
     force = false,
   ): Promise<User | null> {
-    let db = await getDb();
-    let user = await db.queryOne("SELECT * FROM users WHERE username = ?", [
-      username,
-    ]);
+    let [user] = await sql<UserRow>`SELECT *
+                                        FROM users
+                                        WHERE username = ${username}`;
 
-    if (user === null || user.id === null) {
+    if (!user) {
       throw new Error("Invalid username or password");
     }
 
@@ -65,7 +72,7 @@ export class User {
       }
     }
 
-    loggedInUser = new this(+user.id, "" + user.username, !!user.admin);
+    loggedInUser = new this(+user.id, "" + user.username, user.admin);
     return loggedInUser;
   }
 
@@ -83,11 +90,11 @@ export class User {
     password: string[] | null,
     admin: boolean,
   ): Promise<void> {
-    let db = await getDb();
-    await db.execute(
-      "INSERT INTO users (username, password, admin) VALUES (?, ?, ?)",
-      [username, this.passwordToString(password), admin],
-    );
+    await sql`INSERT INTO users ${sql.insertValues({
+      username,
+      password: this.passwordToString(password),
+      admin,
+    })}`;
   }
 
   private constructor(

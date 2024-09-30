@@ -2,7 +2,7 @@
 
 This directory contains the migrations for the Golem Frontend database(s).
 
-The migration system is implemented in Rust for performance reasons. Do not look for usage of this directory in JavaScript.
+The migrations are exported in JavaScript using a rollup plugin. The module name is `@:migrations`.
 
 These files will be minimized as part of the build process before being included. Comments will be removed and multiple spaces or tabs will be replaced by a single space.
 

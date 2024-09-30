@@ -1,57 +1,77 @@
 import * as golemDb from "@:golem/db";
-import { getDb } from "./database";
+import { sql } from "./database";
+
+interface UserStorageRow {
+  value: string;
+}
 
 export class LocalStorage {
-  static async user(id?: number): Promise<LocalStorage> {
-    let db = await getDb();
-    return new LocalStorage(id, db);
+  static async user(id: number): Promise<LocalStorage> {
+    return new LocalStorage(id);
   }
 
-  private constructor(
-    private readonly userId: number | undefined,
-    private readonly db: golemDb.Db,
-  ) {}
+  static async global(): Promise<LocalStorage> {
+    return new LocalStorage(undefined);
+  }
 
-  async get(key: string): Promise<unknown | null> {
-    let row;
+  private constructor(private readonly userId: number | undefined) {}
+
+  async get<T>(
+    key: string,
+    validator?: (v: unknown) => v is T,
+  ): Promise<T | null> {
+    let value: string | undefined;
     if (this.userId === undefined) {
-      row = await this.db.queryOne(
-        "SELECT value FROM global_storage WHERE key = ?",
-        [key],
-      );
+      const rows = await sql<UserStorageRow>`SELECT value
+                                                   FROM global_storage
+                                                   WHERE key = ${key}LIMIT 1`;
+      value = rows[0]?.value;
     } else {
-      row = await this.db.queryOne(
-        "SELECT value FROM user_storage WHERE key = ? AND user_id = ?",
-        [key, this.userId],
-      );
+      let rows = await sql<UserStorageRow>`
+                SELECT value
+                FROM user_storage
+                WHERE key = ${key}
+                  AND user_id = ${this.userId}
+                LIMIT 1`;
+      value = rows[0]?.value;
     }
 
-    return row ? JSON.parse(<string>row.value) : null;
+    if (value === null || value === undefined) {
+      return null;
+    }
+    const json = JSON.parse(value);
+    if (validator && !validator(json)) {
+      throw new Error(`Invalid value schema: key=${JSON.stringify(key)}`);
+    }
+    return json as T;
   }
 
-  async set(key: string, value: unknown): Promise<void> {
+  async set<T>(key: string, value: T): Promise<void> {
     const valueJson = JSON.stringify(value);
     if (this.userId === undefined) {
-      await this.db.execute(
-        "INSERT INTO storage (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-        [key, valueJson],
-      );
+      await sql`INSERT INTO global_storage ${sql.insertValues({
+        key,
+        value: valueJson,
+      })}`;
     } else {
-      await this.db.execute(
-        "INSERT INTO storage (key, value, user_id) VALUES (?, ?, ?) ON CONFLICT(key, user_id) DO UPDATE SET value = excluded.value",
-        [key, valueJson, this.userId],
-      );
+      await sql`INSERT INTO user_storage ${sql.insertValues({
+        key,
+        value: valueJson,
+        user_id: this.userId,
+      })}`;
     }
   }
 
   async remove(key: string): Promise<void> {
     if (this.userId === undefined) {
-      await this.db.execute("DELETE FROM global_storage WHERE key = ?", [key]);
+      await sql`DELETE
+                      FROM global_storage
+                      WHERE key = ${key}`;
     } else {
-      await this.db.execute(
-        "DELETE FROM user_storage WHERE key = ? AND user_id = ?",
-        [key, this.userId],
-      );
+      await sql`DELETE
+                      FROM user_storage
+                      WHERE key = ${key}
+                        AND user_id = ${this.userId}`;
     }
   }
 }

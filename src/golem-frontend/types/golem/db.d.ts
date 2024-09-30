@@ -42,7 +42,7 @@ declare module "@:golem/db" {
      * @param bindings Optional array of values to bind to the query.
      * @returns An array of rows returned from the query.
      */
-    query(query: string, bindings?: SqlValue[]): Promise<Row[]>;
+    query(query: string, bindings?: SqlValue[]): Promise<{ rows: Row[] }>;
 
     /**
      * Executes a SQL query and returns the first row. If no rows are returned, this will return
@@ -63,5 +63,13 @@ declare module "@:golem/db" {
      * @returns The first column of the first row returned from the query, or `null` if no rows are returned.
      */
     execute(query: string, bindings?: SqlValue[]): Promise<number>;
+
+    /**
+     * Executes a raw SQL query. This is useful for executing queries that do not return any rows,
+     * such as `CREATE TABLE` or `INSERT INTO`. Be careful with this function, as it does not
+     * support bindings and is susceptible to SQL injection.
+     * @param query The SQL query to execute.
+     */
+    executeRaw(query: string): Promise<void>;
   }
 }
