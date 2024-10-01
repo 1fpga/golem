@@ -888,18 +888,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "datary"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28f3d3cb000b72d9340c24364baa86b9183075b2e207190a99d76f9b9b6291e2"
-dependencies = [
- "ouroboros",
- "quick-xml",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "de10-nano"
 version = "0.1.0"
 dependencies = [
@@ -2067,7 +2055,6 @@ dependencies = [
  "crossbeam-channel",
  "crossbeam-queue",
  "crossbeam-utils",
- "datary",
  "de10-nano",
  "debounce",
  "dirs",
@@ -2165,7 +2152,6 @@ dependencies = [
  "crossbeam-queue",
  "crossbeam-utils",
  "cyclone-v 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "datary",
  "de10-nano",
  "debounce",
  "derive_builder",
@@ -3605,16 +3591,6 @@ name = "quick-error"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a993555f31e5a609f617c12db6250dedcac1b0a85076912c436e6fc9b2c8e6a3"
-
-[[package]]
-name = "quick-xml"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1004a344b30a54e2ee58d66a71b32d2db2feb0a31f9a2d302bf0536f15de2a33"
-dependencies = [
- "memchr",
- "serde",
-]
 
 [[package]]
 name = "quote"

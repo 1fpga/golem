@@ -1,28 +1,6 @@
 import * as golemDb from "@:golem/db";
 import { SqlTag, type SqlTagDriver } from "@sqltags/core";
 
-const driver: SqlTagDriver<undefined, never> = {
-  cursor(
-    sql: string,
-    params: any[],
-    options: {} | undefined,
-  ): AsyncIterable<any> {
-    throw new Error("Method not implemented.");
-  },
-  escapeIdentifier(identifier: string): string {
-    return `"${identifier.replace(/"/g, '""')}"`;
-  },
-  parameterizeValue(value: any, paramIndex: number): string {
-    return "?";
-  },
-  async query(sql: string, params: any[]): Promise<[any[], undefined]> {
-    let { rows } = await (await getDb()).query(sql, params);
-    return [rows, undefined];
-  },
-};
-
-export const sql = new SqlTag(driver);
-
 async function applyMigrations(db: golemDb.Db, _name: string, latest: string) {
   const migrations = await import("@:migrations");
   const allMigrations = Object.getOwnPropertyNames(migrations.up)
@@ -93,3 +71,25 @@ export async function getDb(): Promise<golemDb.Db> {
 
   return db;
 }
+
+const driver: SqlTagDriver<undefined, never> = {
+  cursor(
+    sql: string,
+    params: any[],
+    options: {} | undefined,
+  ): AsyncIterable<any> {
+    throw new Error("Method not implemented.");
+  },
+  escapeIdentifier(identifier: string): string {
+    return `"${identifier.replace(/"/g, '""')}"`;
+  },
+  parameterizeValue(value: any, paramIndex: number): string {
+    return "?";
+  },
+  async query(sql: string, params: any[]): Promise<[any[], undefined]> {
+    let { rows } = await (await getDb()).query(sql, params);
+    return [rows, undefined];
+  },
+};
+
+export const sql = new SqlTag(driver);

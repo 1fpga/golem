@@ -56,7 +56,11 @@ export default function (baseDir = process.cwd()) {
             if (name !== undefined) {
               return name;
             } else if (schema["$id"] !== undefined) {
-              return path.basename(schema["$id"], "json");
+              if (URL.canParse(schema["$id"])) {
+                return path.basename(schema["$id"], "json");
+              } else {
+                return schema["$id"];
+              }
             } else {
               return "Unknown";
             }

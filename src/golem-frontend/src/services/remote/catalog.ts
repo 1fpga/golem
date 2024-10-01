@@ -7,7 +7,8 @@ import type {
 } from "$schemas:catalog/catalog";
 import type { System as SystemSchema } from "$schemas:catalog/system";
 import type { Core as CoreSchema } from "$schemas:catalog/core";
-import type { ValidateFunction } from "ajv";
+import { RemoteGamesDb } from "./games_database";
+import { fetchJsonAndValidate } from "../../utils/fetch_json";
 
 export const CATALOG_1FPGA_URL = "https://catalog.1fpga.cloud/";
 
@@ -57,27 +58,6 @@ export function compareVersions(
 }
 
 /**
- * Fetch a JSON file from the internet and validate it.
- * @param url The URL to fetch.
- * @param validate The validation function to use.
- * @returns The parsed JSON.
- */
-async function fetchJson<T>(
-  url: string,
-  validate: ValidateFunction<T>,
-): Promise<T> {
-  const response = await net.fetchJson(url);
-  if (validate(response)) {
-    return response;
-  } else {
-    throw new Error(
-      `Validation error on URL ${url}:\n` +
-        (validate.errors || []).map((e) => e.message || "").join("\n"),
-    );
-  }
-}
-
-/**
  * A remote core is a `core.json` that is fetched from the internet,
  * parsed and validated.
  */
@@ -91,7 +71,7 @@ export class RemoteCore {
     );
 
     // Dynamic loading to allow for code splitting.
-    const json = await fetchJson(
+    const json = await fetchJsonAndValidate(
       u,
       (await import("$schemas:catalog/core")).validate,
     );
@@ -171,7 +151,7 @@ export class RemoteSystem {
     ui.show("Fetching system...", `Catalog ${catalog.name}\nURL: ${u}`);
 
     // Dynamic loading to allow for code splitting.
-    const json = await fetchJson(
+    const json = await fetchJsonAndValidate(
       u,
       (await import("$schemas:catalog/system")).validate,
     );
@@ -257,11 +237,7 @@ export class RemoteSystem {
       return;
     }
 
-    const destination = RemoteSystem.pathForAsset(this, "games.db");
-    return await net.download(
-      new URL(this.system_.gamesDb.url, this.url).toString(),
-      destination,
-    );
+    return await RemoteGamesDb.fetch(this.system_.gamesDb.url, this);
   }
 }
 
@@ -299,7 +275,7 @@ export class RemoteCatalog {
     }
 
     try {
-      const json = await fetchJson(url, validateCatalog);
+      const json = await fetchJsonAndValidate(url, validateCatalog);
       const catalog = new RemoteCatalog(url, json);
       if (all) {
         await catalog.fetchDeep();
