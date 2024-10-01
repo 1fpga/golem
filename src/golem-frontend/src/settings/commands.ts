@@ -1,6 +1,6 @@
-import * as db from "@:golem/db";
 import * as ui from "@:golem/ui";
 import * as settings from "@:golem/settings";
+import { Core } from "../services/database/core";
 
 const MAX_COMMAND_LENGTH = 6;
 
@@ -17,7 +17,7 @@ function markerFor(command?: settings.CommandShortcut) {
 }
 
 export async function commands_settings_menu() {
-  const cores = db.query("SELECT * FROM cores");
+  const cores = await Core.list();
 
   await ui.textMenu({
     title: "Commands",
@@ -43,11 +43,13 @@ export async function commands_settings_menu() {
         label: "Core Specific Commands",
       },
       "-",
-      ...cores.map((core) => ({
-        label: "" + core.name + "...",
-        marker: "" + core.system_slug,
-        select: () => {},
-      })),
+      ...(await Promise.all(
+        cores.map(async (core) => ({
+          label: "" + core.name + "...",
+          marker: "" + (await core.getSystem()).uniqueName,
+          select: () => {},
+        })),
+      )),
     ],
   });
 }

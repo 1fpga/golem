@@ -74,16 +74,6 @@ pub fn input_tester(app: &mut GoLEmApp) {
                 } => {
                     current.key_up(scancode);
                 }
-                Event::JoyButtonDown {
-                    which, button_idx, ..
-                } => {
-                    current.joystick_button_down(which, button_idx);
-                }
-                Event::JoyButtonUp {
-                    which, button_idx, ..
-                } => {
-                    current.joystick_button_up(which, button_idx);
-                }
                 Event::ControllerButtonDown { which, button, .. } => {
                     current.controller_button_down(which, button);
                 }

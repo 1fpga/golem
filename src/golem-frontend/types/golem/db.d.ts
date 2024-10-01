@@ -19,32 +19,57 @@ declare module "@:golem/db" {
   export type Row = { [field: string]: SqlValue };
 
   /**
-   * Executes a SQL query and returns the result rows. This will not limit the number of rows
-   * returned, so be careful when querying large tables.
-   *
-   * @param query The SQL query to execute.
-   * @param bindings Optional array of values to bind to the query.
-   * @returns An array of rows returned from the query.
+   * Gets a database object for the given database name. This will create the database if it
+   * does not exist. Applies migrations if specified.
+   * @param name The name of the database.
+   * @param options Optional options for the database.
+   * @returns The database object.
    */
-  export function query(query: string, bindings?: SqlValue[]): Row[];
+  export function load(
+    name: string,
+    options?: { migrations?: string },
+  ): Promise<Db>;
 
   /**
-   * Executes a SQL query and returns the first row. If no rows are returned, this will return
-   * `null`.
-   *
-   * @param query The SQL query to execute.
-   * @param bindings Optional array of values to bind to the query.
-   * @returns The first row returned from the query, or `null` if no rows are returned.
+   * The database object.
    */
-  export function queryOne(query: string, bindings?: SqlValue[]): Row | null;
+  export interface Db {
+    /**
+     * Executes a SQL query and returns the result rows. This will not limit the number of rows
+     * returned, so be careful when querying large tables.
+     *
+     * @param query The SQL query to execute.
+     * @param bindings Optional array of values to bind to the query.
+     * @returns An array of rows returned from the query.
+     */
+    query(query: string, bindings?: SqlValue[]): Promise<{ rows: Row[] }>;
 
-  /**
-   * Executes a SQL query and returns the number of rows affected. This is useful for `INSERT`,
-   * `UPDATE`, and `DELETE` queries.
-   *
-   * @param query The SQL query to execute.
-   * @param bindings Optional array of values to bind to the query.
-   * @returns The first column of the first row returned from the query, or `null` if no rows are returned.
-   */
-  export function execute(query: string, bindings?: SqlValue[]): number;
+    /**
+     * Executes a SQL query and returns the first row. If no rows are returned, this will return
+     * `null`.
+     *
+     * @param query The SQL query to execute.
+     * @param bindings Optional array of values to bind to the query.
+     * @returns The first row returned from the query, or `null` if no rows are returned.
+     */
+    queryOne(query: string, bindings?: SqlValue[]): Promise<Row | null>;
+
+    /**
+     * Executes a SQL query and returns the number of rows affected. This is useful for `INSERT`,
+     * `UPDATE`, and `DELETE` queries.
+     *
+     * @param query The SQL query to execute.
+     * @param bindings Optional array of values to bind to the query.
+     * @returns The first column of the first row returned from the query, or `null` if no rows are returned.
+     */
+    execute(query: string, bindings?: SqlValue[]): Promise<number>;
+
+    /**
+     * Executes a raw SQL query. This is useful for executing queries that do not return any rows,
+     * such as `CREATE TABLE` or `INSERT INTO`. Be careful with this function, as it does not
+     * support bindings and is susceptible to SQL injection.
+     * @param query The SQL query to execute.
+     */
+    executeRaw(query: string): Promise<void>;
+  }
 }

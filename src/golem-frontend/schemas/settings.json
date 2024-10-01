@@ -54,33 +54,6 @@
       "enum": [
         "en"
       ]
-    },
-    "sources": {
-      "type": "array",
-      "items": {
-        "oneOf": [
-          {
-            "enum": [
-              "1fpga"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "url": {
-                "type": "string",
-                "pattern": "^https?://.*$"
-              },
-              "name": {
-                "type": "string"
-              }
-            }
-          }
-        ]
-      },
-      "default": [
-        "1fpga"
-      ]
     }
   }
 }

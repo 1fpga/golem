@@ -7,7 +7,6 @@ members = [
     "src/fce-movie-format",
     "src/golem",
     "src/golem-core",
-    "src/golem-db",
     "src/golem-script",
     "src/golem-ui",
     "src/mister-fpga",
@@ -36,7 +35,6 @@ de10-nano = { path = "src/de10-nano" }
 fce-movie-format = { path = "src/fce-movie-format" }
 golem = { path = "src/golem" }
 one-fpga = { path = "src/golem-core", version = "0.1.0" }
-golem-db = { path = "src/golem-db" }
 golem-script = { path = "src/golem-script" }
 golem-ui = { path = "src/golem-ui" }
 junior = { path = "src/junior" }

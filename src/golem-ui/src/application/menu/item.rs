@@ -234,7 +234,11 @@ where
     }
 
     pub fn unselectable(title: &'a str) -> Self {
-        TextMenuItem::MenuItem(SimpleMenuItem::unselectable(title))
+        Self::MenuItem(SimpleMenuItem::unselectable(title))
+    }
+
+    pub fn unselectable_with_marker(title: &'a str, marker: &'a str) -> Self {
+        Self::MenuItem(SimpleMenuItem::unselectable(title).with_marker(marker))
     }
 
     pub fn empty() -> Self {

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://1fpga.cloud/schemas/catalog.json",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "Name of the catalog",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 64
+    },
+    "systems": {
+      "description": "List of systems in the catalog, their URL and latest version.",
+      "type": "object",
+      "additionalProperties": {
+        "$id": "system",
+        "type": "object",
+        "properties": {
+          "url": {
+            "description": "URL of the system metadata",
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "version": {
+            "description": "Version of the system metadata",
+            "$ref": "defs.json#/definitions/version"
+          }
+        },
+        "required": [
+          "url",
+          "version"
+        ]
+      }
+    },
+    "lastUpdated": {
+      "description": "Date of the last update",
+      "type": "string",
+      "format": "iso-date-time"
+    },
+    "version": {
+      "description": "Version of the catalog. This is used to determine if the catalog needs to be updated locally. This can be any string that can be compared with the version of the catalog on the server. Before comparing, the version strings are split by `.` and each component is compared, allowing for using semver.",
+      "$ref": "defs.json#/definitions/version"
+    }
+  },
+  "required": [
+    "name",
+    "version"
+  ]
+}

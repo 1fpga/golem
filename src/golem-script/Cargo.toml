@@ -14,15 +14,18 @@ boa_interop = { git = "https://github.com/hansl/boa.git", branch = "golem-script
 boa_macros = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 boa_runtime = { git = "https://github.com/hansl/boa.git", branch = "golem-script" }
 de10-nano = { path = "../de10-nano" }
-diesel = { version = "2.1.5", features = ["sqlite", "extras"] }
+directories = "5.0.1"
 either = "1"
+include_dir = "0.7.4"
 one-fpga = { workspace = true }
 golem-ui = { path = "../golem-ui", default-features = false }
 mister-fpga = { path = "../mister-fpga" }
+ping = "0.5.2"
 regex = "1.10.4"
 rustc-hash = "1.1.0"
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0.115"
+sqlite = { version = "0.36.1", features = ["bundled"] }
 tempdir = "0.3.7"
 tracing = "0.1.40"
 reqwest = { version = "0.11.22", features = ["blocking", "json", "rustls-tls"], default-features = false }

@@ -12,21 +12,22 @@ use serde::{Deserialize, Deserializer, Serialize};
 use crate::input::InputState;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(i8)]
 pub enum AxisValue {
     /// At the end of the axis.
-    HighPositive,
+    HighNegative = -2,
 
     /// Around middle.
-    LowPositive,
+    LowNegative = -1,
 
     /// Around 0.
-    Idle,
+    Idle = 0,
 
     /// Around middle.
-    LowNegative,
+    LowPositive = 1,
 
     /// At the end of the axis.
-    HighNegative,
+    HighPositive = 2,
 }
 
 impl Display for AxisValue {
@@ -75,7 +76,7 @@ impl From<i16> for AxisValue {
 impl AxisValue {
     pub fn matches(&self, value: i16) -> bool {
         match self {
-            AxisValue::Idle => (-10..10).contains(&value),
+            AxisValue::Idle => (-32..32).contains(&value),
             AxisValue::LowPositive => ((i16::MAX / 4)..(i16::MAX / 2)).contains(&value),
             AxisValue::HighPositive => ((i16::MAX / 2)..).contains(&value),
             AxisValue::LowNegative => (i16::MIN / 2..i16::MIN / 4).rev().contains(&value),
@@ -170,8 +171,9 @@ impl<'de> Deserialize<'de> for Shortcut {
     where
         D: Deserializer<'de>,
     {
-        let deser = String::deserialize(deserializer)?;
-        deser.parse().map_err(serde::de::Error::custom)
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde::de::Error::custom)
     }
 }
 

@@ -1,4 +1,4 @@
-use boa_engine::object::builtins::JsPromise;
+use boa_engine::object::builtins::{JsArray, JsPromise};
 use boa_engine::value::TryFromJs;
 use boa_engine::{
     js_string, Context, Finalize, JsData, JsError, JsNativeError, JsObject, JsResult, JsString,
@@ -8,6 +8,7 @@ use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use either::Either;
 
 use golem_ui::application::menu;
+use golem_ui::application::panels::password::enter_password;
 use golem_ui::application::panels::prompt::prompt;
 
 use crate::HostData;
@@ -20,6 +21,7 @@ enum MenuAction {
     Details(usize),
     Sort,
     Back,
+    Noop,
 }
 
 impl menu::style::MenuReturn for MenuAction {
@@ -77,7 +79,7 @@ impl TryFromJs for TextMenuItem {
         let marker = if marker.is_undefined() {
             None
         } else {
-            Some(marker.to_string(context).unwrap().to_std_string_escaped())
+            Some(marker.to_string(context)?.to_std_string_escaped())
         };
 
         let select = if object.has_own_property(js_string!("select"), context)? {
@@ -112,7 +114,10 @@ impl<'a> menu::IntoTextMenuItem<'a, MenuAction> for TextMenuItem {
                 MenuAction::Select(self.index),
             )
         } else {
-            menu::TextMenuItem::unselectable(self.label.as_str())
+            menu::TextMenuItem::unselectable_with_marker(
+                self.label.as_str(),
+                self.marker.as_ref().map(|m| m.as_str()).unwrap_or_default(),
+            )
         }
     }
 }
@@ -235,7 +240,11 @@ fn text_menu_(
             }
             MenuAction::Sort => {
                 if let Some(maybe_callable) = options.sort.clone() {
-                    if let Some(result) = call_callable(None, maybe_callable, context)? {
+                    if let Some(mut result) = call_callable(None, maybe_callable, context)? {
+                        if let Some(p) = result.as_promise() {
+                            result = p.await_blocking(context).map_err(JsError::from_opaque)?;
+                        }
+
                         // In sort, we try to replace partial options with the result of the callable.
                         // If this doesn't work, we return the value.
                         let Ok(mut new_options): JsResult<UiMenuOptions> =
@@ -259,24 +268,56 @@ fn text_menu_(
                     }
                 }
             }
+            MenuAction::Noop => {}
         }
     }
 }
 
-fn alert_(
+#[derive(Debug, TryFromJs)]
+struct AlertOptions {
     message: String,
     title: Option<String>,
+    choices: Option<Vec<String>>,
+}
+
+fn alert_(
+    message: Either<String, AlertOptions>,
+    title: Option<String>,
     ContextData(host_defined): ContextData<HostData>,
-) {
-    // Swap title and message if title is specified.
-    let (message, title) = if let Some(t) = title {
-        (t, message)
-    } else {
-        (message, "".to_string())
+    context: &mut Context,
+) -> JsPromise {
+    let (message, title, choices) = match message {
+        Either::Left(message) => {
+            if let Some(real_message) = title {
+                (real_message, message, vec!["OK".to_string()])
+            } else {
+                (message, "".to_string(), vec!["OK".to_string()])
+            }
+        }
+        Either::Right(AlertOptions {
+            message,
+            title,
+            choices: options,
+            ..
+        }) => (
+            message,
+            title.unwrap_or_default(),
+            options.unwrap_or_else(|| vec!["OK".to_string()]),
+        ),
     };
 
     let app = host_defined.app_mut();
-    golem_ui::application::panels::alert::alert(app, &title, &message, &["OK"]);
+    let result = golem_ui::application::panels::alert::alert(
+        app,
+        &title,
+        &message,
+        &choices.iter().map(String::as_str).collect::<Vec<_>>(),
+    );
+
+    JsPromise::resolve(
+        result.map_or(JsValue::null(), |n| JsValue::from(n)),
+        context,
+    )
 }
 
 #[derive(Clone, Debug, Trace, Finalize, JsData, boa_macros::TryFromJs)]
@@ -290,7 +331,8 @@ fn prompt_(
     message: Either<String, PromptOptions>,
     maybe_message: Option<String>,
     ContextData(data): ContextData<HostData>,
-) -> Option<JsString> {
+    context: &mut Context,
+) -> JsPromise {
     let (message, title, default) = match message {
         Either::Left(ref message) => {
             // Swap title and message if title is specified.
@@ -308,14 +350,38 @@ fn prompt_(
     };
 
     let app = data.app_mut();
-    prompt(
+    let result = prompt(
         title.map(String::as_str).unwrap_or(""),
         message,
         default.unwrap_or_default(),
         512,
         app,
     )
-    .map(|r| r.into())
+    .map(|r| JsString::from(r));
+    JsPromise::resolve(result.map_or(JsValue::null(), JsValue::from), context)
+}
+
+fn prompt_password_(
+    title: String,
+    message: String,
+    length: u8,
+    ContextData(data): ContextData<HostData>,
+    context: &mut Context,
+) -> JsPromise {
+    let app = data.app_mut();
+    let result = enter_password(app, &title, &message, length);
+
+    if let Some(result) = result {
+        JsPromise::resolve(
+            JsArray::from_iter(
+                result.iter().map(|i| JsString::from(i.to_string()).into()),
+                context,
+            ),
+            context,
+        )
+    } else {
+        JsPromise::resolve(JsValue::null(), context)
+    }
 }
 
 fn show_(message: String, title: Option<String>, ContextData(host_defined): ContextData<HostData>) {
@@ -356,6 +422,10 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
             (
                 js_string!("prompt"),
                 prompt_.into_js_function_copied(context),
+            ),
+            (
+                js_string!("promptPassword"),
+                prompt_password_.into_js_function_copied(context),
             ),
             (
                 js_string!("qrCode"),

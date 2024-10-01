@@ -1,6 +1,4 @@
-use crate::application::coordinator::Coordinator;
 use crate::application::toolbar::Toolbar;
-use crate::data::paths;
 use crate::data::settings::Settings;
 use crate::input::commands::CommandId;
 use crate::input::shortcut::Shortcut;
@@ -11,12 +9,10 @@ use crate::platform::WindowManager;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use embedded_graphics::Drawable;
-use golem_db::Connection;
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
-use sdl3::joystick::Joystick;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tracing::{info, warn};
 
 pub mod menu;
@@ -25,20 +21,14 @@ pub mod panels;
 mod toolbar;
 mod widgets;
 
-pub mod coordinator;
-
 pub struct GoLEmApp {
     platform: De10Platform,
 
     toolbar: Toolbar,
     settings: Arc<Settings>,
-    database: Arc<Mutex<Connection>>,
-
-    coordinator: Coordinator,
 
     render_toolbar: bool,
 
-    joysticks: [Option<Joystick>; 32],
     gamepads: [Option<Gamepad>; 32],
 
     toolbar_buffer: DrawBuffer<BinaryColor>,
@@ -60,33 +50,21 @@ impl GoLEmApp {
 
         let settings = Arc::new(Settings::new());
 
-        let database_url = paths::config_root_path().join("golem.sqlite");
-
-        let database = golem_db::establish_connection(&database_url.to_string_lossy())
-            .expect("Failed to connect to database");
-        let database = Arc::new(Mutex::new(database));
         let toolbar_size = platform.toolbar_dimensions();
         let osd_size = platform.osd_dimensions();
 
         // Due to a limitation in Rust language right now, None does not implement Copy
         // when Option<T> does not. This means we can't use it in an array. So we use a
         // constant to work around this.
-        let joysticks = {
-            const NONE: Option<Joystick> = None;
-            [NONE; 32]
-        };
         let gamepads = {
             const NONE: Option<Gamepad> = None;
             [NONE; 32]
         };
 
         Self {
-            toolbar: Toolbar::new(settings.clone(), database.clone()),
-            coordinator: Coordinator::new(database.clone()),
+            toolbar: Toolbar::new(settings.clone()),
             render_toolbar: true,
-            joysticks,
             gamepads,
-            database,
             settings,
             platform,
             toolbar_buffer: DrawBuffer::new(toolbar_size),
@@ -130,10 +108,6 @@ impl GoLEmApp {
         &mut self.osd_buffer
     }
 
-    pub fn database(&self) -> Arc<Mutex<Connection>> {
-        self.database.clone()
-    }
-
     pub fn platform_mut(&mut self) -> &mut WindowManager {
         &mut self.platform
     }
@@ -144,10 +118,6 @@ impl GoLEmApp {
 
     pub fn show_toolbar(&mut self) {
         self.render_toolbar = true;
-    }
-
-    pub fn coordinator_mut(&mut self) -> Coordinator {
-        self.coordinator.clone()
     }
 
     pub fn add_shortcut(&mut self, shortcut: Shortcut, command: CommandId) {
@@ -206,27 +176,6 @@ impl GoLEmApp {
                     Event::Quit { .. } => {
                         info!("Quit event received. Quitting...");
                         std::process::exit(0);
-                    }
-                    Event::JoyDeviceAdded { which, .. } => {
-                        let j = self
-                            .platform
-                            .sdl()
-                            .joystick
-                            .borrow_mut()
-                            .open(*which)
-                            .unwrap();
-                        if let Some(Some(j)) = self.joysticks.get(*which as usize) {
-                            warn!("Joystick {} was already connected. Replacing it.", j.name());
-                        }
-
-                        self.joysticks[*which as usize] = Some(j);
-                    }
-                    Event::JoyDeviceRemoved { which, .. } => {
-                        if let Some(None) = self.joysticks.get(*which as usize) {
-                            warn!("Joystick #{which} was not detected.");
-                        }
-
-                        self.joysticks[*which as usize] = None;
                     }
                     Event::ControllerDeviceAdded { which, .. } => {
                         let g = self

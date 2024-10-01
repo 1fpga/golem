@@ -1,0 +1,35 @@
+@startuml
+hide empty description
+
+[*] --> CreateUser
+
+state CreateUser {
+    [*] --> EnterPassword
+    EnterPassword --> ConfirmPassword
+    ConfirmPassword --> [*]
+}
+
+CreateUser --> CreateCatalog
+
+state CreateCatalog {
+    [*] --> CheckOnlineStatus
+    CheckOnlineStatus --> SkipOrTryAgain : offline
+    SkipOrTryAgain --> CheckOnlineStatus : try again
+    SkipOrTryAgain --> [*] : skip
+
+    CheckOnlineStatus --> ChooseWhichCatalog : online
+    ChooseWhichCatalog --> Add1FpgaCatalog : 1 FPGA
+    ChooseWhichCatalog --> AddCustomCatalog : Custom
+    ChooseWhichCatalog --> [*] : skip
+
+    Add1FpgaCatalog --> ChooseCores
+    AddCustomCatalog --> ChooseCores
+
+    ChooseCores --> ChooseGames
+    ChooseGames --> [*]
+}
+
+CreateCatalog --> Thanks
+Thanks --> [*]
+
+@enduml

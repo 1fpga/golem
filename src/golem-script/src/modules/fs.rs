@@ -1,12 +1,11 @@
 use crate::module_loader::GolemModuleLoader;
-use boa_engine::object::builtins::{JsArrayBuffer, JsPromise, JsTypedArray, JsUint8Array};
+use boa_engine::object::builtins::{JsArrayBuffer, JsPromise, JsUint8Array};
 use boa_engine::{js_error, js_string, Context, JsError, JsResult, JsString, JsValue};
 use boa_interop::{IntoJsFunctionCopied, IntoJsModule};
-use either::Either;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-fn write_file(file: JsString, data: JsValue, mut context: &mut Context) -> JsResult<JsPromise> {
+fn write_file(file: JsString, data: JsValue, context: &mut Context) -> JsResult<JsPromise> {
     let path = PathBuf::from(file.to_std_string_escaped());
 
     let data = if let Some(s) = data.as_string() {
@@ -47,7 +46,7 @@ fn write_file(file: JsString, data: JsValue, mut context: &mut Context) -> JsRes
     Ok(promise)
 }
 
-fn read_file(file: JsString, mut context: &mut Context) -> JsResult<JsPromise> {
+fn read_file(file: JsString, context: &mut Context) -> JsResult<JsPromise> {
     let path = PathBuf::from(file.to_std_string_escaped());
 
     let promise = JsPromise::new(

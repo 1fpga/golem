@@ -15,7 +15,7 @@ function fontSizeMarker() {
   }
 }
 
-function updateFontSize(item: ui.TextMenuItem<void>) {
+function updateFontSize<T>(item: ui.TextMenuItem<T>) {
   const current = settings.getSettings().ui?.menuFontSize || "medium";
   const next = fontSizes[(fontSizes.indexOf(current) + 1) % fontSizes.length];
   settings.updateSettings({ ui: { menuFontSize: next } });
@@ -46,7 +46,7 @@ function datetimeFormatMarker() {
   }
 }
 
-function updateDateTimeFormat(item: ui.TextMenuItem<void>) {
+function updateDateTimeFormat<T>(item: ui.TextMenuItem<T>) {
   const current = datetimeFormat();
   const next =
     datetimeFormats[
@@ -57,8 +57,8 @@ function updateDateTimeFormat(item: ui.TextMenuItem<void>) {
 }
 
 export async function settings_menu() {
-  await ui.textMenu({
-    back: () => {},
+  await ui.textMenu<boolean>({
+    back: false,
     title: "Settings",
     items: [
       {

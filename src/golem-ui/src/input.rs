@@ -7,13 +7,13 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 
 pub mod commands;
+pub mod password;
 pub mod shortcut;
 
 /// The current status of all inputs.
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct InputState {
     pub keyboard: HashSet<Scancode>,
-    pub joysticks: HashMap<u32, BitArray<[u32; 4], Lsb0>>,
     pub gamepads: HashMap<u32, HashSet<Button>>,
     pub axis: HashMap<u32, HashMap<Axis, i16>>,
     pub mice: HashMap<u32, (i32, i32)>,
@@ -32,24 +32,6 @@ impl InputState {
             .iter()
             .map(|k| format!("'{}'", k.name()))
             .join(" + ");
-        let joysticks = self
-            .joysticks
-            .iter()
-            .map(|(i, b)| {
-                let buttons = b
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, b)| *b == true)
-                    .map(|(i, _)| i.to_string())
-                    .join(", ");
-                if !buttons.is_empty() {
-                    format!("Joystick {i}: {}", buttons)
-                } else {
-                    "".to_string()
-                }
-            })
-            .filter(|x| !x.is_empty())
-            .join("\n");
         let controllers = self
             .gamepads
             .iter()
@@ -85,7 +67,7 @@ impl InputState {
             .map(|(i, (x, y))| format!("Mouse {}: {}, {}", i, x, y))
             .join("\n");
 
-        [keys, joysticks, controllers, axis, mice]
+        [keys, controllers, axis, mice]
             .iter()
             .filter(|x| !x.is_empty())
             .join("\n")
@@ -93,7 +75,6 @@ impl InputState {
 
     pub fn clear(&mut self) {
         self.keyboard.clear();
-        self.joysticks.clear();
         self.gamepads.clear();
         self.axis.clear();
         self.mice.clear();
@@ -105,20 +86,6 @@ impl InputState {
 
     pub fn key_up(&mut self, code: Scancode) {
         self.keyboard.remove(&code);
-    }
-
-    pub fn joystick_button_down(&mut self, joystick: u32, button: u8) {
-        self.joysticks
-            .entry(joystick)
-            .or_default()
-            .set(button as usize, true);
-    }
-
-    pub fn joystick_button_up(&mut self, joystick: u32, button: u8) {
-        self.joysticks
-            .entry(joystick)
-            .or_default()
-            .set(button as usize, false);
     }
 
     pub fn controller_button_down(&mut self, controller: u32, button: Button) {
@@ -145,14 +112,18 @@ impl InputState {
 
     pub fn is_empty(&self) -> bool {
         self.keyboard.is_empty()
-            && self
-                .joysticks
-                .values()
-                .all(|gp| gp.as_raw_slice().iter().all(|b| *b == 0))
             && self.gamepads.values().all(|x| x.is_empty())
             && self
                 .axis
                 .values()
                 .all(|x| x.values().all(|x| AxisValue::from(*x) == AxisValue::Idle))
+    }
+
+    /// Returns the number of inputs in this state.
+    pub fn len(&self) -> usize {
+        self.keyboard.len()
+            + self.gamepads.values().map(|x| x.len()).sum::<usize>()
+            + self.axis.values().map(|x| x.len()).sum::<usize>()
+            + self.mice.len()
     }
 }

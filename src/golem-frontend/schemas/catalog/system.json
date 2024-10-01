@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://1fpga.cloud/schemas/system.json",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "Name of the system",
+      "type": "string"
+    },
+    "uniqueName": {
+      "description": "Unique short name of the system",
+      "$ref": "defs.json#/definitions/shortName"
+    },
+    "description": {
+      "description": "Description of the system",
+      "type": "string"
+    },
+    "icon": {
+      "description": "URL of the icon",
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "image": {
+      "description": "URL of the image for the system",
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "gamesDb": {
+      "description": "List of games supported by the system",
+      "$ref": "#/definitions/gamesDb"
+    },
+    "cores": {
+      "description": "List of cores for the system",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/core"
+      }
+    },
+    "tags": {
+      "description": "List of tags for the system",
+      "type": "array",
+      "items": {
+        "$ref": "defs.json#/definitions/tag"
+      }
+    },
+    "links": {
+      "$ref": "defs.json#/definitions/links"
+    }
+  },
+  "required": [
+    "name",
+    "uniqueName"
+  ],
+  "definitions": {
+    "gamesDb": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "URL of the game database",
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "description": {
+          "description": "Description of the game",
+          "type": "string"
+        },
+        "size": {
+          "description": "Size of the game database, in bytes",
+          "type": "number"
+        },
+        "sha1": {
+          "description": "SHA1 of the game database",
+          "type": "string"
+        },
+        "version": {
+          "description": "Version of the game database",
+          "$ref": "defs.json#/definitions/version"
+        },
+        "links": {
+          "$ref": "defs.json#/definitions/links"
+        }
+      },
+      "required": [
+        "url",
+        "size",
+        "sha1",
+        "version"
+      ]
+    },
+    "core": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "Version of the core",
+          "$ref": "defs.json#/definitions/version"
+        },
+        "links": {
+          "$ref": "defs.json#/definitions/links"
+        },
+        "url": {
+          "description": "URL of the core",
+          "type": "string",
+          "format": "uri-reference"
+        }
+      },
+      "required": [
+        "version",
+        "url"
+      ]
+    }
+  }
+}

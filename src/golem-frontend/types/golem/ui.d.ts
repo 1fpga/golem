@@ -34,7 +34,10 @@ declare module "@:golem/ui" {
     title?: String;
     items: (string | TextMenuItem<R>)[];
     back?: R | (() => undefined | void | R | Promise<undefined | void | R>);
-    sort?: () => Partial<TextMenuOptions<R>> | void;
+    sort?: () =>
+      | Partial<TextMenuOptions<R>>
+      | void
+      | Promise<Partial<TextMenuOptions<R>> | void>;
     sort_label?: string;
   }
 
@@ -50,21 +53,41 @@ declare module "@:golem/ui" {
   /**
    * Show an alert to the user, with OK.
    */
-  export function alert(message: string): void;
-  export function alert(title: string, message: string): void;
+  export function alert(message: string): Promise<void>;
+  export function alert(title: string, message: string): Promise<void>;
+  export function alert(options: {
+    title?: string;
+    message: string;
+    choices?: string[];
+  }): Promise<null | number>;
 
   /**
    * Show a prompt to the user, which the user can input any text, and an OK/Cancel
    * choices.
    * @returns The user input, or `undefined` if the user canceled the operation.
    */
-  export function prompt(message: string): undefined | string;
-  export function prompt(title: string, message: string): undefined | string;
+  export function prompt(message: string): Promise<undefined | string>;
+  export function prompt(
+    title: string,
+    message: string,
+  ): Promise<undefined | string>;
   export function prompt(options: {
     title?: string;
     message: string;
     default?: string;
-  }): undefined | string;
+  }): Promise<undefined | string>;
+
+  /**
+   * Show a prompt to the user for a button/key password.
+   * @param message The message (title) to show to the user.
+   * @param length The length of the password.
+   * @returns The user's password (as a string), or `null` if the user canceled the operation.
+   */
+  export function promptPassword(
+    title: string,
+    message: string,
+    length: number,
+  ): Promise<string[] | null>;
 
   /**
    * Update the UI but don't let the user interact with it.

@@ -1,8 +1,7 @@
 use crate::modules::golem::globals::classes::JsImage;
 use crate::HostData;
-use boa_engine::class::Class;
 use boa_engine::object::builtins::{JsFunction, JsUint8Array, TypedJsFunction};
-use boa_engine::{js_error, Context, JsError, JsResult, JsString, JsValue};
+use boa_engine::{Context, JsError, JsResult, JsString, JsValue};
 use boa_interop::{js_class, ContextData, JsClass};
 use boa_macros::{Finalize, JsData, Trace, TryFromJs};
 use golem_ui::application::panels::core_loop::run_core_loop;
@@ -27,10 +26,6 @@ pub struct JsCore {
 impl JsCore {
     pub fn new(core: GolemCore) -> Self {
         Self { core }
-    }
-
-    pub fn into_object(self, context: &mut Context) -> JsResult<JsValue> {
-        Self::from_data(self, context).map(JsValue::Object)
     }
 
     fn reset(&mut self) -> JsResult<()> {
@@ -59,7 +54,7 @@ impl JsCore {
                     Ok(())
                 }
             },
-            |app, core, screenshot, savestate, (command_map, context)| {
+            |_, _, screenshot, savestate, (_, context)| {
                 eprintln!("Saving state: {:?}", options);
                 if let Some(options) = options.as_ref() {
                     if let Some(f) = options.on_save_state.as_ref() {

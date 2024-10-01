@@ -6,7 +6,6 @@ use image::DynamicImage;
 use one_fpga::{Core, GolemCore};
 use sdl3::event::Event;
 use std::fmt::Debug;
-use std::path::Path;
 use std::time::Instant;
 use tracing::{debug, error, info, trace};
 
@@ -221,8 +220,7 @@ pub fn run_core_loop<C, E: Debug>(
     app.hide_toolbar();
     app.platform_mut().core_manager_mut().hide_osd();
 
-    let mut result = Ok(());
-    result = core_loop(app, core, context, shortcut_handler, savestate_handler);
+    let result = core_loop(app, core, context, shortcut_handler, savestate_handler);
 
     debug!("Core loop ended");
     info!("Loading Main Menu");

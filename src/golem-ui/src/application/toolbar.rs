@@ -12,7 +12,7 @@ use embedded_graphics::Drawable;
 use embedded_layout::align::{horizontal, vertical, Align};
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::Views;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 enum ToolbarItem {
     Fps(FpsCounterView),
@@ -79,7 +79,7 @@ pub struct Toolbar {
 }
 
 impl Toolbar {
-    pub fn new(settings: Arc<Settings>, _database: Arc<Mutex<golem_db::Connection>>) -> Self {
+    pub fn new(settings: Arc<Settings>) -> Self {
         let on_settings_update = settings.on_update();
         let clock = DateTimeWidget::new(settings.toolbar_datetime_format().time_format());
 
