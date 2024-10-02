@@ -47,10 +47,7 @@
       "$ref": "defs.json#/definitions/links"
     }
   },
-  "required": [
-    "name",
-    "uniqueName"
-  ],
+  "required": ["name", "uniqueName"],
   "definitions": {
     "gamesDb": {
       "type": "object",
@@ -80,12 +77,7 @@
           "$ref": "defs.json#/definitions/links"
         }
       },
-      "required": [
-        "url",
-        "size",
-        "sha1",
-        "version"
-      ]
+      "required": ["url", "size", "sha1", "version"]
     },
     "core": {
       "type": "object",
@@ -103,10 +95,7 @@
           "format": "uri-reference"
         }
       },
-      "required": [
-        "version",
-        "url"
-      ]
+      "required": ["version", "url"]
     }
   }
 }

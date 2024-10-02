@@ -87,7 +87,7 @@ CREATE TABLE catalog_games_db
     system_id   INTEGER      NOT NULL REFERENCES catalog_systems (id),
     catalog_id  INTEGER      NOT NULL REFERENCES catalogs (id),
     name        VARCHAR(255) NOT NULL,
-    unique_id   VARCHAR(255) NOT NULL,
+    unique_id   VARCHAR(255) NOTd NULL,
     description TEXT         NOT NULL,
     CONSTRAINT catalog_games_system_id_unique_id UNIQUE (system_id, catalog_id, unique_id)
 );

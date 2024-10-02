@@ -1,7 +1,7 @@
 import ui from "@:golem/ui";
-import type { Games as GamesDbSchema } from "$schemas:catalog/games";
+import { GamesDb as GamesDbSchema } from "$schemas:catalog/games_db";
 import { RemoteSystem } from "./catalog";
-import { fetchJsonAndValidate } from "../../utils/fetch_json";
+import { fetchJsonAndValidate } from "../../utils";
 
 /**
  * The Game identification database downloaded from a catalog.
@@ -18,7 +18,7 @@ export class RemoteGamesDb {
     // Dynamic loading to allow for code splitting.
     const json = await fetchJsonAndValidate(
       u,
-      (await import("$schemas:catalog/games")).validate,
+      (await import("$schemas:catalog/games_db")).validate,
     );
 
     return new RemoteGamesDb(u, json, system);

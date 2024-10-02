@@ -1,5 +1,5 @@
 import { type Row } from "@:golem/db";
-import { sql } from "../database";
+import { sql } from "../../utils";
 import { RemoteCatalog, RemoteGamesDb, RemoteSystem } from "../remote";
 import type { Catalog } from "./catalog";
 import { Core } from "./core";
@@ -102,7 +102,7 @@ export class System {
     // Game database.
     const db = await remoteSystem.downloadGameDatabase();
     if (db) {
-      console.log(`Downloaded ${db.schema.game.length} games`);
+      console.log(`Downloaded ${db.schema.games?.length ?? 0} game sources`);
     }
   }
 }

@@ -4,7 +4,7 @@ import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";
 import { Catalog } from "./catalog";
 import type { System } from "./system";
-import { sql } from "../database";
+import { sql } from "$/utils";
 
 export interface CoreRow extends Row {
   id: number;

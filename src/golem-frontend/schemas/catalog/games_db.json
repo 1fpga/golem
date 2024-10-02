@@ -3,27 +3,7 @@
   "$id": "http://1fpga.cloud/schemas/games_db.json",
   "type": "object",
   "properties": {
-    "header": {
-      "$id": "header",
-      "description": "Header information of the game database",
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "url": {
-          "type": "string"
-        },
-        "version": {
-          "type": "string",
-          "$ref": "defs.json#/definitions/version"
-        }
-      }
-    },
-    "game": {
+    "games": {
       "$id": "games",
       "type": "array",
       "items": {
@@ -34,19 +14,38 @@
             "description": "Name of the game",
             "type": "string"
           },
-          "id": {
-            "description": "ID of the game. Must be unique per system.",
+          "number": {
+            "description": "Unique ID of the game. Must be unique per system.",
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "region": {
+            "description": "Region of the game",
             "type": "string"
+          },
+          "languages": {
+            "description": "Languages of the game, either as an array or a single string.",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
           },
           "description": {
             "description": "Description of the game",
             "type": "string"
-          },
-          "rom": {
-            "type": "array",
-            "items": {
-              "$ref": "games_db.json#/definitions/rom"
-            }
           },
           "manufacturer": {
             "description": "Manufacturer of the game",
@@ -65,42 +64,69 @@
           },
           "links": {
             "$ref": "defs.json#/definitions/links"
+          },
+          "sources": {
+            "$id": "sources",
+            "type": "array",
+            "items": {
+              "$ref": "games_db.json#/definitions/source"
+            }
           }
         },
-        "required": [
-          "@name",
-          "@id",
-          "size",
-          "sha1"
-        ]
+        "required": ["name", "number", "sources"]
       }
     }
   },
   "definitions": {
-    "rom": {
+    "source": {
+      "$id": "source",
       "type": "object",
       "properties": {
-        "@name": {
-          "description": "Name of the ROM",
-          "type": "string"
-        },
-        "@size": {
-          "description": "Size of the ROM, in bytes",
+        "files": {
+          "$id": "files",
+          "description": "ROM sources",
+          "type": "array",
+          "items": {
+            "$ref": "games_db.json#/definitions/file"
+          }
+        }
+      }
+    },
+    "file": {
+      "$id": "file",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Unique ID of the file. Must be unique per game.",
           "type": "number"
         },
-        "@sha1": {
-          "description": "SHA1 of the ROM",
+        "extension": {
+          "description": "File extension",
+          "type": "string"
+        },
+        "size": {
+          "description": "File size in bytes",
+          "type": "number"
+        },
+        "crc32": {
+          "description": "CRC32 checksum of the file",
+          "type": "string"
+        },
+        "md5": {
+          "description": "MD5 checksum of the file",
+          "type": "string"
+        },
+        "sha1": {
+          "description": "SHA-1 checksum of the file",
+          "type": "string"
+        },
+        "sha256": {
+          "description": "SHA-256 checksum of the file",
           "type": "string"
         }
       },
-      "required": [
-        "@name",
-        "@size",
-        "@sha1"
-      ]
+      "required": ["id", "extension", "size", "sha1"]
     }
   },
-  "required": [
-    "game"
-  ]
+  "required": ["game"]
 }

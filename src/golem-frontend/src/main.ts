@@ -7,7 +7,6 @@ import { settings_menu } from "./settings";
 import { downloads_menu } from "./downloads";
 import { about } from "./ui/about";
 import { initCommands } from "./ui/commands";
-import { getDb } from "./services/database";
 import { login } from "./ui/login";
 
 // Polyfill for events.
@@ -16,7 +15,6 @@ globalThis.performance = <any>{
 };
 
 async function main_menu() {
-  let coreDb = await getDb();
   const nb_games = 0;
   const nb_cores = 0;
 

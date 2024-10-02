@@ -1,4 +1,4 @@
-import { sql } from "../database";
+import { sql } from "../../utils";
 import { Row } from "@:golem/db";
 import { compareVersions, RemoteCatalog } from "../remote";
 import { System, SystemRow } from "./system";

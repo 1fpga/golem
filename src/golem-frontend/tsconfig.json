@@ -4,21 +4,15 @@
     "baseUrl": ".",
     "module": "ESNext",
     "outDir": "dist",
-    "rootDirs": [
-      "src",
-      "codegen"
-    ],
+    "rootDirs": ["src", "codegen"],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "paths": {
-      "$schemas:*": [
-        "codegen/schemas/*"
-      ],
-      "@:*": [
-        "types/*"
-      ]
+      "$/*": ["src/*"],
+      "$schemas:*": ["codegen/schemas/*"],
+      "@:*": ["types/*"]
     }
   }
 }

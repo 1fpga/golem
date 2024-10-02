@@ -1,5 +1,4 @@
-import * as golemDb from "@:golem/db";
-import { sql } from "./database";
+import { sql } from "../utils";
 
 interface UserStorageRow {
   value: string;

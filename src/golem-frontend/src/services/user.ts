@@ -1,5 +1,5 @@
 import * as ui from "@:golem/ui";
-import { sql } from "./database";
+import { sql } from "../utils";
 
 let loggedInUser: User | null = null;
 

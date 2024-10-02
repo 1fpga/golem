@@ -26,10 +26,7 @@
             "$ref": "defs.json#/definitions/version"
           }
         },
-        "required": [
-          "url",
-          "version"
-        ]
+        "required": ["url", "version"]
       }
     },
     "lastUpdated": {
@@ -42,8 +39,5 @@
       "$ref": "defs.json#/definitions/version"
     }
   },
-  "required": [
-    "name",
-    "version"
-  ]
+  "required": ["name", "version"]
 }

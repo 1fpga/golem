@@ -70,7 +70,7 @@ export default function (baseDir = process.cwd()) {
         let content =
           'import type { ValidateFunction } from "ajv";\n\n' +
           `${ts}\n\n` +
-          `export const validate: ValidateFunction<${capitalCase(id)}>;\n` +
+          `export const validate: ValidateFunction<${capitalCase(id).replace(/ /g, "")}>;\n` +
           "export default validate;";
         fs.writeFileSync(`${outputDir}/${outputFile}.d.ts`, content);
       }

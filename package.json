@@ -3,5 +3,8 @@
   "workspaces": [
     "src/golem-frontend",
     "scripts/patreon"
-  ]
+  ],
+  "devDependencies": {
+    "prettier": "3.3.3"
+  }
 }

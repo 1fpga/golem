@@ -71,12 +71,7 @@
                   "pattern": "^[0-9a-fA-Z]+$"
                 }
               },
-              "required": [
-                "url",
-                "type",
-                "size",
-                "sha1"
-              ]
+              "required": ["url", "type", "size", "sha1"]
             }
           },
           "tags": {
@@ -91,10 +86,7 @@
             "$ref": "defs.json#/definitions/version"
           }
         },
-        "required": [
-          "files",
-          "version"
-        ]
+        "required": ["files", "version"]
       }
     },
     "systems": {
@@ -114,10 +106,5 @@
       ]
     }
   },
-  "required": [
-    "name",
-    "uniqueName",
-    "systems",
-    "releases"
-  ]
+  "required": ["name", "uniqueName", "systems", "releases"]
 }

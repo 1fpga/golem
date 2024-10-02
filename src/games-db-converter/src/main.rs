@@ -20,6 +20,9 @@ impl Datafile {
     pub fn minimize(&mut self) {
         for game in &mut self.games {
             game.metadata = game.archive.take();
+            if let Some(metadata) = &mut game.metadata {
+                metadata.languages.as_mut().map(Languages::normalize);
+            }
 
             let mut all_sources = BTreeMap::new();
             game.sources = game
@@ -65,6 +68,36 @@ struct Game {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+enum Languages {
+    Array(Vec<String>),
+    Single(String),
+    None()
+}
+
+impl Languages {
+    pub fn normalize(&mut self) {
+        match self {
+            Languages::Array(array) => {
+                if array.len() == 1 {
+                    *self = Languages::Single(array[0].clone());
+                } else if array.is_empty() {
+                    *self = Languages::None();
+                }
+            }
+            Languages::Single(s) => {
+                if s.is_empty() {
+                    *self = Languages::None();
+                } else if s.contains(',') {
+                    *self = Languages::Array(s.split(',').map(str::to_string).collect());
+                }
+            }
+            Languages::None() => {}
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Archive {
     #[serde(alias = "@number")]
     pub number: String,
@@ -79,7 +112,7 @@ struct Archive {
     region: String,
 
     #[serde(alias = "@languages", skip_serializing_if = "Option::is_none")]
-    languages: Option<String>,
+    languages: Option<Languages>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -7,8 +7,8 @@ import type {
 } from "$schemas:catalog/catalog";
 import type { System as SystemSchema } from "$schemas:catalog/system";
 import type { Core as CoreSchema } from "$schemas:catalog/core";
-import { RemoteGamesDb } from "./games_database";
-import { fetchJsonAndValidate } from "../../utils/fetch_json";
+import { RemoteGamesDb } from "$/services";
+import { fetchJsonAndValidate } from "$/utils";
 
 export const CATALOG_1FPGA_URL = "https://catalog.1fpga.cloud/";
 

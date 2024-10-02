@@ -14,33 +14,20 @@
             },
             {
               "type": "string",
-              "enum": [
-                "small",
-                "medium",
-                "large"
-              ]
+              "enum": ["small", "medium", "large"]
             }
           ]
         },
         "theme": {
           "type": "string",
-          "enum": [
-            "light",
-            "dark",
-            "toolbarLight"
-          ]
+          "enum": ["light", "dark", "toolbarLight"]
         },
         "toolbar": {
           "type": "object",
           "properties": {
             "datetimeFormat": {
               "type": "string",
-              "enum": [
-                "default",
-                "short",
-                "timeOnly",
-                "hidden"
-              ]
+              "enum": ["default", "short", "timeOnly", "hidden"]
             },
             "showFps": {
               "type": "boolean"
@@ -51,9 +38,7 @@
     },
     "language": {
       "type": "string",
-      "enum": [
-        "en"
-      ]
+      "enum": ["en"]
     }
   }
 }
