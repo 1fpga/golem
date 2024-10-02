@@ -81,7 +81,7 @@ CREATE TABLE catalog_systems
     image_path  TEXT
 );
 
-CREATE TABLE catalog_games
+CREATE TABLE catalog_games_db
 (
     id          INTEGER PRIMARY KEY,
     system_id   INTEGER      NOT NULL REFERENCES catalog_systems (id),
@@ -89,9 +89,6 @@ CREATE TABLE catalog_games
     name        VARCHAR(255) NOT NULL,
     unique_id   VARCHAR(255) NOT NULL,
     description TEXT         NOT NULL,
-    executable  TEXT         NOT NULL,
-    icon_path   TEXT,
-    image_path  TEXT,
     CONSTRAINT catalog_games_system_id_unique_id UNIQUE (system_id, catalog_id, unique_id)
 );
 

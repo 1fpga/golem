@@ -4,7 +4,7 @@ import { RemoteSystem } from "./catalog";
 import { fetchJsonAndValidate } from "../../utils/fetch_json";
 
 /**
- *
+ * The Game identification database downloaded from a catalog.
  */
 export class RemoteGamesDb {
   public static async fetch(url: string, system: RemoteSystem) {

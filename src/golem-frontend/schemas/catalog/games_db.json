@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "http://1fpga.cloud/schemas/games.json",
+  "$id": "http://1fpga.cloud/schemas/games_db.json",
   "type": "object",
   "properties": {
     "header": {
@@ -16,6 +16,10 @@
         },
         "url": {
           "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "$ref": "defs.json#/definitions/version"
         }
       }
     },
@@ -26,11 +30,11 @@
         "$id": "game",
         "type": "object",
         "properties": {
-          "@name": {
+          "name": {
             "description": "Name of the game",
             "type": "string"
           },
-          "@id": {
+          "id": {
             "description": "ID of the game. Must be unique per system.",
             "type": "string"
           },
@@ -41,8 +45,23 @@
           "rom": {
             "type": "array",
             "items": {
-              "$ref": "games.json#/definitions/rom"
+              "$ref": "games_db.json#/definitions/rom"
             }
+          },
+          "manufacturer": {
+            "description": "Manufacturer of the game",
+            "type": "string"
+          },
+          "year": {
+            "description": "Year of the game",
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
           },
           "links": {
             "$ref": "defs.json#/definitions/links"
@@ -72,10 +91,6 @@
         "@sha1": {
           "description": "SHA1 of the ROM",
           "type": "string"
-        },
-        "downloadUrl": {
-          "description": "URL for downloading the ROM",
-          "type": "string"
         }
       },
       "required": [
@@ -86,7 +101,6 @@
     }
   },
   "required": [
-    "header",
     "game"
   ]
 }

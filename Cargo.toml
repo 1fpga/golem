@@ -4,7 +4,7 @@ members = [
     "src/bk2-format",
     "src/cyclone-v",
     "src/de10-nano",
-    "src/fce-movie-format",
+    "src/fce-movie-format", "src/games-db-converter",
     "src/golem",
     "src/golem-core",
     "src/golem-script",
