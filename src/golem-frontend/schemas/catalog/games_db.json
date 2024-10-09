@@ -73,7 +73,11 @@
             }
           }
         },
-        "required": ["name", "number", "sources"]
+        "required": [
+          "name",
+          "number",
+          "sources"
+        ]
       }
     }
   },
@@ -125,8 +129,15 @@
           "type": "string"
         }
       },
-      "required": ["id", "extension", "size", "sha1"]
+      "required": [
+        "id",
+        "extension",
+        "size",
+        "sha1"
+      ]
     }
   },
-  "required": ["game"]
+  "required": [
+    "games"
+  ]
 }

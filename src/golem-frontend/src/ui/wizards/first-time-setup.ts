@@ -1,26 +1,27 @@
 import * as ui from "@:golem/ui";
+import {TextMenuItem} from "@:golem/ui";
 import * as net from "@:golem/net";
-import { DEFAULT_USERNAME, User, Catalog, RemoteCatalog } from "../../services";
+import {Catalog, DEFAULT_USERNAME, RemoteCatalog, User} from "../../services";
 import {
+  call,
+  choice,
   conditional,
+  first,
+  generate,
+  ignore,
+  last,
+  map,
   message,
   repeat,
   sequence,
-  map,
+  skipIf,
+  value,
   wizard,
   WizardStep,
-  skipIf,
-  first,
-  choice,
-  ignore,
-  call,
-  last,
-  generate,
 } from "./wizard";
-import { TextMenuItem } from "@:golem/ui";
-import { Core } from "../../services/database/core";
-import type { Files as RemoteCoreFiles } from "$schemas:catalog/core";
-import { filesize } from "filesize";
+import type {Files as RemoteCoreFiles} from "$schemas:catalog/core";
+import {filesize} from "filesize";
+import {oneLine, stripIndents} from "common-tags";
 
 /**
  * A wizard step that prompts the user for a password.
@@ -38,6 +39,28 @@ function password(
       return undefined;
     }
     return password;
+  };
+}
+
+/**
+ * A wizard step that prompts the user for a file or directory.
+ */
+function selectPath(
+  title: string,
+  options?: { initialDir?: string },
+): WizardStep<string | undefined> {
+  return async (o) => {
+    const path = await ui.selectFile(
+      title,
+      options?.initialDir ?? "/media/fat",
+      {},
+    );
+
+    if (path === undefined) {
+      await o.previous();
+      return undefined;
+    }
+    return path;
   };
 }
 
@@ -93,8 +116,11 @@ const createUserWizardStep = map(
     map(
       message(
         "Set Password",
-        "By default, there is one default user (named 'admin'). You'll be able to add more later.\n\n" +
-          "Would you like to set a password?",
+        stripIndents`
+          By default, there is one default user (named 'admin'). You'll be able to add more later.
+          
+          Would you like to set a password?
+        `,
         { choices: ["No", "Yes"] },
       ),
       async (choice) => choice === 1,
@@ -169,10 +195,10 @@ const catalogAddStep = repeat(
       ignore(
         message(
           "Catalogs - Introduction",
-          `
-              Catalogs are websites where you can download games and cores from.
-              Catalogs can be added or removed later. They require an internet connection when setting up, updating or downloading from.
-            `,
+          stripIndents`
+            Catalogs are websites where you can download games and cores from.
+            Catalogs can be added or removed later. They require an internet connection when setting up, updating or downloading from.
+          `,
         ),
       ),
       conditional(
@@ -184,8 +210,10 @@ const catalogAddStep = repeat(
               async (choice) => choice === 0 && !(await net.isOnline()),
               message(
                 "Catalogs (No Internet Connection)",
-                "You need to be online to set up catalogs. Please connect to the internet and try again. " +
-                  "You can also skip this step and set up catalogs later.",
+                oneLine`You need to be online to set up catalogs.
+                  Please connect to the internet and try again. 
+                  You can also skip this step and set up catalogs later.
+                `,
                 {
                   choices: ["Try again", "Skip"],
                 },
@@ -198,9 +226,12 @@ const catalogAddStep = repeat(
 
         choice(
           "Catalogs",
-          "1FPGA comes with a default catalog of officially supported cores and homebrew games.\n " +
-            "Its URL is 'https://catalog.1fpga.cloud'.\n\n" +
-            "Would you like to add it?",
+          stripIndents`
+            1FPGA comes with a default catalog of officially supported cores and homebrew games.
+            Its URL is 'https://catalog.1fpga.cloud'.
+            
+            Would you like to add it?
+          `,
           [
             [
               "Add the 1FPGA Catalog",
@@ -269,15 +300,19 @@ const selectCores = async (catalog: Catalog) => {
   if (shouldInstall) {
     for (const system of Object.values(systems)) {
       if (selected.has(system.uniqueName)) {
-        await system.install(catalog);
+        await system.installAll(catalog);
       }
     }
+    return true;
   } else {
     await ui.alert(
       "Warning",
-      "Skipping core installation. This may cause some games to not work.\n" +
-        "You can always install cores later in the Download Center.",
+      stripIndents`
+        Skipping core installation. This may cause some games to not work.
+        You can always install cores later in the Download Center.
+      `,
     );
+    return false;
   }
 };
 
@@ -294,13 +329,39 @@ const catalogSetup = sequence(
       throw new Error("Should be exactly 1 catalog during the tutorial.");
     }
 
-    return [call(async () => await selectCores(catalog))];
+    return call(async () => await selectCores(catalog));
   }),
   ignore(
     message(
       "Catalogs",
       "Catalogs have been set up. You can always add more catalogs later in the Download Center.",
     ),
+  ),
+);
+
+const addGames = sequence(
+  map(selectPath("Select the directory with your games"), async (root) => {
+    if (root === undefined) {
+      return null;
+    }
+    return call(async () => {
+      await Catalog.addGamesFromRoot(root);
+    });
+  }),
+);
+
+const maybeAddGames = ignore(
+  choice(
+    "Adding Games",
+    oneLine`
+    If you have games on your SD card, you can add them to the database now.
+    This may take a while depending on the number of games you have.
+    You can always add (or remove) games later.
+  `,
+    [
+      ["Add My Games", addGames],
+      ["Skip", value(null)],
+    ],
   ),
 );
 
@@ -318,16 +379,24 @@ const firstMessage = message(
 export async function firstTimeSetup() {
   console.warn("Running first time setup.");
   await wizard<any>(
-    firstMessage,
-    createUserWizardStep,
-    skipIf(
-      map(catalogAddStep, async (catalog) => catalog === null),
-      catalogSetup,
-    ),
-    message(
-      "First Time Setup",
-      "You're all set up! Welcome to 1FPGA and enjoy your stay.",
-      { choices: ["Thanks"] },
-    ),
+    [
+      firstMessage,
+      createUserWizardStep,
+      skipIf(
+        map(catalogAddStep, async (catalog) => catalog === null),
+        sequence(catalogSetup, maybeAddGames),
+      ),
+      message(
+        "First Time Setup",
+        "You're all set up! Welcome to 1FPGA and enjoy your stay.",
+        { choices: ["Thanks"] },
+      ),
+    ],
+    async (err) => {
+      await ui.alert({
+        title: "Error",
+        message: "An unexpected error occurred: " + err.toString(),
+      });
+    },
   );
 }

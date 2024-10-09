@@ -37,6 +37,12 @@ export class Catalog {
     );
   }
 
+  /**
+   * Add all game files found under a root directory.
+   * @param root The root directory to search for games.
+   */
+  public static async addGamesFromRoot(root: string): Promise<void> {}
+
   public static async listCatalogs(): Promise<Catalog[]> {
     const rows = await sql<CatalogRow>`SELECT *
                                            FROM catalogs`;

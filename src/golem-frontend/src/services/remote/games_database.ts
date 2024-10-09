@@ -1,7 +1,12 @@
-import ui from "@:golem/ui";
-import { GamesDb as GamesDbSchema } from "$schemas:catalog/games_db";
+import * as ui from "@:golem/ui";
+import { fetchJsonAndValidate } from "$/utils";
+import {
+  Games as GamesSchema,
+  GamesDb as GamesDbSchema,
+} from "$schemas:catalog/games_db";
 import { RemoteSystem } from "./catalog";
-import { fetchJsonAndValidate } from "../../utils";
+
+export type RemoteGameSchema = GamesSchema[0];
 
 /**
  * The Game identification database downloaded from a catalog.
@@ -26,7 +31,11 @@ export class RemoteGamesDb {
 
   private constructor(
     public readonly url: string,
-    public readonly schema: GamesDbSchema,
+    private readonly schema: GamesDbSchema,
     public readonly system: RemoteSystem,
   ) {}
+
+  get games(): GamesSchema {
+    return this.schema.games ?? [];
+  }
 }

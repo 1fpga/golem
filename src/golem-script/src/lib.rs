@@ -2,7 +2,7 @@ use crate::console::TracingLogger;
 use crate::module_loader::GolemModuleLoader;
 use crate::modules::CommandMap;
 use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
-use boa_macros::{Finalize, JsData, Trace};
+use boa_macros::{js_str, Finalize, JsData, Trace};
 use boa_runtime::RegisterOptions;
 use golem_ui::application::GoLEmApp;
 use std::path::Path;
@@ -121,7 +121,16 @@ pub fn run(
         .load_link_evaluate(&mut context)
         .await_blocking(&mut context)
     {
-        error!("Error loading script: {}", e.display());
+        error!(error = ?e.display(), "Error loading script");
+
+        if let Some(o_err) = e.as_object() {
+            if let Ok(stack) = o_err.get(js_str!("stack"), &mut context) {
+                if !stack.is_null_or_undefined() {
+                    error!("Javascript stack trace: {}", stack.display());
+                }
+            }
+        }
+
         return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
     }
     debug!(

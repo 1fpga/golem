@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use boa_engine::object::builtins::JsPromise;
 use boa_engine::value::TryFromJs;
 use boa_engine::{Context, JsError, JsNativeError, JsResult, JsString, JsValue, TryIntoJsResult};
 use boa_interop::ContextData;
@@ -61,16 +62,28 @@ pub fn select(
     options: SelectFileOptions,
     ContextData(data): ContextData<HostData>,
     context: &mut Context,
-) -> JsResult<JsValue> {
-    let app = data.app_mut();
+) -> JsPromise {
+    JsPromise::new(
+        move |fns, context| {
+            let app = data.app_mut();
 
-    options
-        .try_into()
-        .and_then(|options| {
-            select_file_path_menu(app, &title, Path::new(&initial_dir), options)
-                .map_err(|e| e.to_string())
-        })
-        .map(|path| path.map(|p| JsString::from(p.to_string_lossy().to_string())))
-        .map_err(|e| JsError::from_opaque(JsString::from(e).into()))
-        .try_into_js_result(context)
+            let result = options
+                .try_into()
+                .and_then(|options| {
+                    select_file_path_menu(app, &title, Path::new(&initial_dir), options)
+                        .map_err(|e| e.to_string())
+                })
+                .map(|path| path.map(|p| JsString::from(p.to_string_lossy().to_string())))
+                .map_err(|e| JsError::from_opaque(JsString::from(e).into()))
+                .try_into_js_result(context);
+
+            match result {
+                Ok(v) => fns.resolve.call(&JsValue::Undefined, &[v], context),
+                Err(e) => fns
+                    .reject
+                    .call(&JsValue::Undefined, &[e.to_opaque(context)], context),
+            }
+        },
+        context,
+    )
 }

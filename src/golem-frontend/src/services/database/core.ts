@@ -1,4 +1,4 @@
-import { compareVersions, RemoteCore, RemoteSystem } from "../remote";
+import { compareVersions, RemoteCore } from "../remote";
 import { Row } from "@:golem/db";
 import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";

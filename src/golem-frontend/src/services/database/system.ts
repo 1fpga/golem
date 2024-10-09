@@ -1,8 +1,10 @@
 import { type Row } from "@:golem/db";
-import { sql } from "../../utils";
-import { RemoteCatalog, RemoteGamesDb, RemoteSystem } from "../remote";
+import { sql } from "$/utils";
+import { RemoteCatalog, RemoteSystem } from "../remote";
 import type { Catalog } from "./catalog";
+import { GamesIdentification } from "./games_database";
 import { Core } from "./core";
+import * as ui from "@:golem/ui";
 
 export interface SystemRow extends Row {
   id: number;
@@ -86,7 +88,7 @@ export class System {
   /**
    * Install the system's cores (all of them), and its game database.
    */
-  public async install(catalog: Catalog) {
+  public async installAll(catalog: Catalog) {
     const remoteSystem = await this.fetchRemote();
     const core = await remoteSystem.fetchCores(true);
     const coreNames = Object.keys(core);
@@ -102,7 +104,12 @@ export class System {
     // Game database.
     const db = await remoteSystem.downloadGameDatabase();
     if (db) {
-      console.log(`Downloaded ${db.schema.games?.length ?? 0} game sources`);
+      console.log(`Downloaded ${db.games.length} game sources`);
+
+      ui.show("Installing game database...", `System "${this.name}"`);
+      await Promise.all(
+        db.games.map((game) => GamesIdentification.create(game, this, catalog)),
+      );
     }
   }
 }

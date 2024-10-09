@@ -10,8 +10,8 @@ function start_core(path: string) {
   c.loop();
 }
 
-function select_core_file() {
-  let f = ui.selectFile("Select Core", "/media/fat", {
+async function select_core_file() {
+  let f = await ui.selectFile("Select Core", "/media/fat", {
     dirFirst: false,
     extensions: ["rbf"],
   });

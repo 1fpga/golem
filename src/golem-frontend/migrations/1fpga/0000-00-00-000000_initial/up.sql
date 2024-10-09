@@ -29,7 +29,7 @@ CREATE TABLE user_cores
 (
     id              INTEGER PRIMARY KEY,
     user_id         INTEGER   NOT NULL REFERENCES users (id),
-    catalog_core_id INTEGER   NOT NULL REFERENCES catalog_cores (id),
+    catalog_core_id INTEGER   NOT NULL REFERENCES cores (id),
     favorite        BOOLEAN   NOT NULL DEFAULT FALSE,
     last_played_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -46,7 +46,7 @@ CREATE TABLE user_games
 CREATE TABLE savestates
 (
     id              INTEGER PRIMARY KEY,
-    core_id         INTEGER   NOT NULL REFERENCES catalog_cores (id),
+    core_id         INTEGER   NOT NULL REFERENCES cores (id),
     game_id         INTEGER   NOT NULL REFERENCES user_games (id),
     user_id         INTEGER   NOT NULL,
     state_path      TEXT      NOT NULL,
@@ -81,15 +81,28 @@ CREATE TABLE catalog_systems
     image_path  TEXT
 );
 
-CREATE TABLE catalog_games_db
+-- Games that can be identified by their files (see `catalog_games_db_files`).
+CREATE TABLE games_identification
 (
     id          INTEGER PRIMARY KEY,
     system_id   INTEGER      NOT NULL REFERENCES catalog_systems (id),
     catalog_id  INTEGER      NOT NULL REFERENCES catalogs (id),
     name        VARCHAR(255) NOT NULL,
-    unique_id   VARCHAR(255) NOTd NULL,
+    region      VARCHAR(255),
+    languages   VARCHAR(255),
     description TEXT         NOT NULL,
-    CONSTRAINT catalog_games_system_id_unique_id UNIQUE (system_id, catalog_id, unique_id)
+    CONSTRAINT catalog_games_db_unique UNIQUE (system_id, catalog_id, name, region, languages)
+);
+
+-- Files that are related to a game.
+CREATE TABLE games_identification_files
+(
+    id        INTEGER PRIMARY KEY,
+    games_id  INTEGER      NOT NULL REFERENCES games_identification (id),
+    extension VARCHAR(255) NOT NULL,
+    size      INTEGER      NOT NULL,
+    sha256    VARCHAR(64)  NOT NULL,
+    CONSTRAINT catalog_games_db_files_size_hash UNIQUE (size, sha256)
 );
 
 -- Installed cores from a catalog.

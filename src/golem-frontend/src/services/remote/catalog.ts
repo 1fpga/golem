@@ -1,13 +1,12 @@
 import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";
-
 import type {
   Catalog as CatalogSchema,
   System as CatalogSystemSchema,
 } from "$schemas:catalog/catalog";
 import type { System as SystemSchema } from "$schemas:catalog/system";
 import type { Core as CoreSchema } from "$schemas:catalog/core";
-import { RemoteGamesDb } from "$/services";
+import { RemoteGamesDb } from "$/services/remote/games_database";
 import { fetchJsonAndValidate } from "$/utils";
 
 export const CATALOG_1FPGA_URL = "https://catalog.1fpga.cloud/";
@@ -266,16 +265,19 @@ export class RemoteCatalog {
 
     ui.show("Fetching catalog...", "URL: " + url);
 
-    // Dynamic loading to allow for code splitting.
-    let validateCatalog = (await import("$schemas:catalog/catalog")).validate;
-
     // Add protocol to the URL.
     if (!url.startsWith("https://") && !url.startsWith("http://")) {
       url = "https://" + url;
     }
 
     try {
-      const json = await fetchJsonAndValidate(url, validateCatalog);
+      // Dynamic loading to allow for code splitting. And also don't allow for retries
+      // since we're already in a retry loop.
+      const json = await fetchJsonAndValidate(
+        url,
+        (await import("$schemas:catalog/catalog")).validate,
+        { allowRetry: false },
+      );
       const catalog = new RemoteCatalog(url, json);
       if (all) {
         await catalog.fetchDeep();

@@ -9,4 +9,14 @@ declare module "@:fs" {
   export function writeFile(path: string, data: ArrayBuffer): Promise<void>;
 
   export function readFile(path: string): Promise<ArrayBuffer>;
+
+  export function readTextFile(path: string): Promise<string>;
+
+  export function deleteFile(path: string): Promise<void>;
+
+  export function readDir(path: string): Promise<string[]>;
+
+  export function isFile(path: string): Promise<boolean>;
+
+  export function isDir(path: string): Promise<boolean>;
 }

@@ -9,11 +9,6 @@
  */
 declare module "@:golem/ui" {
   /**
-   * Represents the state of a text menu.
-   */
-  export type TextMenuState = {};
-
-  /**
    * Represents a textual menu item.
    */
   export interface TextMenuItem<R> {
@@ -79,6 +74,7 @@ declare module "@:golem/ui" {
 
   /**
    * Show a prompt to the user for a button/key password.
+   * @param title The title of the prompt.
    * @param message The message (title) to show to the user.
    * @param length The length of the password.
    * @returns The user's password (as a string), or `null` if the user canceled the operation.
@@ -119,5 +115,5 @@ declare module "@:golem/ui" {
     title: string,
     initialDir: string,
     options: SelectFileOptions,
-  ): string | undefined;
+  ): Promise<string | undefined>;
 }

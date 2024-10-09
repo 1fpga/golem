@@ -20,3 +20,24 @@ export declare class Image {
    */
   save(path: string): Promise<void>;
 }
+
+export declare class JsonSchema<T> {
+  /**
+   * Create a new JSON schema.
+   * @param schema The schema to use.
+   */
+  constructor(schema: object);
+
+  /**
+   * Validate the given JSON object.
+   * @param json The JSON object to validate.
+   * @returns Whether the JSON object is valid.
+   */
+  validate(json: unknown): json is T;
+
+  /**
+   * Get the errors from the last validation.
+   * @returns The errors from the last validation.
+   */
+  get errors(): string[] | null;
+}
