@@ -158,6 +158,10 @@ struct UiMenuOptions {
     back: Option<JsValue>,
     sort: Option<JsValue>,
     sort_label: Option<String>,
+
+    /// If this is Some(...) do not show the menu but select the item with the given label
+    /// right await (first label being found).
+    selected: Option<String>,
 }
 
 fn text_menu_(
@@ -181,13 +185,23 @@ fn text_menu_(
             .with_sort_opt(sort_label)
             .with_state(Some(state));
 
-        let (result, new_state) = menu::text_menu(
-            app,
-            &options.title.clone().unwrap_or_default(),
-            options.items.as_slice(),
-            menu_options,
-        );
-        state = new_state;
+        let result = if let Some(label) = options.selected.take() {
+            let selected_idx = options.items.iter().position(|i| i.label == label);
+            if let Some(selected_idx) = selected_idx {
+                MenuAction::Select(selected_idx)
+            } else {
+                MenuAction::Noop
+            }
+        } else {
+            let (result, new_state) = menu::text_menu(
+                app,
+                &options.title.clone().unwrap_or_default(),
+                options.items.as_slice(),
+                menu_options,
+            );
+            state = new_state;
+            result
+        };
 
         fn call_callable(
             item: Option<&mut TextMenuItem>,
@@ -198,20 +212,24 @@ fn text_menu_(
                 let mut result = if let Some(item) = item {
                     let js_item = item.clone().try_js_into(context)?;
 
-                    let result =
+                    let mut result =
                         callable.call(&JsValue::undefined(), &[js_item.clone()], context)?;
+                    while let Some(p) = result.as_promise() {
+                        result = p.await_blocking(context).map_err(JsError::from_opaque)?;
+                    }
+
                     if let Ok(new_item) = TryFromJs::try_from_js(&js_item, context) {
                         *item = new_item;
                     }
 
                     result
                 } else {
-                    callable.call(&JsValue::undefined(), &[], context)?
+                    let mut result = callable.call(&JsValue::undefined(), &[], context)?;
+                    while let Some(p) = result.as_promise() {
+                        result = p.await_blocking(context).map_err(JsError::from_opaque)?;
+                    }
+                    result
                 };
-
-                while let Some(p) = result.as_promise() {
-                    result = p.await_blocking(context).map_err(JsError::from_opaque)?;
-                }
 
                 if result.is_undefined() {
                     Ok(None)

@@ -11,7 +11,7 @@ import * as ui from "@:golem/ui";
  */
 export async function fetchJsonAndValidate<T>(
   url: string,
-  validate: ValidateFunction<T>,
+  validate: ValidateFunction<T> | ((json: unknown) => json is T),
   options?: {
     allowRetry?: boolean;
     onPreValidate?: (json: any) => Promise<void>;
@@ -29,7 +29,9 @@ export async function fetchJsonAndValidate<T>(
       } else {
         throw new Error(
           `Validation error: ` +
-            (validate.errors || []).map((e) => e.message || "").join("\n"),
+            ((validate as any).errors ?? [])
+              .map((e: any) => e.message || "")
+              .join("\n"),
         );
       }
     } catch (e) {
@@ -39,7 +41,7 @@ export async function fetchJsonAndValidate<T>(
 
       const choice = await ui.alert({
         title: "Error fetching JSON",
-        message: `URL: ${url}\n${e}`,
+        message: `URL: ${url}\n${JSON.stringify(e)}`,
         choices: ["Retry fetching", "Cancel"],
       });
 

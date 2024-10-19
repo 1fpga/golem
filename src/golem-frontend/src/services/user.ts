@@ -15,6 +15,13 @@ export interface UserRow {
 
 export class User {
   /**
+   * Log out the currently logged-in user.
+   */
+  public static async logout() {
+    loggedInUser = null;
+  }
+
+  /**
    * Convert a password from a prompt into a string.
    */
   public static passwordToString(password: string[] | null): string | null {
@@ -27,9 +34,14 @@ export class User {
 
   /**
    * Get the currently logged-in user.
+   * @param fail Whether to throw an error if no user is logged in.
    * @returns The logged-in user, or `null` if no user is logged in.
    */
-  public static async loggedInUser(): Promise<User | null> {
+  public static loggedInUser(fail: true): User;
+  public static loggedInUser(fail?: boolean): User | null {
+    if (loggedInUser === null && fail) {
+      throw new Error("No user logged in");
+    }
     return loggedInUser;
   }
 
@@ -41,7 +53,7 @@ export class User {
    *          (e.g. invalid password).
    */
   public static async login(
-    username: string,
+    username: string = DEFAULT_USERNAME,
     force = false,
   ): Promise<User | null> {
     let [user] = await sql<UserRow>`SELECT *

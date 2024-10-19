@@ -1,5 +1,4 @@
 use crate::input::shortcut::AxisValue;
-use bitvec::prelude::*;
 use itertools::Itertools;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;

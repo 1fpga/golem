@@ -8,7 +8,9 @@ use crate::module_loader::GolemModuleLoader;
 mod commands;
 mod core;
 mod db;
+mod fs;
 mod net;
+mod schema;
 mod settings;
 mod shortcuts;
 mod ui;
@@ -26,7 +28,9 @@ pub(super) fn register_modules(
         commands::create_module,
         core::create_module,
         db::create_module,
+        fs::create_module,
         net::create_module,
+        schema::create_module,
         settings::create_module,
         video::create_module,
         ui::create_module,

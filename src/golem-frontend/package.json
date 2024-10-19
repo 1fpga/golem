@@ -7,7 +7,6 @@
   "scripts": {
     "build": "rollup -c --failAfterWarnings",
     "build-ts": "tsc",
-    "retronomicon-update": "openapi-typescript https://retronomicon.land/api/v1/openapi.json -o ./types/retronomicon.d.ts",
     "test": "jest"
   },
   "keywords": [],

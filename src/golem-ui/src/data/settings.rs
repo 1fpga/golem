@@ -14,10 +14,6 @@ use std::time::Duration;
 use strum::Display;
 use tracing::{debug, error};
 
-fn default_retronomicon_backend_() -> Vec<Url> {
-    vec![Url::parse("https://retronomicon.land/api/v1/").unwrap()]
-}
-
 fn create_settings_save_thread_(
     mut update_recv: BusReader<()>,
     path: Arc<RwLock<PathBuf>>,
@@ -99,10 +95,6 @@ pub struct UiSettings {
 pub struct InnerSettings {
     #[merge(strategy = merge::option::recurse)]
     ui: Option<UiSettings>,
-
-    #[serde(default)]
-    #[merge(strategy = merge::overwrite)]
-    retronomicon_backend: Vec<Url>,
 }
 
 impl InnerSettings {
@@ -309,11 +301,6 @@ impl Settings {
         let value: InnerSettings = serde_json::from_value(json).map_err(|e| e.to_string())?;
         self.update(value);
         Ok(())
-    }
-
-    #[inline]
-    pub fn retronomicon_backend(&self) -> Vec<Url> {
-        default_retronomicon_backend_()
     }
 
     #[inline]

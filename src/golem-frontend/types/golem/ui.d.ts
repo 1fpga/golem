@@ -102,7 +102,7 @@ declare module "@:golem/ui" {
     dirFirst?: boolean;
     showHidden?: boolean;
     showExtensions?: boolean;
-    showDirectory?: boolean;
+    directory?: boolean;
     filterPattern?: string;
     extensions?: string[];
   }

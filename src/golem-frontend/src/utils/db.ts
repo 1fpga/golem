@@ -25,6 +25,15 @@ async function applyMigrations(db: golemDb.Db, _name: string, latest: string) {
                   ON CONFLICT (key)
         DO UPDATE SET value = excluded.value`;
   }
+
+  console.log(
+    "Migrations applied. Latest migration: ",
+    (
+      await sql<{ value: string }>`SELECT value
+                                         FROM __1fpga_settings
+                                         WHERE key = 'latest_migration'`
+    )[0]?.value,
+  );
 }
 
 async function createMigrationTable(
@@ -63,7 +72,7 @@ async function initDb(db: golemDb.Db, name: string): Promise<void> {
 
 let db: golemDb.Db | null = null;
 
-export async function getDb(): Promise<golemDb.Db> {
+async function getDb(): Promise<golemDb.Db> {
   if (db === null) {
     db = await golemDb.load("1fpga");
     await initDb(db, "1fpga");
@@ -87,9 +96,39 @@ const driver: SqlTagDriver<undefined, never> = {
     return "?";
   },
   async query(sql: string, params: any[]): Promise<[any[], undefined]> {
-    let { rows } = await (await getDb()).query(sql, params);
-    return [rows, undefined];
+    let db = await getDb();
+    let result = await db.query(sql, params);
+    return [result.rows, undefined];
   },
 };
 
 export const sql = new SqlTag(driver);
+
+export interface SqlTransactionTag extends SqlTag<undefined, never> {
+  commit(): Promise<void>;
+
+  rollback(): Promise<void>;
+
+  db: golemDb.Queryable;
+}
+
+export async function transaction(): Promise<SqlTransactionTag> {
+  const db = await (await getDb()).beginTransaction();
+
+  const tag = new SqlTag({
+    ...driver,
+    async query(sql: string, params: any[]): Promise<[any[], undefined]> {
+      let { rows } = await db.query(sql, params);
+      return [rows, undefined];
+    },
+  }) as SqlTransactionTag;
+
+  tag.commit = async () => {
+    await db.commit();
+  };
+  tag.rollback = async () => {
+    await db.rollback();
+  };
+  tag.db = db;
+  return tag;
+}

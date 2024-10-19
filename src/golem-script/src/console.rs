@@ -30,6 +30,18 @@ impl Logger for TracingLogger {
         Ok(())
     }
 
+    // TODO: reenable this when adding support for debug logging
+    // fn debug(&self, msg: String, state: &ConsoleState, context: &mut Context) -> JsResult<()> {
+    //     let indent = state.indent();
+    //     if tracing::enabled!(tracing::Level::TRACE) {
+    //         let stack = stack(context);
+    //         debug!(?stack, "{msg:>indent$}");
+    //     } else {
+    //         debug!("{msg:>indent$}");
+    //     }
+    //     Ok(())
+    // }
+
     fn info(&self, msg: String, state: &ConsoleState, context: &mut Context) -> JsResult<()> {
         self.log(msg, state, context)
     }

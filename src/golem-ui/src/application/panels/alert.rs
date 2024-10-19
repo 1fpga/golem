@@ -143,11 +143,6 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
 pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -> Option<usize> {
     let display_area = app.main_buffer().bounding_box();
 
-    let character_style = u8g2_fonts::U8g2TextStyle::new(
-        u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
-        BinaryColor::On,
-    );
-
     let mut choices = choices
         .iter()
         .enumerate()

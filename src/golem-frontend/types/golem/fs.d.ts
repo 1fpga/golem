@@ -1,9 +1,9 @@
-// Type definitions for the `@:fs` module in Golem Script.
+// Type definitions for the `@:golem/fs` module in Golem Script.
 
 /**
  * File system functions for Golem Script.
  */
-declare module "@:fs" {
+declare module "@:golem/fs" {
   export function writeFile(path: string, data: string): Promise<void>;
   export function writeFile(path: string, data: Uint8Array): Promise<void>;
   export function writeFile(path: string, data: ArrayBuffer): Promise<void>;
@@ -19,4 +19,15 @@ declare module "@:fs" {
   export function isFile(path: string): Promise<boolean>;
 
   export function isDir(path: string): Promise<boolean>;
+
+  export function findAllFiles(
+    root: string,
+    options?: { extensions?: string[] },
+  ): Promise<string[]>;
+
+  export function sha256(path: string): Promise<string>;
+  export function sha256(path: string[]): Promise<string[]>;
+
+  export function fileSize(path: string): Promise<number>;
+  export function fileSize(path: string[]): Promise<number[]>;
 }

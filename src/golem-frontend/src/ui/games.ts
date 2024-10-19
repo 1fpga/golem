@@ -1,109 +1,157 @@
-import * as core from "@:golem/core";
 import * as ui from "@:golem/ui";
-import { Image } from "@:golem/util";
-import { writeFile } from "@:fs";
+import { TextMenuItem } from "@:golem/ui";
+import { Games, GameSortOrder } from "$/services";
 
-async function start_game(game_id: number) {
-  const db_game = null;
-  if (db_game === null) {
-    ui.alert("Game not found", `Could not find the game with id ${game_id}.`);
-    return;
+const PAGE_SIZE = 100;
+
+export interface PickGameOptions {
+  title?: string;
+  sort?: GameSortOrder;
+  includeUnplayed?: boolean;
+  details?: boolean;
+}
+
+/**
+ * Pick a game from the list of games available on the platform.
+ * @param options Options for the game selection.
+ * @returns The selected game, or `null` if no game was selected (e.g. "Back").
+ */
+export async function pickGame(
+  options: PickGameOptions = {},
+): Promise<Games | null> {
+  const sortOptions = {
+    "Name (A-Z)": GameSortOrder.NameAsc,
+    "Name (Z-A)": GameSortOrder.NameDesc,
+    "System (A-Z)": GameSortOrder.SystemAsc,
+    "Last Played": GameSortOrder.LastPlayed,
+    Favorites: GameSortOrder.Favorites,
+  };
+  let currentSort = Object.keys(sortOptions).indexOf(
+    options.sort ?? GameSortOrder.NameAsc,
+  );
+  let includeUnplayed = options.includeUnplayed ?? true;
+  let index = 0;
+
+  async function buildItems(): Promise<TextMenuItem<Games | string>[]> {
+    const { total, games } = await Games.list(
+      {
+        sort: Object.values(sortOptions)[currentSort],
+        includeUnplayed,
+      },
+      {
+        limit: PAGE_SIZE,
+      },
+    );
+
+    const gameSet: Map<String, Games[]> = games.reduce((acc, game) => {
+      if (!acc.has(game.name)) {
+        acc.set(game.name, []);
+      }
+      acc.get(game.name).push(game);
+      return acc;
+    }, new Map());
+
+    const gameSetItems = [...gameSet.entries()].map(([name, gameArray]) => ({
+      label: "" + name,
+      select: async () => {
+        return gameArray[0];
+      },
+      details: async () => {
+        const result = await show_details_menu("" + name, gameArray);
+        if (result) {
+          return result;
+        }
+      },
+      marker: gameArray[0]?.systemName ?? "",
+    }));
+
+    return [
+      ...gameSetItems,
+      ...(total > PAGE_SIZE
+        ? [
+            {
+              label: "Next page...",
+              select: async () => {
+                index += PAGE_SIZE;
+                return "next";
+              },
+            },
+          ]
+        : []),
+    ];
   }
 
-  // const db_core = await gameDb.queryOne("SELECT * from cores WHERE id = ?", [
-  //   db_game.core_id,
-  // ]);
-  // if (db_core === null) {
-  //   ui.alert("Game not found", `Could not find the game with id ${game_id}.`);
-  //   return;
-  // }
-  //
-  // const { rows: db_files } = await gameDb.query(
-  //   "SELECT * from core_files WHERE game_id = ? AND core_id = ?",
-  //   [game_id, db_game.core_id],
-  // );
-  //
-  // const g = db_game;
-  // const c = db_core;
-  // const f = db_files;
-  //
-  // if (!g || !c) {
-  //   ui.alert(
-  //     "Game not found",
-  //     `Could not find the game with id ${game_id} or a core for it.`,
-  //   );
-  //   return;
-  // }
-  //
-  // await gameDb.execute("UPDATE games SET last_played = ? WHERE id = ?", [
-  //   new Date().toISOString(),
-  //   g.id,
-  // ]);
-  //
-  // const golem_core = core.load({
-  //   core: { type: "Path", path: "" + c.path },
-  //   game: { type: "RomPath", path: "" + g.path },
-  //   files: f.map((file) => "" + file.path),
-  // });
-  // if (golem_core) {
-  //   console.log("Starting core: " + golem_core.name);
-  //
-  //   golem_core.loop({
-  //     async onSaveState(savestate: Uint8Array, screenshot: Image) {
-  //       console.log(
-  //         "savestate: ",
-  //         savestate.byteLength,
-  //         screenshot.width,
-  //         screenshot.height,
-  //       );
-  //       try {
-  //         await writeFile("/media/fat/savestate.ss", savestate);
-  //       } catch (e) {
-  //         console.error(e);
-  //       }
-  //     },
-  //   });
-  // }
+  let selected: string | Games = "next";
+
+  while (selected === "next") {
+    const items = await buildItems();
+    selected = await ui.textMenu<string | Games>({
+      title: options.title ?? "",
+      back: "back",
+      sort_label: Object.keys(sortOptions)[currentSort],
+      sort: async () => {
+        currentSort = (currentSort + 1) % Object.keys(sortOptions).length;
+        index = 0;
+
+        return {
+          sort_label: Object.keys(sortOptions)[currentSort],
+          items: await buildItems(),
+        };
+      },
+      items,
+    });
+  }
+  return typeof selected == "string" ? null : selected;
+}
+
+async function show_details_menu(
+  name: string,
+  gameArray: Games[],
+): Promise<Games | null> {
+  const result = await ui.textMenu<Games | 0>({
+    title: name,
+    back: 0,
+    items: [
+      {
+        label: "Favorite",
+        marker: gameArray[0].favorite ? "Yes" : "No",
+        select: async (item) => {
+          await gameArray[0].setFavorite(!gameArray[0].favorite);
+          item.marker = gameArray[0].favorite ? "Yes" : "No";
+        },
+      },
+      ...(gameArray.length > 1
+        ? [
+            "-",
+            "Multiple versions available:",
+            ...gameArray.map((game) => ({
+              label: game.romPath ?? "-",
+              select: async () => {
+                return game;
+              },
+            })),
+          ]
+        : [
+            {
+              label: "Select",
+              select: async () => {
+                return gameArray[0];
+              },
+            },
+          ]),
+    ],
+  });
+
+  return result === 0 ? null : result;
 }
 
 export async function games_menu() {
-  const sortOptions = {
-    "Name (A-Z)": "name ASC",
-    "Name (Z-A)": "name DESC",
-    "System (A-Z)": "cores.system_slug ASC",
-    "Last Played": "games.last_played DESC",
-    Favorites: "games.favorite DESC, name ASC",
-  };
-  let current_sort = 0;
-
-  async function buildItems() {
-    // let gameDb = await getDb();
-    // let games = await gameDb.query(
-    //   `SELECT games.id as id, games.name as name, cores.system_slug as system
-    //          FROM games
-    //                   LEFT JOIN cores ON games.core_id = cores.id
-    //          ORDER BY ${Object.values(sortOptions)[current_sort]}`,
-    // );
-    let games: any[] = [];
-    return games.map((game) => ({
-      label: "" + game.name,
-      select: () => start_game(game.id as number),
-      marker: "" + game.system,
-    }));
+  while (true) {
+    const game = await pickGame({ title: "Game Library" });
+    if (game) {
+      await game.launch();
+    } else {
+      return;
+    }
   }
-
-  await ui.textMenu({
-    title: "Games",
-    back: true,
-    sort_label: Object.keys(sortOptions)[current_sort],
-    sort: async () => {
-      current_sort = (current_sort + 1) % Object.keys(sortOptions).length;
-
-      return {
-        sort_label: Object.keys(sortOptions)[current_sort],
-        items: await buildItems(),
-      };
-    },
-    items: await buildItems(),
-  });
 }

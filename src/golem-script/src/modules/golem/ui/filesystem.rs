@@ -19,7 +19,7 @@ pub struct SelectFileOptions {
     dir_first: Option<bool>,
     show_hidden: Option<bool>,
     show_extensions: Option<bool>,
-    show_directory: Option<bool>,
+    directory: Option<bool>,
     filter_pattern: Option<String>,
     extensions: Option<Vec<String>>,
 }
@@ -49,7 +49,7 @@ impl TryInto<FilesystemMenuOptions> for SelectFileOptions {
             dir_first: self.dir_first,
             show_hidden: self.show_hidden,
             show_extensions: self.show_extensions,
-            directory: self.show_directory,
+            directory: self.directory,
             pattern,
             extensions,
         })

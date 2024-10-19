@@ -1,7 +1,8 @@
 use crate::console::TracingLogger;
 use crate::module_loader::GolemModuleLoader;
 use crate::modules::CommandMap;
-use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
+use boa_engine::property::Attribute;
+use boa_engine::{js_string, Context, JsError, JsObject, JsResult, JsValue, Module, Source};
 use boa_macros::{js_str, Finalize, JsData, Trace};
 use boa_runtime::RegisterOptions;
 use golem_ui::application::GoLEmApp;
@@ -58,7 +59,7 @@ impl HostData {
 fn create_context(
     script: Option<&impl AsRef<Path>>,
     host_defined: HostData,
-) -> Result<(Context, Rc<GolemModuleLoader>), JsError> {
+) -> JsResult<(Context, Rc<GolemModuleLoader>)> {
     let loader = match script {
         Some(p) => {
             let dir = p.as_ref().parent().expect("Cannot use root.");
@@ -70,6 +71,26 @@ fn create_context(
 
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
     context.insert_data(host_defined);
+
+    let version = {
+        let major = (env!("CARGO_PKG_VERSION_MAJOR"))
+            .parse::<u32>()
+            .expect("Invalid major version");
+        let minor = (env!("CARGO_PKG_VERSION_MINOR"))
+            .parse::<u32>()
+            .expect("Invalid major version");
+
+        let version = JsObject::with_null_proto();
+        version.set(js_str!("major"), major, false, &mut context)?;
+        version.set(js_str!("minor"), minor, false, &mut context)?;
+        version
+    };
+
+    let one_fpga = JsObject::default();
+    one_fpga.set(js_str!("name"), js_string!("OneFPGA"), false, &mut context)?;
+    one_fpga.set(js_str!("version"), version, false, &mut context)?;
+
+    context.register_global_property(js_str!("ONE_FPGA"), one_fpga, Attribute::ENUMERABLE)?;
 
     Ok((context, loader))
 }

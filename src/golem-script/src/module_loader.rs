@@ -7,29 +7,45 @@ use boa_engine::{Context, JsResult, JsString, Module};
 use boa_interop::embed_module;
 use boa_interop::loaders::HashMapModuleLoader;
 
+fn create_root_dirs() -> Result<(), std::io::Error> {
+    std::fs::create_dir_all("/media/fat/golem/scripts/")?;
+    std::fs::create_dir_all("/media/fat/golem/plugins/")?;
+    Ok(())
+}
+
 /// A module loader that also understands "freestanding" modules and
 /// special resolution.
 pub struct GolemModuleLoader {
     named_modules: Rc<RefCell<HashMapModuleLoader>>,
     inner: Rc<dyn ModuleLoader>,
+    scripts: Rc<dyn ModuleLoader>,
+    plugins: Rc<dyn ModuleLoader>,
 }
 
 impl Default for GolemModuleLoader {
     fn default() -> Self {
+        let _ = create_root_dirs();
+
         Self {
             named_modules: Rc::new(RefCell::new(HashMapModuleLoader::default())),
             inner: Rc::new(embed_module!("../golem-frontend/dist/")),
+            scripts: Rc::new(SimpleModuleLoader::new("/media/fat/golem/scripts/").unwrap()),
+            plugins: Rc::new(SimpleModuleLoader::new("/media/fat/golem/plugins/").unwrap()),
         }
     }
 }
 
 impl GolemModuleLoader {
     fn new_unchecked(root: PathBuf) -> Self {
+        let _ = create_root_dirs();
+
         Self {
             named_modules: Rc::new(RefCell::new(HashMapModuleLoader::default())),
             inner: Rc::new(
                 SimpleModuleLoader::new(root).expect("Could not find the script folder."),
             ),
+            scripts: Rc::new(SimpleModuleLoader::new("/media/fat/golem/scripts/").unwrap()),
+            plugins: Rc::new(SimpleModuleLoader::new("/media/fat/golem/plugins/").unwrap()),
         }
     }
 

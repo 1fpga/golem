@@ -7,8 +7,8 @@ import del from "rollup-plugin-delete";
 
 import codegen from "./rollup/rollup-plugin-codegen.js";
 import {
-  transformTaggedTemplate,
   transformCommonTags,
+  transformTaggedTemplate,
 } from "./rollup/rollup-plugin-template-literals.js";
 import dbMigrations from "./rollup/rollup-plugin-db-migrations.js";
 
@@ -28,28 +28,49 @@ export default {
     nodeResolve({
       preferBuiltins: false,
     }),
+    typescript({
+      exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],
+    }),
+    json(),
     commonjs({
       extensions: [".js", ".ts", ".cjs"],
       transformMixedEsModules: true,
     }),
     transformTaggedTemplate({
-      tagsToProcess: ["sql"],
+      tagsToProcess: [
+        "sql",
+        "sql1",
+        "sql2",
+        "sql3",
+        "sql4",
+        "sql5",
+        "sql6",
+        "sql7",
+      ],
       transformer: (sql) => {
         return sql.replace(/\n/g, " ").replace(/\s\s+/g, " ");
       },
     }),
     transformCommonTags("oneLine"),
+    transformCommonTags("source"),
     transformCommonTags("stripIndent"),
     transformCommonTags("stripIndents"),
-    typescript({
-      exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],
-    }),
-    json(),
     [
       ...(production
         ? [
             terser({
-              compress: true,
+              compress: {
+                arguments: true,
+                booleans_as_integers: true,
+                ecma: 2020,
+                module: true,
+                passes: 2,
+                pure_new: true,
+                unsafe: true,
+                unsafe_arrows: true,
+                unsafe_comps: true,
+                unsafe_math: true,
+              },
               ecma: 2020,
               mangle: true,
             }),
@@ -58,14 +79,16 @@ export default {
     ],
   ],
   external: [
-    "@:fs",
     "@:golem/commands",
     "@:golem/core",
     "@:golem/db",
+    "@:golem/fs",
     "@:golem/net",
     "@:golem/patrons",
+    "@:golem/schema",
     "@:golem/settings",
     "@:golem/storage",
     "@:golem/ui",
+    "@:golem/utils",
   ],
 };

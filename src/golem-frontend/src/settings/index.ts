@@ -1,11 +1,12 @@
 import * as ui from "@:golem/ui";
-import * as settings from "@:golem/settings";
+import * as golemSettings from "@:golem/settings";
 import { commands_settings_menu } from "./commands";
+import { Games, StartOn, StartOnSetting, UserSettings } from "$/services";
 
-const fontSizes: settings.FontSize[] = ["small", "medium", "large"];
+const fontSizes: golemSettings.FontSize[] = ["small", "medium", "large"];
 
 function fontSizeMarker() {
-  switch (settings.getSettings().ui?.menuFontSize || "medium") {
+  switch (golemSettings.getSettings().ui?.menuFontSize || "medium") {
     case "small":
       return "Small";
     case "medium":
@@ -16,13 +17,13 @@ function fontSizeMarker() {
 }
 
 function updateFontSize<T>(item: ui.TextMenuItem<T>) {
-  const current = settings.getSettings().ui?.menuFontSize || "medium";
+  const current = golemSettings.getSettings().ui?.menuFontSize || "medium";
   const next = fontSizes[(fontSizes.indexOf(current) + 1) % fontSizes.length];
-  settings.updateSettings({ ui: { menuFontSize: next } });
+  golemSettings.updateSettings({ ui: { menuFontSize: next } });
   item.marker = fontSizeMarker();
 }
 
-const datetimeFormats: settings.DateTimeFormat[] = [
+const datetimeFormats: golemSettings.DateTimeFormat[] = [
   "default",
   "short",
   "timeOnly",
@@ -30,7 +31,7 @@ const datetimeFormats: settings.DateTimeFormat[] = [
 ];
 
 function datetimeFormat() {
-  return settings.getSettings().ui?.toolbarDatetimeFormat || "default";
+  return golemSettings.getSettings().ui?.toolbarDatetimeFormat || "default";
 }
 
 function datetimeFormatMarker() {
@@ -52,22 +53,88 @@ function updateDateTimeFormat<T>(item: ui.TextMenuItem<T>) {
     datetimeFormats[
       (datetimeFormats.indexOf(current) + 1) % datetimeFormats.length
     ];
-  settings.updateSettings({ ui: { toolbarDatetimeFormat: next } });
+  golemSettings.updateSettings({ ui: { toolbarDatetimeFormat: next } });
   item.marker = datetimeFormatMarker();
 }
 
+async function start_options_menu(settings: UserSettings) {
+  const labels = {
+    [StartOn.MainMenu]: "Main Menu",
+    [StartOn.GameLibrary]: "Game Library",
+    [StartOn.LastGamePlayed]: "Last Game Played",
+    [StartOn.SpecificGame]: "Specific Game",
+  };
+
+  let startMenuKind: StartOn = (await settings.startOn()).kind as StartOn;
+
+  await ui.textMenu({
+    back: false,
+    title: "Startup Options",
+    items: [
+      {
+        label: "Start on:",
+        marker: labels[startMenuKind],
+        select: async (item) => {
+          // Cannot select specific game from this menu.
+          const keys = Object.keys(labels);
+          startMenuKind = keys[
+            (keys.indexOf(startMenuKind) + 1) % keys.length
+          ] as StartOn;
+
+          let startOn: StartOnSetting;
+          switch (startMenuKind) {
+            case StartOn.SpecificGame:
+              const game = await Games.select({
+                title: "Select a game",
+                details: false,
+              });
+              if (game) {
+                startOn = {
+                  kind: startMenuKind,
+                  game: game.id,
+                };
+              } else {
+                while (startMenuKind === StartOn.SpecificGame) {
+                  startMenuKind = keys[
+                    (keys.indexOf(startMenuKind) + 1) % keys.length
+                  ] as StartOn;
+                }
+                startOn = {
+                  kind: startMenuKind,
+                };
+              }
+              break;
+            default:
+              startOn = {
+                kind: startMenuKind,
+              };
+              break;
+          }
+
+          item.marker = labels[startMenuKind];
+          await settings.setStartOn(startOn);
+          console.log("Start on:", JSON.stringify(await settings.startOn()));
+        },
+      },
+    ],
+  });
+}
+
 export async function settings_menu() {
+  const settings = await UserSettings.forLoggedInUser();
+
   await ui.textMenu<boolean>({
     back: false,
     title: "Settings",
     items: [
       {
         label: "Show FPS",
-        select: () => {
-          let current = settings.getSettings().ui?.showFps || false;
-          settings.updateSettings({ ui: { showFps: !current } });
+        select: (item) => {
+          let current = golemSettings.getSettings().ui?.showFps || false;
+          golemSettings.updateSettings({ ui: { showFps: !current } });
+          item.marker = golemSettings.getSettings().ui?.showFps ? "On" : "Off";
         },
-        marker: settings.getSettings().ui?.showFps ? "On" : "Off",
+        marker: golemSettings.getSettings().ui?.showFps ? "On" : "Off",
       },
       {
         label: "Font Size",
@@ -87,6 +154,11 @@ export async function settings_menu() {
       {
         label: "Save States",
         select: () => {},
+      },
+      "---",
+      {
+        label: "Startup Options",
+        select: async () => await start_options_menu(settings),
       },
     ],
   });

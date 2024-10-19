@@ -31,6 +31,7 @@ fn core_loop<C, E: Debug>(
         &mut GoLEmApp,
         &mut GolemCore,
         Option<&DynamicImage>,
+        usize,
         &[u8],
         &mut C,
     ) -> Result<(), E>,
@@ -151,28 +152,23 @@ fn core_loop<C, E: Debug>(
                         Ok(Some(ss)) => {
                             if ss.is_dirty() {
                                 let mut buffer = vec![];
-                                match ss.save(&mut buffer) {
-                                    Ok(_) => ss,
-                                    Err(err) => {
-                                        error!(?err, "Error saving savestate. Will stop trying.");
-                                        should_check_savestates = false;
-                                        break;
-                                    }
-                                };
+                                if let Err(err) = ss.save(&mut buffer) {
+                                    error!(?err, "Error saving savestate. Will stop trying.");
+                                    should_check_savestates = false;
+                                    break;
+                                }
 
-                                match savestate_handler(
+                                if let Err(err) = savestate_handler(
                                     app,
                                     core,
                                     screenshot.as_ref(),
+                                    i,
                                     &buffer,
                                     context,
                                 ) {
-                                    Ok(_) => {}
-                                    Err(err) => {
-                                        error!(?err, "Error saving savestate. Will stop trying.");
-                                        should_check_savestates = false;
-                                        break;
-                                    }
+                                    error!(?err, "Error saving savestate. Will stop trying.");
+                                    should_check_savestates = false;
+                                    break;
                                 }
                             }
                         }
@@ -210,6 +206,7 @@ pub fn run_core_loop<C, E: Debug>(
         &mut GoLEmApp,
         &mut GolemCore,
         Option<&DynamicImage>,
+        usize,
         &[u8],
         &mut C,
     ) -> Result<(), E>,

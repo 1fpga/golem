@@ -1,7 +1,7 @@
 import * as ui from "@:golem/ui";
 import {TextMenuItem} from "@:golem/ui";
 import * as net from "@:golem/net";
-import {Catalog, DEFAULT_USERNAME, RemoteCatalog, User} from "../../services";
+import {Catalog, DEFAULT_USERNAME, GamesIdentification, RemoteCatalog, User,} from "../../services";
 import {
   call,
   choice,
@@ -53,7 +53,9 @@ function selectPath(
     const path = await ui.selectFile(
       title,
       options?.initialDir ?? "/media/fat",
-      {},
+      {
+        directory: true,
+      },
     );
 
     if (path === undefined) {
@@ -196,8 +198,9 @@ const catalogAddStep = repeat(
         message(
           "Catalogs - Introduction",
           stripIndents`
-            Catalogs are websites where you can download games and cores from.
-            Catalogs can be added or removed later. They require an internet connection when setting up, updating or downloading from.
+            Catalogs are online repositories where you can download games and cores from.
+            Catalogs can be added or removed later.
+            They require an internet connection when setting up, updating or downloading from.
           `,
         ),
       ),
@@ -228,7 +231,7 @@ const catalogAddStep = repeat(
           "Catalogs",
           stripIndents`
             1FPGA comes with a default catalog of officially supported cores and homebrew games.
-            Its URL is 'https://catalog.1fpga.cloud'.
+            It also includes updates to GoLEm itself, if you skip this, you will have to manually update GoLEm.
             
             Would you like to add it?
           `,
@@ -341,12 +344,12 @@ const catalogSetup = sequence(
 
 const addGames = sequence(
   map(selectPath("Select the directory with your games"), async (root) => {
+    console.log("Selected root: ", root);
     if (root === undefined) {
       return null;
     }
-    return call(async () => {
-      await Catalog.addGamesFromRoot(root);
-    });
+
+    await GamesIdentification.addGamesFromRoot(root);
   }),
 );
 

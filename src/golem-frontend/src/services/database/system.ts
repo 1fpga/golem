@@ -104,12 +104,13 @@ export class System {
     // Game database.
     const db = await remoteSystem.downloadGameDatabase();
     if (db) {
-      console.log(`Downloaded ${db.games.length} game sources`);
-
       ui.show("Installing game database...", `System "${this.name}"`);
-      await Promise.all(
-        db.games.map((game) => GamesIdentification.create(game, this, catalog)),
-      );
+      await GamesIdentification.createBatch(db.games, this, catalog);
+    }
+
+    // Add game if `no-roms` is in the tags.
+    if (remoteSystem.tags.includes("no-roms")) {
+      await GamesIdentification.createNoRomGames(this, catalog);
     }
   }
 }

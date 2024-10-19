@@ -45,18 +45,11 @@ declare module "@:golem/settings" {
       showFps?: boolean;
       language?: string;
     };
-
-    retronomiconBackend?: string[];
-
-    commands?: {
-      global?: GlobalCommands;
-      perCore?: {
-        [slug: string]: GlobalCommands | { [command: string]: CommandShortcut };
-      };
-    };
   }
 
   export function getSettings(): Settings;
 
   export function updateSettings(settings: Partial<Settings>): void;
+
+  export function setFontSize(fontSize: FontSize): void;
 }

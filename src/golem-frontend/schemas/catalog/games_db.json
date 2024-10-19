@@ -11,19 +11,12 @@
         "type": "object",
         "properties": {
           "name": {
-            "description": "Name of the game",
+            "description": "Full name of the game which might includes tagged data",
             "type": "string"
           },
-          "number": {
-            "description": "Unique ID of the game. Must be unique per system.",
-            "oneOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string"
-              }
-            ]
+          "shortname": {
+            "description": "Short name of the game which might not be unique",
+            "type": "string"
           },
           "region": {
             "description": "Region of the game",
@@ -75,7 +68,6 @@
         },
         "required": [
           "name",
-          "number",
           "sources"
         ]
       }
@@ -133,7 +125,7 @@
         "id",
         "extension",
         "size",
-        "sha1"
+        "sha256"
       ]
     }
   },

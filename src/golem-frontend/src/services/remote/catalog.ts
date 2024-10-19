@@ -211,6 +211,10 @@ export class RemoteSystem {
     return this.system_.gamesDb?.size || 0;
   }
 
+  get tags(): string[] {
+    return this.system_.tags || [];
+  }
+
   async fetchCores(_deep = false) {
     if (this.cores_ === undefined) {
       if (this.system_.cores) {

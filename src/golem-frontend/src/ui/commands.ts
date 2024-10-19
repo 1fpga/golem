@@ -1,16 +1,16 @@
 import * as commands from "@:golem/commands";
 import BASIC_COMMANDS from "../commands/basic";
-import { LocalStorage } from "../services";
+import { DbStorage } from "../services";
 
 export async function initCommands() {
-  const storage = await LocalStorage.global();
-  let validate = (await import("$schemas:shortcut")).default;
+  const storage = await DbStorage.global();
+  let validate = (await import("$schemas:shortcut")).validate;
 
   for (const cmd of BASIC_COMMANDS) {
     let settingsName = `shortcuts-${cmd.shortName}`;
 
     let command = await addCommand_(cmd);
-    const maybeShortcuts = storage.get(settingsName);
+    const maybeShortcuts = await storage.get(settingsName);
     if (validate(maybeShortcuts)) {
       command.shortcuts = maybeShortcuts;
     } else if (cmd.defaultShortcuts !== undefined) {

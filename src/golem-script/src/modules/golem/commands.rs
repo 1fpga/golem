@@ -56,9 +56,6 @@ impl CommandType {
 #[derive(Debug, Clone)]
 pub struct Command {
     pub ty: CommandType,
-    pub short_name: String,
-    pub name: String,
-    pub description: String,
     pub action: JsFunction,
     pub shortcuts: Vec<Shortcut>,
 }

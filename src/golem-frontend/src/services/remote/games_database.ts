@@ -1,6 +1,7 @@
+import * as golemSchema from "@:golem/schema";
 import * as ui from "@:golem/ui";
 import { fetchJsonAndValidate } from "$/utils";
-import {
+import type {
   Games as GamesSchema,
   GamesDb as GamesDbSchema,
 } from "$schemas:catalog/games_db";
@@ -21,9 +22,10 @@ export class RemoteGamesDb {
     );
 
     // Dynamic loading to allow for code splitting.
-    const json = await fetchJsonAndValidate(
+    const schema = await import("$schemas-json:catalog/games_db.json");
+    const json = await fetchJsonAndValidate<GamesDbSchema>(
       u,
-      (await import("$schemas:catalog/games_db")).validate,
+      (value: unknown) => golemSchema.validate<GamesDbSchema>(value, schema),
     );
 
     return new RemoteGamesDb(u, json, system);

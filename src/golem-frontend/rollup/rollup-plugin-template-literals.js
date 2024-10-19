@@ -1,7 +1,6 @@
 import babelParser from "@babel/parser";
 import generate from "@babel/generator";
 import traverse from "@babel/traverse";
-import * as rollup from "rollup";
 import * as commonTags from "common-tags";
 
 const { parse, ParserOptions } = babelParser;
@@ -57,8 +56,12 @@ export function transformTaggedContent(content, options = {}) {
 export function transformTaggedTemplate(options = {}) {
   return {
     name: "transform-tagged-template",
-    transform(content) {
-      return transformTaggedContent(content, options);
+    transform(content, id) {
+      if (id.endsWith(".json")) {
+        return content;
+      } else {
+        return transformTaggedContent(content, options);
+      }
     },
   };
 }
@@ -73,7 +76,13 @@ export function transformCommonTags(name) {
     transform(content) {
       return transformTaggedContent(content, {
         tagsToProcess: [name],
-        transformer: (content) => commonTags[name](content),
+        transformer: (content, o) => {
+          if (name === "oneLine") {
+            return content.replace(/\n\s*/gm, " ").replace(/\s+/g, " ");
+          } else {
+            return commonTags[name](content);
+          }
+        },
       });
     },
   };
