@@ -5,6 +5,7 @@ import { oneLine } from "common-tags";
 import { SqlExpression } from "@sqltags/core";
 import { User } from "../user";
 import { PickGameOptions } from "$/ui/games";
+import { Core } from "$/services/database/core";
 
 interface GamesCoreRow {
   id: number;
@@ -226,21 +227,29 @@ export class Games {
                   ON CONFLICT
         DO
         UPDATE SET last_played_at = excluded.last_played_at`;
+    Core.setRunning(await Core.getById(this.row_.cores_id));
 
-    const core = golemCore.load({
-      core: { type: "Path", path: this.row_.rbf_path },
-      ...(this.row_.rom_path !== null
-        ? { game: { type: "RomPath", path: this.row_.rom_path } }
-        : {}),
-    });
-
-    if (core) {
-      console.log("Starting core: " + core.name);
-      core.on("saveState", async (savestate: Uint8Array, screenshot: Image) => {
-        const ss = SaveState.create(this, savestate, screenshot);
-        console.log("Saved state: ", JSON.stringify(ss));
+    try {
+      const core = golemCore.load({
+        core: { type: "Path", path: this.row_.rbf_path },
+        ...(this.row_.rom_path !== null
+          ? { game: { type: "RomPath", path: this.row_.rom_path } }
+          : {}),
       });
-      core.loop();
+
+      if (core) {
+        console.log("Starting core: " + core.name);
+        core.on(
+          "saveState",
+          async (savestate: Uint8Array, screenshot: Image) => {
+            const ss = SaveState.create(this, savestate, screenshot);
+            console.log("Saved state: ", JSON.stringify(ss));
+          },
+        );
+        core.loop();
+      }
+    } finally {
+      Core.setRunning(null);
     }
   }
 }

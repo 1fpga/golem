@@ -116,4 +116,9 @@ declare module "@:golem/ui" {
     initialDir: string,
     options: SelectFileOptions,
   ): Promise<string | undefined>;
+
+  /**
+   * Show the input tester panel.
+   */
+  export function inputTester(): Promise<void>;
 }

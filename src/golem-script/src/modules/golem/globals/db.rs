@@ -16,6 +16,7 @@ use tracing::trace;
 
 /// A value in a column in SQL, compatible with JavaScript.
 pub enum SqlValue {
+    Json(serde_json::Value),
     Binary(Vec<u8>),
     String(JsString),
     Number(f64),
@@ -31,6 +32,7 @@ impl SqlValue {
             SqlValue::Integer(i) => i.into(),
             SqlValue::Null => JsValue::null(),
             SqlValue::Binary(b) => JsUint8Array::from_iter(b.into_iter(), context)?.into(),
+            SqlValue::Json(json) => JsValue::from_json(&json, context)?,
         })
     }
 }
@@ -61,11 +63,7 @@ impl TryFromJs for SqlValue {
                 let array = JsUint8Array::from_object(o.clone())?;
                 Ok(Self::Binary(array.iter(context).collect()))
             }
-            _ => Err(js_error!(
-                "Invalid value type {}, cannot convert to SQL.",
-                value.type_of()
-            )
-            .into()),
+            o => Ok(Self::Json(o.to_json(context)?)),
         }
     }
 }
@@ -92,6 +90,7 @@ impl From<SqlValue> for Value {
             SqlValue::Number(f) => Value::Real(f),
             SqlValue::String(s) => Value::Text(s.to_std_string_escaped()),
             SqlValue::Null => Value::Null,
+            SqlValue::Json(json) => Value::Text(json.to_string()),
         }
     }
 }

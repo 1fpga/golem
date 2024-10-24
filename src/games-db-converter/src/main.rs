@@ -85,10 +85,15 @@ impl Datafile {
         for g in &self.games {
             for s in &g.sources {
                 for f in &s.files {
-                    all_hashes.insert((f.extension.clone(), f.size, f.sha256.clone()), g.clone());
+                    all_hashes.insert(
+                        (f.extension.clone(), f.size, f.sha256.clone()),
+                        g.name.clone(),
+                    );
                 }
             }
         }
+
+        let mut new_sources: HashMap<String, Source> = HashMap::new();
 
         for g in other.games {
             for s in &g.sources {
@@ -96,20 +101,25 @@ impl Datafile {
                     if let Some(existing) =
                         all_hashes.get(&(f.extension.clone(), f.size, f.sha256.clone()))
                     {
-                        if existing.name == g.name {
+                        if existing == &g.name {
                             continue;
                         }
 
-                        eprintln!(
-                            "Duplicate game: \n    {:?}\n    {:?}",
-                            existing.name, g.name
-                        );
+                        eprintln!("Duplicate game: \n    {:?}\n    {:?}", existing, g.name);
                     } else {
                         self.games.push(g.clone());
-                        all_hashes
-                            .insert((f.extension.clone(), f.size, f.sha256.clone()), g.clone());
+                        all_hashes.insert(
+                            (f.extension.clone(), f.size, f.sha256.clone()),
+                            g.name.clone(),
+                        );
                     }
                 }
+            }
+        }
+
+        for g in &mut self.games {
+            if let Some(s) = new_sources.remove(&g.name) {
+                g.sources.push(s);
             }
         }
     }
@@ -247,27 +257,15 @@ fn convert_htgb<R: BufRead>(reader: R) -> Datafile {
         let record = result.expect("Could not read CSV record");
 
         let (sha256, path, sha1, _md5, _crc32, size) = match record.len() {
-            5 => (
-                record.get(0).unwrap().to_string(),
-                record.get(1).unwrap().to_string(),
-                record.get(2).unwrap().to_string(),
-                record.get(3).unwrap().to_string(),
-                record.get(4).unwrap().to_string(),
-                0,
-            ),
             6 => (
                 record.get(0).unwrap().to_string(),
                 record.get(1).unwrap().to_string(),
                 record.get(2).unwrap().to_string(),
                 record.get(3).unwrap().to_string(),
                 record.get(4).unwrap().to_string(),
-                record
-                    .get(5)
-                    .unwrap()
-                    .parse::<u32>()
-                    .expect("Could not parse size"),
+                record.get(5).unwrap().parse::<u32>().unwrap_or(0),
             ),
-            _ => panic!("Invalid number of columns"),
+            l => panic!("Invalid number of columns: {}", l),
         };
 
         let file_name = PathBuf::from(path);
@@ -319,7 +317,7 @@ fn main() {
             .as_deref()
         {
             Some("xml") => quick_xml::de::from_reader(reader).expect("Could not read XML file"),
-            Some("txt") => convert_htgb(reader),
+            Some("txt") | Some("csv") => convert_htgb(reader),
             _ => panic!("Unknown file type"),
         };
 

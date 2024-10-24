@@ -73,17 +73,21 @@ export function transformTaggedTemplate(options = {}) {
 export function transformCommonTags(name) {
   return {
     name: "transform-common-tags-" + name,
-    transform(content) {
-      return transformTaggedContent(content, {
-        tagsToProcess: [name],
-        transformer: (content, o) => {
-          if (name === "oneLine") {
-            return content.replace(/\n\s*/gm, " ").replace(/\s+/g, " ");
-          } else {
-            return commonTags[name](content);
-          }
-        },
-      });
+    transform(content, id) {
+      if (id.endsWith(".json")) {
+        return content;
+      } else {
+        return transformTaggedContent(content, {
+          tagsToProcess: [name],
+          transformer: (content, o) => {
+            if (name === "oneLine") {
+              return content.replace(/\n\s*/gm, " ").replace(/\s+/g, " ");
+            } else {
+              return commonTags[name](content);
+            }
+          },
+        });
+      }
     },
   };
 }

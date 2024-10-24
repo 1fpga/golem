@@ -50,6 +50,7 @@ function selectPath(
   options?: { initialDir?: string },
 ): WizardStep<string | undefined> {
   return async (o) => {
+    console.log("selectPath", title, JSON.stringify(options));
     const path = await ui.selectFile(
       title,
       options?.initialDir ?? "/media/fat",
@@ -57,6 +58,8 @@ function selectPath(
         directory: true,
       },
     );
+
+    console.log("Selected path:", path);
 
     if (path === undefined) {
       await o.previous();

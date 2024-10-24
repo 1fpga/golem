@@ -209,7 +209,7 @@ fn text_menu_(
             context: &mut Context,
         ) -> JsResult<Option<JsValue>> {
             if let Some(callable) = maybe_callable.as_callable() {
-                let mut result = if let Some(item) = item {
+                let result = if let Some(item) = item {
                     let js_item = item.clone().try_js_into(context)?;
 
                     let mut result =
@@ -224,11 +224,12 @@ fn text_menu_(
 
                     result
                 } else {
-                    let mut result = callable.call(&JsValue::undefined(), &[], context)?;
-                    while let Some(p) = result.as_promise() {
-                        result = p.await_blocking(context).map_err(JsError::from_opaque)?;
+                    let result = callable.call(&JsValue::undefined(), &[], context)?;
+                    if let Some(p) = result.as_promise() {
+                        p.await_blocking(context).map_err(JsError::from_opaque)?
+                    } else {
+                        result
                     }
-                    result
                 };
 
                 if result.is_undefined() {
@@ -432,6 +433,13 @@ fn qr_code_(
     golem_ui::application::panels::qrcode::qrcode_alert(app, &title, &message, &url);
 }
 
+fn input_tester_(ContextData(host_defined): ContextData<HostData>, ctx: &mut Context) -> JsPromise {
+    let app = host_defined.app_mut();
+    golem_ui::application::panels::input_tester::input_tester(app);
+
+    JsPromise::resolve(JsValue::undefined(), ctx)
+}
+
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
         js_string!("ui"),
@@ -457,6 +465,10 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
             (
                 js_string!("selectFile"),
                 filesystem::select.into_js_function_copied(context),
+            ),
+            (
+                js_string!("inputTester"),
+                input_tester_.into_js_function_copied(context),
             ),
         ]
         .into_js_module(context),

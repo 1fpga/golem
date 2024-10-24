@@ -4,12 +4,13 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hasher;
 use std::str::FromStr;
 
+use crate::input::InputState;
 use itertools::Itertools;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use serde::{Deserialize, Deserializer, Serialize};
-
-use crate::input::InputState;
+use strum::EnumString;
+use tracing::error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i8)]
@@ -97,11 +98,29 @@ impl AxisValue {
     }
 }
 
+/// A set of modifier keys. These are indiscriminate for whether right/left keys are pressed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumString, strum::Display)]
+#[repr(u8)]
+pub enum Modifiers {
+    #[strum(ascii_case_insensitive)]
+    Shift,
+
+    #[strum(ascii_case_insensitive)]
+    Ctrl,
+
+    #[strum(ascii_case_insensitive)]
+    Alt,
+
+    #[strum(ascii_case_insensitive)]
+    Gui,
+}
+
 /// A shortcut that can be compared to an input state.
 /// This is normally paired with a command.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Shortcut {
     keyboard: HashSet<Scancode>,
+    keyboard_modifiers: HashSet<Modifiers>,
     gamepad_button: HashSet<Button>,
     axis: HashMap<Axis, AxisValue>,
 }
@@ -125,6 +144,11 @@ impl std::hash::Hash for Shortcut {
             .sorted_by(|a, b| (**a as i32).cmp(&(**b as i32)))
             .collect::<Vec<_>>()
             .hash(state);
+        self.keyboard_modifiers
+            .iter()
+            .sorted()
+            .collect::<Vec<_>>()
+            .hash(state);
         self.gamepad_button
             .iter()
             .sorted_by(|a, b| (**a as i32).cmp(&(**b as i32)))
@@ -145,6 +169,11 @@ impl Display for Shortcut {
             .iter()
             .map(|k| format!("'{}'", k.name()))
             .join(" + ");
+        let modifiers = self
+            .keyboard_modifiers
+            .iter()
+            .map(|m| m.to_string())
+            .join(" + ");
         let buttons = self.gamepad_button.iter().map(|b| b.string()).join(" + ");
         let axis = self
             .axis
@@ -152,7 +181,7 @@ impl Display for Shortcut {
             .map(|(a, v)| format!("{}{}", a.string(), v))
             .join(" + ");
 
-        [keys, buttons, axis]
+        [modifiers, keys, buttons, axis]
             .iter()
             .filter(|x| !x.is_empty())
             .join(" + ")
@@ -194,8 +223,11 @@ impl FromStr for Shortcut {
                 if let Some(key) = Scancode::from_name(s) {
                     result.add_key(key);
                 } else {
+                    error!(s, "Invalid key");
                     return Err("Invalid shortcut: invalid Key");
                 }
+            } else if let Ok(key) = Modifiers::from_str(shortcut) {
+                result.add_modifier(key);
             } else if let Some(button) = Button::from_string(shortcut) {
                 result.add_gamepad_button(button);
             } else if let Some((axis, value)) = shortcut
@@ -207,6 +239,7 @@ impl FromStr for Shortcut {
                     .map_err(|_| "Invalid axis value.")?;
                 result.add_axis(axis, value);
             } else {
+                error!(shortcut, "Invalid shortcut");
                 return Err("Invalid shortcut: invalid shortcut");
             }
         }
@@ -225,6 +258,12 @@ impl Shortcut {
         self.keyboard.insert(code);
         true
     }
+
+    pub fn add_modifier(&mut self, modifier: Modifiers) -> bool {
+        self.keyboard_modifiers.insert(modifier);
+        true
+    }
+
     pub fn add_gamepad_button(&mut self, button: Button) -> bool {
         self.gamepad_button.insert(button);
         true
@@ -246,6 +285,24 @@ impl Shortcut {
 
     pub fn matches(&self, state: &InputState) -> bool {
         self.keyboard.iter().all(|x| state.keyboard.contains(x))
+            && self.keyboard_modifiers.iter().all(|x| match x {
+                Modifiers::Shift => {
+                    state.keyboard.contains(&Scancode::LShift)
+                        || state.keyboard.contains(&Scancode::RShift)
+                }
+                Modifiers::Ctrl => {
+                    state.keyboard.contains(&Scancode::LCtrl)
+                        || state.keyboard.contains(&Scancode::RCtrl)
+                }
+                Modifiers::Alt => {
+                    state.keyboard.contains(&Scancode::LAlt)
+                        || state.keyboard.contains(&Scancode::RAlt)
+                }
+                Modifiers::Gui => {
+                    state.keyboard.contains(&Scancode::LGui)
+                        || state.keyboard.contains(&Scancode::RGui)
+                }
+            })
             && self
                 .gamepad_button
                 .iter()

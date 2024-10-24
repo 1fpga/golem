@@ -1,6 +1,7 @@
 import * as ui from "@:golem/ui";
 import * as core from "@:golem/core";
 import { CoreSettingPage } from "@:golem/core";
+import type { Core } from "$/services/database/core";
 
 enum SettingReturn {
   Continue,
@@ -113,17 +114,39 @@ function isKindFile(
 }
 
 export async function coreOsdMenu(
-  core: core.GolemCore,
+  golemCore: core.GolemCore,
+  coreDb: Core | null,
 ): Promise<core.OsdResult> {
-  let menu = core.settings;
+  let menu = golemCore.settings;
 
   let fileMenus = menu.items.filter(isKindFile);
 
   console.log(JSON.stringify(menu));
+
   return await ui.textMenu({
     title: "Core Menu",
     back: false,
     items: [
+      ...(coreDb
+        ? [
+            {
+              label: "Load Game...",
+              select: async () => {
+                // let system = await coreDb.getSystem();
+                // let game = await (
+                //   await import("$/services/database/games")
+                // ).Games.select({
+                //   title: "Load Game",
+                //   system: system.uniqueName,
+                // });
+                // if (game?.romPath) {
+                //   golemCore.fileSelect(0, game.romPath);
+                //   return false;
+                // }
+              },
+            },
+          ]
+        : []),
       ...(await Promise.all(
         fileMenus.map((item) => ({
           label: item.label,
@@ -132,7 +155,7 @@ export async function coreOsdMenu(
               extensions: item.extensions,
             });
             if (path) {
-              core.fileSelect(item.id, path);
+              golemCore.fileSelect(item.id, path);
               return false;
             }
           },
@@ -142,9 +165,9 @@ export async function coreOsdMenu(
       {
         label: "Core Settings...",
         select: async () => {
-          switch (await coreSettingsMenu(core)) {
+          switch (await coreSettingsMenu(golemCore)) {
             case SettingReturn.Back:
-              return false;
+              return undefined;
             case SettingReturn.Quit:
               return true;
             default:
@@ -155,7 +178,7 @@ export async function coreOsdMenu(
       {
         label: "Reset Core",
         select: () => {
-          core.reset();
+          golemCore.reset();
           return false;
         },
       },

@@ -1,5 +1,6 @@
 use crate::modules::golem::globals::classes::JsImage;
 use crate::HostData;
+use boa_engine::class::Class;
 use boa_engine::object::builtins::{JsFunction, JsUint8Array};
 use boa_engine::value::TryFromJs;
 use boa_engine::{js_error, Context, JsError, JsResult, JsString, JsValue};
@@ -72,9 +73,19 @@ impl JsCore {
             app,
             &mut core,
             &mut (command_map, context),
-            |app, core, _, id, (command_map, context)| -> JsResult<()> {
-                if let Some(command) = command_map.get_mut(id) {
-                    command.execute(app, Some(core), context)
+            |_, core, id, (command_map, context)| -> JsResult<()> {
+                if let Some(command) = command_map.get(id) {
+                    let core = JsValue::Object(
+                        JsCore::from_data(JsCore::new(core.clone()), context).unwrap(),
+                    );
+                    let result = command.call(&JsValue::undefined(), &[core], context)?;
+
+                    // If the command returns a promise, wait for it to resolve (or reject).
+                    if let Some(p) = result.as_promise() {
+                        eprintln!("Waiting for promise to resolve...");
+                        p.await_blocking(context).map_err(JsError::from_opaque)?;
+                    }
+                    Ok(())
                 } else {
                     Ok(())
                 }

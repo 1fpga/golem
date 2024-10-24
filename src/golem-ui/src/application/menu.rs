@@ -82,7 +82,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     app: &mut GoLEmApp,
     title: &str,
     items: &'a [impl IntoTextMenuItem<'a, R>],
-    options: TextMenuOptions<R>,
+    options: TextMenuOptions<'a, R>,
 ) -> (R, GolemMenuState<R>) {
     let TextMenuOptions {
         show_back_menu,
@@ -139,7 +139,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let show2 = !items_items.is_empty() && !suffix_items.is_empty();
     let show3 = show_back;
 
-    let mut menu_style = style::menu_style(app.settings().menu_style());
+    let mut menu_style = style::menu_style(app.ui_settings().menu_style_options());
     if let Some(font) = title_font {
         menu_style = menu_style.with_title_font(font);
     }
@@ -221,7 +221,6 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
 
         let (result, new_state) = app.draw_loop(|_, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
-
             let _ = buffer.clear(Rgb888::BLACK.into());
 
             {
@@ -243,22 +242,29 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
             let menu = &mut layout.inner_mut().parent.object;
 
             for ev in state.events() {
-                if let Some(action) = menu.interact(ev) {
+                // TODO: remove clone.
+                if let Some(action) = menu.interact(ev.clone()) {
                     match action {
-                        SdlMenuAction::Back => return R::back().map(|b| (Some(b), menu.state())),
-                        SdlMenuAction::Select(result) => return Some((Some(result), menu.state())),
-                        SdlMenuAction::ChangeSort => {
-                            return R::sort().map(|r| (Some(r), menu.state()));
+                        SdlMenuAction::Back => {
+                            return R::back().map(|b| (Some(*&b), menu.state().clone()))
                         }
-                        SdlMenuAction::ShowOptions => if let SdlMenuAction::Select(r) = menu.selected_value() {
-                            return r.into_details().map(|r| (Some(r), menu.state()));
-                        },
+                        SdlMenuAction::Select(result) => {
+                            return Some((Some(result), menu.state().clone()))
+                        }
+                        SdlMenuAction::ChangeSort => {
+                            return R::sort().map(|r| (Some(r), menu.state().clone()));
+                        }
+                        SdlMenuAction::ShowOptions => {
+                            if let SdlMenuAction::Select(r) = menu.selected_value() {
+                                return r.into_details().map(|r| (Some(r), menu.state().clone()));
+                            }
+                        }
                         SdlMenuAction::KeyPress(Keycode::Backspace)
                         | SdlMenuAction::KeyPress(Keycode::KpBackspace) => {
                             filter.pop();
 
                             info!("filter: {}", filter);
-                            return Some((None, menu.state()));
+                            return Some((None, menu.state().clone()));
                         }
                         SdlMenuAction::TextInput(text) => {
                             for c in text.iter() {
@@ -267,7 +273,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                                 }
                                 filter.push(*c);
                             }
-                            return Some((None, menu.state()));
+                            return Some((None, menu.state().clone()));
                         }
                         _ => {}
                     }

@@ -1,29 +1,59 @@
 // The root file being executed by Golem by default.
 import * as ui from "@:golem/ui";
-
-import { games_menu } from "./ui/games";
-import { cores_menu } from "./ui/cores";
-import { settings_menu } from "./settings";
-import { downloads_menu } from "./downloads";
-import { about } from "./ui/about";
-import { initCommands } from "./ui/commands";
-import { login } from "./ui/login";
-import { Games, StartOn, StartOnSetting, User, UserSettings } from "$/services";
-import { stripIndents } from "common-tags"; // Polyfill for events.
+import {
+  Commands,
+  Core,
+  Games,
+  StartOn,
+  StartOnSetting,
+  User,
+  UserSettings,
+} from "$/services";
+import { stripIndents } from "common-tags";
+import { StartGameAction } from "$/actions/start_game";
+import { MainMenuAction } from "$/actions/main_menu";
+import { gamesMenu } from "$/ui/games";
+import { coresMenu } from "$/ui/cores"; // Import the basic commands.
+import "./commands/basic";
+import { settingsMenu } from "$/ui/settings";
+import { login } from "$/ui/login";
+import { downloads_menu } from "$/downloads";
+import { about } from "$/ui/about"; // Polyfill for events.
 
 // Polyfill for events.
 globalThis.performance = <any>{
   now: () => Date.now(),
 };
 
-async function main_menu(startOn: StartOnSetting) {
+async function debugMenu() {
+  await ui.textMenu({
+    title: "Debug",
+    back: false,
+    items: [
+      {
+        label: "Reset All...",
+        select: async () => {
+          await ui.alert("Reset everything");
+        },
+      },
+      {
+        label: "Input Tester...",
+        select: async () => {
+          await ui.inputTester();
+        },
+      },
+    ],
+  });
+}
+
+async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
   let quit = false;
   let logout = false;
 
   // Check the startOn option.
   switch (startOn.kind) {
     case StartOn.GameLibrary:
-      await games_menu();
+      await gamesMenu();
       break;
     case StartOn.LastGamePlayed:
       {
@@ -31,7 +61,7 @@ async function main_menu(startOn: StartOnSetting) {
         if (game) {
           await game.launch();
         } else {
-          await games_menu();
+          await gamesMenu();
           break;
         }
       }
@@ -52,29 +82,45 @@ async function main_menu(startOn: StartOnSetting) {
 
   // There are no back menu, but we still need to loop sometimes (when selecting a game, for example).
   while (!(quit || logout)) {
-    const nb_games = await Games.count({});
-    const nb_cores = 0;
+    const nbGames = await Games.count({});
+    const nbCores = await Core.count();
 
-    const games_lbl = nb_games > 0 ? `(${nb_games})` : "";
-    const cores_lbl = nb_cores > 0 ? `(${nb_cores})` : "";
+    const gamesMarker = nbGames > 0 ? `(${nbGames})` : "";
+    const coresMarker = nbCores > 0 ? `(${nbCores})` : "";
 
     await ui.textMenu({
       title: "",
       items: [
         {
           label: "Game Library",
-          select: games_menu,
-          marker: games_lbl,
+          select: async () => await gamesMenu(),
+          marker: gamesMarker,
         },
-        { label: "Cores", select: cores_menu, marker: cores_lbl },
+        {
+          label: "Cores",
+          select: async () => await coresMenu(),
+          marker: coresMarker,
+        },
         "---",
         {
           label: "Settings...",
-          select: settings_menu,
+          select: async () => await settingsMenu(),
         },
-        { label: "Download Center...", select: downloads_menu },
+        {
+          label: "Download Center...",
+          select: async () => await downloads_menu(),
+        },
         "---",
         { label: "About", select: about },
+        ...((await settings.getDevTools())
+          ? [
+              "-",
+              {
+                label: "Developer Tools",
+                select: async () => await debugMenu(),
+              },
+            ]
+          : []),
         "---",
         { label: "Logout", select: () => (logout = true) },
         { label: "Exit", select: () => (quit = true) },
@@ -86,6 +132,7 @@ async function main_menu(startOn: StartOnSetting) {
     return true;
   } else if (logout) {
     await User.logout();
+    await Commands.logout();
   }
   return false;
 }
@@ -109,28 +156,46 @@ async function mainInner(): Promise<boolean> {
         "Error",
         stripIndents`
           Could not log in after initial setup. This is a bug.
-          
+
           Please report this issue to the developers.
-          
+
           The application will now exit.
         `,
       );
       return true;
     }
+    await Commands.init(user, true);
+  } else {
+    await Commands.init(user, false);
   }
 
-  await initCommands();
+  const settings = await UserSettings.init(user);
+  let startOn = await settings.startOn();
+  console.log("Starting on:", JSON.stringify(startOn));
 
-  try {
-    const settings = await UserSettings.forLoggedInUser();
-    const startOn = await settings.startOn();
-    console.log("Starting on:", JSON.stringify(startOn));
-
-    return await main_menu(startOn);
-  } catch (e: any) {
-    console.error(e);
-    await ui.alert("Error", e.toString());
-    return false;
+  while (true) {
+    try {
+      return await mainMenu(startOn, settings);
+    } catch (e: any) {
+      if (e instanceof StartGameAction) {
+        console.log(`Action - Starting game: ${JSON.stringify(e.game.name)}`);
+        await e.game.launch();
+      } else if (e instanceof MainMenuAction) {
+        console.log("Action - Main Menu");
+        // Do nothing, just loop.
+      } else {
+        // Rethrow to show the user the actual error.
+        let choice = await ui.alert({
+          title: "An error happened",
+          message: (e as Error)?.message ?? JSON.stringify(e),
+          choices: ["Restart", "Quit"],
+        });
+        if (choice === 1) {
+          return false;
+        }
+      }
+    }
+    startOn = { kind: StartOn.MainMenu };
   }
 }
 

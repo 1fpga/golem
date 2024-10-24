@@ -39,9 +39,14 @@ export async function fetchJsonAndValidate<T>(
         throw e;
       }
 
+      let message = (e as any)?.message ?? `${e}`;
+      if (message === "[object Object]" || !message) {
+        message = JSON.stringify(e);
+      }
+
       const choice = await ui.alert({
         title: "Error fetching JSON",
-        message: `URL: ${url}\n${JSON.stringify(e)}`,
+        message: `URL: ${url}\n\n${(e as any)?.message ?? JSON.stringify(e)}\n`,
         choices: ["Retry fetching", "Cancel"],
       });
 

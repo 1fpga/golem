@@ -195,10 +195,10 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
             Event::TextInput { text, .. } => {
                 let mut ch = text.chars();
                 let t = [
-                    ch.next().unwrap_or(0 as char),
-                    ch.next().unwrap_or(0 as char),
-                    ch.next().unwrap_or(0 as char),
-                    ch.next().unwrap_or(0 as char),
+                    ch.next().unwrap_or_default(),
+                    ch.next().unwrap_or_default(),
+                    ch.next().unwrap_or_default(),
+                    ch.next().unwrap_or_default(),
                 ];
                 Interaction::Action(Action::Return(SdlMenuAction::TextInput(t))).into()
             }

@@ -12,7 +12,6 @@ mod fs;
 mod net;
 mod schema;
 mod settings;
-mod shortcuts;
 mod ui;
 mod video;
 

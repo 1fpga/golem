@@ -1,5 +1,5 @@
 use crate::application::widgets::network::{NetworkWidget, NetworkWidgetView};
-use crate::data::settings::Settings;
+use crate::data::settings::UiSettings;
 use crate::macguiver::views::clock::DateTimeWidget;
 use crate::macguiver::views::fps::{FpsCounter, FpsCounterView};
 use embedded_graphics::draw_target::DrawTarget;
@@ -12,7 +12,6 @@ use embedded_graphics::Drawable;
 use embedded_layout::align::{horizontal, vertical, Align};
 use embedded_layout::layout::linear::{spacing, LinearLayout};
 use embedded_layout::prelude::Views;
-use std::sync::Arc;
 
 enum ToolbarItem {
     Fps(FpsCounterView),
@@ -70,45 +69,39 @@ impl Drawable for ToolbarItem {
 /// This includes on the left a series of icons that can be updated individually, and
 /// on the right a clock.
 pub struct Toolbar {
-    fps: FpsCounter,
+    fps: Option<FpsCounter>,
     network: NetworkWidget,
     clock: DateTimeWidget,
-
-    settings: Arc<Settings>,
-    on_settings_update: bus::BusReader<()>,
 }
 
 impl Toolbar {
-    pub fn new(settings: Arc<Settings>) -> Self {
-        let on_settings_update = settings.on_update();
-        let clock = DateTimeWidget::new(settings.toolbar_datetime_format().time_format());
+    pub fn new() -> Self {
+        let clock = DateTimeWidget::new("");
 
         Self {
             clock,
-            fps: FpsCounter::new(MonoTextStyle::new(
-                &embedded_graphics::mono_font::ascii::FONT_6X9,
-                BinaryColor::On,
-            )),
+            fps: None,
             network: NetworkWidget::new(),
-            settings,
-            on_settings_update,
         }
     }
 
-    pub fn update(&mut self) -> bool {
+    pub fn update(&mut self, settings: UiSettings) -> bool {
         let mut should_redraw = self.clock.update()
             || self.network.update()
             || self
                 .clock
-                .set_time_format(self.settings.toolbar_datetime_format().time_format());
+                .set_time_format(settings.toolbar_datetime_format().time_format());
 
-        // Check for settings changes.
-        if self.on_settings_update.try_recv().is_ok() {
-            should_redraw = true;
-        }
-
-        if self.settings.show_fps() {
-            should_redraw = should_redraw || self.fps.update();
+        if settings.show_fps() {
+            if self.fps.is_none() {
+                self.fps = Some(FpsCounter::new(MonoTextStyle::new(
+                    &embedded_graphics::mono_font::ascii::FONT_6X9,
+                    BinaryColor::On,
+                )));
+            }
+            should_redraw = should_redraw || self.fps.as_mut().unwrap().update();
+        } else {
+            self.fps = None;
         }
 
         should_redraw
@@ -140,10 +133,8 @@ impl Drawable for Toolbar {
         bound.size.width -= 4;
 
         let mut items: Vec<ToolbarItem> = Vec::new();
-        if self.settings.show_fps() {
-            items.push(ToolbarItem::Fps(FpsCounterView::from_fps_counter(
-                &self.fps,
-            )));
+        if let Some(ref fps) = self.fps {
+            items.push(ToolbarItem::Fps(FpsCounterView::from_fps_counter(fps)));
         }
 
         items.push(ToolbarItem::Network(NetworkWidgetView::from_network(

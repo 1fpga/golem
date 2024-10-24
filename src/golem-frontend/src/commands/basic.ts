@@ -1,47 +1,43 @@
-import * as commands from "@:golem/commands";
-import { coreOsdMenu } from "../ui/menus/core_osd";
+import { coreOsdMenu } from "$/ui/menus/core_osd";
+import { Commands, Core } from "$/services";
 
-const BASIC_COMMANDS: commands.CommandDef[] = [
-  {
+export async function init() {
+  await Commands.registerCommand({
     type: "core",
-    shortName: "showCoreMenu",
-    name: "Show Core Menu",
-    description: "Show the running core's menu.",
-    action: async (core) => {
-      core.showOsd(() => coreOsdMenu(core));
+    key: "showMenu",
+    name: "Show the core menu",
+    category: "Core",
+    running: false,
+    async handler(core) {
+      if (core && !this.running) {
+        this.running = true;
+        const coreDb = Core.running();
+        core.showOsd(() => coreOsdMenu(core, coreDb));
+        this.running = false;
+      }
     },
-    defaultShortcuts: ["'F12'"],
-  },
-  {
+    default: "'F12'",
+  });
+
+  await Commands.registerCommand({
     type: "core",
-    shortName: "quitCore",
-    name: "Quit Core",
-    description: "Quit the running core and go back to the main menu.",
-    action: async (core) => {
-      core.quit();
+    key: "quitCore",
+    name: "Quit to the main menu",
+    category: "Core",
+    handler: (c) => {
+      c?.quit();
     },
-    defaultShortcuts: ["'F10'"],
-  },
-  {
-    type: "core",
-    shortName: "screenshot",
-    name: "Take Screenshot",
-    description: "Take a screenshot of the current screen.",
-    action: async (core) => {
-      core.screenshot("screenshot.png");
-    },
-    defaultShortcuts: ["'SysReq'"],
-  },
-  {
+    default: "'F10'",
+  });
+
+  await Commands.registerCommand({
     type: "general",
-    shortName: "debugLog",
-    name: "Debug Log",
-    description: "Print a line in debug.",
-    action: async () => {
+    key: "showDebugLog",
+    name: "Show a debug log",
+    category: "Debug",
+    handler: async () => {
       console.log("Debug log.");
     },
-    defaultShortcuts: ["'D' + 'F1'"],
-  },
-];
-
-export default BASIC_COMMANDS;
+    default: "Ctrl + 'D'",
+  });
+}

@@ -31,7 +31,7 @@ export default {
     typescript({
       exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],
     }),
-    json(),
+    json({}),
     commonjs({
       extensions: [".js", ".ts", ".cjs"],
       transformMixedEsModules: true,
@@ -61,7 +61,6 @@ export default {
             terser({
               compress: {
                 arguments: true,
-                booleans_as_integers: true,
                 ecma: 2020,
                 module: true,
                 passes: 2,
@@ -91,4 +90,11 @@ export default {
     "@:golem/ui",
     "@:golem/utils",
   ],
+  onLog(level, log, handler) {
+    if (level === "warn") {
+      handler("error", log); // turn other warnings into errors
+    } else {
+      handler(level, log); // otherwise, just print the log
+    }
+  },
 };

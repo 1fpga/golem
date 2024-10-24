@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "rollup -c --failAfterWarnings",
+    "build": "rollup -c",
     "build-ts": "tsc",
     "test": "jest"
   },

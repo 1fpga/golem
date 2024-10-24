@@ -1,15 +1,17 @@
+use crate::input::commands::CommandId;
 use sdl3::event::Event;
 
 pub struct EventLoopState {
-    events: Vec<Event>,
+    pub(crate) events: Vec<Event>,
+    pub(crate) shortcut: Option<CommandId>,
 }
 
 impl EventLoopState {
-    pub fn new(events: Vec<Event>) -> Self {
-        Self { events }
+    pub fn events(&self) -> impl Iterator<Item = &Event> + '_ {
+        self.events.iter()
     }
 
-    pub fn events(&mut self) -> impl Iterator<Item = Event> + '_ {
-        self.events.iter().cloned()
+    pub fn shortcuts(&self) -> impl Iterator<Item = CommandId> + '_ {
+        self.shortcut.iter().copied()
     }
 }

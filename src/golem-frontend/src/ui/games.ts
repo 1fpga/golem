@@ -1,6 +1,5 @@
 import * as ui from "@:golem/ui";
-import { TextMenuItem } from "@:golem/ui";
-import { Games, GameSortOrder } from "$/services";
+import { Games, GameSortOrder } from "$/services/database/games";
 
 const PAGE_SIZE = 100;
 
@@ -9,6 +8,7 @@ export interface PickGameOptions {
   sort?: GameSortOrder;
   includeUnplayed?: boolean;
   details?: boolean;
+  system?: string;
 }
 
 /**
@@ -32,10 +32,11 @@ export async function pickGame(
   let includeUnplayed = options.includeUnplayed ?? true;
   let index = 0;
 
-  async function buildItems(): Promise<TextMenuItem<Games | string>[]> {
+  async function buildItems(): Promise<ui.TextMenuItem<Games | string>[]> {
     const { total, games } = await Games.list(
       {
         sort: Object.values(sortOptions)[currentSort],
+        system: options.system,
         includeUnplayed,
       },
       {
@@ -145,7 +146,7 @@ async function show_details_menu(
   return result === 0 ? null : result;
 }
 
-export async function games_menu() {
+export async function gamesMenu() {
   while (true) {
     const game = await pickGame({ title: "Game Library" });
     if (game) {

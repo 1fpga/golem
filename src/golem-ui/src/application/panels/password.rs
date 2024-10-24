@@ -95,18 +95,18 @@ pub fn enter_password(
                     repeat: false,
                     ..
                 } => {
-                    if scancode == sdl3::keyboard::Scancode::Escape {
+                    if *scancode == sdl3::keyboard::Scancode::Escape {
                         return Some(None);
                     }
-                    password.add_key(scancode);
+                    password.add_key(*scancode);
                 }
                 Event::ControllerButtonDown { button, .. } => {
-                    password.add_controller_button(button);
+                    password.add_controller_button(*button);
                 }
                 Event::ControllerAxisMotion { axis, value, .. } => {
-                    let x = AxisValue::from(value);
+                    let x = AxisValue::from(*value);
                     if !x.is_idle() {
-                        password.add_controller_axis(axis, value);
+                        password.add_controller_axis(*axis, *value);
                     }
                 }
                 _ => {}

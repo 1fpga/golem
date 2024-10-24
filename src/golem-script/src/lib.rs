@@ -142,17 +142,14 @@ pub fn run(
         .load_link_evaluate(&mut context)
         .await_blocking(&mut context)
     {
-        error!(error = ?e.display(), "Error loading script");
-
-        if let Some(o_err) = e.as_object() {
-            if let Ok(stack) = o_err.get(js_str!("stack"), &mut context) {
-                if !stack.is_null_or_undefined() {
-                    error!("Javascript stack trace: {}", stack.display());
-                }
-            }
+        let e = JsError::from_opaque(e);
+        if let Ok(e) = e.try_native(&mut context) {
+            error!(error = ?e, "Native error");
+        } else {
+            error!(error = ?e, "Error loading script");
         }
 
-        return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
+        return Err(e.into());
     }
     debug!(
         "Script loaded and evaluated in {}ms.",

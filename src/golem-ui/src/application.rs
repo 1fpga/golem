@@ -1,7 +1,8 @@
 use crate::application::toolbar::Toolbar;
-use crate::data::settings::Settings;
+use crate::data::settings::UiSettings;
 use crate::input::commands::CommandId;
 use crate::input::shortcut::Shortcut;
+use crate::input::InputState;
 use crate::macguiver::application::EventLoopState;
 use crate::macguiver::buffer::DrawBuffer;
 use crate::platform::de10::De10Platform;
@@ -12,8 +13,7 @@ use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
 use std::collections::HashMap;
-use std::sync::Arc;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 pub mod menu;
 
@@ -25,7 +25,6 @@ pub struct GoLEmApp {
     platform: De10Platform,
 
     toolbar: Toolbar,
-    settings: Arc<Settings>,
 
     render_toolbar: bool,
 
@@ -34,8 +33,10 @@ pub struct GoLEmApp {
     toolbar_buffer: DrawBuffer<BinaryColor>,
     osd_buffer: DrawBuffer<BinaryColor>,
 
-    commands: HashMap<Shortcut, CommandId>,
-    command_handler: Option<Box<dyn Fn(CommandId)>>,
+    input_state: InputState,
+    shortcuts: HashMap<Shortcut, CommandId>,
+
+    ui_settings: UiSettings,
 }
 
 impl Default for GoLEmApp {
@@ -47,8 +48,6 @@ impl Default for GoLEmApp {
 impl GoLEmApp {
     pub fn new() -> Self {
         let platform = WindowManager::default();
-
-        let settings = Arc::new(Settings::new());
 
         let toolbar_size = platform.toolbar_dimensions();
         let osd_size = platform.osd_dimensions();
@@ -62,38 +61,24 @@ impl GoLEmApp {
         };
 
         Self {
-            toolbar: Toolbar::new(settings.clone()),
+            toolbar: Toolbar::new(),
             render_toolbar: true,
             gamepads,
-            settings,
             platform,
             toolbar_buffer: DrawBuffer::new(toolbar_size),
             osd_buffer: DrawBuffer::new(osd_size),
-            commands: HashMap::new(),
-            command_handler: None,
+            input_state: InputState::default(),
+            shortcuts: Default::default(),
+            ui_settings: UiSettings::default(),
         }
     }
 
-    pub fn set_command_handler(&mut self, handler: impl Fn(CommandId) + 'static) {
-        self.command_handler = Some(Box::new(handler));
+    pub fn add_shortcut(&mut self, shortcut: Shortcut, command: CommandId) {
+        self.shortcuts.insert(shortcut, command);
     }
 
-    pub fn commands(&self) -> &HashMap<Shortcut, CommandId> {
-        &self.commands
-    }
-
-    pub fn commands_mut(&mut self) -> &mut HashMap<Shortcut, CommandId> {
-        &mut self.commands
-    }
-
-    pub fn execute_command(&mut self, command_id: CommandId) {
-        if let Some(handler) = &self.command_handler {
-            handler(command_id);
-        }
-    }
-
-    pub fn settings(&self) -> &Settings {
-        &self.settings
+    pub fn remove_shortcut(&mut self, shortcut: &Shortcut) -> Option<CommandId> {
+        self.shortcuts.remove(shortcut)
     }
 
     pub fn init_platform(&mut self) {
@@ -120,23 +105,23 @@ impl GoLEmApp {
         self.render_toolbar = true;
     }
 
-    pub fn add_shortcut(&mut self, shortcut: Shortcut, command: CommandId) {
-        self.commands.insert(shortcut, command);
+    pub fn ui_settings(&self) -> &UiSettings {
+        &self.ui_settings
     }
 
-    pub fn remove_shortcut(&mut self, shortcut: Shortcut) {
-        self.commands.remove(&shortcut);
+    pub fn ui_settings_mut(&mut self) -> &mut UiSettings {
+        &mut self.ui_settings
     }
 
     fn draw_inner<R>(&mut self, drawer_fn: impl FnOnce(&mut Self) -> R) -> R {
         self.osd_buffer.clear(BinaryColor::Off).unwrap();
         let result = drawer_fn(self);
 
-        if self.render_toolbar && self.toolbar.update() {
+        if self.render_toolbar && self.toolbar.update(*self.ui_settings()) {
             self.toolbar_buffer.clear(BinaryColor::Off).unwrap();
             self.toolbar.draw(&mut self.toolbar_buffer).unwrap();
 
-            if self.settings.invert_toolbar() {
+            if self.ui_settings.invert_toolbar() {
                 self.toolbar_buffer.invert();
             }
 
@@ -160,17 +145,24 @@ impl GoLEmApp {
 
     pub fn draw_loop<R>(
         &mut self,
-        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
+        mut loop_fn: impl FnMut(&mut Self, EventLoopState) -> Option<R>,
     ) -> R {
         self.event_loop(|s, state| s.draw(|s| loop_fn(s, state)))
     }
 
     pub fn event_loop<R>(
         &mut self,
-        mut loop_fn: impl FnMut(&mut Self, &mut EventLoopState) -> Option<R>,
+        mut loop_fn: impl FnMut(&mut Self, EventLoopState) -> Option<R>,
     ) -> R {
+        let mut triggered_commands = vec![];
+
         loop {
             let events = self.platform.events();
+
+            let mut longest_shortcut = Shortcut::default();
+            let mut shortcut = None;
+
+            let mut check_shortcuts = false;
             for event in events.iter() {
                 match event {
                     Event::Quit { .. } => {
@@ -198,13 +190,62 @@ impl GoLEmApp {
 
                         self.gamepads[*which as usize] = None;
                     }
+                    Event::KeyDown {
+                        scancode: Some(scancode),
+                        repeat,
+                        ..
+                    } => {
+                        if !repeat {
+                            self.input_state.key_down(*scancode);
+                            check_shortcuts = true;
+                        }
+                    }
+                    Event::KeyUp {
+                        scancode: Some(scancode),
+                        ..
+                    } => {
+                        self.input_state.key_up(*scancode);
+                        check_shortcuts = true;
+                    }
+                    Event::ControllerButtonDown { which, button, .. } => {
+                        self.input_state.controller_button_down(*which, *button);
+                        check_shortcuts = true;
+                    }
+                    Event::ControllerButtonUp { which, button, .. } => {
+                        self.input_state.controller_button_up(*which, *button);
+                        check_shortcuts = true;
+                    }
+                    Event::ControllerAxisMotion {
+                        which, axis, value, ..
+                    } => {
+                        self.input_state
+                            .controller_axis_motion(*which, *axis, *value);
+                        check_shortcuts = true;
+                    }
                     _ => {}
                 }
             }
+            if check_shortcuts {
+                for (s, id) in &self.shortcuts {
+                    if s.matches(&self.input_state) {
+                        if triggered_commands.contains(id) {
+                            continue;
+                        }
 
-            let mut state = EventLoopState::new(events);
+                        debug!(id = ?*id, shortcut = ?s, input_state = ?self.input_state, "Command triggered");
+                        triggered_commands.push(*id);
 
-            if let Some(r) = loop_fn(self, &mut state) {
+                        if s > &longest_shortcut {
+                            longest_shortcut = s.clone();
+                            shortcut = Some(*id);
+                        }
+                    } else {
+                        triggered_commands.retain(|x| x != id);
+                    }
+                }
+            }
+
+            if let Some(r) = loop_fn(self, EventLoopState { events, shortcut }) {
                 break r;
             }
         }

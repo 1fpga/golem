@@ -11,8 +11,8 @@
     "lib": [
     ],
     "strict": true,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "paths": {
       "$/*": [

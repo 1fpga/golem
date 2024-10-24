@@ -1,3 +1,4 @@
+import * as core from "@:golem/core";
 import { compareVersions, RemoteCore } from "../remote";
 import { Row } from "@:golem/db";
 import * as net from "@:golem/net";
@@ -5,6 +6,7 @@ import * as ui from "@:golem/ui";
 import { Catalog } from "./catalog";
 import type { System } from "./system";
 import { sql } from "$/utils";
+import { coreOsdMenu } from "$/ui/menus/core_osd";
 
 export interface CoreRow extends Row {
   id: number;
@@ -25,6 +27,8 @@ export interface CoreRow extends Row {
  * and validating cores is done by {@link RemoteCore}.
  */
 export class Core {
+  private static runningCore: Core | null = null;
+
   private static fromRow(row: CoreRow | null): Core {
     if (row === null) {
       throw new Error("Core not found");
@@ -35,6 +39,34 @@ export class Core {
 
   public static pathForAsset(core: RemoteCore, version: string) {
     return `/media/fat/golem/cores/${core.uniqueName}/${version}`;
+  }
+
+  public static running() {
+    return Core.runningCore;
+  }
+
+  public static setRunning(core: Core | null) {
+    Core.runningCore = core;
+  }
+
+  public static async getById(id: number): Promise<Core | null> {
+    const [row] = await sql<CoreRow>`SELECT *
+                                         FROM cores
+                                         WHERE id = ${id}
+                                         LIMIT 1`;
+    return Core.fromRow(row);
+  }
+
+  public static async count(system?: System): Promise<number> {
+    const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*) as count
+                                                       FROM cores ${
+                                                         system
+                                                           ? sql`WHERE system_id =
+                                                                       ${system.id}`
+                                                           : undefined
+                                                       }`;
+
+    return count;
   }
 
   public static async list(system?: System): Promise<Core[]> {
@@ -144,5 +176,23 @@ export class Core {
 
   public get rbfPath() {
     return this.row.rbf_path;
+  }
+
+  public async launch() {
+    if (!this.rbfPath) {
+      throw new Error("Core does not have an RBF path");
+    }
+
+    try {
+      console.log(`Starting core: ${JSON.stringify(this)}`);
+      Core.setRunning(this);
+      let c = core.load({
+        core: { type: "Path", path: this.rbfPath },
+      });
+      c.showOsd(() => coreOsdMenu(c, this));
+      c.loop();
+    } finally {
+      Core.setRunning(null);
+    }
   }
 }

@@ -22,7 +22,8 @@ export class RemoteGamesDb {
     );
 
     // Dynamic loading to allow for code splitting.
-    const schema = await import("$schemas-json:catalog/games_db.json");
+    const schema = (await import("$schemas-json:catalog/games_db.json"))
+      .default;
     const json = await fetchJsonAndValidate<GamesDbSchema>(
       u,
       (value: unknown) => golemSchema.validate<GamesDbSchema>(value, schema),

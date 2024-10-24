@@ -4,25 +4,6 @@
  * This module provides functions to interact with the settings of the Golem frontend.
  */
 declare module "@:golem/settings" {
-  /*
-   * A command shortcut is an array of strings that represent the key sequence
-   * to trigger the command. Any string can trigger a command. The string format
-   * is a list of keys, buttons or axis separated by pluses, e.g. `'B' + A`
-   * would trigger the command when the A button is pressed and the B key are
-   * pressed at the same time.
-   */
-  export type CommandShortcut = string | string[];
-
-  /**
-   * Global list of commands supported by all cores.
-   */
-  export interface GlobalCommands {
-    showMenu?: CommandShortcut;
-    resetCore?: CommandShortcut;
-    quitCore?: CommandShortcut;
-    takeScreenshot?: CommandShortcut;
-  }
-
   /**
    * Font size options for the UI.
    */
@@ -33,23 +14,46 @@ declare module "@:golem/settings" {
    */
   export type DateTimeFormat = "default" | "short" | "timeOnly" | "hidden";
 
-  /**
-   * The settings object that can be retrieved and updated. This object also
-   * matches the structure of the `settings.json` file.
-   */
-  export interface Settings {
-    ui?: {
-      menuFontSize?: FontSize;
-      invertToolbar?: boolean;
-      toolbarDatetimeFormat?: DateTimeFormat;
-      showFps?: boolean;
-      language?: string;
-    };
-  }
-
-  export function getSettings(): Settings;
-
-  export function updateSettings(settings: Partial<Settings>): void;
+  export function fontSize(): FontSize;
 
   export function setFontSize(fontSize: FontSize): void;
+
+  export function datetimeFormat(): DateTimeFormat;
+
+  export function setDatetimeFormat(format: DateTimeFormat): void;
+
+  export function showFps(): boolean;
+
+  export function setShowFps(show: boolean): void;
+
+  export function invertToolbar(): boolean;
+
+  export function setInvertToolbar(invert: boolean): void;
+
+  /**
+   * Ping the NTP server and update the current time.
+   */
+  export function updateDateTime(): void;
+
+  /**
+   * Get a list of all available timezones.
+   */
+  export function listTimeZones(): string[];
+
+  /**
+   * Get the timezone to use.
+   */
+  export function getTimeZone(): string | null;
+
+  /**
+   * Set the timezone to use.
+   * @param timeZone The timezone to use, or null to not change the system time zone.
+   */
+  export function setTimeZone(timeZone: string): void;
+
+  /**
+   * Manually set the date and time.
+   * @param dateTime The date and time to set.
+   */
+  export function setDateTime(dateTime: Date): void;
 }
