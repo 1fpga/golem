@@ -304,6 +304,9 @@ export class Commands {
         commands.removeShortcut(shortcut);
       }
     }
+    Commands.commands = new Map();
+    Commands.def = new Map();
+    Commands.isInit = false;
   }
 
   /**

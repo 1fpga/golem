@@ -10,7 +10,7 @@ members = [
     "src/golem-script",
     "src/golem-ui",
     "src/mister-fpga",
-    "src/taser",
+    "src/taser", "src/time_test",
 ]
 
 [profile.release]
@@ -29,6 +29,7 @@ panic = "abort"
 image = "0.25"
 ouroboros = "0.18"
 reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false }
+time = { version = "0.3", features = ["local-offset"] }
 url = { version = "2.5" }
 
 # Repo crates

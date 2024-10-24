@@ -153,6 +153,15 @@ export class Games {
     return row ? Games.fromGamesCoreRow(row) : null;
   }
 
+  public static async first() {
+    const [row] = await sql<GamesCoreRow>`
+            SELECT ${sql.raw(GAMES_FIELDS)}
+            FROM ${sql.raw(GAMES_FROM_JOIN)}
+            LIMIT 1
+        `;
+    return row ? Games.fromGamesCoreRow(row) : null;
+  }
+
   public static async list(
     filter: GamesListFilter,
     options: GamesListOptions = {},

@@ -89,12 +89,15 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         back_label,
         show_sort,
         sort_by,
-        state: mut menu_state,
+        state,
         detail_label,
         title_font,
         prefix,
         suffix,
+        selected,
     } = options;
+    let mut menu_state = state.unwrap_or_default();
+
     let show_back_button = R::back().is_some() && show_back_menu;
     let show_back = show_back_button && show_back_menu;
     let show_details = detail_label.is_some();
@@ -194,7 +197,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                 .with_marker("<-"),
         );
 
-        let menu = SizedMenu::new(
+        let prefix_len = prefix_items.len();
+        let mut menu = SizedMenu::new(
             menu_size,
             Menu::with_style(title, menu_style)
                 .add_menu_items(&mut prefix_items)
@@ -204,8 +208,21 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                 .add_menu_items(&mut suffix_items)
                 .add_menu_item(separator3)
                 .add_menu_item(back_item)
-                .build_with_state(menu_state.unwrap_or_default()),
+                .build_with_state(menu_state),
         );
+
+        if let Some(selected) = selected {
+            // Need to add prefix items (and separator1 which is always present) to the index.
+            let selected = selected + prefix_len as u32 + 1;
+            menu.interact(sdl3::event::Event::User {
+                timestamp: 0,
+                window_id: 0,
+                type_: 0,
+                code: selected as i32,
+                data1: std::ptr::null_mut(),
+                data2: std::ptr::null_mut(),
+            });
+        }
 
         let mut layout = LinearLayout::vertical(
             Chain::new(menu).append(
@@ -286,6 +303,6 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         if let Some(r) = result {
             return (r, new_state);
         }
-        menu_state = Some(new_state);
+        menu_state = new_state;
     }
 }

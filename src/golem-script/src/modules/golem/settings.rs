@@ -5,6 +5,7 @@ use boa_engine::{js_error, js_string, Context, JsResult, JsString, JsValue, Modu
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use golem_ui::application::menu::style::MenuStyleFontSize;
 use golem_ui::data::settings::DateTimeFormat;
+use tracing::{debug, error, trace};
 
 struct JsDatetimeFormat(DateTimeFormat);
 
@@ -140,9 +141,16 @@ fn list_time_zones_() -> Vec<JsString> {
         .collect()
 }
 
-fn set_date_time_inner_(datetime: String) -> JsResult<()> {
+fn set_date_time_inner_(datetime: &str) -> JsResult<()> {
+    // Make sure this is a valid date and time.
+    let _ = time::OffsetDateTime::parse(
+        datetime,
+        &time::format_description::well_known::Iso8601::DEFAULT,
+    )
+    .map_err(|e| js_error!("Invalid date and time: {}", e))?;
+
     let status = std::process::Command::new("date")
-        .args(&["-s", &datetime])
+        .args(&["-s", datetime])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
@@ -155,26 +163,42 @@ fn set_date_time_inner_(datetime: String) -> JsResult<()> {
     }
 }
 
-fn update_date_time_() {
+fn update_date_time_(tz: Option<String>, update_tz: Option<bool>) {
     // Only deserialize the fields we care about.
-    #[derive(serde::Deserialize)]
+    #[derive(Debug, serde::Deserialize)]
     struct WorldTimeApiResponse {
         timezone: String,
         datetime: String,
     }
 
-    fn ping_ntp() -> JsResult<String> {
-        let result = reqwest::blocking::get("http://worldtimeapi.org/api/ip")
+    fn ping_ntp(tz: Option<String>) -> JsResult<WorldTimeApiResponse> {
+        trace!(?tz, "Pinging worldtimeapi for time");
+
+        let mut url = "https://worldtimeapi.org/api/ip".to_string();
+        if let Some(tz) = tz {
+            url = format!("https://worldtimeapi.org/api/timezone/{}", tz);
+        }
+
+        let result = reqwest::blocking::get(&url)
             .map_err(|e| js_error!("Could not get timezone from worldtimeapi: {}", e))?
             .json::<WorldTimeApiResponse>()
             .map_err(|e| js_error!("Could not parse worldtimeapi response: {}", e))?;
-        Ok(result.datetime)
+        trace!(?result, "Got time from worldtimeapi");
+        Ok(result)
     }
 
-    std::thread::spawn(|| {
+    std::thread::spawn(move || {
         // Ignore errors.
-        if let Some(dt) = ping_ntp().ok() {
-            let _ = set_date_time_inner_(dt);
+        if let Some(dt) = ping_ntp(tz).ok() {
+            if let Some(true) = update_tz {
+                if let Err(e) = set_time_zone_(dt.timezone) {
+                    error!(?e, "Could not set timezone");
+                }
+            }
+
+            if let Err(e) = set_date_time_inner_(&dt.datetime) {
+                error!(?e, "Could not set date and time");
+            }
         }
     });
 }
@@ -198,7 +222,9 @@ fn set_time_zone_(tz: String) -> JsResult<()> {
     match std::fs::exists(&tz_path) {
         Ok(false) => return Err(js_error!("Timezone not found: {}", tz)),
         Err(e) => return Err(js_error!("Could not check timezone: {}", e)),
-        _ => {}
+        Ok(true) => {
+            debug!(tz, "Timezone found")
+        }
     }
 
     std::fs::remove_file("/etc/localtime")
@@ -217,7 +243,7 @@ fn set_date_time_(datetime: JsDate, context: &mut Context) -> JsResult<()> {
         .ok_or_else(|| js_error!("Could not convert date to string"))?
         .to_std_string_lossy();
 
-    set_date_time_inner_(iso)
+    set_date_time_inner_(&iso)
 }
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {

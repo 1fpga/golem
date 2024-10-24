@@ -4,7 +4,7 @@ import {
   Commands,
   Core,
   Games,
-  StartOn,
+  StartOnKind,
   StartOnSetting,
   User,
   UserSettings,
@@ -52,10 +52,10 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
 
   // Check the startOn option.
   switch (startOn.kind) {
-    case StartOn.GameLibrary:
+    case StartOnKind.GameLibrary:
       await gamesMenu();
       break;
-    case StartOn.LastGamePlayed:
+    case StartOnKind.LastGamePlayed:
       {
         const game = await Games.lastPlayed();
         if (game) {
@@ -66,7 +66,7 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
         }
       }
       break;
-    case StartOn.SpecificGame:
+    case StartOnKind.SpecificGame:
       {
         const game = await Games.byId(startOn.game);
         if (game) {
@@ -75,7 +75,7 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
       }
       break;
 
-    case StartOn.MainMenu:
+    case StartOnKind.MainMenu:
     default:
       break;
   }
@@ -122,7 +122,9 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
             ]
           : []),
         "---",
-        { label: "Logout", select: () => (logout = true) },
+        ...((await User.canLogOut())
+          ? [{ label: "Logout", select: () => (logout = true) }]
+          : []),
         { label: "Exit", select: () => (quit = true) },
       ],
     });
@@ -131,8 +133,8 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
   if (quit) {
     return true;
   } else if (logout) {
-    await User.logout();
     await Commands.logout();
+    await User.logout();
   }
   return false;
 }
@@ -173,6 +175,9 @@ async function mainInner(): Promise<boolean> {
   let startOn = await settings.startOn();
   console.log("Starting on:", JSON.stringify(startOn));
 
+  await settings.updateDateTimeIfNecessary();
+  console.log("Date: ", new Date());
+
   while (true) {
     try {
       return await mainMenu(startOn, settings);
@@ -195,7 +200,7 @@ async function mainInner(): Promise<boolean> {
         }
       }
     }
-    startOn = { kind: StartOn.MainMenu };
+    startOn = { kind: StartOnKind.MainMenu };
   }
 }
 

@@ -1,0 +1,7 @@
+[package]
+name = "time_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+time = { version = "0.3.36", features = ["local-offset"] }

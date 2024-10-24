@@ -9,7 +9,7 @@ export type StartOnSetting = StartOnSchema;
  * The possible values for the `startOn` setting.
  * If you update this setting, remember to also update the `start-on.json` schema.
  */
-export const enum StartOn {
+export enum StartOnKind {
   MainMenu = "main-menu",
   GameLibrary = "game-library",
   LastGamePlayed = "last-game",
@@ -30,6 +30,7 @@ export const DATETIME_FORMATS: settings.DateTimeFormat[] = [
 export const enum DatetimeUpdate {
   Automatic = "auto",
   Manual = "manual",
+  AutoWithTz = "auto-tz",
 }
 
 const START_ON_KEY = "startOn";
@@ -87,7 +88,7 @@ export class UserSettings {
     return await this.getOrFail(
       START_ON_KEY,
       {
-        kind: StartOn.MainMenu,
+        kind: StartOnKind.MainMenu,
       },
       (await import("$schemas:settings/start-on")).validate,
     );
@@ -181,6 +182,8 @@ export class UserSettings {
   }
 
   public async setTimeZone(tz: string) {
+    // This will throw if the timezone is invalid.
+    settings.setTimeZone(tz);
     await this.storage_.set(TIMEZONE_KEY, tz);
   }
 
@@ -190,5 +193,16 @@ export class UserSettings {
 
   public async getDateTimeUpdate() {
     return await this.getOrFail(DATETIME_UPDATE_KEY, DatetimeUpdate.Manual);
+  }
+
+  public async updateDateTimeIfNecessary() {
+    const update = await this.getDateTimeUpdate();
+    if (update != DatetimeUpdate.Manual) {
+      let tz = undefined;
+      if (update === DatetimeUpdate.AutoWithTz) {
+        tz = await this.getTimeZone("UTC");
+      }
+      settings.updateDateTime(tz, update === DatetimeUpdate.Automatic);
+    }
   }
 }

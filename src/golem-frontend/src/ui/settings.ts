@@ -1,13 +1,7 @@
 import * as ui from "@:golem/ui";
 import * as golemSettings from "@:golem/settings";
 import { shortcutsMenu } from "./settings/shortcuts";
-import {
-  DatetimeUpdate,
-  Games,
-  StartOn,
-  StartOnSetting,
-  UserSettings,
-} from "$/services";
+import { DatetimeUpdate, Games, StartOnKind, UserSettings } from "$/services";
 
 const FONT_SIZE_LABELS: { [key in golemSettings.FontSize]: string } = {
   small: "Small",
@@ -24,67 +18,85 @@ const DATETIME_FORMAT_LABELS: {
   hidden: "Hidden",
 };
 
-async function start_options_menu(settings: UserSettings) {
+async function startOptionsMenu(settings: UserSettings) {
   const labels = {
-    [StartOn.MainMenu]: "Main Menu",
-    [StartOn.GameLibrary]: "Game Library",
-    [StartOn.LastGamePlayed]: "Last Game Played",
-    [StartOn.SpecificGame]: "Specific Game",
+    [StartOnKind.MainMenu]: "Main Menu",
+    [StartOnKind.GameLibrary]: "Game Library",
+    [StartOnKind.LastGamePlayed]: "Last Game Played",
+    [StartOnKind.SpecificGame]: "Specific Game",
   };
 
-  let startMenuKind: StartOn = (await settings.startOn()).kind as StartOn;
+  let done = false;
 
-  await ui.textMenu({
-    back: false,
-    title: "Startup Options",
-    items: [
-      {
-        label: "Start on:",
-        marker: labels[startMenuKind],
-        select: async (item) => {
-          // Cannot select specific game from this menu.
-          const keys = Object.keys(labels);
-          startMenuKind = keys[
-            (keys.indexOf(startMenuKind) + 1) % keys.length
-          ] as StartOn;
+  let startOn = await settings.startOn();
+  let maybeGame: undefined | Games;
+  while (!done) {
+    if (startOn.kind === StartOnKind.SpecificGame) {
+      maybeGame = await Games.byId(startOn.game);
+    }
 
-          let startOn: StartOnSetting;
-          switch (startMenuKind) {
-            case StartOn.SpecificGame:
-              const game = await Games.select({
-                title: "Select a game",
-                details: false,
-              });
-              if (game) {
-                startOn = {
-                  kind: startMenuKind,
-                  game: game.id,
-                };
-              } else {
-                while (startMenuKind === StartOn.SpecificGame) {
-                  startMenuKind = keys[
-                    (keys.indexOf(startMenuKind) + 1) % keys.length
-                  ] as StartOn;
+    done = await ui.textMenu({
+      back: true,
+      title: "Startup Options",
+      items: [
+        {
+          label: "Start on:",
+          marker: labels[startOn.kind],
+          select: async (item) => {
+            // Cannot select specific game from this menu.
+            const keys = Object.keys(labels);
+            let kind = keys[
+              (keys.indexOf(startOn.kind) + 1) % keys.length
+            ] as StartOnKind;
+
+            switch (kind) {
+              case StartOnKind.SpecificGame:
+                const g = maybeGame ?? (await Games.first());
+                if (g) {
+                  maybeGame = g;
+                  startOn = { kind, game: g.id };
+                } else {
+                  while (kind === StartOnKind.SpecificGame) {
+                    kind = keys[
+                      (keys.indexOf(kind) + 1) % keys.length
+                    ] as StartOnKind;
+                  }
+                  startOn = { kind };
                 }
-                startOn = {
-                  kind: startMenuKind,
-                };
-              }
-              break;
-            default:
-              startOn = {
-                kind: startMenuKind,
-              };
-              break;
-          }
+                break;
+              default:
+                startOn = { kind };
+                break;
+            }
 
-          item.marker = labels[startMenuKind];
-          await settings.setStartOn(startOn);
-          console.log("Start on:", JSON.stringify(await settings.startOn()));
+            item.marker = labels[startOn.kind];
+            await settings.setStartOn(startOn);
+            console.log("Start on:", JSON.stringify(await settings.startOn()));
+            return false;
+          },
         },
-      },
-    ],
-  });
+        ...(startOn.kind === StartOnKind.SpecificGame
+          ? [
+              {
+                label: "  ",
+                marker: maybeGame?.name ?? "",
+                select: async (item: ui.TextMenuItem<boolean>) => {
+                  const game = await Games.select({
+                    title: "Select a game",
+                  });
+                  if (game) {
+                    maybeGame = game;
+                    startOn = { kind: StartOnKind.SpecificGame, game: game.id };
+                    await settings.setStartOn(startOn);
+                    item.marker = game.name;
+                  }
+                },
+              },
+            ]
+          : []),
+      ],
+    });
+  }
 }
 
 export async function uiSettingsMenu(settings: UserSettings) {
@@ -139,7 +151,6 @@ async function setTimezone(settings: UserSettings) {
       ...golemSettings.listTimeZones().map((tz) => ({
         label: tz,
         select: async () => {
-          golemSettings.setTimeZone(tz);
           await settings.setTimeZone(tz);
           return tz;
         },
@@ -148,19 +159,57 @@ async function setTimezone(settings: UserSettings) {
   });
 }
 
-async function setDateTimeMenu(settings: UserSettings) {
-  interface DateTimeValues {
-    title: string;
-    value: string;
+interface DateTimeMenuValues {
+  title: string;
+  value: string;
 
-    choices(): string[];
+  choices(): string[];
+}
+
+/**
+ * Show a series of menus to set the date or time.
+ * @param values The list of values to set.
+ * @returns Whether the user completed the menu (or false if cancelled).
+ */
+async function setDateTimeUi(values: DateTimeMenuValues[]): Promise<boolean> {
+  let i = 0;
+  while (i < values.length) {
+    const menu = values[i];
+    const choices = menu.choices();
+    const currentValue = choices.indexOf(menu.value);
+    const pick = await ui.textMenu({
+      title: menu.title,
+      back: -1,
+      highlighted: currentValue == -1 ? 0 : currentValue,
+      items: [
+        ...menu.choices().map((choice) => ({
+          label: choice,
+          select: async () => {
+            menu.value = choice;
+            return 0;
+          },
+        })),
+      ],
+    });
+
+    if (pick === -1) {
+      if (i === 0) {
+        return false;
+      }
+      i--;
+    } else {
+      i++;
+    }
   }
+  return true;
+}
 
+async function setDateMenu(settings: UserSettings) {
   let date = new Date();
-  const values: DateTimeValues[] = [
+  const completed = await setDateTimeUi([
     {
       get title() {
-        return `Year (${date.getFullYear()})`;
+        return `Year (____-${date.getMonth() + 1}-${date.getDate()})`;
       },
       get value() {
         return date.getFullYear().toString();
@@ -175,7 +224,7 @@ async function setDateTimeMenu(settings: UserSettings) {
     },
     {
       get title() {
-        return `Month (${date.getFullYear()}-${date.getMonth() + 1})`;
+        return `Month (${date.getFullYear()}-__-${date.getDate()})`;
       },
       get value() {
         return (date.getMonth() + 1).toString();
@@ -187,7 +236,7 @@ async function setDateTimeMenu(settings: UserSettings) {
     },
     {
       get title() {
-        return `Day (${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()})`;
+        return `Day (${date.getFullYear()}-${date.getMonth() + 1}-__)`;
       },
       get value() {
         return date.getDate().toString();
@@ -206,71 +255,127 @@ async function setDateTimeMenu(settings: UserSettings) {
         );
       },
     },
-  ];
+  ]);
 
-  let i = 0;
-  while (i < values.length) {
-    const menu = values[i];
-    const pick = await ui.textMenu({
-      title: menu.title,
-      back: -1,
-      items: [
-        ...menu.choices().map((choice) => ({
-          label: choice,
-          select: async () => {
-            menu.value = choice;
-            return 0;
-          },
-        })),
-      ],
-    });
-
-    if (pick === -1) {
-      if (i === 0) {
-        return null;
-      }
-      i--;
-    } else {
-      i++;
-    }
+  if (completed) {
+    golemSettings.setDateTime(date);
+    return date;
+  } else {
+    return null;
   }
+}
 
-  golemSettings.setDateTime(date);
-  return date;
+async function setTimeMenu(settings: UserSettings) {
+  let date = new Date();
+  const completed = await setDateTimeUi([
+    {
+      get title() {
+        return `Hour (__:${date.getMinutes()}:${date.getSeconds()})`;
+      },
+      get value() {
+        return date.getHours().toString();
+      },
+      set value(value) {
+        date.setHours(parseInt(value, 10));
+      },
+      choices: () => {
+        return Array.from({ length: 24 }, (_, i) => i.toString());
+      },
+    },
+    {
+      get title() {
+        return `Minutes (${date.getHours()}:__:${date.getSeconds()})`;
+      },
+      get value() {
+        return date.getMinutes().toString();
+      },
+      set value(value) {
+        date.setMinutes(parseInt(value, 10));
+      },
+      choices: () => {
+        return Array.from({ length: 60 }, (_, i) => i.toString());
+      },
+    },
+    {
+      get title() {
+        return `Seconds (${date.getHours()}:${date.getMinutes()}:__)`;
+      },
+      get value() {
+        return date.getSeconds().toString();
+      },
+      set value(value) {
+        date.setSeconds(parseInt(value, 10));
+      },
+      choices: () => {
+        return Array.from({ length: 60 }, (_, i) => i.toString());
+      },
+    },
+  ]);
+
+  if (completed) {
+    golemSettings.setDateTime(date);
+    return date;
+  } else {
+    return null;
+  }
 }
 
 async function settingsMenuDateTime(settings: UserSettings) {
   while (true) {
-    const auto =
-      (await settings.getDateTimeUpdate()) === DatetimeUpdate.Automatic;
+    const type = await settings.getDateTimeUpdate();
     const d = new Date();
     let items: ui.TextMenuItem<any>[] = [];
-    if (!auto) {
-      items = [
-        {
-          label: "Set TimeZone...",
-          marker: await settings.getTimeZone(
-            golemSettings.getTimeZone() ?? "UTC",
-          ),
-          select: async (item: ui.TextMenuItem<undefined>) => {
-            const newTZ = await setTimezone(settings);
-            if (newTZ !== null) {
-              item.marker = newTZ;
-              await settings.setTimeZone(newTZ);
-            }
-          },
+    if (type !== DatetimeUpdate.Automatic) {
+      items.push({
+        label: "Set TimeZone...",
+        marker: await settings.getTimeZone(
+          golemSettings.getTimeZone() ?? "UTC",
+        ),
+        select: async (item: ui.TextMenuItem<undefined>) => {
+          const newTZ = await setTimezone(settings);
+          if (newTZ !== null) {
+            item.marker = newTZ;
+            await settings.setTimeZone(newTZ);
+          }
         },
+      });
+    }
+    if (type === DatetimeUpdate.Manual) {
+      items.push(
         {
           label: "Set Date",
           marker: `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`,
           select: async (item) => {
-            const n = await setDateTimeMenu(settings);
+            const n = await setDateMenu(settings);
             if (n) {
               item.marker = `${n.getFullYear()}-${n.getMonth() + 1}-${n.getDate()}`;
             }
           },
         },
-      ];
+        {
+          label: "Set Time",
+          marker: `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
+          select: async (item) => {
+            const n = await setTimeMenu(settings);
+            if (n) {
+              item.marker = `${n.getHours()}:${n.getMinutes()}:${n.getSeconds()}`;
+            }
+          },
+        },
+      );
+    }
+
+    let marker;
+    switch (type) {
+      case DatetimeUpdate.Automatic:
+        marker = "Automatic";
+        break;
+      case DatetimeUpdate.Manual:
+        marker = "Manual";
+        break;
+      case DatetimeUpdate.AutoWithTz:
+        marker = "Automatic (with TZ)";
+        break;
     }
 
     const result = await ui.textMenu({
@@ -279,11 +384,15 @@ async function settingsMenuDateTime(settings: UserSettings) {
       items: [
         {
           label: "Update Date and Time",
-          marker: auto ? "Automatic" : "Manual",
+          marker,
           select: async (item) => {
-            await settings.setDateTimeUpdate(
-              auto ? DatetimeUpdate.Manual : DatetimeUpdate.Automatic,
-            );
+            const next =
+              type === DatetimeUpdate.Automatic
+                ? DatetimeUpdate.AutoWithTz
+                : type === DatetimeUpdate.AutoWithTz
+                  ? DatetimeUpdate.Manual
+                  : DatetimeUpdate.Automatic;
+            await settings.setDateTimeUpdate(next);
             return 1;
           },
         },
@@ -320,6 +429,8 @@ export async function settingsMenu() {
           if (await settingsMenuDateTime(settings)) {
             reloadMainMenu = true;
           }
+
+          await settings.updateDateTimeIfNecessary();
         },
       },
       "---",
@@ -329,8 +440,8 @@ export async function settingsMenu() {
       },
       "---",
       {
-        label: "Startup Options",
-        select: async () => await start_options_menu(settings),
+        label: "Startup Options...",
+        select: async () => await startOptionsMenu(settings),
       },
       "-",
       {

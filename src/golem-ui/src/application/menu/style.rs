@@ -165,6 +165,13 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
         action: Self::Input,
     ) -> InputResult<Self::Value> {
         match action {
+            Event::User { type_, code, .. } => {
+                if type_ == 0 {
+                    Interaction::Navigation(Navigation::JumpTo(code as usize)).into()
+                } else {
+                    InputState::Idle.into()
+                }
+            }
             Event::KeyDown {
                 keycode: Some(code),
                 ..

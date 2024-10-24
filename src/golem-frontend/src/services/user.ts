@@ -88,6 +88,26 @@ export class User {
     return loggedInUser;
   }
 
+  static async canLogOut() {
+    const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*)
+                                                       FROM users`;
+    if (count > 1) {
+      return true;
+    }
+    if (loggedInUser === null) {
+      return false;
+    }
+
+    let [user] = await sql<UserRow>`SELECT *
+                                        FROM users
+                                        WHERE username = ${loggedInUser.username}`;
+
+    if (!user) {
+      return false;
+    }
+    return user.password !== null;
+  }
+
   /**
    * Create a new user. Please note that the user is not logged in after creation.
    * @param username The username of the new user.

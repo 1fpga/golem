@@ -159,9 +159,12 @@ struct UiMenuOptions {
     sort: Option<JsValue>,
     sort_label: Option<String>,
 
+    highlighted: Option<u32>,
+
     /// If this is Some(...) do not show the menu but select the item with the given label
     /// right await (first label being found).
-    selected: Option<String>,
+    #[unsafe_ignore_trace]
+    selected: Option<Either<String, u32>>,
 }
 
 fn text_menu_(
@@ -183,10 +186,21 @@ fn text_menu_(
             .with_back_menu(options.back.is_some())
             .with_show_sort(options.sort.is_some())
             .with_sort_opt(sort_label)
-            .with_state(Some(state));
+            .with_state(Some(state))
+            .with_selected_opt(options.highlighted);
 
         let result = if let Some(label) = options.selected.take() {
-            let selected_idx = options.items.iter().position(|i| i.label == label);
+            let selected_idx = match label {
+                Either::Left(label) => options.items.iter().position(|i| i.label == label),
+                Either::Right(idx) => {
+                    if idx > options.items.len() as u32 {
+                        None
+                    } else {
+                        Some(idx as usize)
+                    }
+                }
+            };
+
             if let Some(selected_idx) = selected_idx {
                 MenuAction::Select(selected_idx)
             } else {

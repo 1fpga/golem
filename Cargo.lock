@@ -2264,6 +2264,7 @@ dependencies = [
  "sha2 0.11.0-pre.4",
  "strum 0.26.3",
  "tempdir",
+ "time",
  "tracing",
  "url",
  "valico",
@@ -2331,6 +2332,7 @@ dependencies = [
  "strum 0.25.0",
  "tempdir",
  "thiserror",
+ "time",
  "tinybmp",
  "tracing",
  "tracing-subscriber",
@@ -4868,6 +4870,13 @@ checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
 dependencies = [
  "num-conv",
  "time-core",
+]
+
+[[package]]
+name = "time_test"
+version = "0.1.0"
+dependencies = [
+ "time",
 ]
 
 [[package]]

@@ -3,6 +3,7 @@ use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
 use image::RgbImage;
 use mister_fpga::core::AsMisterCore;
 use sdl3::event::Event;
+use time::util::local_offset;
 use tracing::{debug, error};
 
 use mister_fpga::fpga;
@@ -61,6 +62,14 @@ impl Default for De10Platform {
 
 impl De10Platform {
     pub fn init(&mut self) {
+        // This is necessary to prevent the time crate (which is used in Boa, for example)
+        // from returning an error when trying to get the local offset.
+        // This is because we're not running in single thread, but we do accept the risk
+        // of running in an unsound environment for time.
+        unsafe {
+            local_offset::set_soundness(local_offset::Soundness::Unsound);
+        }
+
         self.core_manager.load_menu().unwrap();
     }
 

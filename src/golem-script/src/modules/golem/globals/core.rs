@@ -14,7 +14,7 @@ use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::error;
+use tracing::{debug, error, info};
 
 #[derive(Debug, Clone, Trace, Finalize, TryFromJs)]
 struct LoopOptions {}
@@ -67,7 +67,7 @@ impl JsCore {
         let mut core = self.core.clone();
 
         let events = self.events.clone();
-        eprintln!("Running loop: {:?}", options);
+        info!("Running loop: {:?}", options);
 
         run_core_loop(
             app,
@@ -82,7 +82,7 @@ impl JsCore {
 
                     // If the command returns a promise, wait for it to resolve (or reject).
                     if let Some(p) = result.as_promise() {
-                        eprintln!("Waiting for promise to resolve...");
+                        debug!("Waiting for promise to resolve...");
                         p.await_blocking(context).map_err(JsError::from_opaque)?;
                     }
                     Ok(())

@@ -32,8 +32,10 @@ declare module "@:golem/settings" {
 
   /**
    * Ping the NTP server and update the current time.
+   * @param tz The timezone to use, or null to use the system timezone.
+   * @param updateTz Whether to update the timezone as well.
    */
-  export function updateDateTime(): void;
+  export function updateDateTime(tz?: string, updateTz?: boolean): void;
 
   /**
    * Get a list of all available timezones.
