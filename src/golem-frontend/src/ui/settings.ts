@@ -1,7 +1,15 @@
 import * as ui from "@:golem/ui";
 import * as golemSettings from "@:golem/settings";
 import { shortcutsMenu } from "./settings/shortcuts";
-import { DatetimeUpdate, Games, StartOnKind, UserSettings } from "$/services";
+import {
+  DatetimeUpdate,
+  Games,
+  GlobalSettings,
+  StartOnKind,
+  User,
+  UserSettings,
+} from "$/services";
+import { accountsSettingsMenu } from "$/ui/settings/accounts";
 
 const FONT_SIZE_LABELS: { [key in golemSettings.FontSize]: string } = {
   small: "Small",
@@ -99,7 +107,12 @@ async function startOptionsMenu(settings: UserSettings) {
   }
 }
 
-export async function uiSettingsMenu(settings: UserSettings) {
+export async function uiSettingsMenu() {
+  if (!User.loggedInUser(true).admin) {
+    throw new Error("Only admins can change the UI settings.");
+  }
+
+  const settings = await GlobalSettings.create();
   await ui.textMenu({
     title: "UI Settings",
     back: 0,
@@ -143,7 +156,8 @@ export async function uiSettingsMenu(settings: UserSettings) {
   return false;
 }
 
-async function setTimezone(settings: UserSettings) {
+async function setTimezone() {
+  const settings = await GlobalSettings.create();
   return await ui.textMenu({
     title: "Pick a Timezone",
     back: null,
@@ -204,7 +218,7 @@ async function setDateTimeUi(values: DateTimeMenuValues[]): Promise<boolean> {
   return true;
 }
 
-async function setDateMenu(settings: UserSettings) {
+async function setDateMenu() {
   let date = new Date();
   const completed = await setDateTimeUi([
     {
@@ -265,7 +279,7 @@ async function setDateMenu(settings: UserSettings) {
   }
 }
 
-async function setTimeMenu(settings: UserSettings) {
+async function setTimeMenu() {
   let date = new Date();
   const completed = await setDateTimeUi([
     {
@@ -320,7 +334,12 @@ async function setTimeMenu(settings: UserSettings) {
   }
 }
 
-async function settingsMenuDateTime(settings: UserSettings) {
+async function settingsMenuDateTime() {
+  if (!User.loggedInUser(true).admin) {
+    throw new Error("Only admins can change the date and time settings.");
+  }
+
+  const settings = await GlobalSettings.create();
   while (true) {
     const type = await settings.getDateTimeUpdate();
     const d = new Date();
@@ -332,7 +351,7 @@ async function settingsMenuDateTime(settings: UserSettings) {
           golemSettings.getTimeZone() ?? "UTC",
         ),
         select: async (item: ui.TextMenuItem<undefined>) => {
-          const newTZ = await setTimezone(settings);
+          const newTZ = await setTimezone();
           if (newTZ !== null) {
             item.marker = newTZ;
             await settings.setTimeZone(newTZ);
@@ -346,7 +365,7 @@ async function settingsMenuDateTime(settings: UserSettings) {
           label: "Set Date",
           marker: `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`,
           select: async (item) => {
-            const n = await setDateMenu(settings);
+            const n = await setDateMenu();
             if (n) {
               item.marker = `${n.getFullYear()}-${n.getMonth() + 1}-${n.getDate()}`;
             }
@@ -356,7 +375,7 @@ async function settingsMenuDateTime(settings: UserSettings) {
           label: "Set Time",
           marker: `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`,
           select: async (item) => {
-            const n = await setTimeMenu(settings);
+            const n = await setTimeMenu();
             if (n) {
               item.marker = `${n.getHours()}:${n.getMinutes()}:${n.getSeconds()}`;
             }
@@ -385,7 +404,7 @@ async function settingsMenuDateTime(settings: UserSettings) {
         {
           label: "Update Date and Time",
           marker,
-          select: async (item) => {
+          select: async () => {
             const next =
               type === DatetimeUpdate.Automatic
                 ? DatetimeUpdate.AutoWithTz
@@ -408,6 +427,7 @@ async function settingsMenuDateTime(settings: UserSettings) {
 }
 
 export async function settingsMenu() {
+  const user = User.loggedInUser(true);
   const settings = await UserSettings.forLoggedInUser();
   let reloadMainMenu = false;
 
@@ -415,22 +435,34 @@ export async function settingsMenu() {
     back: 0,
     title: "Settings",
     items: [
-      {
-        label: "UI...",
-        select: async () => {
-          if (await uiSettingsMenu(settings)) {
-            reloadMainMenu = true;
-          }
-        },
-      },
-      {
-        label: "Date and Time...",
-        select: async () => {
-          if (await settingsMenuDateTime(settings)) {
-            reloadMainMenu = true;
-          }
+      ...(user.admin
+        ? [
+            {
+              label: "UI...",
+              select: async () => {
+                if (await uiSettingsMenu()) {
+                  reloadMainMenu = true;
+                }
+              },
+            },
+            {
+              label: "Date and Time...",
+              select: async () => {
+                if (await settingsMenuDateTime()) {
+                  reloadMainMenu = true;
+                }
 
-          await settings.updateDateTimeIfNecessary();
+                await (
+                  await GlobalSettings.create()
+                ).updateDateTimeIfNecessary();
+              },
+            },
+          ]
+        : []),
+      {
+        label: "Accounts...",
+        select: async () => {
+          reloadMainMenu = reloadMainMenu || (await accountsSettingsMenu());
         },
       },
       "---",
@@ -438,7 +470,6 @@ export async function settingsMenu() {
         label: "Shortcuts...",
         select: shortcutsMenu,
       },
-      "---",
       {
         label: "Startup Options...",
         select: async () => await startOptionsMenu(settings),

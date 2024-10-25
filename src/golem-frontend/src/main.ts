@@ -4,6 +4,7 @@ import {
   Commands,
   Core,
   Games,
+  GlobalSettings,
   StartOnKind,
   StartOnSetting,
   User,
@@ -172,10 +173,10 @@ async function mainInner(): Promise<boolean> {
   }
 
   const settings = await UserSettings.init(user);
+  const global = await GlobalSettings.init();
   let startOn = await settings.startOn();
-  console.log("Starting on:", JSON.stringify(startOn));
 
-  await settings.updateDateTimeIfNecessary();
+  console.log("Starting on:", JSON.stringify(startOn));
   console.log("Date: ", new Date());
 
   while (true) {
