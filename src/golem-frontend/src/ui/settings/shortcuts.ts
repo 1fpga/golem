@@ -27,7 +27,14 @@ export async function shortcutsMenu() {
         label: ` ${c.name}`,
         marker: markerForCommand(c),
         select: async () => {
-          await ui.alert("Shortcuts for " + c.name, c.shortcuts.join(", "));
+          const shortcut = await ui.promptShortcut(
+            "Enter a new shortcut",
+            c.name,
+          );
+          console.log(shortcut);
+          if (shortcut) {
+            await c.addShortcut(shortcut, undefined);
+          }
         },
       });
     }

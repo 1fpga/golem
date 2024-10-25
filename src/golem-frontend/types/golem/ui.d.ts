@@ -156,4 +156,12 @@ declare module "@:golem/ui" {
    * Show the input tester panel.
    */
   export function inputTester(): Promise<void>;
+
+  /**
+   * Prompt the user for a shortcut.
+   */
+  export function promptShortcut(
+    title?: string,
+    message?: string,
+  ): Promise<string | undefined>;
 }

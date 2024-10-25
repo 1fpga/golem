@@ -1,18 +1,17 @@
-use std::cmp::Ordering;
-use std::collections::{HashMap, HashSet};
-use std::fmt::{Display, Formatter};
-use std::hash::Hasher;
-use std::str::FromStr;
-
 use crate::input::InputState;
+use bitvec::array::BitArray;
 use itertools::Itertools;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use serde::{Deserialize, Deserializer, Serialize};
-use strum::EnumString;
+use std::cmp::Ordering;
+use std::fmt::{Display, Formatter};
+use std::hash::Hasher;
+use std::str::FromStr;
+use strum::{EnumCount, EnumString};
 use tracing::error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i8)]
 pub enum AxisValue {
     /// At the end of the axis.
@@ -22,6 +21,7 @@ pub enum AxisValue {
     LowNegative = -1,
 
     /// Around 0.
+    #[default]
     Idle = 0,
 
     /// Around middle.
@@ -99,30 +99,35 @@ impl AxisValue {
 }
 
 /// A set of modifier keys. These are indiscriminate for whether right/left keys are pressed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumString, strum::Display)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, Hash, EnumString, strum::Display, EnumCount, strum::FromRepr,
+)]
 #[repr(u8)]
 pub enum Modifiers {
     #[strum(ascii_case_insensitive)]
-    Shift,
+    Shift = 0,
 
     #[strum(ascii_case_insensitive)]
-    Ctrl,
+    Ctrl = 1,
 
     #[strum(ascii_case_insensitive)]
-    Alt,
+    Alt = 2,
 
     #[strum(ascii_case_insensitive)]
-    Gui,
+    Gui = 3,
 }
 
 /// A shortcut that can be compared to an input state.
 /// This is normally paired with a command.
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Shortcut {
-    keyboard: HashSet<Scancode>,
-    keyboard_modifiers: HashSet<Modifiers>,
-    gamepad_button: HashSet<Button>,
-    axis: HashMap<Axis, AxisValue>,
+    keyboard:
+        BitArray<[u32; (sdl3::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize) / size_of::<u32>()]>,
+    keyboard_modifiers: [bool; Modifiers::COUNT],
+    gamepad_button: BitArray<
+        [u32; (sdl3::sys::SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MAX as usize) / size_of::<u32>()],
+    >,
+    axis: [AxisValue; sdl3::sys::SDL_GamepadAxis::SDL_GAMEPAD_AXIS_MAX as usize],
 }
 
 impl PartialOrd for Shortcut {
@@ -139,27 +144,21 @@ impl Ord for Shortcut {
 
 impl std::hash::Hash for Shortcut {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.keyboard
-            .iter()
-            .sorted_by(|a, b| (**a as i32).cmp(&(**b as i32)))
-            .collect::<Vec<_>>()
-            .hash(state);
-        self.keyboard_modifiers
-            .iter()
-            .sorted()
-            .collect::<Vec<_>>()
-            .hash(state);
-        self.gamepad_button
-            .iter()
-            .sorted_by(|a, b| (**a as i32).cmp(&(**b as i32)))
-            .collect::<Vec<_>>()
-            .hash(state);
-        self.axis
-            .iter()
-            .sorted_by(|(a, _), (b, _)| (**a as i32).cmp(&(**b as i32)))
-            .collect::<Vec<_>>()
-            .hash(state);
+        self.keyboard.hash(state);
+        self.keyboard_modifiers.hash(state);
+        self.gamepad_button.hash(state);
+        self.axis.hash(state);
     }
+}
+
+#[inline]
+fn index_to_button(i: usize) -> Button {
+    Button::from_ll(unsafe { std::mem::transmute(i as i32) }).expect("Invalid button index?")
+}
+
+#[inline]
+fn index_to_axis(i: usize) -> Axis {
+    Axis::from_ll(unsafe { std::mem::transmute(i as i32) }).expect("Invalid axis index?")
 }
 
 impl Display for Shortcut {
@@ -167,18 +166,33 @@ impl Display for Shortcut {
         let keys = self
             .keyboard
             .iter()
-            .map(|k| format!("'{}'", k.name()))
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .map(|(i, _)| {
+                let k = Scancode::from_i32(i as i32).expect("Invalid scancode index?");
+                format!("'{}'", k)
+            })
             .join(" + ");
         let modifiers = self
             .keyboard_modifiers
             .iter()
-            .map(|m| m.to_string())
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .map(|(i, _)| Modifiers::from_repr(i as u8).unwrap().to_string())
             .join(" + ");
-        let buttons = self.gamepad_button.iter().map(|b| b.string()).join(" + ");
+        let buttons = self
+            .gamepad_button
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .map(|(i, _)| index_to_button(i).string())
+            .join(" + ");
         let axis = self
             .axis
             .iter()
-            .map(|(a, v)| format!("{}{}", a.string(), v))
+            .enumerate()
+            .filter(|(_, v)| !v.is_idle())
+            .map(|(i, v)| format!("{}{}", index_to_axis(i).string(), v))
             .join(" + ");
 
         [modifiers, keys, buttons, axis]
@@ -255,28 +269,50 @@ impl Shortcut {
     }
 
     pub fn add_key(&mut self, code: Scancode) -> bool {
-        self.keyboard.insert(code);
+        let i = code as usize;
+        self.keyboard.set(i, true);
         true
+    }
+
+    pub fn with_modifier(mut self, modifier: Modifiers) -> Self {
+        self.add_modifier(modifier);
+        self
     }
 
     pub fn add_modifier(&mut self, modifier: Modifiers) -> bool {
-        self.keyboard_modifiers.insert(modifier);
+        self.keyboard_modifiers[modifier as usize] = true;
         true
     }
 
+    pub fn with_gamepad_button(mut self, button: Button) -> Self {
+        self.add_gamepad_button(button);
+        self
+    }
+
     pub fn add_gamepad_button(&mut self, button: Button) -> bool {
-        self.gamepad_button.insert(button);
+        self.gamepad_button.set(button as usize, true);
         true
     }
+
+    pub fn with_axis(mut self, axis: Axis, value: impl Into<AxisValue>) -> Self {
+        self.add_axis(axis, value);
+        self
+    }
+
     pub fn add_axis(&mut self, axis: Axis, value: impl Into<AxisValue>) -> bool {
+        let i = axis as usize;
+        if i > self.axis.len() {
+            return false;
+        }
+
         let v: AxisValue = value.into();
         if v.is_idle() {
             return false;
         }
 
-        let c = self.axis.get(&axis).copied().unwrap_or(AxisValue::Idle);
+        let c = self.axis.get(i).copied().unwrap_or(AxisValue::Idle);
         if (c.is_negative() && v < c) || (c.is_positive() && v > c) || c.is_idle() {
-            self.axis.insert(axis, v);
+            self.axis[i] = v;
             true
         } else {
             false
@@ -284,35 +320,68 @@ impl Shortcut {
     }
 
     pub fn matches(&self, state: &InputState) -> bool {
-        self.keyboard.iter().all(|x| state.keyboard.contains(x))
-            && self.keyboard_modifiers.iter().all(|x| match x {
-                Modifiers::Shift => {
-                    state.keyboard.contains(&Scancode::LShift)
-                        || state.keyboard.contains(&Scancode::RShift)
-                }
-                Modifiers::Ctrl => {
-                    state.keyboard.contains(&Scancode::LCtrl)
-                        || state.keyboard.contains(&Scancode::RCtrl)
-                }
-                Modifiers::Alt => {
-                    state.keyboard.contains(&Scancode::LAlt)
-                        || state.keyboard.contains(&Scancode::RAlt)
-                }
-                Modifiers::Gui => {
-                    state.keyboard.contains(&Scancode::LGui)
-                        || state.keyboard.contains(&Scancode::RGui)
-                }
+        self.keyboard
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .all(|(i, _)| {
+                state
+                    .keyboard
+                    .contains(&Scancode::from_i32(i as i32).expect("Invalid scancode index?"))
             })
+            && self
+                .keyboard_modifiers
+                .iter()
+                .enumerate()
+                .filter(|(_, x)| **x)
+                .all(
+                    |(i, _)| match Modifiers::from_repr(i as u8).expect("Invalid modifier?") {
+                        Modifiers::Shift => {
+                            state.keyboard.contains(&Scancode::LShift)
+                                || state.keyboard.contains(&Scancode::RShift)
+                        }
+                        Modifiers::Ctrl => {
+                            state.keyboard.contains(&Scancode::LCtrl)
+                                || state.keyboard.contains(&Scancode::RCtrl)
+                        }
+                        Modifiers::Alt => {
+                            state.keyboard.contains(&Scancode::LAlt)
+                                || state.keyboard.contains(&Scancode::RAlt)
+                        }
+                        Modifiers::Gui => {
+                            state.keyboard.contains(&Scancode::LGui)
+                                || state.keyboard.contains(&Scancode::RGui)
+                        }
+                    },
+                )
             && self
                 .gamepad_button
                 .iter()
-                .all(|x| state.gamepads.values().any(|gp| gp.contains(x)))
-            && self.axis.iter().all(|(a, v)| {
-                state
-                    .axis
-                    .values()
-                    .any(|gp| gp.get(a).map(|x| v.matches(*x)).unwrap_or(false))
-            })
+                .enumerate()
+                .filter(|(_, x)| **x)
+                .all(|(i, _)| {
+                    let x = index_to_button(i);
+                    state.gamepads.values().any(|gp| gp.contains(&x))
+                })
+            && self
+                .axis
+                .iter()
+                .enumerate()
+                .filter(|(_, x)| !x.is_idle())
+                .all(|(i, v)| {
+                    let x = index_to_axis(i);
+                    state
+                        .axis
+                        .values()
+                        .any(|gp| gp.get(&x).map(|x| v.matches(*x)).unwrap_or(false))
+                })
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.keyboard.iter().all(|x| !*x)
+            && self.keyboard_modifiers.iter().all(|x| !*x)
+            && self.gamepad_button.iter().all(|x| !*x)
+            && self.axis.iter().all(|x| x.is_idle())
     }
 }
 
@@ -322,9 +391,14 @@ fn shortcut_matches() {
     state.key_down(Scancode::A);
     state.key_down(Scancode::B);
     state.controller_button_down(0, Button::DPadUp);
+    state.controller_axis_motion(0, Axis::LeftX, 10000);
 
-    let shortcut = Shortcut::default().with_key(Scancode::A);
-    assert!(shortcut.matches(&state));
+    assert!(Shortcut::default().with_key(Scancode::A).matches(&state));
+    assert!(Shortcut::default()
+        .with_key(Scancode::B)
+        .with_gamepad_button(Button::DPadUp)
+        .matches(&state));
+
     let shortcut = Shortcut::default()
         .with_key(Scancode::A)
         .with_key(Scancode::C);

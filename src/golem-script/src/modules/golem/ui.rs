@@ -454,6 +454,26 @@ fn input_tester_(ContextData(host_defined): ContextData<HostData>, ctx: &mut Con
     JsPromise::resolve(JsValue::undefined(), ctx)
 }
 
+fn prompt_shortcut_(
+    ContextData(host_defined): ContextData<HostData>,
+    title: Option<String>,
+    message: Option<String>,
+    context: &mut Context,
+) -> JsPromise {
+    let app = host_defined.app_mut();
+    let result = golem_ui::application::panels::shortcut::prompt_shortcut(
+        app,
+        title.unwrap_or("Pick a shortcut".to_string()).as_str(),
+        message.as_deref(),
+    );
+
+    if let Some(result) = result {
+        JsPromise::resolve(JsString::from(result.to_string()), context)
+    } else {
+        JsPromise::resolve(JsValue::undefined(), context)
+    }
+}
+
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
         js_string!("ui"),
@@ -483,6 +503,10 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
             (
                 js_string!("inputTester"),
                 input_tester_.into_js_function_copied(context),
+            ),
+            (
+                js_string!("promptShortcut"),
+                prompt_shortcut_.into_js_function_copied(context),
             ),
         ]
         .into_js_module(context),

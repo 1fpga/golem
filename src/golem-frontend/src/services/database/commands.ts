@@ -71,6 +71,7 @@ class Shortcuts {
     shortcut: string,
     meta: any,
   ) {
+    console.log("Creating shortcut", user.id, key, shortcut, meta);
     const [row] = await sql<ShortcutRow>`
             INSERT INTO shortcuts ${sql.insertValues({
               user_id: user.id,
@@ -165,14 +166,9 @@ export class GeneralCommand<T> extends BaseCommand<T, GeneralCommandDef<T>> {
     if (maybeShortcut) {
       await maybeShortcut.delete();
     }
-    await sql`
-            INSERT INTO shortcuts ${sql.insertValues({
-              user_id: user.id,
-              key: this.def_.key,
-              shortcut,
-              meta,
-            })}
-        `;
+    this.shortcuts_.push(
+      await Shortcuts.create(user, this.def_.key, shortcut, meta),
+    );
     commands.createShortcut(shortcut, (c) => {
       this.def_.handler(c, meta);
     });
