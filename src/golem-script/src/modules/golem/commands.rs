@@ -8,6 +8,7 @@ use golem_ui::input::shortcut::Shortcut;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::atomic::AtomicUsize;
+use tracing::debug;
 
 #[derive(Default, Trace, Finalize, JsData)]
 pub struct CommandMap {
@@ -44,6 +45,7 @@ fn create_shortcut_(
     shortcut: String,
     action: JsFunction,
 ) -> JsResult<()> {
+    debug!(?shortcut, "Creating shortcut");
     let shortcut =
         Shortcut::from_str(&shortcut).map_err(|e| js_error!("Invalid shortcut: {:?}", e))?;
 

@@ -119,7 +119,7 @@ pub enum Modifiers {
 
 /// A shortcut that can be compared to an input state.
 /// This is normally paired with a command.
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
+#[derive(Default, Clone, PartialEq, Eq)]
 pub struct Shortcut {
     keyboard:
         BitArray<[u32; (sdl3::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize) / size_of::<u32>()]>,
@@ -128,6 +128,19 @@ pub struct Shortcut {
         [u32; (sdl3::sys::SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MAX as usize) / size_of::<u32>()],
     >,
     axis: [AxisValue; sdl3::sys::SDL_GamepadAxis::SDL_GAMEPAD_AXIS_MAX as usize],
+}
+
+impl std::fmt::Debug for Shortcut {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let (modifiers, keys, buttons, axis) = self.stringify_fields();
+
+        f.debug_struct("Shortcut")
+            .field("keyboard", &keys)
+            .field("keyboard_modifiers", &modifiers)
+            .field("gamepad_button", &buttons)
+            .field("axis", &axis)
+            .finish()
+    }
 }
 
 impl PartialOrd for Shortcut {
@@ -163,37 +176,7 @@ fn index_to_axis(i: usize) -> Axis {
 
 impl Display for Shortcut {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let keys = self
-            .keyboard
-            .iter()
-            .enumerate()
-            .filter(|(_, x)| **x)
-            .map(|(i, _)| {
-                let k = Scancode::from_i32(i as i32).expect("Invalid scancode index?");
-                format!("'{}'", k)
-            })
-            .join(" + ");
-        let modifiers = self
-            .keyboard_modifiers
-            .iter()
-            .enumerate()
-            .filter(|(_, x)| **x)
-            .map(|(i, _)| Modifiers::from_repr(i as u8).unwrap().to_string())
-            .join(" + ");
-        let buttons = self
-            .gamepad_button
-            .iter()
-            .enumerate()
-            .filter(|(_, x)| **x)
-            .map(|(i, _)| index_to_button(i).string())
-            .join(" + ");
-        let axis = self
-            .axis
-            .iter()
-            .enumerate()
-            .filter(|(_, v)| !v.is_idle())
-            .map(|(i, v)| format!("{}{}", index_to_axis(i).string(), v))
-            .join(" + ");
+        let (modifiers, keys, buttons, axis) = self.stringify_fields();
 
         [modifiers, keys, buttons, axis]
             .iter()
@@ -263,6 +246,42 @@ impl FromStr for Shortcut {
 }
 
 impl Shortcut {
+    fn stringify_fields(&self) -> (String, String, String, String) {
+        let keys = self
+            .keyboard
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .map(|(i, _)| {
+                let k = Scancode::from_i32(i as i32).expect("Invalid scancode index?");
+                format!("'{}'", k)
+            })
+            .join(" + ");
+        let modifiers = self
+            .keyboard_modifiers
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .map(|(i, _)| Modifiers::from_repr(i as u8).unwrap().to_string())
+            .join(" + ");
+        let buttons = self
+            .gamepad_button
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| **x)
+            .map(|(i, _)| index_to_button(i).string())
+            .join(" + ");
+        let axis = self
+            .axis
+            .iter()
+            .enumerate()
+            .filter(|(_, v)| !v.is_idle())
+            .map(|(i, v)| format!("{}{}", index_to_axis(i).string(), v))
+            .join(" + ");
+
+        (modifiers, keys, buttons, axis)
+    }
+
     pub fn with_key(mut self, code: Scancode) -> Self {
         self.add_key(code);
         self

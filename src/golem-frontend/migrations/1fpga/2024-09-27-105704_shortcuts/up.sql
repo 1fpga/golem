@@ -12,7 +12,7 @@ CREATE TABLE shortcuts
     shortcut TEXT         NOT NULL,
 
     -- Any additional metadata.
-    meta     TEXT,
+    meta     JSON,
 
     -- It is illegal to have two identical shortcuts for the same user.
     -- The system would not know which one to trigger.

@@ -1,2 +1,2 @@
-export * from "./db";
+export * from "./sql";
 export * from "./fetch_json";

@@ -119,7 +119,7 @@ export class GamesIdentification {
       shortname: null,
       region: null,
       languages: null,
-      description: system.name,
+      description: system.description,
     })} RETURNING id`;
 
     if (row === undefined) {

@@ -89,12 +89,16 @@ export class RemoteCore {
     public readonly system: RemoteSystem,
   ) {}
 
-  get name() {
+  get name(): string {
     return this.schema.name || this.schema.uniqueName;
   }
 
   get uniqueName() {
     return this.schema.uniqueName;
+  }
+
+  get tags() {
+    return this.schema.tags || [];
   }
 
   get latestRelease() {

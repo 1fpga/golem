@@ -19,7 +19,6 @@ import {
   wizard,
   WizardStep,
 } from "./wizard";
-import type {Files as RemoteCoreFiles} from "$schemas:catalog/core";
 import {filesize} from "filesize";
 import {oneLine, stripIndents} from "common-tags";
 
@@ -265,13 +264,11 @@ const selectCores = async (catalog: Catalog) => {
           Object.entries(systems).map(async ([_key, system]) => {
             const remote = await system.fetchRemote();
             const cores = Object.values(await remote.fetchCores());
-            const coreSize = cores
-              .reduce(
-                (a, b) => [...a, ...b.latestRelease.files],
-                [] as RemoteCoreFiles,
-              )
-              .reduce((a, b) => a + b.size, 0);
-
+            const coreSize = cores.reduce(
+              (a, b) =>
+                a + b.latestRelease.files.reduce((a, b) => a + b.size, 0),
+              0,
+            );
             return [
               {
                 label: system.name,
@@ -286,10 +283,14 @@ const selectCores = async (catalog: Catalog) => {
                   }
                 },
               },
-              {
-                label: "  - Cores:",
-                marker: "" + Object.keys(await remote.fetchCores()).length,
-              },
+              ...(cores.length > 1
+                ? [
+                    {
+                      label: "  - Cores:",
+                      marker: "" + cores.length,
+                    },
+                  ]
+                : []),
               {
                 label: "  - Size:",
                 marker: filesize(remote.size + coreSize),

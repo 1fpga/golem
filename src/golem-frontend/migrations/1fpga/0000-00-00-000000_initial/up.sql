@@ -12,7 +12,7 @@ CREATE TABLE user_storage
     id         INTEGER PRIMARY KEY,
     user_id    INTEGER      NOT NULL REFERENCES users (id),
     key        VARCHAR(255) NOT NULL,
-    value      TEXT         NOT NULL,
+    value      JSON         NOT NULL,
     updated_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT user_storage_user_id_key UNIQUE (user_id, key)
 );
@@ -21,7 +21,7 @@ CREATE TABLE global_storage
 (
     id         INTEGER PRIMARY KEY,
     key        VARCHAR(255) NOT NULL UNIQUE,
-    value      TEXT         NOT NULL,
+    value      JSON         NOT NULL,
     updated_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

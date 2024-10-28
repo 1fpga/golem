@@ -21,70 +21,62 @@ export type CoreCommandHandler<T> = (
   meta: T,
 ) => void | Promise<void>;
 
-export interface GeneralCommandDef<T> {
+export interface CommandDef<T> {
+  type: "general" | "core";
+  key: string;
+  name: string;
+  category: string;
+  validator?: (v: unknown) => v is T;
+  default?: string;
+}
+
+export interface GeneralCommandDef<T> extends CommandDef<T> {
   type: "general";
-  key: string;
-  name: string;
-  category: string;
-  validator?: (v: unknown) => v is T;
   handler: GeneralCommandHandler<T>;
-  default?: string;
 }
 
-export interface CoreCommandDef<T> {
+export interface CoreCommandDef<T> extends CommandDef<T> {
   type: "core";
-  key: string;
-  name: string;
-  category: string;
-  validator?: (v: unknown) => v is T;
   handler: CoreCommandHandler<T>;
-  default?: string;
 }
-
-export type CommandDef<T> = GeneralCommandDef<T> | CoreCommandDef<T>;
 
 class Shortcuts {
-  public static async list(): Promise<Shortcuts[]> {
+  public static async listForCommand<C extends BaseCommand>(
+    command: C,
+  ): Promise<Shortcuts[]> {
     const user = User.loggedInUser(true);
     const rows = await sql<ShortcutRow>`
             SELECT *
             FROM shortcuts
             WHERE user_id = ${user.id}
+              AND key = ${command.key}
         `;
-    return rows.map((row) => new Shortcuts(row));
+    console.log(5, JSON.stringify(rows));
+    return rows.map((row) => new Shortcuts(row, command));
   }
 
-  public static async listForName(key: string): Promise<Shortcuts[]> {
-    const user = User.loggedInUser(true);
-    const rows = await sql<ShortcutRow>`
-            SELECT *
-            FROM shortcuts
-            WHERE user_id = ${user.id}
-              AND key = ${key}
-        `;
-    return rows.map((row) => new Shortcuts(row));
-  }
-
-  public static async create(
+  public static async create<C extends BaseCommand>(
     user: User,
-    key: string,
+    command: C,
     shortcut: string,
     meta: any,
   ) {
-    console.log("Creating shortcut", user.id, key, shortcut, meta);
     const [row] = await sql<ShortcutRow>`
             INSERT INTO shortcuts ${sql.insertValues({
               user_id: user.id,
-              key,
+              key: command.key,
               shortcut,
-              meta: JSON.stringify(meta),
+              meta: JSON.stringify(meta ?? null),
             })}
                 RETURNING *
         `;
-    return new Shortcuts(row);
+    return new Shortcuts(row, command);
   }
 
-  private constructor(private readonly row_: ShortcutRow) {}
+  private constructor(
+    private readonly row_: ShortcutRow,
+    public readonly command: BaseCommand,
+  ) {}
 
   public get shortcut(): string {
     return this.row_.shortcut;
@@ -104,10 +96,14 @@ class Shortcuts {
 }
 
 export abstract class BaseCommand<
-  T,
+  T = unknown,
   Def extends CommandDef<T> = CommandDef<T>,
 > {
-  constructor(protected readonly def_: Def) {}
+  protected constructor(protected readonly def_: Def) {}
+
+  get key(): string {
+    return this.def_.key;
+  }
 
   get name(): string {
     return this.def_.name;
@@ -133,20 +129,32 @@ export class GeneralCommand<T> extends BaseCommand<T, GeneralCommandDef<T>> {
     def: GeneralCommandDef<T>,
     firstTime: boolean,
   ): Promise<GeneralCommand<T>> {
-    let shortcuts = await Shortcuts.listForName(def.key);
+    const c = new GeneralCommand(def);
+
+    let shortcuts = await Shortcuts.listForCommand(c);
     if (firstTime && shortcuts.length == 0 && def.default) {
-      shortcuts.push(await Shortcuts.create(user, def.key, def.default, {}));
+      shortcuts.push(await Shortcuts.create(user, c, def.default, {}));
     }
-    return new GeneralCommand(def, shortcuts);
+    c.shortcuts_ = shortcuts;
+
+    // Register all shortcuts.
+    for (const s of shortcuts) {
+      console.log(`0 Creating shortcut ${s.shortcut}`);
+      commands.createShortcut(s.shortcut, (c) => def.handler(c, s.meta));
+    }
+
+    return c;
   }
 
   private constructor(
     def_: GeneralCommandDef<T>,
-    private readonly shortcuts_: Shortcuts[],
+    private shortcuts_: Shortcuts[] = [],
   ) {
+    console.log(4, JSON.stringify(def_), JSON.stringify(shortcuts_));
     super(def_);
     // Register all shortcuts.
     for (const s of shortcuts_) {
+      console.log(`0 Creating shortcut ${s.shortcut}`);
       commands.createShortcut(s.shortcut, (c) => def_.handler(c, s.meta));
     }
   }
@@ -158,17 +166,19 @@ export class GeneralCommand<T> extends BaseCommand<T, GeneralCommandDef<T>> {
     }
     commands.removeShortcut(shortcut);
     await maybeShortcut.delete();
+    this.shortcuts_ = this.shortcuts_.filter((s) => s.shortcut !== shortcut);
   }
 
   public async addShortcut(shortcut: string, meta: T) {
     const user = User.loggedInUser(true);
     const maybeShortcut = this.shortcuts_.find((s) => s.shortcut === shortcut);
     if (maybeShortcut) {
-      await maybeShortcut.delete();
+      // We cannot keep a consistent state if we try to delete it from the database here
+      // but not from the command instance it's from.
+      throw new Error("Shortcut already exists.");
     }
-    this.shortcuts_.push(
-      await Shortcuts.create(user, this.def_.key, shortcut, meta),
-    );
+    this.shortcuts_.push(await Shortcuts.create(user, this, shortcut, meta));
+    console.log(`1 Creating shortcut ${shortcut}`);
     commands.createShortcut(shortcut, (c) => {
       this.def_.handler(c, meta);
     });
@@ -185,16 +195,28 @@ export class CoreCommand<T> extends BaseCommand<T, CoreCommandDef<T>> {
     def: CoreCommandDef<T>,
     firstTime: boolean,
   ): Promise<CoreCommand<T>> {
-    let shortcuts = await Shortcuts.listForName(def.key);
+    const c = new CoreCommand(def, []);
+    let shortcuts = await Shortcuts.listForCommand(c);
     if (firstTime && shortcuts.length == 0 && def.default) {
-      shortcuts.push(await Shortcuts.create(user, def.key, def.default, {}));
+      shortcuts.push(await Shortcuts.create(user, c, def.default, {}));
     }
-    return new CoreCommand(def, shortcuts);
+    c.shortcuts_ = shortcuts;
+
+    // Register all shortcuts.
+    for (const s of shortcuts) {
+      commands.createShortcut(s.shortcut, (c) => {
+        if (c) {
+          def.handler(c, s.meta);
+        }
+      });
+    }
+
+    return c;
   }
 
   private constructor(
     def_: CoreCommandDef<T>,
-    private readonly shortcuts_: Shortcuts[],
+    private shortcuts_: Shortcuts[],
   ) {
     super(def_);
 
@@ -215,22 +237,16 @@ export class CoreCommand<T> extends BaseCommand<T, CoreCommandDef<T>> {
     }
     commands.removeShortcut(shortcut);
     await maybeShortcut.delete();
+    this.shortcuts_ = this.shortcuts_.filter((s) => s.shortcut !== shortcut);
   }
 
   public async addShortcut(shortcut: string, meta: T) {
     const user = User.loggedInUser(true);
-    const maybeShortcut = this.shortcuts_.find((s) => s.shortcut === shortcut);
-    if (maybeShortcut) {
-      await maybeShortcut.delete();
-    }
-    await sql`
-            INSERT INTO shortcuts ${sql.insertValues({
-              user_id: user.id,
-              key: this.def_.key,
-              shortcut,
-              meta,
-            })}
-        `;
+    // If the shortcut doesn't exist, this does nothing.
+    await this.deleteShortcut(shortcut);
+
+    this.shortcuts_.push(await Shortcuts.create(user, this, shortcut, meta));
+    console.log(`3 Creating shortcut ${shortcut}`);
     commands.createShortcut(shortcut, (c) => {
       if (c) {
         this.def_.handler(c, meta);
@@ -252,20 +268,26 @@ export class Commands {
   private static async createCommandFromDef(
     user: User,
     key: string,
-    def: CommandDef<any>,
+    def: CommandDef<unknown>,
     firstTime: boolean,
   ) {
     switch (def.type) {
       case "general":
+        console.log(0, JSON.stringify(def));
         Commands.commands.set(
           key,
-          await GeneralCommand.create(user, def, firstTime),
+          await GeneralCommand.create(
+            user,
+            def as GeneralCommandDef<any>,
+            firstTime,
+          ),
         );
         break;
       case "core":
+        console.log(1, JSON.stringify(def));
         Commands.commands.set(
           key,
-          await CoreCommand.create(user, def, firstTime),
+          await CoreCommand.create(user, def as CoreCommandDef<any>, firstTime),
         );
         break;
     }
@@ -280,6 +302,7 @@ export class Commands {
    *                  This will set the default shortcuts for commands that have one.
    */
   public static async init(user: User, firstTime = false) {
+    console.log("Initializing commands.");
     if (Commands.isInit) {
       throw new Error("Commands already initialized.");
     }
@@ -287,6 +310,7 @@ export class Commands {
 
     await (await import("$/commands")).init();
     for (const [key, def] of Commands.def) {
+      console.log(`Creating command ${key}`);
       await Commands.createCommandFromDef(user, key, def, firstTime);
     }
   }
@@ -311,6 +335,12 @@ export class Commands {
    *            unique.
    * @param def The definition of the command.
    */
+  public static registerCommand<Json, T extends GeneralCommandDef<Json>>(
+    def: T,
+  ): Promise<void>;
+  public static registerCommand<Json, T extends CoreCommandDef<Json>>(
+    def: T,
+  ): Promise<void>;
   public static async registerCommand<Json, T extends CommandDef<Json>>(
     def: T,
   ) {

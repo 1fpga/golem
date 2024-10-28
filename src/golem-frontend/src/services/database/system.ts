@@ -11,6 +11,7 @@ export interface SystemRow extends Row {
   catalog_id: number;
   name: string;
   unique_name: string;
+  description: string;
   icon_path: string | null;
   image_path: string | null;
 }
@@ -26,6 +27,7 @@ export class System {
       row.catalog_id,
       row.name,
       row.unique_name,
+      row.description,
       row.icon_path,
       row.image_path,
     );
@@ -62,6 +64,7 @@ export class System {
     public readonly catalogId: number,
     public readonly name: string,
     public readonly uniqueName: string,
+    public readonly description: string,
     public readonly iconPath: string | null,
     public readonly imagePath: string | null,
   ) {}

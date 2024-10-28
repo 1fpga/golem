@@ -81,7 +81,11 @@ export class Core {
     return rows.map(Core.fromRow);
   }
 
-  static async upgrade(core: RemoteCore, system: System, catalog: Catalog) {
+  static async upgrade(
+    core: RemoteCore,
+    system: System,
+    catalog: Catalog,
+  ): Promise<Core> {
     throw new Error("Method not implemented.");
   }
 
@@ -134,7 +138,7 @@ export class Core {
     }
 
     console.debug("Adding core to database");
-    await sql`INSERT INTO cores ${sql.insertValues({
+    let [row] = await sql<CoreRow>`INSERT INTO cores ${sql.insertValues({
       system_id: system.id,
       catalog_id: catalog.id,
       name: core.name,
@@ -144,7 +148,9 @@ export class Core {
       version: release.version,
       icon_path: core.iconPath,
       image_path: core.imagePath,
-    })}`;
+    })} RETURNING *`;
+
+    return Core.fromRow(row);
   }
 
   private constructor(private readonly row: CoreRow) {}
@@ -156,6 +162,10 @@ export class Core {
       throw new Error("System not found");
     }
     return s;
+  }
+
+  public get id() {
+    return this.row.id;
   }
 
   public get uniqueName() {
