@@ -1,5 +1,6 @@
 import * as ui from "@:golem/ui";
 import { Games, GameSortOrder } from "$/services/database/games";
+import { Commands } from "$/services";
 
 const PAGE_SIZE = 100;
 
@@ -58,7 +59,7 @@ export async function pickGame(
         return gameArray[0];
       },
       details: async () => {
-        const result = await show_details_menu("" + name, gameArray);
+        const result = await showGameDetailsMenu("" + name, gameArray);
         if (result) {
           return result;
         }
@@ -105,10 +106,18 @@ export async function pickGame(
   return typeof selected == "string" ? null : selected;
 }
 
-async function show_details_menu(
+async function showGameDetailsMenu(
   name: string,
   gameArray: Games[],
 ): Promise<Games | null> {
+  const shortcuts = await Commands.list(StartGameCommand);
+
+  const shortcuts = (await Commands.list()).filter(
+    (s) =>
+      s.key === "startSpecificGame" &&
+      s.shortcutsWithMeta[1]?.gameId === gameArray[0].id,
+  );
+
   const result = await ui.textMenu<Games | 0>({
     title: name,
     back: 0,
@@ -134,12 +143,15 @@ async function show_details_menu(
           ]
         : [
             {
-              label: "Select",
+              label: "Launch",
               select: async () => {
                 return gameArray[0];
               },
             },
           ]),
+      "-",
+      "Shortcuts",
+      "-",
     ],
   });
 

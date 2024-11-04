@@ -11,6 +11,7 @@ import {
   transformTaggedTemplate,
 } from "./rollup/rollup-plugin-template-literals.js";
 import dbMigrations from "./rollup/rollup-plugin-db-migrations.js";
+import constants from "./rollup/rollup-plugin-consts.js";
 
 const production =
   !("NODE_ENV" in process.env) || process.env.NODE_ENV === "production";
@@ -27,6 +28,9 @@ export default {
     dbMigrations(),
     nodeResolve({
       preferBuiltins: false,
+    }),
+    constants({
+      environment: production ? "production" : "development",
     }),
     typescript({
       exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],

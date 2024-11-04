@@ -2,7 +2,7 @@ import { coreOsdMenu } from "$/ui/menus/core_osd";
 import { Commands, Core } from "$/services";
 
 export async function init() {
-  await Commands.registerCommand({
+  await Commands.register({
     type: "core",
     key: "showMenu",
     name: "Show the core menu",
@@ -19,7 +19,7 @@ export async function init() {
     default: "'F12'",
   });
 
-  await Commands.registerCommand({
+  await Commands.register({
     type: "core",
     key: "quitCore",
     name: "Quit to the main menu",
@@ -30,7 +30,7 @@ export async function init() {
     default: "'F10'",
   });
 
-  await Commands.registerCommand({
+  await Commands.register({
     type: "general",
     key: "showDebugLog",
     name: "Show a debug log",

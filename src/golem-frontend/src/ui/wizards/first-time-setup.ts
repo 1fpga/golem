@@ -1,26 +1,34 @@
+import environment from "consts:environment";
 import * as ui from "@:golem/ui";
-import {TextMenuItem} from "@:golem/ui";
 import * as net from "@:golem/net";
-import {Catalog, DEFAULT_USERNAME, GamesIdentification, RemoteCatalog, User,} from "../../services";
 import {
-  call,
-  choice,
-  conditional,
-  first,
-  generate,
-  ignore,
-  last,
-  map,
-  message,
-  repeat,
-  sequence,
-  skipIf,
-  value,
-  wizard,
-  WizardStep,
+    Catalog,
+    Core,
+    DEFAULT_USERNAME,
+    GamesIdentification,
+    RemoteCatalog,
+    User,
+    WellKnownCatalogs,
+} from "$/services";
+import {
+    call,
+    choice,
+    conditional,
+    first,
+    generate,
+    ignore,
+    last,
+    map,
+    message,
+    repeat,
+    sequence,
+    skipIf,
+    value,
+    wizard,
+    WizardStep,
 } from "./wizard";
-import {filesize} from "filesize";
 import {oneLine, stripIndents} from "common-tags";
+import {selectCoresFromRemoteCatalog} from "$/ui/catalog/cores";
 
 /**
  * A wizard step that prompts the user for a password.
@@ -49,7 +57,6 @@ function selectPath(
   options?: { initialDir?: string },
 ): WizardStep<string | undefined> {
   return async (o) => {
-    console.log("selectPath", title, JSON.stringify(options));
     const path = await ui.selectFile(
       title,
       options?.initialDir ?? "/media/fat",
@@ -57,8 +64,6 @@ function selectPath(
         directory: true,
       },
     );
-
-    console.log("Selected path:", path);
 
     if (path === undefined) {
       await o.previous();
@@ -142,10 +147,12 @@ const createUserWizardStep = map(
 
 const SHOULD_RETRY_ADD_CATALOG = Symbol.for("SHOULD_RETRY_ADD_CATALOG");
 
-async function add1FpgaCatalog(): Promise<Catalog | null | Symbol> {
+async function addWellKnownCatalog(
+  wellKnownCatalogs: WellKnownCatalogs,
+): Promise<Catalog | null | Symbol> {
   while (true) {
     try {
-      const catalog = await RemoteCatalog.fetch1Fpga();
+      const catalog = await RemoteCatalog.fetchWellKnown(wellKnownCatalogs);
       return await Catalog.create(catalog, 0);
     } catch (e) {
       console.error("Could not add 1fpga catalog:", e);
@@ -239,9 +246,23 @@ const catalogAddStep = repeat(
           `,
           [
             [
-              "Add the 1FPGA Catalog",
-              call(async () => await add1FpgaCatalog()),
+              "Add the 1FPGA catalog",
+              call(
+                async () =>
+                  await addWellKnownCatalog(WellKnownCatalogs.OneFpga),
+              ),
             ],
+            ...(environment === "development"
+              ? [
+                  [
+                    "Add a local test catalog",
+                    call(
+                      async () =>
+                        await addWellKnownCatalog(WellKnownCatalogs.LocalTest),
+                    ),
+                  ] as [string, WizardStep<null>],
+                ]
+              : []),
             ["Add custom catalog", call(async () => await addCustomCatalog())],
             ["Skip", async () => null],
           ],
@@ -250,78 +271,6 @@ const catalogAddStep = repeat(
     ),
   ),
 );
-
-const selectCores = async (catalog: Catalog) => {
-  let selected = new Set<string>();
-  let systems = await catalog.listSystems();
-
-  let shouldInstall = await ui.textMenu({
-    title: "Choose Systems to install",
-    back: false,
-    items: [
-      ...(
-        await Promise.all(
-          Object.entries(systems).map(async ([_key, system]) => {
-            const remote = await system.fetchRemote();
-            const cores = Object.values(await remote.fetchCores());
-            const coreSize = cores.reduce(
-              (a, b) =>
-                a + b.latestRelease.files.reduce((a, b) => a + b.size, 0),
-              0,
-            );
-            return [
-              {
-                label: system.name,
-                marker: selected.has(system.uniqueName) ? "install" : "",
-                select: (item: TextMenuItem<boolean>) => {
-                  if (selected.has(system.uniqueName)) {
-                    selected.delete(system.uniqueName);
-                    item.marker = "";
-                  } else {
-                    selected.add(system.uniqueName);
-                    item.marker = "install";
-                  }
-                },
-              },
-              ...(cores.length > 1
-                ? [
-                    {
-                      label: "  - Cores:",
-                      marker: "" + cores.length,
-                    },
-                  ]
-                : []),
-              {
-                label: "  - Size:",
-                marker: filesize(remote.size + coreSize),
-              },
-            ];
-          }),
-        )
-      ).flat(),
-      "-",
-      { label: "Install selected systems", select: () => true },
-    ],
-  });
-
-  if (shouldInstall) {
-    for (const system of Object.values(systems)) {
-      if (selected.has(system.uniqueName)) {
-        await system.installAll(catalog);
-      }
-    }
-    return true;
-  } else {
-    await ui.alert(
-      "Warning",
-      stripIndents`
-        Skipping core installation. This may cause some games to not work.
-        You can always install cores later in the Download Center.
-      `,
-    );
-    return false;
-  }
-};
 
 const catalogSetup = sequence(
   ignore(
@@ -336,7 +285,31 @@ const catalogSetup = sequence(
       throw new Error("Should be exactly 1 catalog during the tutorial.");
     }
 
-    return call(async () => await selectCores(catalog));
+    return call(async () => {
+      const remote = await RemoteCatalog.fetch(catalog.url);
+      const { cores, systems } = await selectCoresFromRemoteCatalog(remote, {
+        installAll: true,
+      });
+      if (cores.length === 0 || systems.length === 0) {
+        await ui.alert(
+          "Warning",
+          stripIndents`
+              Skipping core installation. This may cause some games to not work.
+              You can always install cores later in the Download Center.
+            `,
+        );
+        return;
+      }
+
+      for (const system of (await catalog.listSystems()).filter((s) =>
+        systems.some((r) => r.uniqueName === s.uniqueName),
+      )) {
+        await system.install(catalog);
+      }
+      for (const core of cores) {
+        await Core.install(core, catalog);
+      }
+    });
   }),
   ignore(
     message(

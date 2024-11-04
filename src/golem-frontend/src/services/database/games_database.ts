@@ -98,39 +98,18 @@ export class GamesIdentification {
           if (row === undefined) {
             missing.push(path);
           } else {
-            console.log({ games_id: row.games_id, path: path });
-            await sql`INSERT INTO games ${sql.insertValues({ games_id: row.games_id, path: path })}`;
+            await sql`INSERT INTO games ${sql.insertValues({
+              games_id: row.games_id,
+              path: path,
+              size,
+              sha256,
+            })}`;
           }
         }
       },
     );
 
     return missing;
-  }
-
-  public static async createNoRomGames(system: System, catalog: Catalog) {
-    // Create the games_identification entry.
-    const [row] = await sql<{
-      id: number;
-    }>`INSERT INTO games_identification ${sql.insertValues({
-      system_id: system.id,
-      catalog_id: catalog.id,
-      name: `${system.name}`,
-      shortname: null,
-      region: null,
-      languages: null,
-      description: system.description,
-    })} RETURNING id`;
-
-    if (row === undefined) {
-      throw new Error("Could not insert game...");
-    }
-
-    await sql`INSERT INTO games ${sql.insertValues({
-      games_id: row.id,
-      path: null,
-      no_rom: true,
-    })}`;
   }
 
   public static async createBatch(

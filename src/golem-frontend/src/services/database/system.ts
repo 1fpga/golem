@@ -1,10 +1,9 @@
+import * as ui from "@:golem/ui";
 import { type Row } from "@:golem/db";
 import { sql } from "$/utils";
 import { RemoteCatalog, RemoteSystem } from "../remote";
 import type { Catalog } from "./catalog";
-import { GamesIdentification } from "./games_database";
-import { Core } from "./core";
-import * as ui from "@:golem/ui";
+import { GamesIdentification } from "$/services/database/games_database";
 
 export interface SystemRow extends Row {
   id: number;
@@ -12,12 +11,10 @@ export interface SystemRow extends Row {
   name: string;
   unique_name: string;
   description: string;
-  icon_path: string | null;
-  image_path: string | null;
 }
 
 export class System {
-  public static fromRow(row: SystemRow | null): System {
+  private static fromRow(row: SystemRow | null): System {
     if (row === null) {
       throw new Error("System not found");
     }
@@ -28,14 +25,29 @@ export class System {
       row.name,
       row.unique_name,
       row.description,
-      row.icon_path,
-      row.image_path,
     );
+  }
+
+  public static async listForCatalogId(catalogId: number): Promise<System[]> {
+    const rows = await sql<SystemRow>`SELECT *
+                                          FROM systems
+                                          WHERE catalog_id = ${catalogId}`;
+    return rows.map(System.fromRow);
+  }
+
+  public static async getByUniqueName(
+    uniqueName: string,
+  ): Promise<System | null> {
+    const [row] = await sql<SystemRow>`SELECT *
+                                           FROM systems
+                                           WHERE unique_name = ${uniqueName}
+                                           LIMIT 1`;
+    return System.fromRow(row);
   }
 
   public static async getById(id: number): Promise<System | null> {
     const [row] = await sql<SystemRow>`SELECT *
-                                           FROM catalog_systems
+                                           FROM systems
                                            WHERE id = ${id}
                                            LIMIT 1`;
     return System.fromRow(row);
@@ -43,19 +55,17 @@ export class System {
 
   public static async create(system: RemoteSystem, catalogId: number) {
     const id = await sql<{ id: number }>`SELECT id
-                                             FROM catalog_systems
+                                             FROM systems
                                              WHERE unique_name = ${system.uniqueName}`;
     if (id.length > 0) {
       throw new Error("System already exists");
     }
 
-    await sql`INSERT INTO catalog_systems ${sql.insertValues({
+    await sql`INSERT INTO systems ${sql.insertValues({
       catalog_id: catalogId,
       name: system.name,
       unique_name: system.uniqueName,
       description: system.description || null,
-      icon_path: system.iconPath,
-      image_path: system.imagePath,
     })}`;
   }
 
@@ -65,18 +75,17 @@ export class System {
     public readonly name: string,
     public readonly uniqueName: string,
     public readonly description: string,
-    public readonly iconPath: string | null,
-    public readonly imagePath: string | null,
   ) {}
 
-  public async fetchRemote(): Promise<RemoteSystem> {
+  public async fetchRemote(): Promise<RemoteSystem | null> {
     const remoteCatalog = await RemoteCatalog.fetch(
       (await this.getCatalog()).url,
     );
+    console.log(1, JSON.stringify(remoteCatalog.schema));
     let systems = await remoteCatalog.fetchSystems(
       (uniqueName) => this.uniqueName === uniqueName,
     );
-    return systems[this.uniqueName];
+    return systems[this.uniqueName] ?? null;
   }
 
   public async getCatalog(): Promise<Catalog> {
@@ -89,31 +98,19 @@ export class System {
   }
 
   /**
-   * Install the system's cores (all of them), and its game database.
+   * Install the system's games database and other system related data.
    */
-  public async installAll(catalog: Catalog) {
+  public async install(catalog: Catalog) {
     const remoteSystem = await this.fetchRemote();
-    const core = await remoteSystem.fetchCores(true);
-    const coreNames = Object.keys(core);
-    if (coreNames.length === 0) {
-      throw new Error("No cores found for system.");
+    if (remoteSystem === null) {
+      throw new Error("(0) System not found");
     }
-
-    // All cores.
-    await Promise.all(
-      coreNames.map((name) => Core.install(core[name], this, catalog)),
-    );
 
     // Game database.
     const db = await remoteSystem.downloadGameDatabase();
     if (db) {
       ui.show("Installing game database...", `System "${this.name}"`);
       await GamesIdentification.createBatch(db.games, this, catalog);
-    }
-
-    // Add game if `no-roms` is in the tags.
-    if (remoteSystem.tags.includes("no-roms")) {
-      await GamesIdentification.createNoRomGames(this, catalog);
     }
   }
 }

@@ -1,3 +1,4 @@
+import environment from "consts:environment";
 import * as golemDb from "@:golem/db";
 import { SqlTag, type SqlTagDriver } from "@sqltags/core";
 
@@ -96,6 +97,10 @@ const driver: SqlTagDriver<undefined, never> = {
     return "?";
   },
   async query(sql: string, params: any[]): Promise<[any[], undefined]> {
+    if (environment === "development") {
+      console.log(sql, params);
+    }
+
     let db = await getDb();
     let result = await db.query(sql, params);
     return [result.rows, undefined];
@@ -118,6 +123,9 @@ export async function transaction(): Promise<SqlTransactionTag> {
   const tag = new SqlTag({
     ...driver,
     async query(sql: string, params: any[]): Promise<[any[], undefined]> {
+      if (environment === "development") {
+        console.log("tx", sql, params);
+      }
       let { rows } = await db.query(sql, params);
       return [rows, undefined];
     },

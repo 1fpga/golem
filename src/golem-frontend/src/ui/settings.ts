@@ -2,6 +2,7 @@ import * as ui from "@:golem/ui";
 import * as golemSettings from "@:golem/settings";
 import { shortcutsMenu } from "./settings/shortcuts";
 import {
+  CatalogCheckFrequency,
   DatetimeUpdate,
   Games,
   GlobalSettings,
@@ -10,6 +11,14 @@ import {
   UserSettings,
 } from "$/services";
 import { accountsSettingsMenu } from "$/ui/settings/accounts";
+
+const UPDATE_FREQUENCY_LABELS = {
+  [CatalogCheckFrequency.Manually]: "Manually",
+  [CatalogCheckFrequency.EveryStartup]: "On Startup",
+  [CatalogCheckFrequency.Daily]: "Daily",
+  [CatalogCheckFrequency.Weekly]: "Once a week",
+  [CatalogCheckFrequency.Monthly]: "Once a month",
+};
 
 const FONT_SIZE_LABELS: { [key in golemSettings.FontSize]: string } = {
   small: "Small",
@@ -121,33 +130,29 @@ export async function uiSettingsMenu() {
         label: "Show FPS",
         marker: (await settings.getShowFps()) ? "On" : "Off",
         select: async (item) => {
-          await settings.toggleShowFps();
-          item.marker = (await settings.getShowFps()) ? "On" : "Off";
+          item.marker = (await settings.toggleShowFps()) ? "On" : "Off";
         },
       },
       {
         label: "Font Size",
         marker: FONT_SIZE_LABELS[await settings.getFontSize()],
         select: async (item) => {
-          await settings.toggleFontSize();
-          item.marker = FONT_SIZE_LABELS[await settings.getFontSize()];
+          item.marker = FONT_SIZE_LABELS[await settings.toggleFontSize()];
         },
       },
       {
         label: "Toolbar Date Format",
         marker: DATETIME_FORMAT_LABELS[await settings.getDatetimeFormat()],
         select: async (item) => {
-          await settings.toggleDatetimeFormat();
           item.marker =
-            DATETIME_FORMAT_LABELS[await settings.getDatetimeFormat()];
+            DATETIME_FORMAT_LABELS[await settings.toggleDatetimeFormat()];
         },
       },
       {
         label: "Invert Toolbar",
         marker: (await settings.getInvertToolbar()) ? "On" : "Off",
         select: async (item) => {
-          await settings.toggleInvertToolbar();
-          item.marker = (await settings.getInvertToolbar()) ? "On" : "Off";
+          item.marker = (await settings.toggleInvertToolbar()) ? "On" : "Off";
         },
       },
     ],
@@ -429,6 +434,7 @@ async function settingsMenuDateTime() {
 export async function settingsMenu() {
   const user = User.loggedInUser(true);
   const settings = await UserSettings.forLoggedInUser();
+  const globals = await GlobalSettings.create();
   let reloadMainMenu = false;
 
   await ui.textMenu({
@@ -455,6 +461,19 @@ export async function settingsMenu() {
                 await (
                   await GlobalSettings.create()
                 ).updateDateTimeIfNecessary();
+              },
+            },
+            {
+              label: "Check for Updates",
+              marker:
+                UPDATE_FREQUENCY_LABELS[
+                  await globals.getCatalogCheckFrequency()
+                ],
+              select: async (item: ui.TextMenuItem<any>) => {
+                item.marker =
+                  UPDATE_FREQUENCY_LABELS[
+                    await globals.toggleCatalogCheckFrequency()
+                  ];
               },
             },
           ]

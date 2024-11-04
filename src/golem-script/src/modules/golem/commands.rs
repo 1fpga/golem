@@ -59,6 +59,7 @@ fn create_shortcut_(
 }
 
 fn remove_shortcut_(ContextData(data): ContextData<HostData>, shortcut: String) -> JsResult<()> {
+    debug!(?shortcut, "Removing shortcut");
     let shortcut =
         Shortcut::from_str(&shortcut).map_err(|e| js_error!("Invalid shortcut: {:?}", e))?;
 

@@ -1,6 +1,15 @@
-import type {ValidateFunction} from "ajv";
+import type { ErrorObject, ValidateFunction } from "ajv";
 import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";
+
+export class ValidationError extends Error {
+  constructor(public readonly errors: ErrorObject[]) {
+    const message =
+      `Validation error:\n  ` +
+      errors.map((e) => JSON.stringify(e)).join("\n  ");
+    super(message);
+  }
+}
 
 /**
  * Fetch a JSON file from the internet and validate it.
@@ -27,12 +36,7 @@ export async function fetchJsonAndValidate<T>(
       if (validate(response)) {
         return response;
       } else {
-        throw new Error(
-          `Validation error: ` +
-            ((validate as any).errors ?? [])
-              .map((e: any) => e.message || "")
-              .join("\n"),
-        );
+        throw new ValidationError((validate as any).errors ?? []);
       }
     } catch (e) {
       if (!(options?.allowRetry ?? true)) {

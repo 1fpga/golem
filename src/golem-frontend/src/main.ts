@@ -1,6 +1,8 @@
 // The root file being executed by Golem by default.
+import environment from "consts:environment";
 import * as ui from "@:golem/ui";
 import {
+  Catalog,
   Commands,
   Core,
   Games,
@@ -18,8 +20,8 @@ import { coresMenu } from "$/ui/cores"; // Import the basic commands.
 import "./commands/basic";
 import { settingsMenu } from "$/ui/settings";
 import { login } from "$/ui/login";
-import { downloads_menu } from "$/downloads";
-import { about } from "$/ui/about"; // Polyfill for events.
+import { downloadCenterMenu } from "$/ui/downloads";
+import { about } from "$/ui/about";
 
 // Polyfill for events.
 globalThis.performance = <any>{
@@ -88,6 +90,7 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
 
     const gamesMarker = nbGames > 0 ? `(${nbGames})` : "";
     const coresMarker = nbCores > 0 ? `(${nbCores})` : "";
+    const downloadMarker = (await Catalog.count(true)) > 0 ? "!" : "";
 
     await ui.textMenu({
       title: "",
@@ -109,7 +112,8 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
         },
         {
           label: "Download Center...",
-          select: async () => await downloads_menu(),
+          marker: downloadMarker,
+          select: async () => await downloadCenterMenu(),
         },
         "---",
         { label: "About", select: about },
@@ -167,13 +171,15 @@ async function mainInner(): Promise<boolean> {
       );
       return true;
     }
-    await Commands.init(user, true);
+    await Commands.login(user, true);
   } else {
-    await Commands.init(user, false);
+    await Commands.login(user, false);
   }
 
-  const settings = await UserSettings.init(user);
-  const global = await GlobalSettings.init();
+  const [settings, global] = await Promise.all([
+    UserSettings.init(user),
+    GlobalSettings.init(),
+  ]);
   let startOn = await settings.startOn();
 
   console.log("Starting on:", JSON.stringify(startOn));
@@ -184,10 +190,8 @@ async function mainInner(): Promise<boolean> {
       return await mainMenu(startOn, settings);
     } catch (e: any) {
       if (e instanceof StartGameAction) {
-        console.log(`Action - Starting game: ${JSON.stringify(e.game.name)}`);
         await e.game.launch();
       } else if (e instanceof MainMenuAction) {
-        console.log("Action - Main Menu");
         // Do nothing, just loop.
       } else {
         // Rethrow to show the user the actual error.
@@ -208,6 +212,7 @@ async function mainInner(): Promise<boolean> {
 export async function main() {
   console.log("Golem frontend started: ", JSON.stringify(ONE_FPGA));
   let quit = false;
+  console.log(environment);
 
   while (!quit) {
     quit = await mainInner();
