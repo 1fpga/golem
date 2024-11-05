@@ -13,6 +13,14 @@ export interface PickGameOptions {
   system?: string;
 }
 
+function ellipses(max: number, end = false) {
+  if (end) {
+    return (s: string) => (s.length > max ? s.slice(0, max - 3) + "..." : s);
+  } else {
+    return (s: string) => (s.length > max ? "..." + s.slice(-max + 3) : s);
+  }
+}
+
 /**
  * Pick a game from the list of games available on the platform.
  * @param options Options for the game selection.
@@ -111,15 +119,36 @@ async function showGameDetailsMenu(
   name: string,
   gameArray: Games[],
 ): Promise<Games | null> {
-  const shortcuts = (
-    await Commands.get(StartGameCommand)
-  )?.shortcutsWithMeta.filter((s) => s.meta.gameId === gameArray[0].id);
+  let highlighted: number | undefined;
 
-  console.log(shortcuts);
+  while (true) {
+    const result = await showGameDetailsMenuInner(name, gameArray, highlighted);
+    if (typeof result === "number") {
+      highlighted = result;
+      continue;
+    }
+    if (result) {
+      return result;
+    }
 
-  const result = await ui.textMenu<Games | 0>({
+    return null;
+  }
+}
+
+async function showGameDetailsMenuInner(
+  name: string,
+  gameArray: Games[],
+  highlighted: number | undefined,
+): Promise<Games | false | number> {
+  const shortcuts =
+    (await Commands.get(StartGameCommand))?.shortcutsWithMeta.filter((s) => {
+      return gameArray.some((ga) => ga.id === s.meta.gameId);
+    }) ?? [];
+
+  const result = await ui.textMenu<Games | false | number>({
     title: name,
-    back: 0,
+    back: false,
+    highlighted,
     items: [
       {
         label: "Favorite",
@@ -133,12 +162,14 @@ async function showGameDetailsMenu(
         ? [
             "-",
             "Multiple versions available:",
-            ...gameArray.map((game) => ({
-              label: game.romPath ?? "-",
-              select: async () => {
-                return game;
-              },
-            })),
+            ...gameArray.map((game) => {
+              return {
+                label: "  " + ellipses(40)(game.romPath ?? "<NO PATH>"),
+                select: async () => {
+                  return game;
+                },
+              };
+            }),
           ]
         : [
             {
@@ -149,33 +180,82 @@ async function showGameDetailsMenu(
             },
           ]),
       "-",
-      "Shortcuts",
-      ...(shortcuts ?? []).map((s) => ({
-        label: ` ${s.shortcut}`,
-        select: async () => {
-          const command = await Commands.get(StartGameCommand);
-          if (command) {
-            await command.deleteShortcut(s.shortcut);
-          }
-        },
-      })),
+      ...(shortcuts.length > 0
+        ? [
+            "Remove Shortcuts:",
+            ...shortcuts.map((s, i) => ({
+              label: ` ${s.shortcut}`,
+              select: async () => {
+                const command = await Commands.get(StartGameCommand);
+                if (command) {
+                  const choice = await ui.alert({
+                    title: "Deleting shortcut",
+                    message: `Are you sure you want to delete this shortcut?\n${s.shortcut}`,
+                    choices: ["Cancel", "Delete shortcut"],
+                  });
+                  if (choice === 1) {
+                    await command.deleteShortcut(s.shortcut);
+
+                    // Return the new highlighted index.
+                    return (
+                      1 + // Favorite
+                      (gameArray.length > 1 ? gameArray.length + 2 : 1) + // Multiple versions
+                      1 + // Separator
+                      i + // Shortcut index
+                      1
+                    );
+                  }
+                }
+              },
+            })),
+          ]
+        : []),
       {
-        label: "Add shortcut...",
+        label: "Add new shortcut...",
         select: async () => {
-          const shortcut = await ui.promptShortcut(name, "Enter the shortcut:");
-          if (!shortcut) {
+          const newShortcut = await ui.promptShortcut(
+            name,
+            "Enter the shortcut:",
+          );
+          if (!newShortcut) {
             return;
           }
           const command = await Commands.get(StartGameCommand);
           if (command) {
-            await command.addShortcut(shortcut, { gameId: gameArray[0].id });
+            const maybeCommand = await Commands.find(newShortcut);
+            if (maybeCommand) {
+              // Find the type if necessary.
+              const meta = maybeCommand.shortcutsWithMeta.find(
+                ({ shortcut }) => {
+                  return shortcut === newShortcut;
+                },
+              );
+
+              const labelOf = await maybeCommand.labelOf(meta?.meta);
+              await ui.alert({
+                title: "Shortcut already exists",
+                message: `The selected shortcut:\n${newShortcut}\nIs already in use by the command:\n${labelOf}`,
+              });
+
+              return;
+            }
+            await command.addShortcut(newShortcut, { gameId: gameArray[0].id });
+            // Return the new hightlighted index.
+            return (
+              1 +
+              (gameArray.length > 1 ? gameArray.length + 2 : 1) +
+              1 +
+              (shortcuts.length > 0 ? shortcuts.length + 2 : 1)
+            );
           }
         },
       },
     ],
   });
 
-  return result === 0 ? null : result;
+  console.log(result);
+
+  return result;
 }
 
 export async function gamesMenu() {

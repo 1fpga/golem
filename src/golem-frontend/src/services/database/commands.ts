@@ -143,17 +143,13 @@ class Shortcuts {
   private constructor(
     private readonly row_: ShortcutRow,
     public readonly command: CommandImpl<unknown>,
-    meta: unknown,
+    public readonly meta: unknown,
   ) {
     commands.createShortcut(row_.shortcut, (c) => command.execute_(c, meta));
   }
 
   public get shortcut(): string {
     return this.row_.shortcut;
-  }
-
-  public get meta(): any {
-    return this.row_.meta;
   }
 
   async delete() {
@@ -219,7 +215,15 @@ export class Command<T = unknown> {
   }
 
   get shortcutsWithMeta(): { shortcut: string; meta: T }[] {
-    return this.shortcuts_.map((s) => ({ shortcut: s.shortcut, meta: s.meta }));
+    return this.shortcuts_.map((s) => ({
+      shortcut: s.shortcut,
+      // This has been already validated when the shortcut was created.
+      meta: s.meta as T,
+    }));
+  }
+
+  labelOf(meta: T) {
+    return this.def_.labelOf(meta);
   }
 
   public async addShortcut(shortcut: string, meta?: T): Promise<void> {
@@ -327,5 +331,19 @@ export class Commands {
     return Array.from(Commands.commands.values()).find((c) => c.is(Class)) as
       | Command<T>
       | undefined;
+  }
+
+  public static async find<T>(
+    shortcut: string,
+  ): Promise<Command<T> | undefined> {
+    return Array.from(Commands.commands.values()).find((c) =>
+      c.shortcuts.includes(shortcut),
+    ) as Command<T> | undefined;
+  }
+
+  public static async shortcutExists(shortcut: string): Promise<boolean> {
+    return Array.from(Commands.commands.values()).some((c) =>
+      c.shortcuts.includes(shortcut),
+    );
   }
 }

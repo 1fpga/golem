@@ -195,13 +195,20 @@ async function mainInner(): Promise<boolean> {
         await action.game.launch();
       }
       action = undefined;
+      startOn = { kind: StartOnKind.MainMenu };
     } catch (e: any) {
       action = undefined;
+      startOn = { kind: StartOnKind.MainMenu };
       if (e instanceof StartGameAction) {
         // Set the action for the next round.
         action = e;
       } else if (e instanceof MainMenuAction) {
-        // Do nothing, just loop.
+        // There is a quirk here that if the StartOn is GameLibrary, we will go back
+        // to the game library instead of the main menu.
+        switch ((await settings.startOn()).kind) {
+          case StartOnKind.GameLibrary:
+            startOn = { kind: StartOnKind.GameLibrary };
+        }
       } else {
         // Rethrow to show the user the actual error.
         let choice = await ui.alert({
@@ -214,7 +221,6 @@ async function mainInner(): Promise<boolean> {
         }
       }
     }
-    startOn = { kind: StartOnKind.MainMenu };
   }
 }
 
