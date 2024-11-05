@@ -1,31 +1,55 @@
+use crate::commands::maybe_call_command;
 use crate::modules::golem::globals::classes::JsImage;
 use crate::HostData;
-use boa_engine::object::builtins::{JsFunction, JsUint8Array, TypedJsFunction};
-use boa_engine::{Context, JsError, JsResult, JsString, JsValue};
+use boa_engine::object::builtins::{JsFunction, JsUint8Array};
+use boa_engine::value::TryFromJs;
+use boa_engine::{js_error, Context, JsError, JsResult, JsString, JsValue};
 use boa_interop::{js_class, ContextData, JsClass};
-use boa_macros::{Finalize, JsData, Trace, TryFromJs};
+use boa_macros::{js_str, Finalize, JsData, Trace};
+use enum_map::{Enum, EnumMap};
 use golem_ui::application::panels::core_loop::run_core_loop;
 use golem_ui::application::GoLEmApp;
 use mister_fpga::core::{AsMisterCore, MisterFpgaCore};
 use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
-use tracing::error;
+use std::cell::RefCell;
+use std::rc::Rc;
+use tracing::{error, info};
 
 #[derive(Debug, Clone, Trace, Finalize, TryFromJs)]
-struct LoopOptions {
-    #[boa(rename = "onSaveState")]
-    on_save_state: Option<TypedJsFunction<(JsUint8Array, Option<JsValue>), JsValue>>,
+struct LoopOptions {}
+
+#[derive(Debug, Clone, Enum)]
+enum Events {
+    SaveState,
+}
+
+impl TryFromJs for Events {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
+        let string = JsString::try_from_js(value, context)?;
+        if string == js_str!("saveState") {
+            Ok(Self::SaveState)
+        } else {
+            Err(js_error!(TypeError: "Unknown event type: {}", string.to_std_string_escaped()))
+        }
+    }
 }
 
 #[derive(Clone, Trace, Finalize, JsData)]
 pub struct JsCore {
     #[unsafe_ignore_trace]
     core: GolemCore,
+
+    #[unsafe_ignore_trace]
+    events: Rc<RefCell<EnumMap<Events, Vec<JsFunction>>>>,
 }
 
 impl JsCore {
     pub fn new(core: GolemCore) -> Self {
-        Self { core }
+        Self {
+            core,
+            events: Default::default(),
+        }
     }
 
     fn reset(&mut self) -> JsResult<()> {
@@ -41,33 +65,37 @@ impl JsCore {
         let app = host_defined.app_mut();
         let command_map = host_defined.command_map_mut();
         let mut core = self.core.clone();
-        eprintln!("Running loop: {:?}", options);
+
+        let events = self.events.clone();
+        info!("Running loop: {:?}", options);
 
         run_core_loop(
             app,
             &mut core,
             &mut (command_map, context),
-            |app, core, _, id, (command_map, context)| -> JsResult<()> {
-                if let Some(command) = command_map.get_mut(id) {
-                    command.execute(app, Some(core), context)
-                } else {
-                    Ok(())
-                }
+            |app, _core, id, (command_map, context)| -> JsResult<()> {
+                maybe_call_command(app, id, command_map, context)
             },
-            |_, _, screenshot, savestate, (_, context)| {
-                eprintln!("Saving state: {:?}", options);
-                if let Some(options) = options.as_ref() {
-                    if let Some(f) = options.on_save_state.as_ref() {
-                        let ss = JsUint8Array::from_iter(savestate.iter().copied(), context)?;
-                        let image = screenshot
-                            .and_then(|i| JsImage::new(i.clone()).into_object(context).ok());
-                        let result = f.call(context, (ss, image))?;
+            |_app, _core, screenshot, slot, savestate, (_, context)| {
+                for handler in events.borrow()[Events::SaveState].iter() {
+                    let ss = JsUint8Array::from_iter(savestate.iter().copied(), context)?;
+                    let image =
+                        screenshot.and_then(|i| JsImage::new(i.clone()).into_object(context).ok());
+                    let result = handler.call(
+                        &JsValue::undefined(),
+                        &[
+                            ss.into(),
+                            image.unwrap_or(JsValue::undefined()),
+                            JsValue::from(slot),
+                        ],
+                        context,
+                    )?;
 
-                        if let Some(p) = result.as_promise() {
-                            p.await_blocking(context).map_err(JsError::from_opaque)?;
-                        }
+                    if let Some(p) = result.as_promise() {
+                        p.await_blocking(context).map_err(JsError::from_opaque)?;
                     }
                 }
+
                 Ok(())
             },
         )
@@ -96,7 +124,7 @@ impl JsCore {
         }
 
         let mut v = handler.call(&JsValue::undefined(), &[], context)?;
-        while let Some(p) = v.as_promise() {
+        if let Some(p) = v.as_promise() {
             match p.await_blocking(context) {
                 Ok(new_v) => {
                     v = new_v;
@@ -142,6 +170,11 @@ impl JsCore {
                 slice.set(bit, bits.at(bit as i64, context)?.to_uint8(context)? != 0);
             }
         }
+        Ok(())
+    }
+
+    fn on(&mut self, event: Events, handler: JsFunction) -> JsResult<()> {
+        self.events.borrow_mut()[event].push(handler);
         Ok(())
     }
 }
@@ -202,7 +235,7 @@ js_class! {
             id: u32,
             path: JsString,
         ) -> JsResult<()> {
-            this.clone_inner().core.file_select(SettingId::from(id), path.to_std_string_escaped()).map_err(JsError::from_rust)
+            this.clone_inner().core.file_select(SettingId::from(id), path.to_std_string_lossy()).map_err(JsError::from_rust)
         }
 
         fn trigger(
@@ -230,6 +263,14 @@ js_class! {
 
         fn quit(this: JsClass<JsCore>) -> () {
             this.clone_inner().quit()
+        }
+
+        fn on(
+            this: JsClass<JsCore>,
+            event: Events,
+            handler: JsFunction,
+        ) -> JsResult<()> {
+            this.clone_inner().on(event, handler)
         }
     }
 }

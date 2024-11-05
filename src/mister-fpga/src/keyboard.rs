@@ -1,3 +1,4 @@
+#![allow(unused)]
 const LCTRL: u32 = 0x000100;
 const LSHIFT: u32 = 0x000200;
 const LALT: u32 = 0x000400;

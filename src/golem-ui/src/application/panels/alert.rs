@@ -17,9 +17,9 @@ use embedded_menu::items::MenuItem;
 use embedded_menu::Menu;
 use embedded_text::style::{HeightMode, TextBoxStyleBuilder};
 use embedded_text::TextBox;
-use reqwest::Url;
 use std::convert::identity;
 use tracing::error;
+use url::Url;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub enum MenuAction {
@@ -143,11 +143,6 @@ pub fn show(app: &mut GoLEmApp, title: &str, message: &str) {
 pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -> Option<usize> {
     let display_area = app.main_buffer().bounding_box();
 
-    let character_style = u8g2_fonts::U8g2TextStyle::new(
-        u8g2_fonts::fonts::u8g2_font_haxrcorp4089_t_cyrillic,
-        BinaryColor::On,
-    );
-
     let mut choices = choices
         .iter()
         .enumerate()
@@ -156,9 +151,12 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
 
     let menu = SizedMenu::new(
         Size::new(128, 48),
-        Menu::with_style("", style::menu_style_simple(app.settings().menu_style()))
-            .add_menu_items(&mut choices)
-            .build(),
+        Menu::with_style(
+            "",
+            style::menu_style_simple(app.ui_settings().menu_style_options()),
+        )
+        .add_menu_items(&mut choices)
+        .build(),
     );
 
     let character_style = u8g2_fonts::U8g2TextStyle::new(
@@ -203,7 +201,7 @@ pub fn alert(app: &mut GoLEmApp, title: &str, message: &str, choices: &[&str]) -
 
         let menu = &mut layout.object;
         for ev in state.events() {
-            match menu.interact(ev) {
+            match menu.interact(ev.clone()) {
                 None => {}
                 Some(MenuAction::Back) => return Some(None),
                 Some(MenuAction::Select(idx)) => return Some(Some(idx)),

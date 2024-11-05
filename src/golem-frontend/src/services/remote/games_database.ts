@@ -1,10 +1,16 @@
-import ui from "@:golem/ui";
-import type { Games as GamesDbSchema } from "$schemas:catalog/games";
+import * as golemSchema from "@:golem/schema";
+import * as ui from "@:golem/ui";
+import { fetchJsonAndValidate } from "$/utils";
+import type {
+  Games as GamesSchema,
+  GamesDb as GamesDbSchema,
+} from "$schemas:catalog/games_db";
 import { RemoteSystem } from "./catalog";
-import { fetchJsonAndValidate } from "../../utils/fetch_json";
+
+export type RemoteGameSchema = GamesSchema[0];
 
 /**
- *
+ * The Game identification database downloaded from a catalog.
  */
 export class RemoteGamesDb {
   public static async fetch(url: string, system: RemoteSystem) {
@@ -16,9 +22,11 @@ export class RemoteGamesDb {
     );
 
     // Dynamic loading to allow for code splitting.
-    const json = await fetchJsonAndValidate(
+    const schema = (await import("$schemas-json:catalog/games_db.json"))
+      .default;
+    const json = await fetchJsonAndValidate<GamesDbSchema>(
       u,
-      (await import("$schemas:catalog/games")).validate,
+      (value: unknown) => golemSchema.validate<GamesDbSchema>(value, schema),
     );
 
     return new RemoteGamesDb(u, json, system);
@@ -26,7 +34,11 @@ export class RemoteGamesDb {
 
   private constructor(
     public readonly url: string,
-    public readonly schema: GamesDbSchema,
+    private readonly schema: GamesDbSchema,
     public readonly system: RemoteSystem,
   ) {}
+
+  get games(): GamesSchema {
+    return this.schema.games ?? [];
+  }
 }

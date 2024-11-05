@@ -58,17 +58,6 @@ pub fn sav_path(core_name: &str) -> PathBuf {
     sav_root_path().join(core_name)
 }
 
-pub fn core_root(core: &retronomicon_dto::cores::CoreListItem) -> PathBuf {
-    core_root_path().join(&core.slug)
-}
-
-pub fn core_release_root(
-    core: &retronomicon_dto::cores::CoreListItem,
-    release: &retronomicon_dto::cores::releases::CoreReleaseRef,
-) -> PathBuf {
-    core_root(core).join(&release.version)
-}
-
 pub fn settings_path() -> PathBuf {
     config_root_path().join("settings.json5")
 }

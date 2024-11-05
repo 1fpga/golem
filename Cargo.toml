@@ -4,13 +4,13 @@ members = [
     "src/bk2-format",
     "src/cyclone-v",
     "src/de10-nano",
-    "src/fce-movie-format",
+    "src/fce-movie-format", "src/games-db-converter",
     "src/golem",
     "src/golem-core",
     "src/golem-script",
     "src/golem-ui",
     "src/mister-fpga",
-    "src/taser",
+    "src/taser", "src/time_test",
 ]
 
 [profile.release]
@@ -27,6 +27,10 @@ panic = "abort"
 
 [workspace.dependencies]
 image = "0.25"
+ouroboros = "0.18"
+reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false }
+time = { version = "0.3", features = ["local-offset"] }
+url = { version = "2.5" }
 
 # Repo crates
 bk2-format = { path = "src/bk2-format" }

@@ -1,3 +1,5 @@
+use crate::commands::maybe_call_command;
+use crate::HostData;
 use boa_engine::object::builtins::{JsArray, JsPromise};
 use boa_engine::value::TryFromJs;
 use boa_engine::{
@@ -6,12 +8,9 @@ use boa_engine::{
 };
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use either::Either;
-
 use golem_ui::application::menu;
 use golem_ui::application::panels::password::enter_password;
 use golem_ui::application::panels::prompt::prompt;
-
-use crate::HostData;
 
 mod filesystem;
 
@@ -158,12 +157,20 @@ struct UiMenuOptions {
     back: Option<JsValue>,
     sort: Option<JsValue>,
     sort_label: Option<String>,
+    details: Option<String>,
+
+    highlighted: Option<u32>,
+
+    /// If this is Some(...) do not show the menu but select the item with the given label
+    /// right await (first label being found).
+    #[unsafe_ignore_trace]
+    selected: Option<Either<String, u32>>,
 }
 
 fn text_menu_(
     mut options: UiMenuOptions,
     ContextData(host_defined): ContextData<HostData>,
-    context: &mut Context,
+    mut context: &mut Context,
 ) -> JsResult<JsPromise> {
     let app = host_defined.app_mut();
 
@@ -174,20 +181,47 @@ fn text_menu_(
         }
 
         let sort_label = options.sort_label.as_deref();
+        let details_label = options.details.as_deref();
 
         let menu_options = menu::TextMenuOptions::default()
             .with_back_menu(options.back.is_some())
             .with_show_sort(options.sort.is_some())
+            .with_details_opt(details_label)
             .with_sort_opt(sort_label)
-            .with_state(Some(state));
+            .with_state(Some(state))
+            .with_selected_opt(options.highlighted);
 
-        let (result, new_state) = menu::text_menu(
-            app,
-            &options.title.clone().unwrap_or_default(),
-            options.items.as_slice(),
-            menu_options,
-        );
-        state = new_state;
+        let result = if let Some(label) = options.selected.take() {
+            let selected_idx = match label {
+                Either::Left(label) => options.items.iter().position(|i| i.label == label),
+                Either::Right(idx) => {
+                    if idx > options.items.len() as u32 {
+                        None
+                    } else {
+                        Some(idx as usize)
+                    }
+                }
+            };
+
+            if let Some(selected_idx) = selected_idx {
+                MenuAction::Select(selected_idx)
+            } else {
+                MenuAction::Noop
+            }
+        } else {
+            let (result, new_state) = menu::text_menu(
+                app,
+                &options.title.clone().unwrap_or_default(),
+                options.items.as_slice(),
+                menu_options,
+                &mut (host_defined.command_map_mut(), &mut context),
+                |app, id, (command_map, context)| -> JsResult<()> {
+                    maybe_call_command(app, id, *command_map, *context)
+                },
+            )?;
+            state = new_state;
+            result
+        };
 
         fn call_callable(
             item: Option<&mut TextMenuItem>,
@@ -195,23 +229,28 @@ fn text_menu_(
             context: &mut Context,
         ) -> JsResult<Option<JsValue>> {
             if let Some(callable) = maybe_callable.as_callable() {
-                let mut result = if let Some(item) = item {
+                let result = if let Some(item) = item {
                     let js_item = item.clone().try_js_into(context)?;
 
-                    let result =
+                    let mut result =
                         callable.call(&JsValue::undefined(), &[js_item.clone()], context)?;
+                    while let Some(p) = result.as_promise() {
+                        result = p.await_blocking(context).map_err(JsError::from_opaque)?;
+                    }
+
                     if let Ok(new_item) = TryFromJs::try_from_js(&js_item, context) {
                         *item = new_item;
                     }
 
                     result
                 } else {
-                    callable.call(&JsValue::undefined(), &[], context)?
+                    let result = callable.call(&JsValue::undefined(), &[], context)?;
+                    if let Some(p) = result.as_promise() {
+                        p.await_blocking(context).map_err(JsError::from_opaque)?
+                    } else {
+                        result
+                    }
                 };
-
-                while let Some(p) = result.as_promise() {
-                    result = p.await_blocking(context).map_err(JsError::from_opaque)?;
-                }
 
                 if result.is_undefined() {
                     Ok(None)
@@ -414,6 +453,33 @@ fn qr_code_(
     golem_ui::application::panels::qrcode::qrcode_alert(app, &title, &message, &url);
 }
 
+fn input_tester_(ContextData(host_defined): ContextData<HostData>, ctx: &mut Context) -> JsPromise {
+    let app = host_defined.app_mut();
+    golem_ui::application::panels::input_tester::input_tester(app);
+
+    JsPromise::resolve(JsValue::undefined(), ctx)
+}
+
+fn prompt_shortcut_(
+    ContextData(host_defined): ContextData<HostData>,
+    title: Option<String>,
+    message: Option<String>,
+    context: &mut Context,
+) -> JsPromise {
+    let app = host_defined.app_mut();
+    let result = golem_ui::application::panels::shortcut::prompt_shortcut(
+        app,
+        title.unwrap_or("Pick a shortcut".to_string()).as_str(),
+        message.as_deref(),
+    );
+
+    if let Some(result) = result {
+        JsPromise::resolve(JsString::from(result.to_string()), context)
+    } else {
+        JsPromise::resolve(JsValue::undefined(), context)
+    }
+}
+
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
         js_string!("ui"),
@@ -439,6 +505,14 @@ pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
             (
                 js_string!("selectFile"),
                 filesystem::select.into_js_function_copied(context),
+            ),
+            (
+                js_string!("inputTester"),
+                input_tester_.into_js_function_copied(context),
+            ),
+            (
+                js_string!("promptShortcut"),
+                prompt_shortcut_.into_js_function_copied(context),
             ),
         ]
         .into_js_module(context),

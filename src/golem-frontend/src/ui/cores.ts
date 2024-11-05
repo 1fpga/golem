@@ -1,53 +1,40 @@
 import * as core from "@:golem/core";
 import * as ui from "@:golem/ui";
-import { Core } from "../services/database/core";
+import { Core } from "$/services/database/core";
 
-function start_core(path: string) {
-  console.log(`Starting core: ${JSON.stringify(path)}`);
-  let c = core.load({
-    core: { type: "Path", path },
-  });
-  c.loop();
-}
-
-function select_core_file() {
-  let f = ui.selectFile("Select Core", "/media/fat", {
+async function selectCoreFile() {
+  let f = await ui.selectFile("Select Core", "/media/fat", {
     dirFirst: false,
     extensions: ["rbf"],
   });
 
   if (f !== undefined) {
+    Core.setRunning(null);
     let c = core.load({
       core: { type: "Path", path: f },
     });
+    c.showOsd(async () =>
+      (await import("$/ui/menus/core_osd")).coreOsdMenu(c, null),
+    );
     c.loop();
   }
 }
 
-export async function cores_menu() {
+export async function coresMenu() {
   const cores = await Core.list();
 
   await ui.textMenu({
     title: "Cores",
-    back: true,
+    back: 0,
     items: [
       ...cores.map((core) => ({
         label: "" + core.name,
         select: async () => {
-          if (core.rbfPath) {
-            start_core(core.rbfPath);
-          } else {
-            await ui.alert("Core is not an RBF core?");
-          }
+          await core.launch();
         },
       })),
       "-",
-      { label: "Select File...", select: select_core_file },
-      "-",
-      {
-        label: "Download Cores...",
-        select: () => ui.alert("Not implemented yet!"),
-      },
+      { label: "Select File...", select: selectCoreFile },
     ],
   });
 }

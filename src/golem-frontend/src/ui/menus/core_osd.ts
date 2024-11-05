@@ -1,6 +1,7 @@
 import * as ui from "@:golem/ui";
 import * as core from "@:golem/core";
 import { CoreSettingPage } from "@:golem/core";
+import type { Core } from "$/services/database/core";
 
 enum SettingReturn {
   Continue,
@@ -29,68 +30,70 @@ export async function coreSettingsMenu(
       title: "Core Settings",
       back: SettingReturn.ReturnContinue,
       items: [
-        ...menu.items.map((item) => {
-          switch (item.kind) {
-            case "page":
-              return {
-                label: item.label,
-                marker: ">",
-                select: async () => {
-                  return await coreSettingsMenu(core, item.label);
-                },
-              };
-            case "separator":
-              return "-";
-            case "label":
-              return {
-                label: item.label,
-                selectable: item.selectable,
-              };
-            case "file":
-              return {
-                label: item.label,
-                marker: item.extensions.join(","),
-                select: () => {
-                  let path = ui.selectFile(item.label, "/media/fat", {
-                    extensions: item.extensions,
-                  });
-                  if (path) {
-                    core.fileSelect(item.id, path);
-                    return false;
-                  }
-                },
-              };
-            case "trigger":
-              return {
-                label: item.label,
-                marker: "!",
-                select: () => {
-                  core.trigger(item.id);
-                },
-              };
-            case "bool":
-              return {
-                label: item.label,
-                marker: item.value ? "[X]" : "[ ]",
-                select: (menuItem: ui.TextMenuItem<SettingReturn>) => {
-                  item.value = core.boolSelect(item.id, !item.value);
-                  menuItem.marker = item.value ? "[X]" : "[ ]";
-                },
-              };
-            case "int":
-              return {
-                label: item.label,
-                marker: item.choices[item.value],
-                select: (menuItem: ui.TextMenuItem<SettingReturn>) => {
-                  item.value = core.intSelect(
-                    item.id,
-                    (item.value + 1) % item.choices.length,
-                  );
-                  menuItem.marker = item.choices[item.value];
-                },
-              };
-          }
-        }),
+        ...(await Promise.all(
+          menu.items.map((item) => {
+            switch (item.kind) {
+              case "page":
+                return {
+                  label: item.label,
+                  marker: ">",
+                  select: async () => {
+                    return await coreSettingsMenu(core, item.label);
+                  },
+                };
+              case "separator":
+                return "-";
+              case "label":
+                return {
+                  label: item.label,
+                  selectable: item.selectable,
+                };
+              case "file":
+                return {
+                  label: item.label,
+                  marker: item.extensions.join(","),
+                  select: async () => {
+                    let path = await ui.selectFile(item.label, "/media/fat", {
+                      extensions: item.extensions,
+                    });
+                    if (path) {
+                      core.fileSelect(item.id, path);
+                      return false;
+                    }
+                  },
+                };
+              case "trigger":
+                return {
+                  label: item.label,
+                  marker: "!",
+                  select: () => {
+                    core.trigger(item.id);
+                  },
+                };
+              case "bool":
+                return {
+                  label: item.label,
+                  marker: item.value ? "[X]" : "[ ]",
+                  select: (menuItem: ui.TextMenuItem<SettingReturn>) => {
+                    item.value = core.boolSelect(item.id, !item.value);
+                    menuItem.marker = item.value ? "[X]" : "[ ]";
+                  },
+                };
+              case "int":
+                return {
+                  label: item.label,
+                  marker: item.choices[item.value],
+                  select: (menuItem: ui.TextMenuItem<SettingReturn>) => {
+                    item.value = core.intSelect(
+                      item.id,
+                      (item.value + 1) % item.choices.length,
+                    );
+                    menuItem.marker = item.choices[item.value];
+                  },
+                };
+            }
+          }),
+        )),
       ],
     });
 
@@ -111,36 +114,60 @@ function isKindFile(
 }
 
 export async function coreOsdMenu(
-  core: core.GolemCore,
+  golemCore: core.GolemCore,
+  coreDb: Core | null,
 ): Promise<core.OsdResult> {
-  let menu = core.settings;
+  let menu = golemCore.settings;
 
   let fileMenus = menu.items.filter(isKindFile);
 
   console.log(JSON.stringify(menu));
+
   return await ui.textMenu({
     title: "Core Menu",
     back: false,
     items: [
-      ...fileMenus.map((item) => ({
-        label: item.label,
-        select: () => {
-          let path = ui.selectFile(item.label, "/media/fat", {
-            extensions: item.extensions,
-          });
-          if (path) {
-            core.fileSelect(item.id, path);
-            return false;
-          }
-        },
-      })),
+      ...(coreDb
+        ? [
+            {
+              label: "Load Game...",
+              select: async () => {
+                // let system = await coreDb.getSystem();
+                // let game = await (
+                //   await import("$/services/database/games")
+                // ).Games.select({
+                //   title: "Load Game",
+                //   system: system.uniqueName,
+                // });
+                // if (game?.romPath) {
+                //   golemCore.fileSelect(0, game.romPath);
+                //   return false;
+                // }
+              },
+            },
+          ]
+        : []),
+      ...(await Promise.all(
+        fileMenus.map((item) => ({
+          label: item.label,
+          select: async () => {
+            let path = await ui.selectFile(item.label, "/media/fat", {
+              extensions: item.extensions,
+            });
+            if (path) {
+              golemCore.fileSelect(item.id, path);
+              return false;
+            }
+          },
+        })),
+      )),
       "-",
       {
         label: "Core Settings...",
         select: async () => {
-          switch (await coreSettingsMenu(core)) {
+          switch (await coreSettingsMenu(golemCore)) {
             case SettingReturn.Back:
-              return false;
+              return undefined;
             case SettingReturn.Quit:
               return true;
             default:
@@ -151,7 +178,7 @@ export async function coreOsdMenu(
       {
         label: "Reset Core",
         select: () => {
-          core.reset();
+          golemCore.reset();
           return false;
         },
       },

@@ -9,6 +9,7 @@ use embedded_layout::View;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, MenuState};
 use sdl3::keyboard::Keycode;
+use std::fmt::Debug;
 use tracing::info;
 use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
 
@@ -24,6 +25,7 @@ use crate::application::widgets::opt::OptionalView;
 use crate::application::widgets::text::FontRendererView;
 use crate::application::widgets::EmptyView;
 use crate::application::GoLEmApp;
+use crate::input::commands::CommandId;
 
 pub mod filesystem;
 pub mod item;
@@ -78,23 +80,28 @@ pub fn bottom_bar<'a>(
     .arrange()
 }
 
-pub fn text_menu<'a, R: MenuReturn + Copy>(
+pub fn text_menu<'a, C, R: MenuReturn + Copy, E: Debug>(
     app: &mut GoLEmApp,
     title: &str,
     items: &'a [impl IntoTextMenuItem<'a, R>],
-    options: TextMenuOptions<R>,
-) -> (R, GolemMenuState<R>) {
+    options: TextMenuOptions<'a, R>,
+    context: &mut C,
+    mut shortcut_handler: impl FnMut(&mut GoLEmApp, CommandId, &mut C) -> Result<(), E>,
+) -> Result<(R, GolemMenuState<R>), E> {
     let TextMenuOptions {
         show_back_menu,
         back_label,
         show_sort,
         sort_by,
-        state: mut menu_state,
+        state,
         detail_label,
         title_font,
         prefix,
         suffix,
+        selected,
     } = options;
+    let mut menu_state = state.unwrap_or_default();
+
     let show_back_button = R::back().is_some() && show_back_menu;
     let show_back = show_back_button && show_back_menu;
     let show_details = detail_label.is_some();
@@ -139,7 +146,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
     let show2 = !items_items.is_empty() && !suffix_items.is_empty();
     let show3 = show_back;
 
-    let mut menu_style = style::menu_style(app.settings().menu_style());
+    let mut menu_style = style::menu_style(app.ui_settings().menu_style_options());
     if let Some(font) = title_font {
         menu_style = menu_style.with_title_font(font);
     }
@@ -194,7 +201,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                 .with_marker("<-"),
         );
 
-        let menu = SizedMenu::new(
+        let prefix_len = prefix_items.len();
+        let mut menu = SizedMenu::new(
             menu_size,
             Menu::with_style(title, menu_style)
                 .add_menu_items(&mut prefix_items)
@@ -204,8 +212,21 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                 .add_menu_items(&mut suffix_items)
                 .add_menu_item(separator3)
                 .add_menu_item(back_item)
-                .build_with_state(menu_state.unwrap_or_default()),
+                .build_with_state(menu_state),
         );
+
+        if let Some(selected) = selected {
+            // Need to add prefix items (and separator1 which is always present) to the index.
+            let selected = selected + prefix_len as u32 + 1;
+            menu.interact(sdl3::event::Event::User {
+                timestamp: 0,
+                window_id: 0,
+                type_: 0,
+                code: selected as i32,
+                data1: std::ptr::null_mut(),
+                data2: std::ptr::null_mut(),
+            });
+        }
 
         let mut layout = LinearLayout::vertical(
             Chain::new(menu).append(
@@ -219,9 +240,8 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         .with_alignment(horizontal::Left)
         .arrange();
 
-        let (result, new_state) = app.draw_loop(|_, state| {
+        let (result, new_state) = app.draw_loop(|app, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
-
             let _ = buffer.clear(Rgb888::BLACK.into());
 
             {
@@ -243,22 +263,31 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
             let menu = &mut layout.inner_mut().parent.object;
 
             for ev in state.events() {
-                if let Some(action) = menu.interact(ev) {
+                // TODO: remove clone.
+                if let Some(action) = menu.interact(ev.clone()) {
                     match action {
-                        SdlMenuAction::Back => return R::back().map(|b| (Some(b), menu.state())),
-                        SdlMenuAction::Select(result) => return Some((Some(result), menu.state())),
-                        SdlMenuAction::ChangeSort => {
-                            return R::sort().map(|r| (Some(r), menu.state()));
+                        SdlMenuAction::Back => {
+                            return R::back().map(|b| Ok((Some(*&b), menu.state().clone())))
                         }
-                        SdlMenuAction::ShowOptions => if let SdlMenuAction::Select(r) = menu.selected_value() {
-                            return r.into_details().map(|r| (Some(r), menu.state()));
-                        },
+                        SdlMenuAction::Select(result) => {
+                            return Some(Ok((Some(result), menu.state().clone())));
+                        }
+                        SdlMenuAction::ChangeSort => {
+                            return R::sort().map(|r| Ok((Some(r), menu.state().clone())));
+                        }
+                        SdlMenuAction::ShowOptions => {
+                            if let SdlMenuAction::Select(r) = menu.selected_value() {
+                                return r
+                                    .into_details()
+                                    .map(|r| Ok((Some(r), menu.state().clone())));
+                            }
+                        }
                         SdlMenuAction::KeyPress(Keycode::Backspace)
                         | SdlMenuAction::KeyPress(Keycode::KpBackspace) => {
                             filter.pop();
 
                             info!("filter: {}", filter);
-                            return Some((None, menu.state()));
+                            return Some(Ok((None, menu.state().clone())));
                         }
                         SdlMenuAction::TextInput(text) => {
                             for c in text.iter() {
@@ -267,19 +296,25 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                                 }
                                 filter.push(*c);
                             }
-                            return Some((None, menu.state()));
+                            return Some(Ok((None, menu.state().clone())));
                         }
                         _ => {}
                     }
                 }
             }
 
+            if let Some(c) = state.shortcut {
+                if let Err(e) = shortcut_handler(app, c, context) {
+                    return Some(Err(e));
+                }
+            }
+
             None
-        });
+        })?;
 
         if let Some(r) = result {
-            return (r, new_state);
+            return Ok((r, new_state));
         }
-        menu_state = Some(new_state);
+        menu_state = new_state;
     }
 }

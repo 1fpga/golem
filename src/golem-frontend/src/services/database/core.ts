@@ -1,10 +1,12 @@
-import { compareVersions, RemoteCore, RemoteSystem } from "../remote";
+import * as core from "@:golem/core";
+import { compareVersions, RemoteCore } from "../remote";
 import { Row } from "@:golem/db";
 import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";
 import { Catalog } from "./catalog";
-import type { System } from "./system";
-import { sql } from "../database";
+import { System } from "./system";
+import { sql } from "$/utils";
+import { coreOsdMenu } from "$/ui/menus/core_osd";
 
 export interface CoreRow extends Row {
   id: number;
@@ -15,8 +17,6 @@ export interface CoreRow extends Row {
   rbf_path: string | null;
   description: string;
   version: string | null;
-  icon_path: string | null;
-  image_path: string | null;
 }
 
 /**
@@ -25,6 +25,8 @@ export interface CoreRow extends Row {
  * and validating cores is done by {@link RemoteCore}.
  */
 export class Core {
+  private static runningCore: Core | null = null;
+
   private static fromRow(row: CoreRow | null): Core {
     if (row === null) {
       throw new Error("Core not found");
@@ -35,6 +37,42 @@ export class Core {
 
   public static pathForAsset(core: RemoteCore, version: string) {
     return `/media/fat/golem/cores/${core.uniqueName}/${version}`;
+  }
+
+  public static running() {
+    return Core.runningCore;
+  }
+
+  public static setRunning(core: Core | null) {
+    Core.runningCore = core;
+  }
+
+  public static async getById(id: number): Promise<Core | null> {
+    const [row] = await sql<CoreRow>`SELECT *
+                                         FROM cores
+                                         WHERE id = ${id}
+                                         LIMIT 1`;
+    return Core.fromRow(row);
+  }
+
+  public static async count(system?: System): Promise<number> {
+    const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*) as count
+                                                       FROM cores ${
+                                                         system
+                                                           ? sql`WHERE system_id =
+                                                                       ${system.id}`
+                                                           : undefined
+                                                       }`;
+
+    return count;
+  }
+
+  public static async listForCatalogId(catalogId: number): Promise<Core[]> {
+    const rows = await sql<CoreRow>`SELECT *
+                                        FROM cores
+                                        WHERE catalog_id = ${catalogId}`;
+
+    return rows.map(Core.fromRow);
   }
 
   public static async list(system?: System): Promise<Core[]> {
@@ -49,16 +87,11 @@ export class Core {
     return rows.map(Core.fromRow);
   }
 
-  static async upgrade(core: RemoteCore, system: System, catalog: Catalog) {
+  static async upgrade(core: RemoteCore, catalog: Catalog): Promise<Core> {
     throw new Error("Method not implemented.");
   }
 
-  static async install(
-    core: RemoteCore,
-    system: System,
-    catalog: Catalog,
-    version?: string,
-  ) {
+  static async install(core: RemoteCore, catalog: Catalog, version?: string) {
     let [maybeCore] = await sql<CoreRow>`SELECT *
                                              FROM cores
                                              WHERE unique_name = ${core.uniqueName}
@@ -76,7 +109,7 @@ export class Core {
       // Maybe we need to upgrade it?
       const existingCore = Core.fromRow(maybeCore);
       if (compareVersions(release.version, existingCore.version) > 0) {
-        return await Core.upgrade(core, system, catalog);
+        return await Core.upgrade(core, catalog);
       }
     }
 
@@ -102,17 +135,37 @@ export class Core {
     }
 
     console.debug("Adding core to database");
-    await sql`INSERT INTO cores ${sql.insertValues({
-      system_id: system.id,
+    let [row] = await sql<CoreRow>`INSERT INTO cores ${sql.insertValues({
       catalog_id: catalog.id,
       name: core.name,
       unique_name: core.uniqueName,
       rbf_path: rbf,
       description: core.description,
       version: release.version,
-      icon_path: core.iconPath,
-      image_path: core.imagePath,
-    })}`;
+    })} RETURNING *`;
+
+    console.debug("Adding systems to core");
+    for (const system of core.systems) {
+      const s = await System.getByUniqueName(system);
+      if (s === null) {
+        throw new Error("System not found");
+      }
+
+      await sql`INSERT INTO cores_systems ${sql.insertValues({
+        core_id: row.id,
+        system_id: s.id,
+      })}`;
+    }
+
+    console.debug("Adding core to games database");
+    if (core.tags.includes("no-roms")) {
+      await sql`INSERT INTO games ${sql.insertValues({
+        name: core.name,
+        core_id: row.id,
+      })}`;
+    }
+
+    return Core.fromRow(row);
   }
 
   private constructor(private readonly row: CoreRow) {}
@@ -124,6 +177,10 @@ export class Core {
       throw new Error("System not found");
     }
     return s;
+  }
+
+  public get id() {
+    return this.row.id;
   }
 
   public get uniqueName() {
@@ -144,5 +201,36 @@ export class Core {
 
   public get rbfPath() {
     return this.row.rbf_path;
+  }
+
+  public async launch() {
+    if (!this.rbfPath) {
+      throw new Error("Core does not have an RBF path");
+    }
+
+    try {
+      console.log(`Starting core: ${JSON.stringify(this)}`);
+      Core.setRunning(this);
+      let c = core.load({
+        core: { type: "Path", path: this.rbfPath },
+      });
+
+      let error = undefined;
+      c.showOsd(async () => {
+        try {
+          return await coreOsdMenu(c, this);
+        } catch (e) {
+          error = e;
+          return true;
+        }
+      });
+      if (error) {
+        throw error;
+      }
+
+      c.loop();
+    } finally {
+      Core.setRunning(null);
+    }
   }
 }

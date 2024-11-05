@@ -1,5 +1,4 @@
 use crate::input::shortcut::AxisValue;
-use crate::input::InputState;
 use sdl3::gamepad::{Axis, Button};
 use sdl3::keyboard::Scancode;
 use std::fmt::Display;

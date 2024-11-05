@@ -1,11 +1,12 @@
 import * as fs from "fs";
 import * as path from "path";
 import { globSync } from "glob";
-import { _, Ajv } from "ajv";
+import { Ajv } from "ajv";
 import addFormats from "ajv-formats";
 import * as schema_to_ts from "json-schema-to-typescript";
 import standaloneCode from "ajv/dist/standalone/index.js";
 import { capitalCase } from "change-case";
+import { source } from "common-tags";
 
 export default function (baseDir = process.cwd()) {
   const root = path.resolve(`${baseDir}/codegen`);
@@ -36,6 +37,7 @@ export default function (baseDir = process.cwd()) {
           useDefaults: true,
           code: {
             esm: true,
+            lines: true,
             source: true,
           },
           schemas: [
@@ -67,11 +69,15 @@ export default function (baseDir = process.cwd()) {
           },
         });
 
-        let content =
-          'import type { ValidateFunction } from "ajv";\n\n' +
-          `${ts}\n\n` +
-          `export const validate: ValidateFunction<${capitalCase(id)}>;\n` +
-          "export default validate;";
+        let content = source`
+          import type { ValidateFunction } from "ajv";
+          
+          ${ts}  
+          
+          export const validate: ValidateFunction<${capitalCase(id).replace(/ /g, "")}>;
+          export default validate;
+        `;
+
         fs.writeFileSync(`${outputDir}/${outputFile}.d.ts`, content);
       }
     },
@@ -80,6 +86,9 @@ export default function (baseDir = process.cwd()) {
         return path.resolve(
           `${baseDir}/codegen/schemas/${source.substring(9)}.js`,
         );
+      }
+      if (source.startsWith("$schemas-json:") && source.endsWith(".json")) {
+        return this.resolve(`${baseDir}/schemas/${source.substring(14)}`);
       }
       if (source.startsWith("node:")) {
         // return path.resolve(`${baseDir}/node_modules/${source.substring(5)}`);

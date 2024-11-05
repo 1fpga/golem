@@ -4,8 +4,6 @@
  * This module provides functions to interact with cores in Golem Script.
  */
 declare module "@:golem/core" {
-  import { Image } from "@:golem/util";
-
   /**
    * A path to a core file.
    */
@@ -130,17 +128,19 @@ declare module "@:golem/core" {
   /**
    * Options for the core loop.
    */
-  export interface LoopOptions {
-    /**
-     * Callback for when the core wants to save a savestate.
-     * @param path
-     * @param screenshot
-     */
-    onSaveState?(
-      savestate: Uint8Array,
-      screenshot: Image,
-    ): void | Promise<void>;
-  }
+  export interface LoopOptions {}
+
+  /**
+   * Callback for when the core wants to save a savestate.
+   * @param savestate The savestate to save (in binary format).
+   * @param screenshot A screenshot of the current game.
+   * @param slot The slot number to save the savestate to.
+   */
+  export type SaveStateListener = (
+    savestate: Uint8Array,
+    screenshot: Image,
+    slot: number,
+  ) => void | Promise<void>;
 
   /**
    * The result of the OSD, whether to quit the core or not.
@@ -216,6 +216,18 @@ declare module "@:golem/core" {
      * Quit the core and returns to the main menu.
      */
     quit(): void;
+
+    /**
+     * Add an event listener to the core.
+     */
+    on(event: string, listener: (...args: any[]) => any | Promise<any>): void;
+
+    /**
+     * Specialization of the `on` method for the `saveState` event.
+     * @param event The event name.
+     * @param listener The event listener.
+     */
+    on(event: "saveState", listener: SaveStateListener): void;
   }
 
   /**

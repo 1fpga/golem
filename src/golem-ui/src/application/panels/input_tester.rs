@@ -53,8 +53,9 @@ pub fn input_tester(app: &mut GoLEmApp) {
         .arrange()
         .align_to(&display_area, horizontal::Center, vertical::Top);
 
-        let mut buffer = app.main_buffer().color_converted();
-        let _ = layout.draw(&mut buffer);
+        let buffer = app.osd_buffer();
+        let _ = buffer.clear(BinaryColor::Off);
+        let _ = layout.draw(buffer);
 
         for e in state.events() {
             match e {
@@ -63,27 +64,27 @@ pub fn input_tester(app: &mut GoLEmApp) {
                     repeat: false,
                     ..
                 } => {
-                    if scancode == sdl3::keyboard::Scancode::Escape {
+                    if *scancode == sdl3::keyboard::Scancode::Escape {
                         return Some(());
                     }
-                    current.key_down(scancode);
+                    current.key_down(*scancode);
                 }
                 Event::KeyUp {
                     scancode: Some(scancode),
                     ..
                 } => {
-                    current.key_up(scancode);
+                    current.key_up(*scancode);
                 }
                 Event::ControllerButtonDown { which, button, .. } => {
-                    current.controller_button_down(which, button);
+                    current.controller_button_down(*which, *button);
                 }
                 Event::ControllerButtonUp { which, button, .. } => {
-                    current.controller_button_up(which, button);
+                    current.controller_button_up(*which, *button);
                 }
                 Event::ControllerAxisMotion {
                     which, axis, value, ..
                 } => {
-                    current.controller_axis_motion(which, axis, value);
+                    current.controller_axis_motion(*which, *axis, *value);
                 }
 
                 _ => {}

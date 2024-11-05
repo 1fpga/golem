@@ -4,6 +4,8 @@ export class WizardCancelError {}
 
 export class WizardCancelDone {}
 
+export class WizardRestart {}
+
 export interface StepOptions {
   previous: () => Promise<void>;
 }
@@ -54,6 +56,13 @@ export function noop(): WizardStep<undefined> {
   return async (options) => {};
 }
 
+export function generate<T>(
+  fn: () => Promise<WizardStep<T | undefined>>,
+): WizardStep<T>;
+export function generate<T>(
+  fn: () => Promise<WizardStep<T | undefined>[]>,
+): WizardStep<T[]>;
+
 /**
  * Generate a step from a function that returns a list of steps, at the time
  * the wizard is running. If this step is skipped, the function will not be
@@ -62,16 +71,15 @@ export function noop(): WizardStep<undefined> {
  */
 export function generate<T>(
   fn: () => Promise<WizardStep<T | undefined> | WizardStep<T | undefined>[]>,
-): WizardStep<T[]> {
+): WizardStep<T | T[] | undefined> {
   return async (options) => {
     const steps = await fn();
-    let results;
+
     if (Array.isArray(steps)) {
-      results = await sequence(...steps)(options);
+      return (await sequence(...steps)(options)).filter((x) => x !== undefined);
     } else {
-      results = await sequence(steps)(options);
+      return (await sequence(steps)(options))[0];
     }
-    return results.filter((r) => r !== undefined);
   };
 }
 
@@ -229,11 +237,24 @@ export function choice<T>(
   return fn;
 }
 
-export async function wizard<T>(...steps: WizardStep<T>[]): Promise<T[]> {
+export async function wizard<T>(
+  steps: WizardStep<T>[],
+  onError?: (e: any) => Promise<void>,
+): Promise<void> {
   let seq = sequence(...steps);
   let options: StepOptions = {
     async previous(): Promise<void> {},
   };
 
-  return await seq(options);
+  try {
+    await seq(options);
+  } catch (e) {
+    // Swallow errors that are of known types.
+    if (e instanceof WizardCancelError || e instanceof WizardCancelDone) {
+    } else if (onError) {
+      await onError(e);
+    } else {
+      throw e;
+    }
+  }
 }

@@ -1,16 +1,24 @@
-import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";
-
-import type {
-  Catalog as CatalogSchema,
-  System as CatalogSystemSchema,
-} from "$schemas:catalog/catalog";
+import type { Catalog as CatalogSchema } from "$schemas:catalog/catalog";
 import type { System as SystemSchema } from "$schemas:catalog/system";
+import type {
+  Core as CoresCoreSchema,
+  Cores as CoresSchema,
+} from "$schemas:catalog/cores";
+import type {
+  System as SystemsSystemSchema,
+  Systems as SystemsSchema,
+} from "$schemas:catalog/systems";
 import type { Core as CoreSchema } from "$schemas:catalog/core";
-import { RemoteGamesDb } from "./games_database";
-import { fetchJsonAndValidate } from "../../utils/fetch_json";
+import { RemoteGamesDb } from "$/services/remote/games_database";
+import { fetchJsonAndValidate, ValidationError } from "$/utils";
 
-export const CATALOG_1FPGA_URL = "https://catalog.1fpga.cloud/";
+export enum WellKnownCatalogs {
+  OneFpga = "https://catalog.1fpga.cloud/",
+  // The BETA is not available yet.
+  OneFpgaBeta = "https://catalog.1fpga.cloud/beta.json",
+  LocalTest = "http://catalog.local:8081/catalog.json",
+}
 
 const CATALOG_CACHE: { [url: string]: RemoteCatalog } = {};
 
@@ -58,16 +66,93 @@ export function compareVersions(
 }
 
 /**
+ * A remote system array. This is a `systems.json` that is fetched from the internet,
+ * parsed and validated. It contains the list of all systems.
+ */
+export class RemoteSystems {
+  /**
+   * The system cache.
+   * @private
+   */
+  private systems_: { [k: string]: RemoteSystem } = Object.create(null);
+
+  public static async fetch(url: string, catalog: RemoteCatalog, deep = false) {
+    const systemsUrl = new URL(url, catalog.url).toString();
+    const systems = await fetchJsonAndValidate(
+      systemsUrl,
+      (await import("$schemas:catalog/systems")).validate,
+    );
+    return new RemoteSystems(systemsUrl, systems, catalog);
+  }
+
+  constructor(
+    public readonly url: string,
+    public readonly schema: SystemsSchema,
+    public readonly catalog: RemoteCatalog,
+  ) {}
+
+  public async fetchSystem(key: string, deep = false) {
+    if (!this.systems_[key]) {
+      this.systems_[key] = await RemoteSystem.fetch(
+        key,
+        new URL(this.schema[key].url, this.url).toString(),
+        this,
+        deep,
+      );
+    }
+    return this.systems_[key];
+  }
+}
+
+/**
+ * A remote core array. This is a `cores.json` that is fetched from the internet,
+ * parsed and validated. It contains the list of all cores. Each core is a `RemoteCore`.
+ */
+export class RemoteCores {
+  /**
+   * The core cache.
+   * @private
+   */
+  private cores_: { [k: string]: RemoteCore } = Object.create(null);
+
+  public static async fetch(url: string, catalog: RemoteCatalog, deep = false) {
+    const coresUrl = new URL(url, catalog.url).toString();
+    const cores = await fetchJsonAndValidate(
+      coresUrl,
+      (await import("$schemas:catalog/cores")).validate,
+    );
+    return new RemoteCores(coresUrl, cores, catalog);
+  }
+
+  constructor(
+    public readonly url: string,
+    public readonly schema: CoresSchema,
+    public readonly catalog: RemoteCatalog,
+  ) {}
+
+  public async fetchCore(key: string, deep = false) {
+    if (!this.cores_[key]) {
+      this.cores_[key] = await RemoteCore.fetch(
+        key,
+        new URL(this.schema[key].url, this.url).toString(),
+        this,
+      );
+    }
+    return this.cores_[key];
+  }
+}
+
+/**
  * A remote core is a `core.json` that is fetched from the internet,
  * parsed and validated.
  */
 export class RemoteCore {
-  public static async fetch(key: string, url: string, system: RemoteSystem) {
-    const u = new URL(url, system.url).toString();
+  public static async fetch(key: string, url: string, cores: RemoteCores) {
+    const u = new URL(url, cores.url).toString();
 
     ui.show(
       "Fetching core...",
-      `Catalog "${system.catalog.name}"\nSystem "${system.name}"\nURL: ${u}`,
+      `Catalog "${cores.catalog.name}"\nCore: ${key}\nURL: ${u}`,
     );
 
     // Dynamic loading to allow for code splitting.
@@ -81,21 +166,38 @@ export class RemoteCore {
         `Core name mismatch: ${JSON.stringify(key)} != ${JSON.stringify(json.uniqueName)}`,
       );
     }
-    return new RemoteCore(u, json, system);
+
+    return new RemoteCore(u, json, cores);
   }
 
   constructor(
     public readonly url: string,
     public readonly schema: CoreSchema,
-    public readonly system: RemoteSystem,
+    public readonly cores: RemoteCores,
   ) {}
 
-  get name() {
+  get catalog() {
+    return this.cores.catalog;
+  }
+
+  get name(): string {
     return this.schema.name || this.schema.uniqueName;
+  }
+
+  get systems(): string[] {
+    if (typeof this.schema.systems === "string") {
+      return [this.schema.systems];
+    } else {
+      return this.schema.systems || [];
+    }
   }
 
   get uniqueName() {
     return this.schema.uniqueName;
+  }
+
+  get tags() {
+    return this.schema.tags || [];
   }
 
   get latestRelease() {
@@ -118,14 +220,6 @@ export class RemoteCore {
   get description() {
     return this.schema.description || null;
   }
-
-  get iconPath() {
-    return this.schema.icon || null;
-  }
-
-  get imagePath() {
-    return this.schema.image || null;
-  }
 }
 
 /**
@@ -133,22 +227,19 @@ export class RemoteCore {
  * parsed and validated.
  */
 export class RemoteSystem {
-  private cores_: { [k: string]: RemoteCore } | undefined;
-  private iconPath_: string | null = null;
-
   public static pathForAsset(system: RemoteSystem, assetType: string) {
     return `/media/fat/golem/systems/${system.uniqueName}/${assetType}`;
   }
 
   public static async fetch(
     key: string,
-    schema: CatalogSystemSchema,
-    catalog: RemoteCatalog,
+    url: string,
+    systems: RemoteSystems,
     deep = false,
   ): Promise<RemoteSystem> {
-    const u = new URL(schema.url, catalog.url).toString();
+    const u = new URL(url, systems.url).toString();
 
-    ui.show("Fetching system...", `Catalog ${catalog.name}\nURL: ${u}`);
+    ui.show("Fetching system...", `Catalog ${systems.catalog.name}\nURL: ${u}`);
 
     // Dynamic loading to allow for code splitting.
     const json = await fetchJsonAndValidate(
@@ -161,83 +252,45 @@ export class RemoteSystem {
         `System name mismatch: ${JSON.stringify(key)} != ${JSON.stringify(json.uniqueName)}`,
       );
     }
-    const system = new RemoteSystem(u, json, catalog);
-
-    if (deep) {
-      await system.fetchCores(deep);
-
-      if (json.icon) {
-        const destination = RemoteSystem.pathForAsset(system, "icons");
-        system.iconPath_ = await net.download(
-          new URL(json.icon, u).toString(),
-          destination,
-        );
-      }
-    }
-
-    return system;
+    return new RemoteSystem(u, json, systems);
   }
 
   constructor(
     public readonly url: string,
-    private readonly system_: SystemSchema,
-    private catalog_: RemoteCatalog,
+    public readonly schema: SystemSchema,
+    private systems_: RemoteSystems,
   ) {}
 
+  get catalog(): RemoteCatalog {
+    return this.systems_.catalog;
+  }
+
   get name(): string {
-    return this.system_.name || this.system_.uniqueName;
+    return this.schema.name || this.schema.uniqueName;
   }
 
   get uniqueName(): string {
-    return this.system_.uniqueName;
+    return this.schema.uniqueName;
   }
 
   get description(): string | null {
-    return this.system_.description || null;
-  }
-
-  get catalog(): RemoteCatalog {
-    return this.catalog_;
-  }
-
-  get iconPath(): string | null {
-    return this.iconPath_;
-  }
-
-  get imagePath(): string | null {
-    return null;
+    return this.schema.description || null;
   }
 
   get size(): number {
-    return this.system_.gamesDb?.size || 0;
+    return this.schema.gamesDb?.size || 0;
   }
 
-  async fetchCores(_deep = false) {
-    if (this.cores_ === undefined) {
-      if (this.system_.cores) {
-        const entries = Object.entries(this.system_.cores);
-        const cores = await Promise.all(
-          entries.map(async ([key, core]) => {
-            return [key, await RemoteCore.fetch(key, core.url, this)] as [
-              string,
-              RemoteCore,
-            ];
-          }),
-        );
-        this.cores_ = Object.fromEntries(cores);
-      } else {
-        this.cores_ = {};
-      }
-    }
-    return this.cores_;
+  get tags(): string[] {
+    return this.schema.tags || [];
   }
 
   async downloadGameDatabase() {
-    if (!this.system_.gamesDb) {
+    if (!this.schema.gamesDb) {
       return;
     }
 
-    return await RemoteGamesDb.fetch(this.system_.gamesDb.url, this);
+    return await RemoteGamesDb.fetch(this.schema.gamesDb.url, this);
   }
 }
 
@@ -246,10 +299,13 @@ export class RemoteSystem {
  * parsed and validated.
  */
 export class RemoteCatalog {
-  private systems_: { [key: string]: RemoteSystem } | undefined;
+  private systems_: RemoteSystems | undefined;
+  private cores_: RemoteCores | undefined;
 
-  public static async fetch1Fpga(): Promise<RemoteCatalog> {
-    return RemoteCatalog.fetch(CATALOG_1FPGA_URL);
+  public static async fetchWellKnown(
+    wellKnown: WellKnownCatalogs,
+  ): Promise<RemoteCatalog> {
+    return RemoteCatalog.fetch(wellKnown);
   }
 
   public static async fetch(url: string, all = false): Promise<RemoteCatalog> {
@@ -266,16 +322,19 @@ export class RemoteCatalog {
 
     ui.show("Fetching catalog...", "URL: " + url);
 
-    // Dynamic loading to allow for code splitting.
-    let validateCatalog = (await import("$schemas:catalog/catalog")).validate;
-
     // Add protocol to the URL.
     if (!url.startsWith("https://") && !url.startsWith("http://")) {
       url = "https://" + url;
     }
 
     try {
-      const json = await fetchJsonAndValidate(url, validateCatalog);
+      // Dynamic loading to allow for code splitting. And also don't allow for retries
+      // since we're already in a retry loop.
+      const json = await fetchJsonAndValidate(
+        url,
+        (await import("$schemas:catalog/catalog")).validate,
+        { allowRetry: false },
+      );
       const catalog = new RemoteCatalog(url, json);
       if (all) {
         await catalog.fetchDeep();
@@ -284,70 +343,103 @@ export class RemoteCatalog {
       CATALOG_CACHE[url] = catalog;
       return catalog;
     } catch (e) {
+      if (e instanceof ValidationError) {
+        throw e;
+      }
+
+      console.error("Error fetching catalog:", (e as any)?.message || e);
+
       // If this is http, try with https.
-      if (url.startsWith("http://")) {
+      // If this doesn't end with `catalog.json`, try adding it.
+      if (!url.endsWith("/catalog.json")) {
+        return RemoteCatalog.fetch(new URL("catalog.json", url).toString());
+      } else if (url.startsWith("http://")) {
         return RemoteCatalog.fetch(url.replace(/^http:\/\//, "https://"));
       } else {
-        // If this doesn't end with `catalog.json`, try adding it.
-        if (!url.endsWith("/catalog.json")) {
-          return RemoteCatalog.fetch(
-            url + (url.endsWith("/") ? "" : "/") + "catalog.json",
-          );
-        } else {
-          throw e;
-        }
+        throw e;
       }
     }
   }
 
   private constructor(
     public readonly url: string,
-    private readonly catalog: CatalogSchema,
+    public readonly schema: CatalogSchema,
   ) {}
 
   public get name(): string {
-    return this.catalog.name;
+    return this.schema.name;
   }
 
   public get version(): number | string {
-    return this.catalog.version;
+    return this.schema.version;
   }
 
   public get lastUpdated(): string | null {
-    return this.catalog.lastUpdated || null;
+    return this.schema.lastUpdated || null;
   }
 
   public async fetchSystems(
     predicate: (
       uniqueName: string,
-      system: CatalogSystemSchema,
+      system: SystemsSystemSchema,
     ) => boolean = () => true,
     deep = false,
-  ): Promise<{ [name: string]: RemoteSystem }> {
-    if (this.systems_ === undefined) {
-      if (this.catalog.systems) {
-        const entries = Object.entries(this.catalog.systems);
-
-        const systems = await Promise.all(
-          entries
-            .filter(([key, system]) => predicate(key, system))
-            .map(async ([key, system]) => {
-              return [
-                key,
-                await RemoteSystem.fetch(key, system, this, deep),
-              ] as [string, RemoteSystem];
-            }),
-        );
-        this.systems_ = Object.fromEntries(systems);
-      } else {
-        this.systems_ = {};
-      }
+  ): Promise<{ [k: string]: RemoteSystem }> {
+    // If there's no cores, return an empty array.
+    if (this.schema.systems === undefined) {
+      return {};
     }
 
-    return this.systems_;
+    if (this.systems_ === undefined) {
+      this.systems_ = await RemoteSystems.fetch(this.schema.systems.url, this);
+    }
+
+    return Object.fromEntries(
+      (
+        await Promise.all(
+          Object.entries(this.systems_.schema)
+            .filter(([name, system]) => predicate(name, system))
+            .map(async ([name, _system]) => [
+              name,
+              await this.systems_?.fetchSystem(name, deep),
+            ]),
+        )
+      ).filter(([_, s]) => s !== undefined),
+    );
+  }
+
+  public async fetchCores(
+    predicate: (uniqueName: string, core: CoresCoreSchema) => boolean = () =>
+      true,
+    deep = false,
+  ): Promise<{ [k: string]: RemoteCore }> {
+    // If there's no cores, return an empty array.
+    if (this.schema.cores === undefined) {
+      return {};
+    }
+
+    if (this.cores_ === undefined) {
+      this.cores_ = await RemoteCores.fetch(this.schema.cores.url, this);
+    }
+
+    return Object.fromEntries(
+      (
+        await Promise.all(
+          Object.entries(this.cores_.schema)
+            .filter(([name, core]) => predicate(name, core))
+            .map(async ([name, _core]) => [
+              name,
+              await this.cores_?.fetchCore(name, deep),
+            ]),
+        )
+      ).filter(([_, c]) => c !== undefined),
+    );
   }
 
   public async fetchDeep() {
-    await this.fetchSystems(() => true, true);
+    await Promise.all([
+      this.fetchSystems(() => true, true),
+      this.fetchCores(() => true, true),
+    ]);
   }
 }

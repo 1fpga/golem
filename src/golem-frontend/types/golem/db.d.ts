@@ -31,9 +31,9 @@ declare module "@:golem/db" {
   ): Promise<Db>;
 
   /**
-   * The database object.
+   * A queryable object that can execute SQL queries.
    */
-  export interface Db {
+  export interface Queryable {
     /**
      * Executes a SQL query and returns the result rows. This will not limit the number of rows
      * returned, so be careful when querying large tables.
@@ -42,7 +42,10 @@ declare module "@:golem/db" {
      * @param bindings Optional array of values to bind to the query.
      * @returns An array of rows returned from the query.
      */
-    query(query: string, bindings?: SqlValue[]): Promise<{ rows: Row[] }>;
+    query<T = Row>(
+      query: string,
+      bindings?: SqlValue[],
+    ): Promise<{ rows: T[] }>;
 
     /**
      * Executes a SQL query and returns the first row. If no rows are returned, this will return
@@ -52,7 +55,7 @@ declare module "@:golem/db" {
      * @param bindings Optional array of values to bind to the query.
      * @returns The first row returned from the query, or `null` if no rows are returned.
      */
-    queryOne(query: string, bindings?: SqlValue[]): Promise<Row | null>;
+    queryOne<T = Row>(query: string, bindings?: SqlValue[]): Promise<T | null>;
 
     /**
      * Executes a SQL query and returns the number of rows affected. This is useful for `INSERT`,
@@ -63,6 +66,31 @@ declare module "@:golem/db" {
      * @returns The first column of the first row returned from the query, or `null` if no rows are returned.
      */
     execute(query: string, bindings?: SqlValue[]): Promise<number>;
+  }
+
+  export interface Transaction extends Queryable {
+    /**
+     * Commits the transaction. This will unlock the database and allow other transactions to
+     * modify the database.
+     */
+    commit(): Promise<void>;
+
+    /**
+     * Rolls back the transaction. This will unlock the database and allow other transactions to
+     * modify the database.
+     */
+    rollback(): Promise<void>;
+  }
+
+  /**
+   * The database object.
+   */
+  export interface Db extends Queryable {
+    /**
+     * Begins a transaction. This will lock the database and prevent other transactions from
+     * modifying the database until the transaction is committed or rolled back.
+     */
+    beginTransaction(): Promise<Transaction>;
 
     /**
      * Executes a raw SQL query. This is useful for executing queries that do not return any rows,

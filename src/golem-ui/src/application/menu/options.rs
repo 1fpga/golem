@@ -13,6 +13,8 @@ pub struct TextMenuOptions<'a, R: MenuReturn + Copy> {
     pub(super) state: Option<GolemMenuState<R>>,
     pub(super) title_font: Option<&'static MonoFont<'static>>,
 
+    pub(super) selected: Option<u32>,
+
     /// Prefix items added to the menu before the categorized and sorted section of items.
     pub(super) prefix: &'a [(&'a str, &'a str, R)],
     /// Suffix items added to the menu after the categorized and sorted section of items.
@@ -31,6 +33,7 @@ impl<'a, R: MenuReturn + Copy> Default for TextMenuOptions<'a, R> {
             detail_label: None,
             state: None,
             title_font: None,
+            selected: None,
         }
     }
 }
@@ -72,6 +75,13 @@ impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
         }
     }
 
+    pub fn with_details_opt(self, detail_label: Option<&'a str>) -> Self {
+        Self {
+            detail_label,
+            ..self
+        }
+    }
+
     pub fn with_sort(self, field: &'a str) -> Self {
         Self {
             sort_by: Some(field),
@@ -96,5 +106,9 @@ impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
 
     pub fn with_suffix(self, suffix: &'a [(&'a str, &'a str, R)]) -> Self {
         Self { suffix, ..self }
+    }
+
+    pub fn with_selected_opt(self, selected: Option<u32>) -> Self {
+        Self { selected, ..self }
     }
 }

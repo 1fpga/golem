@@ -34,11 +34,12 @@ impl DateTimeWidget {
         }
     }
 
-    pub fn set_time_format(&mut self, time_format: String) -> bool {
+    pub fn set_time_format(&mut self, time_format: &str) -> bool {
         if time_format == self.time_format {
             return false;
         }
-        self.time_format = time_format;
+
+        self.time_format = time_format.to_string();
         self.set_time(self.date_time);
         let text = self.date_time.format(&self.time_format).to_string();
         self.bounds =

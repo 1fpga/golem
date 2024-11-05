@@ -1,8 +1,9 @@
 use crate::console::TracingLogger;
 use crate::module_loader::GolemModuleLoader;
 use crate::modules::CommandMap;
-use boa_engine::{js_string, Context, JsError, JsValue, Module, Source};
-use boa_macros::{Finalize, JsData, Trace};
+use boa_engine::property::Attribute;
+use boa_engine::{js_string, Context, JsError, JsObject, JsResult, JsValue, Module, Source};
+use boa_macros::{js_str, Finalize, JsData, Trace};
 use boa_runtime::RegisterOptions;
 use golem_ui::application::GoLEmApp;
 use std::path::Path;
@@ -12,6 +13,7 @@ use tracing::{debug, error, info};
 
 mod module_loader;
 
+mod commands;
 mod console;
 mod modules;
 
@@ -58,7 +60,7 @@ impl HostData {
 fn create_context(
     script: Option<&impl AsRef<Path>>,
     host_defined: HostData,
-) -> Result<(Context, Rc<GolemModuleLoader>), JsError> {
+) -> JsResult<(Context, Rc<GolemModuleLoader>)> {
     let loader = match script {
         Some(p) => {
             let dir = p.as_ref().parent().expect("Cannot use root.");
@@ -70,6 +72,26 @@ fn create_context(
 
     let mut context = Context::builder().module_loader(loader.clone()).build()?;
     context.insert_data(host_defined);
+
+    let version = {
+        let major = (env!("CARGO_PKG_VERSION_MAJOR"))
+            .parse::<u32>()
+            .expect("Invalid major version");
+        let minor = (env!("CARGO_PKG_VERSION_MINOR"))
+            .parse::<u32>()
+            .expect("Invalid major version");
+
+        let version = JsObject::with_null_proto();
+        version.set(js_str!("major"), major, false, &mut context)?;
+        version.set(js_str!("minor"), minor, false, &mut context)?;
+        version
+    };
+
+    let one_fpga = JsObject::default();
+    one_fpga.set(js_str!("name"), js_string!("OneFPGA"), false, &mut context)?;
+    one_fpga.set(js_str!("version"), version, false, &mut context)?;
+
+    context.register_global_property(js_str!("ONE_FPGA"), one_fpga, Attribute::ENUMERABLE)?;
 
     Ok((context, loader))
 }
@@ -121,8 +143,14 @@ pub fn run(
         .load_link_evaluate(&mut context)
         .await_blocking(&mut context)
     {
-        error!("Error loading script: {}", e.display());
-        return Err(JsError::from_opaque(e).try_native(&mut context)?.into());
+        let e = JsError::from_opaque(e);
+        if let Ok(e) = e.try_native(&mut context) {
+            error!(error = ?e, "Native error");
+        } else {
+            error!(error = ?e, "Error loading script");
+        }
+
+        return Err(e.into());
     }
     debug!(
         "Script loaded and evaluated in {}ms.",

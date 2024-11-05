@@ -1,5 +1,5 @@
 import * as ui from "@:golem/ui";
-import { sql } from "./database";
+import { sql } from "../utils";
 
 let loggedInUser: User | null = null;
 
@@ -10,10 +10,17 @@ export interface UserRow {
   username: string;
   password: string | null;
   createdAt: Date;
-  admin: boolean;
+  admin: number;
 }
 
 export class User {
+  /**
+   * Log out the currently logged-in user.
+   */
+  public static async logout() {
+    loggedInUser = null;
+  }
+
   /**
    * Convert a password from a prompt into a string.
    */
@@ -27,10 +34,31 @@ export class User {
 
   /**
    * Get the currently logged-in user.
+   * @param fail Whether to throw an error if no user is logged in.
    * @returns The logged-in user, or `null` if no user is logged in.
    */
-  public static async loggedInUser(): Promise<User | null> {
+  public static loggedInUser(fail: true): User;
+  public static loggedInUser(fail?: boolean): User | null {
+    if (loggedInUser === null && fail) {
+      throw new Error("No user logged in");
+    }
     return loggedInUser;
+  }
+
+  public static async list(): Promise<User[]> {
+    const rows = await sql<UserRow>`SELECT *
+                                        FROM users`;
+    return rows.map((row) => new this(row.id, row.username, !!row.admin));
+  }
+
+  public static async byUsername(username: string): Promise<User | null> {
+    let [user] = await sql<UserRow>`SELECT *
+                                        FROM users
+                                        WHERE username = ${username}`;
+    if (!user) {
+      return null;
+    }
+    return new this(user.id, user.username, !!user.admin);
   }
 
   /**
@@ -41,7 +69,7 @@ export class User {
    *          (e.g. invalid password).
    */
   public static async login(
-    username: string,
+    username: string = DEFAULT_USERNAME,
     force = false,
   ): Promise<User | null> {
     let [user] = await sql<UserRow>`SELECT *
@@ -72,8 +100,33 @@ export class User {
       }
     }
 
-    loggedInUser = new this(+user.id, "" + user.username, user.admin);
+    loggedInUser = new this(+user.id, "" + user.username, !!user.admin);
     return loggedInUser;
+  }
+
+  /**
+   * Return whether the user is able to logout. Users can logout if there is
+   * more than one user, or if the user has a password.
+   */
+  static async canLogOut() {
+    const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*) as count
+                                                       FROM users`;
+
+    if (count > 1) {
+      return true;
+    }
+    if (loggedInUser === null) {
+      return false;
+    }
+
+    let [user] = await sql<UserRow>`SELECT *
+                                        FROM users
+                                        WHERE username = ${loggedInUser.username}`;
+
+    if (!user) {
+      return false;
+    }
+    return user.password !== null;
   }
 
   /**
@@ -100,6 +153,43 @@ export class User {
   private constructor(
     public readonly id: number,
     public readonly username: string,
-    public readonly admin: boolean,
+    private admin_: boolean,
   ) {}
+
+  public get admin() {
+    return this.admin_;
+  }
+
+  public async delete() {
+    if (loggedInUser?.admin !== true) {
+      throw new Error("You do not have permission to delete users");
+    }
+
+    await sql`DELETE
+                  FROM users
+                  WHERE id = ${this.id}`;
+  }
+
+  public async clearPassword() {
+    await sql`UPDATE users
+                  SET password = null
+                  WHERE id = ${this.id}`;
+  }
+
+  public async setPassword(password: string[]) {
+    await sql`UPDATE users
+                  SET password = ${User.passwordToString(password)}
+                  WHERE id = ${this.id}`;
+  }
+
+  public async toggleAdmin() {
+    if (loggedInUser?.admin) {
+      throw new Error("You do not have permission to change user admin status");
+    }
+
+    this.admin_ = !this.admin;
+    await sql`UPDATE users
+                  SET admin = ${this.admin}
+                  WHERE id = ${this.id}`;
+  }
 }

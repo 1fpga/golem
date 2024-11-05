@@ -8,17 +8,28 @@
       "src",
       "codegen"
     ],
+    "lib": [
+    ],
     "strict": true,
+    "resolveJsonModule": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "paths": {
+      "$/*": [
+        "src/*"
+      ],
       "$schemas:*": [
         "codegen/schemas/*"
+      ],
+      "$schemas-json:*": [
+        "schemas/*"
       ],
       "@:*": [
         "types/*"
       ]
-    }
+    },
+    "types": [
+      "./types/globals.d.ts"
+    ]
   }
 }

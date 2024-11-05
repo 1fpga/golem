@@ -42,12 +42,9 @@ num-integer = "0.1.45"
 num-traits = "0.2.15"
 once_cell = "1.18.0"
 one-fpga = { workspace = true }
-ouroboros = "0.18.0"
 parking_lot = "0.12.1"
 qrcode = { version = "0.14.0", features = ["image"] }
 regex = "1.9.3"
-reqwest = { version = "0.11.22", features = ["blocking", "json", "rustls-tls"], default-features = false }
-retronomicon-dto = { version = "0.2.3" }
 sdl3 = { version = "0.5.0", features = ["bundled"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde-hex = "0.1.0"
@@ -61,7 +58,6 @@ tinybmp = "0.5.0"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["tracing-log", "env-filter"] }
 u8g2-fonts = { version = "0.3.0", features = ["embedded_graphics_textstyle"] }
-walkdir = "2.3.3"
 
 [build-dependencies]
 vergen = { version = "8.2.4", features = ["build", "git", "gitoxide"] }

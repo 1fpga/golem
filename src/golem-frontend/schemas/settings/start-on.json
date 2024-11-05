@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://golem.1fpga.cloud/schemas/settings/start-on.json",
+  "type": "object",
+  "oneOf": [
+    {
+      "$id": "base-start-on",
+      "properties": {
+        "kind": {
+          "$id": "base-kind",
+          "enum": [
+            "main-menu",
+            "game-library",
+            "last-game"
+          ]
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "$id": "start-game-start-on",
+      "properties": {
+        "kind": {
+          "$id": "start-game-kind",
+          "enum": [
+            "start-game"
+          ]
+        },
+        "game": {
+          "$id": "game-id",
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "game"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

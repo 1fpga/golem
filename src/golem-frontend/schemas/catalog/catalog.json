@@ -9,28 +9,45 @@
       "minLength": 3,
       "maxLength": 64
     },
+    "cores": {
+      "description": "List of cores in the catalog, their URL and latest version.",
+      "$id": "cores",
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "URL of the core metadata",
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "version": {
+          "description": "Version of the core metadata",
+          "$ref": "defs.json#/definitions/version"
+        }
+      },
+      "required": [
+        "url",
+        "version"
+      ]
+    },
     "systems": {
       "description": "List of systems in the catalog, their URL and latest version.",
+      "$id": "systems",
       "type": "object",
-      "additionalProperties": {
-        "$id": "system",
-        "type": "object",
-        "properties": {
-          "url": {
-            "description": "URL of the system metadata",
-            "type": "string",
-            "format": "uri-reference"
-          },
-          "version": {
-            "description": "Version of the system metadata",
-            "$ref": "defs.json#/definitions/version"
-          }
+      "properties": {
+        "url": {
+          "description": "URL of the system metadata",
+          "type": "string",
+          "format": "uri-reference"
         },
-        "required": [
-          "url",
-          "version"
-        ]
-      }
+        "version": {
+          "description": "Version of the system metadata",
+          "$ref": "defs.json#/definitions/version"
+        }
+      },
+      "required": [
+        "url",
+        "version"
+      ]
     },
     "lastUpdated": {
       "description": "Date of the last update",

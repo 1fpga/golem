@@ -469,6 +469,11 @@ pub trait Core {
 /// A core that be used in the `Golem` platform. This is a wrapper around a core
 /// that implements the [`Core`] trait. It can be used to pass around a core
 /// without knowing its implementation.
+///
+/// # Safety
+/// We can use UnsafeCell here because we are not sharing the core across threads.
+/// Although this can still lead to undefined behaviour, the underlying core still
+/// has access to physical memory and this does not make it less safe.
 #[derive(Clone)]
 pub struct GolemCore {
     name: String,

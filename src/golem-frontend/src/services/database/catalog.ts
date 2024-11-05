@@ -1,17 +1,23 @@
-import { sql } from "../database";
+import { sql } from "$/utils";
 import { Row } from "@:golem/db";
-import { compareVersions, RemoteCatalog } from "../remote";
-import { System, SystemRow } from "./system";
+import { compareVersions, RemoteCatalog, WellKnownCatalogs } from "../remote";
+import { System } from "./system";
+import { Core } from "$/services/database/core";
 
 export interface CatalogRow extends Row {
   id: number;
   name: string;
   url: string;
-  latest_check_at: string | null;
   latest_update_at: string | null;
   last_updated: string;
   version: string;
   priority: number;
+  update_pending: boolean;
+}
+
+export interface ListCatalogsOptions {
+  updatePending?: boolean;
+  url?: string;
 }
 
 /**
@@ -29,18 +35,79 @@ export class Catalog {
       row.id,
       row.name,
       row.url,
-      row.latest_check_at ? new Date(row.latest_check_at) : null,
       row.latest_update_at ? new Date(row.latest_update_at) : null,
       row.last_updated,
       row.version,
       row.priority,
+      row.update_pending,
     );
   }
 
-  public static async listCatalogs(): Promise<Catalog[]> {
+  public static async hasCatalog(
+    url: WellKnownCatalogs | string,
+  ): Promise<boolean> {
+    const catalogs = await Catalog.listCatalogs({ url });
+    return catalogs.length > 0;
+  }
+
+  /**
+   * Perform the update for all catalogs that have updates pending.
+   */
+  public static async updateAll(): Promise<boolean> {
+    const catalogs = await Catalog.listCatalogs({ updatePending: true });
+    let any = false;
+    for (const catalog of catalogs) {
+      any = any || (await catalog.update());
+    }
+    return any;
+  }
+
+  /**
+   * Check for updates in catalogs that do not have update pendings, updating
+   * the `update_pending` field in the database for those who have new updates.
+   */
+  public static async checkForUpdates(): Promise<void> {
+    const catalogs = await Catalog.listCatalogs({ updatePending: false });
+    const shouldUpdate: Catalog[] = (
+      await Promise.all(
+        catalogs.map(async (c) =>
+          (await c.checkForUpdates()) !== null ? c : undefined,
+        ),
+      )
+    ).filter((c) => c !== undefined);
+
+    await sql`UPDATE catalogs
+                  SET update_pending = true
+                  WHERE ${sql.in(
+                    "id",
+                    shouldUpdate.map((c) => c.id),
+                  )}`;
+  }
+
+  public static async listCatalogs(
+    options: ListCatalogsOptions = {},
+  ): Promise<Catalog[]> {
     const rows = await sql<CatalogRow>`SELECT *
-                                           FROM catalogs`;
+                                           FROM catalogs
+                                           WHERE ${sql.and(
+                                             true,
+                                             options.url
+                                               ? sql`url =
+                                                           ${options.url}`
+                                               : undefined,
+                                             options.updatePending
+                                               ? sql`update_pending =
+                                                           ${options.updatePending}`
+                                               : undefined,
+                                           )}
+        `;
     return rows.map(Catalog.fromRow).sort((a, b) => a.priority - b.priority);
+  }
+
+  public static async count(updatePending = false): Promise<number> {
+    const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*) as count
+                                                       FROM catalogs ${updatePending ? sql`WHERE update_pending = true` : ""}`;
+    return count;
   }
 
   public static async getByUrl(url: string): Promise<Catalog | null> {
@@ -98,27 +165,30 @@ export class Catalog {
     public readonly id: number,
     public readonly name: string,
     public readonly url: string,
-    public readonly latestCheckAt: Date | null,
     public readonly latestUpdateAt: Date | null,
     public readonly lastUpdated: string,
     public readonly version: string,
     public readonly priority: number,
+    public readonly updatePending: boolean,
   ) {}
 
   /**
    * Check for updates in the catalog.
    * @returns Return the remote catalog if there's an update, otherwise null.
    */
-  public async checkForUpdates(): Promise<RemoteCatalog | null> {
-    if (
-      this.latestCheckAt !== null &&
-      this.latestCheckAt.getTime() > Date.now()
-    ) {
-      return null;
-    }
-
-    let remote = await RemoteCatalog.fetch(this.url);
-    if (compareVersions(remote.version, this.version) > 0) {
+  private async checkForUpdates(): Promise<RemoteCatalog | null> {
+    const remote = await RemoteCatalog.fetch(this.url);
+    const shouldUpdate = compareVersions(remote.version, this.version) > 0;
+    console.debug(
+      "Checking for updates...",
+      this.name,
+      JSON.stringify({
+        current: this.version,
+        remote: remote.version,
+        shouldUpdate,
+      }),
+    );
+    if (shouldUpdate) {
       return remote;
     } else {
       return null;
@@ -129,9 +199,38 @@ export class Catalog {
    * Get the list of systems in this catalog.
    */
   public async listSystems(): Promise<System[]> {
-    const rows = await sql<SystemRow>`SELECT *
-                                          FROM catalog_systems
-                                          WHERE catalog_id = ${this.id}`;
-    return rows.map(System.fromRow);
+    return System.listForCatalogId(this.id);
+  }
+
+  /**
+   * Get a list of cores in this catalog.
+   */
+  public async listCores(): Promise<Core[]> {
+    return Core.listForCatalogId(this.id);
+  }
+
+  /**
+   * Perform an update in the catalog.
+   * @returns Whether the catalog was updated or not.
+   */
+  public async update(): Promise<boolean> {
+    const remote = await RemoteCatalog.fetch(this.url);
+    const shouldUpdate = compareVersions(remote.version, this.version) > 0;
+    if (!shouldUpdate) {
+      // Just a last check since this can be expensive.
+      return false;
+    }
+    console.debug(
+      "Updating catalog...",
+      this.name,
+      JSON.stringify({
+        current: this.version,
+        remote: remote.version,
+      }),
+    );
+
+    const systems = await remote.fetchSystems(() => true);
+
+    return true;
   }
 }

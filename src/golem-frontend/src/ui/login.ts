@@ -1,10 +1,14 @@
 import * as ui from "@:golem/ui";
-import { User } from "../services/user";
-import { getDb } from "../services/database";
+import { User } from "$/services";
+import { sql } from "$/utils";
+
+interface UserRow {
+  username: string;
+  password: string | null;
+}
 
 export async function login(): Promise<User | null> {
-  let db = await getDb();
-  let { rows } = await db.query("SELECT * FROM users");
+  let rows = await sql<UserRow>`SELECT * FROM users`;
 
   // Check if there's no user in the database. If so, return null.
   if (rows.length === 0) {

@@ -1,17 +1,16 @@
-import * as golemDb from "@:golem/db";
-import { sql } from "./database";
+import { sql } from "$/utils";
 
 interface UserStorageRow {
   value: string;
 }
 
-export class LocalStorage {
-  static async user(id: number): Promise<LocalStorage> {
-    return new LocalStorage(id);
+export class DbStorage {
+  static async user(id: number): Promise<DbStorage> {
+    return new DbStorage(id);
   }
 
-  static async global(): Promise<LocalStorage> {
-    return new LocalStorage(undefined);
+  static async global(): Promise<DbStorage> {
+    return new DbStorage(undefined);
   }
 
   private constructor(private readonly userId: number | undefined) {}
@@ -24,7 +23,8 @@ export class LocalStorage {
     if (this.userId === undefined) {
       const rows = await sql<UserStorageRow>`SELECT value
                                                    FROM global_storage
-                                                   WHERE key = ${key}LIMIT 1`;
+                                                   WHERE key = ${key}
+                                                   LIMIT 1`;
       value = rows[0]?.value;
     } else {
       let rows = await sql<UserStorageRow>`
@@ -52,13 +52,17 @@ export class LocalStorage {
       await sql`INSERT INTO global_storage ${sql.insertValues({
         key,
         value: valueJson,
-      })}`;
+      })}
+                      ON CONFLICT (key)
+            DO UPDATE SET value = excluded.value`;
     } else {
       await sql`INSERT INTO user_storage ${sql.insertValues({
         key,
         value: valueJson,
         user_id: this.userId,
-      })}`;
+      })}
+                      ON CONFLICT (key, user_id)
+            DO UPDATE SET value = excluded.value`;
     }
   }
 

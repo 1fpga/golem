@@ -5,3 +5,4 @@ pub mod password;
 pub mod progress;
 pub mod prompt;
 pub mod qrcode;
+pub mod shortcut;

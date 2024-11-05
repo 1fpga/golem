@@ -1,47 +1,64 @@
-import * as commands from "@:golem/commands";
-import { coreOsdMenu } from "../ui/menus/core_osd";
+import * as core from "@:golem/core";
+import { coreOsdMenu } from "$/ui/menus/core_osd";
+import { Commands, Core, CoreCommandImpl } from "$/services";
 
-const BASIC_COMMANDS: commands.CommandDef[] = [
-  {
-    type: "core",
-    shortName: "showCoreMenu",
-    name: "Show Core Menu",
-    description: "Show the running core's menu.",
-    action: async (core) => {
-      core.showOsd(() => coreOsdMenu(core));
-    },
-    defaultShortcuts: ["'F12'"],
-  },
-  {
-    type: "core",
-    shortName: "quitCore",
-    name: "Quit Core",
-    description: "Quit the running core and go back to the main menu.",
-    action: async (core) => {
-      core.quit();
-    },
-    defaultShortcuts: ["'F10'"],
-  },
-  {
-    type: "core",
-    shortName: "screenshot",
-    name: "Take Screenshot",
-    description: "Take a screenshot of the current screen.",
-    action: async (core) => {
-      core.screenshot("screenshot.png");
-    },
-    defaultShortcuts: ["'SysReq'"],
-  },
-  {
-    type: "general",
-    shortName: "debugLog",
-    name: "Debug Log",
-    description: "Print a line in debug.",
-    action: async () => {
-      console.log("Debug log.");
-    },
-    defaultShortcuts: ["'D' + 'F1'"],
-  },
-];
+export class ShowCoreMenuCommand extends CoreCommandImpl {
+  key = "showCoreMenu";
+  label = "Show the core's menu";
+  category = "Core";
+  default = "'F12'";
 
-export default BASIC_COMMANDS;
+  // This is used to prevent the menu from being shown multiple times.
+  shown = false;
+
+  async execute(core: core.GolemCore) {
+    if (!this.shown && Core.running() !== null) {
+      try {
+        this.shown = true;
+        const coreDb = Core.running();
+        let error = undefined;
+        core.showOsd(async () => {
+          try {
+            return await coreOsdMenu(core, coreDb);
+          } catch (e) {
+            error = e;
+            return true;
+          }
+        });
+        if (error) {
+          throw error;
+        }
+      } finally {
+        this.shown = false;
+      }
+    }
+  }
+}
+
+export class QuitCoreCommand extends CoreCommandImpl {
+  key = "quitCore";
+  label = "Quit to the main menu";
+  category = "Core";
+  default = "'F10'";
+
+  async execute(core: core.GolemCore) {
+    core.quit();
+  }
+}
+
+export class ShowDebugLogCommand extends CoreCommandImpl {
+  key = "showDebugLog";
+  label = "Show a debug log";
+  category = "Debug";
+  default = "Ctrl + 'D'";
+
+  async execute() {
+    console.log("Debug log.");
+  }
+}
+
+export async function init() {
+  await Commands.register(ShowCoreMenuCommand);
+  await Commands.register(QuitCoreCommand);
+  await Commands.register(ShowDebugLogCommand);
+}

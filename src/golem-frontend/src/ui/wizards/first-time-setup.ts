@@ -1,26 +1,34 @@
+import environment from "consts:environment";
 import * as ui from "@:golem/ui";
 import * as net from "@:golem/net";
-import { DEFAULT_USERNAME, User, Catalog, RemoteCatalog } from "../../services";
 import {
-  conditional,
-  message,
-  repeat,
-  sequence,
-  map,
-  wizard,
-  WizardStep,
-  skipIf,
-  first,
-  choice,
-  ignore,
-  call,
-  last,
-  generate,
+    Catalog,
+    Core,
+    DEFAULT_USERNAME,
+    GamesIdentification,
+    RemoteCatalog,
+    User,
+    WellKnownCatalogs,
+} from "$/services";
+import {
+    call,
+    choice,
+    conditional,
+    first,
+    generate,
+    ignore,
+    last,
+    map,
+    message,
+    repeat,
+    sequence,
+    skipIf,
+    value,
+    wizard,
+    WizardStep,
 } from "./wizard";
-import { TextMenuItem } from "@:golem/ui";
-import { Core } from "../../services/database/core";
-import type { Files as RemoteCoreFiles } from "$schemas:catalog/core";
-import { filesize } from "filesize";
+import {oneLine, stripIndents} from "common-tags";
+import {selectCoresFromRemoteCatalog} from "$/ui/catalog/cores";
 
 /**
  * A wizard step that prompts the user for a password.
@@ -38,6 +46,30 @@ function password(
       return undefined;
     }
     return password;
+  };
+}
+
+/**
+ * A wizard step that prompts the user for a file or directory.
+ */
+function selectPath(
+  title: string,
+  options?: { initialDir?: string },
+): WizardStep<string | undefined> {
+  return async (o) => {
+    const path = await ui.selectFile(
+      title,
+      options?.initialDir ?? "/media/fat",
+      {
+        directory: true,
+      },
+    );
+
+    if (path === undefined) {
+      await o.previous();
+      return undefined;
+    }
+    return path;
   };
 }
 
@@ -93,8 +125,11 @@ const createUserWizardStep = map(
     map(
       message(
         "Set Password",
-        "By default, there is one default user (named 'admin'). You'll be able to add more later.\n\n" +
-          "Would you like to set a password?",
+        stripIndents`
+          By default, there is one default user (named 'admin'). You'll be able to add more later.
+          
+          Would you like to set a password?
+        `,
         { choices: ["No", "Yes"] },
       ),
       async (choice) => choice === 1,
@@ -112,10 +147,12 @@ const createUserWizardStep = map(
 
 const SHOULD_RETRY_ADD_CATALOG = Symbol.for("SHOULD_RETRY_ADD_CATALOG");
 
-async function add1FpgaCatalog(): Promise<Catalog | null | Symbol> {
+async function addWellKnownCatalog(
+  wellKnownCatalogs: WellKnownCatalogs,
+): Promise<Catalog | null | Symbol> {
   while (true) {
     try {
-      const catalog = await RemoteCatalog.fetch1Fpga();
+      const catalog = await RemoteCatalog.fetchWellKnown(wellKnownCatalogs);
       return await Catalog.create(catalog, 0);
     } catch (e) {
       console.error("Could not add 1fpga catalog:", e);
@@ -169,10 +206,11 @@ const catalogAddStep = repeat(
       ignore(
         message(
           "Catalogs - Introduction",
-          `
-              Catalogs are websites where you can download games and cores from.
-              Catalogs can be added or removed later. They require an internet connection when setting up, updating or downloading from.
-            `,
+          stripIndents`
+            Catalogs are online repositories where you can download games and cores from.
+            Catalogs can be added or removed later.
+            They require an internet connection when setting up, updating or downloading from.
+          `,
         ),
       ),
       conditional(
@@ -184,8 +222,10 @@ const catalogAddStep = repeat(
               async (choice) => choice === 0 && !(await net.isOnline()),
               message(
                 "Catalogs (No Internet Connection)",
-                "You need to be online to set up catalogs. Please connect to the internet and try again. " +
-                  "You can also skip this step and set up catalogs later.",
+                oneLine`You need to be online to set up catalogs.
+                  Please connect to the internet and try again. 
+                  You can also skip this step and set up catalogs later.
+                `,
                 {
                   choices: ["Try again", "Skip"],
                 },
@@ -198,14 +238,31 @@ const catalogAddStep = repeat(
 
         choice(
           "Catalogs",
-          "1FPGA comes with a default catalog of officially supported cores and homebrew games.\n " +
-            "Its URL is 'https://catalog.1fpga.cloud'.\n\n" +
-            "Would you like to add it?",
+          stripIndents`
+            1FPGA comes with a default catalog of officially supported cores and homebrew games.
+            It also includes updates to GoLEm itself, if you skip this, you will have to manually update GoLEm.
+            
+            Would you like to add it?
+          `,
           [
             [
-              "Add the 1FPGA Catalog",
-              call(async () => await add1FpgaCatalog()),
+              "Add the 1FPGA catalog",
+              call(
+                async () =>
+                  await addWellKnownCatalog(WellKnownCatalogs.OneFpga),
+              ),
             ],
+            ...(environment === "development"
+              ? [
+                  [
+                    "Add a local test catalog",
+                    call(
+                      async () =>
+                        await addWellKnownCatalog(WellKnownCatalogs.LocalTest),
+                    ),
+                  ] as [string, WizardStep<null>],
+                ]
+              : []),
             ["Add custom catalog", call(async () => await addCustomCatalog())],
             ["Skip", async () => null],
           ],
@@ -214,72 +271,6 @@ const catalogAddStep = repeat(
     ),
   ),
 );
-
-const selectCores = async (catalog: Catalog) => {
-  let selected = new Set<string>();
-  let systems = await catalog.listSystems();
-
-  let shouldInstall = await ui.textMenu({
-    title: "Choose Systems to install",
-    back: false,
-    items: [
-      ...(
-        await Promise.all(
-          Object.entries(systems).map(async ([_key, system]) => {
-            const remote = await system.fetchRemote();
-            const cores = Object.values(await remote.fetchCores());
-            const coreSize = cores
-              .reduce(
-                (a, b) => [...a, ...b.latestRelease.files],
-                [] as RemoteCoreFiles,
-              )
-              .reduce((a, b) => a + b.size, 0);
-
-            return [
-              {
-                label: system.name,
-                marker: selected.has(system.uniqueName) ? "install" : "",
-                select: (item: TextMenuItem<boolean>) => {
-                  if (selected.has(system.uniqueName)) {
-                    selected.delete(system.uniqueName);
-                    item.marker = "";
-                  } else {
-                    selected.add(system.uniqueName);
-                    item.marker = "install";
-                  }
-                },
-              },
-              {
-                label: "  - Cores:",
-                marker: "" + Object.keys(await remote.fetchCores()).length,
-              },
-              {
-                label: "  - Size:",
-                marker: filesize(remote.size + coreSize),
-              },
-            ];
-          }),
-        )
-      ).flat(),
-      "-",
-      { label: "Install selected systems", select: () => true },
-    ],
-  });
-
-  if (shouldInstall) {
-    for (const system of Object.values(systems)) {
-      if (selected.has(system.uniqueName)) {
-        await system.install(catalog);
-      }
-    }
-  } else {
-    await ui.alert(
-      "Warning",
-      "Skipping core installation. This may cause some games to not work.\n" +
-        "You can always install cores later in the Download Center.",
-    );
-  }
-};
 
 const catalogSetup = sequence(
   ignore(
@@ -294,13 +285,63 @@ const catalogSetup = sequence(
       throw new Error("Should be exactly 1 catalog during the tutorial.");
     }
 
-    return [call(async () => await selectCores(catalog))];
+    return call(async () => {
+      const remote = await RemoteCatalog.fetch(catalog.url);
+      const { cores, systems } = await selectCoresFromRemoteCatalog(remote, {
+        installAll: true,
+      });
+      if (cores.length === 0 || systems.length === 0) {
+        await ui.alert(
+          "Warning",
+          stripIndents`
+              Skipping core installation. This may cause some games to not work.
+              You can always install cores later in the Download Center.
+            `,
+        );
+        return;
+      }
+
+      for (const system of (await catalog.listSystems()).filter((s) =>
+        systems.some((r) => r.uniqueName === s.uniqueName),
+      )) {
+        await system.install(catalog);
+      }
+      for (const core of cores) {
+        await Core.install(core, catalog);
+      }
+    });
   }),
   ignore(
     message(
       "Catalogs",
       "Catalogs have been set up. You can always add more catalogs later in the Download Center.",
     ),
+  ),
+);
+
+const addGames = sequence(
+  map(selectPath("Select the directory with your games"), async (root) => {
+    console.log("Selected root: ", root);
+    if (root === undefined) {
+      return null;
+    }
+
+    await GamesIdentification.addGamesFromRoot(root);
+  }),
+);
+
+const maybeAddGames = ignore(
+  choice(
+    "Adding Games",
+    oneLine`
+    If you have games on your SD card, you can add them to the database now.
+    This may take a while depending on the number of games you have.
+    You can always add (or remove) games later.
+  `,
+    [
+      ["Add My Games", addGames],
+      ["Skip", value(null)],
+    ],
   ),
 );
 
@@ -318,16 +359,24 @@ const firstMessage = message(
 export async function firstTimeSetup() {
   console.warn("Running first time setup.");
   await wizard<any>(
-    firstMessage,
-    createUserWizardStep,
-    skipIf(
-      map(catalogAddStep, async (catalog) => catalog === null),
-      catalogSetup,
-    ),
-    message(
-      "First Time Setup",
-      "You're all set up! Welcome to 1FPGA and enjoy your stay.",
-      { choices: ["Thanks"] },
-    ),
+    [
+      firstMessage,
+      createUserWizardStep,
+      skipIf(
+        map(catalogAddStep, async (catalog) => catalog === null),
+        sequence(catalogSetup, maybeAddGames),
+      ),
+      message(
+        "First Time Setup",
+        "You're all set up! Welcome to 1FPGA and enjoy your stay.",
+        { choices: ["Thanks"] },
+      ),
+    ],
+    async (err) => {
+      await ui.alert({
+        title: "Error",
+        message: "An unexpected error occurred: " + err.toString(),
+      });
+    },
   );
 }

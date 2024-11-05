@@ -74,9 +74,12 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
     let mut items = [MenuItem::new("Back", MenuAction::Back)];
     let menu = SizedMenu::new(
         Size::new(64, 32),
-        Menu::with_style(" ", style::menu_style_simple(app.settings().menu_style()))
-            .add_menu_items(&mut items)
-            .build(),
+        Menu::with_style(
+            " ",
+            style::menu_style_simple(app.ui_settings().menu_style_options()),
+        )
+        .add_menu_items(&mut items)
+        .build(),
     );
 
     let mut layout = LinearLayout::horizontal(
@@ -113,7 +116,7 @@ pub fn qrcode_alert(app: &mut GoLEmApp, title: &str, message: &str, url: &str) {
 
         let menu = &mut layout.inner_mut().object.inner_mut().object;
         for ev in state.events() {
-            match menu.interact(ev) {
+            match menu.interact(ev.clone()) {
                 None => {}
                 Some(_) => return Some(()),
             }

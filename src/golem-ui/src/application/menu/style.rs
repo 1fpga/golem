@@ -154,10 +154,17 @@ pub enum AxisState {
     Down,
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
+pub struct SdlMenuInputAdapterState {
+    modifiers: u8,
+    left_x: AxisState,
+    left_y: AxisState,
+}
+
 impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
     type Input = Event;
     type Value = SdlMenuAction<R>;
-    type State = (AxisState, AxisState);
+    type State = SdlMenuInputAdapterState;
 
     fn handle_input(
         &self,
@@ -165,8 +172,34 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
         action: Self::Input,
     ) -> InputResult<Self::Value> {
         match action {
+            Event::User { type_, code, .. } => {
+                if type_ == 0 {
+                    Interaction::Navigation(Navigation::JumpTo(code as usize)).into()
+                } else {
+                    InputState::Idle.into()
+                }
+            }
+            Event::KeyUp {
+                keycode: Some(code),
+                ..
+            } => match code {
+                Keycode::LCtrl
+                | Keycode::RCtrl
+                | Keycode::LShift
+                | Keycode::RShift
+                | Keycode::LAlt
+                | Keycode::RAlt
+                | Keycode::LGui
+                | Keycode::RGui => {
+                    state.modifiers -= 1;
+                    trace!(?code, modifiers = ?state.modifiers, "Modifier key up");
+                    InputState::Idle.into()
+                }
+                _ => InputState::Idle.into(),
+            },
             Event::KeyDown {
                 keycode: Some(code),
+                repeat,
                 ..
             } => match code {
                 Keycode::Escape => Interaction::Action(Action::Return(SdlMenuAction::Back)).into(),
@@ -189,18 +222,39 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
                     Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into()
                 }
 
+                kc @ (Keycode::LCtrl
+                | Keycode::RCtrl
+                | Keycode::LShift
+                | Keycode::RShift
+                | Keycode::LAlt
+                | Keycode::RAlt
+                | Keycode::LGui
+                | Keycode::RGui) => {
+                    if !repeat {
+                        state.modifiers += 1;
+                        trace!(?code, modifiers = ?state.modifiers, "Modifier key down");
+                    }
+                    // Still send the key press to the event handler.
+                    Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into()
+                }
+
                 kc => Interaction::Action(Action::Return(SdlMenuAction::KeyPress(kc))).into(),
             },
 
             Event::TextInput { text, .. } => {
-                let mut ch = text.chars();
-                let t = [
-                    ch.next().unwrap_or(0 as char),
-                    ch.next().unwrap_or(0 as char),
-                    ch.next().unwrap_or(0 as char),
-                    ch.next().unwrap_or(0 as char),
-                ];
-                Interaction::Action(Action::Return(SdlMenuAction::TextInput(t))).into()
+                trace!(modifiers = ?state.modifiers, ?text, "Text input");
+                if state.modifiers > 0 {
+                    InputState::Idle.into()
+                } else {
+                    let mut ch = text.chars();
+                    let t = [
+                        ch.next().unwrap_or_default(),
+                        ch.next().unwrap_or_default(),
+                        ch.next().unwrap_or_default(),
+                        ch.next().unwrap_or_default(),
+                    ];
+                    Interaction::Action(Action::Return(SdlMenuAction::TextInput(t))).into()
+                }
             }
 
             Event::ControllerButtonDown { button, .. } => match button {
@@ -223,42 +277,42 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
             Event::ControllerAxisMotion { axis, value, .. } => match axis {
                 Axis::LeftX => {
                     if value > i16::MAX / 2 {
-                        if state.0 != AxisState::Up {
-                            state.0 = AxisState::Up;
+                        if state.left_x != AxisState::Up {
+                            state.left_x = AxisState::Up;
                             Interaction::Navigation(Navigation::Backward(MENU_ITEMS_PER_PAGE))
                                 .into()
                         } else {
                             InputState::Idle.into()
                         }
                     } else if value < i16::MIN / 2 {
-                        if state.0 != AxisState::Down {
-                            state.0 = AxisState::Down;
+                        if state.left_x != AxisState::Down {
+                            state.left_x = AxisState::Down;
                             Interaction::Navigation(Navigation::Forward(MENU_ITEMS_PER_PAGE)).into()
                         } else {
                             InputState::Idle.into()
                         }
                     } else {
-                        state.0 = AxisState::Idle;
+                        state.left_x = AxisState::Idle;
                         InputState::Idle.into()
                     }
                 }
                 Axis::LeftY => {
                     if value > i16::MAX / 2 {
-                        if state.1 != AxisState::Up {
-                            state.1 = AxisState::Up;
+                        if state.left_y != AxisState::Up {
+                            state.left_y = AxisState::Up;
                             Interaction::Navigation(Navigation::Next).into()
                         } else {
                             InputState::Idle.into()
                         }
                     } else if value < i16::MIN / 2 {
-                        if state.1 != AxisState::Down {
-                            state.1 = AxisState::Down;
+                        if state.left_y != AxisState::Down {
+                            state.left_y = AxisState::Down;
                             Interaction::Navigation(Navigation::Previous).into()
                         } else {
                             InputState::Idle.into()
                         }
                     } else {
-                        state.1 = AxisState::Idle;
+                        state.left_y = AxisState::Idle;
                         InputState::Idle.into()
                     }
                 }
@@ -426,6 +480,7 @@ impl Theme for SimpleMenuTheme {
 
 pub use selection_indicator::style::rectangle::Rectangle as RectangleIndicator;
 use serde::{Deserialize, Serialize};
+use tracing::trace;
 
 fn menu_style_inner<I: InputAdapterSource<R> + Default, R>(
     options: MenuStyleOptions,

@@ -5,9 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "rollup -c --failAfterWarnings",
+    "build": "rollup -c",
     "build-ts": "tsc",
-    "retronomicon-update": "openapi-typescript https://retronomicon.land/api/v1/openapi.json -o ./types/retronomicon.d.ts",
     "test": "jest"
   },
   "keywords": [],
