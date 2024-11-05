@@ -124,7 +124,7 @@ impl JsCore {
         }
 
         let mut v = handler.call(&JsValue::undefined(), &[], context)?;
-        while let Some(p) = v.as_promise() {
+        if let Some(p) = v.as_promise() {
             match p.await_blocking(context) {
                 Ok(new_v) => {
                     v = new_v;

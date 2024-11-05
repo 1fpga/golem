@@ -118,7 +118,7 @@ export async function selectCoresFromRemoteCatalog(
         : []),
       ...items,
       "-",
-      { label: "Install selected systems", select: () => true },
+      { label: "Install selected cores", select: () => true },
     ],
   });
 

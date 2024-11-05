@@ -238,9 +238,9 @@ export class Games {
                   ON CONFLICT
         DO
         UPDATE SET last_played_at = excluded.last_played_at`;
-    Core.setRunning(await Core.getById(this.row_.cores_id));
 
     try {
+      Core.setRunning(await Core.getById(this.row_.cores_id));
       const core = golemCore.load({
         core: { type: "Path", path: this.row_.rbf_path },
         ...(this.row_.rom_path !== null

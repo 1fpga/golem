@@ -1,17 +1,12 @@
 import * as core from "@:golem/core";
-import {
-  Commands,
-  CoreCommandImpl,
-  Games,
-  GeneralCommandImpl,
-} from "$/services";
+import { Commands, Games, GeneralCommandImpl } from "$/services";
 import { StartGameAction } from "$/actions/start_game";
 
 interface GameDef {
   gameId: number;
 }
 
-export class StartGameCommand extends CoreCommandImpl<GameDef> {
+export class StartGameCommand extends GeneralCommandImpl<GameDef> {
   key = "startSpecificGame";
   category = "Core";
 
@@ -28,7 +23,7 @@ export class StartGameCommand extends CoreCommandImpl<GameDef> {
     return `Game ${g.name}`;
   }
 
-  async execute(core: core.GolemCore, game: GameDef) {
+  async execute(_: core.GolemCore, game: GameDef) {
     const g = await Games.byId(game.gameId);
     throw new StartGameAction(g);
   }

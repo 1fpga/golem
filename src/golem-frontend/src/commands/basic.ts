@@ -13,10 +13,24 @@ export class ShowCoreMenuCommand extends CoreCommandImpl {
 
   async execute(core: core.GolemCore) {
     if (!this.shown && Core.running() !== null) {
-      this.shown = true;
-      const coreDb = Core.running();
-      core.showOsd(() => coreOsdMenu(core, coreDb));
-      this.shown = false;
+      try {
+        this.shown = true;
+        const coreDb = Core.running();
+        let error = undefined;
+        core.showOsd(async () => {
+          try {
+            return await coreOsdMenu(core, coreDb);
+          } catch (e) {
+            error = e;
+            return true;
+          }
+        });
+        if (error) {
+          throw error;
+        }
+      } finally {
+        this.shown = false;
+      }
     }
   }
 }

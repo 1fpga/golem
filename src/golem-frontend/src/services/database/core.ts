@@ -209,13 +209,25 @@ export class Core {
     }
 
     try {
-      console.log(`
-      }Starting core: ${JSON.stringify(this)}`);
+      console.log(`Starting core: ${JSON.stringify(this)}`);
       Core.setRunning(this);
       let c = core.load({
         core: { type: "Path", path: this.rbfPath },
       });
-      c.showOsd(() => coreOsdMenu(c, this));
+
+      let error = undefined;
+      c.showOsd(async () => {
+        try {
+          return await coreOsdMenu(c, this);
+        } catch (e) {
+          error = e;
+          return true;
+        }
+      });
+      if (error) {
+        throw error;
+      }
+
       c.loop();
     } finally {
       Core.setRunning(null);
