@@ -157,6 +157,7 @@ struct UiMenuOptions {
     back: Option<JsValue>,
     sort: Option<JsValue>,
     sort_label: Option<String>,
+    details: Option<String>,
 
     highlighted: Option<u32>,
 
@@ -180,10 +181,12 @@ fn text_menu_(
         }
 
         let sort_label = options.sort_label.as_deref();
+        let details_label = options.details.as_deref();
 
         let menu_options = menu::TextMenuOptions::default()
             .with_back_menu(options.back.is_some())
             .with_show_sort(options.sort.is_some())
+            .with_details_opt(details_label)
             .with_sort_opt(sort_label)
             .with_state(Some(state))
             .with_selected_opt(options.highlighted);

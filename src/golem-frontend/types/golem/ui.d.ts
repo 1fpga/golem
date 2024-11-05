@@ -55,6 +55,11 @@ declare module "@:golem/ui" {
     sort_label?: string;
 
     /**
+     * The label to show for the detail button. If missing, it will not be shown.
+     */
+    details?: string;
+
+    /**
      * The index of the item to highlight when presenting the menu to the
      * user. By default, the first item is highlighted. If a number is
      * provided but the index is out of bounds, the last item is highlighted.

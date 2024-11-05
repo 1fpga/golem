@@ -109,6 +109,7 @@ export async function pickGame(
           items: await buildItems(),
         };
       },
+      details: "Details",
       items,
     });
   }

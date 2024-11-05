@@ -41,21 +41,21 @@ export interface GamesListOptions {
 const GAMES_FIELDS = oneLine`
   games.id AS id,
   games.path AS rom_path,
-  IFNULL(cores.rbf_path, cores_2.rbf_path) AS rbf_path,
+  cores.rbf_path AS rbf_path,
   IFNULL(games_identification.name, games.name) AS name,
   systems.unique_name AS system_name,
   user_games.favorite,
   user_games.last_played_at,
-  IFNULL(user_games.cores_id, IFNULL(cores.id, games.core_id)) AS cores_id
+  IFNULL(user_games.cores_id, cores_systems.core_id) AS cores_id
 `;
 
 const GAMES_FROM_JOIN = oneLine`
   games
     LEFT JOIN games_identification ON games.games_id = games_identification.id
-    LEFT JOIN systems ON games_identification.system_id = systems.id
-    LEFT JOIN cores_systems ON cores_systems.system_id = systems.id
-    LEFT JOIN cores ON cores.id = cores_systems.core_id
-    LEFT JOIN cores AS cores_2 ON cores_2.id = games.core_id 
+    LEFT JOIN systems AS systems_2 ON games_identification.system_id = systems_2.id
+    LEFT JOIN cores ON games.core_id = cores.id
+    LEFT JOIN cores_systems ON cores.id = cores_systems.core_id OR games.core_id = cores_systems.core_id OR systems_2.id = cores_systems.system_id
+    LEFT JOIN systems ON games_identification.system_id = systems.id OR cores_systems.system_id = systems.id
     LEFT JOIN user_games ON user_games.games_id = games.id
 `;
 

@@ -75,6 +75,13 @@ impl<'a, R: MenuReturn + Copy> TextMenuOptions<'a, R> {
         }
     }
 
+    pub fn with_details_opt(self, detail_label: Option<&'a str>) -> Self {
+        Self {
+            detail_label,
+            ..self
+        }
+    }
+
     pub fn with_sort(self, field: &'a str) -> Self {
         Self {
             sort_by: Some(field),
