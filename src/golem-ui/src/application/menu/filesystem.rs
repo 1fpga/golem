@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 
 use embedded_graphics::mono_font::ascii;
@@ -8,6 +9,7 @@ use regex::Regex;
 use crate::application::menu::style::MenuReturn;
 use crate::application::menu::{text_menu, TextMenuOptions};
 use crate::application::GoLEmApp;
+use crate::input::commands::CommandId;
 
 const MAXIMUM_TITLE_PATH_LENGTH: usize = 38;
 
@@ -111,12 +113,14 @@ impl SortOption {
     }
 }
 
-pub fn select_file_path_menu(
+pub fn select_file_path_menu<C, E: Debug>(
     app: &mut GoLEmApp,
     title: impl AsRef<str>,
     initial: impl AsRef<Path>,
     options: FilesystemMenuOptions,
-) -> Result<Option<PathBuf>, std::io::Error> {
+    context: &mut C,
+    mut shortcut_handler: impl FnMut(&mut GoLEmApp, CommandId, &mut C) -> Result<(), E>,
+) -> Result<Option<PathBuf>, E> {
     let FilesystemMenuOptions {
         allow_back,
         dir_first,
@@ -138,11 +142,12 @@ pub fn select_file_path_menu(
     let mut sort = SortOption::NameAsc;
 
     loop {
-        let mut entries = std::fs::read_dir(&path)?
+        let mut entries = std::fs::read_dir(&path)
+            .unwrap()
             .filter_map(|entry| {
-                let entry = entry.ok()?;
+                let entry = entry.ok().unwrap();
                 let path = entry.path();
-                let name = path.file_name()?.to_string_lossy().to_string();
+                let name = path.file_name().unwrap().to_string_lossy().to_string();
 
                 if !show_hidden && name.starts_with('.') {
                     return None;
@@ -272,8 +277,14 @@ pub fn select_file_path_menu(
             menu_options = menu_options.with_suffix(&select_curr_dir);
         }
 
-        let (selection, _new_state) =
-            text_menu(app, &title, entries_items.as_slice(), menu_options);
+        let (selection, _new_state) = text_menu(
+            app,
+            &title,
+            entries_items.as_slice(),
+            menu_options,
+            context,
+            &mut shortcut_handler,
+        )?;
 
         match selection {
             MenuAction::Select(idx) => {

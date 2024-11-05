@@ -185,12 +185,21 @@ async function mainInner(): Promise<boolean> {
   console.log("Starting on:", JSON.stringify(startOn));
   console.log("Date: ", new Date());
 
+  let action = undefined;
+
   while (true) {
     try {
-      return await mainMenu(startOn, settings);
+      if (action === undefined) {
+        return await mainMenu(startOn, settings);
+      } else if (action instanceof StartGameAction) {
+        await action.game.launch();
+      }
+      action = undefined;
     } catch (e: any) {
+      action = undefined;
       if (e instanceof StartGameAction) {
-        await e.game.launch();
+        // Set the action for the next round.
+        action = e;
       } else if (e instanceof MainMenuAction) {
         // Do nothing, just loop.
       } else {

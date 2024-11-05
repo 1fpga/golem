@@ -1,3 +1,5 @@
+use crate::commands::maybe_call_command;
+use crate::HostData;
 use boa_engine::object::builtins::{JsArray, JsPromise};
 use boa_engine::value::TryFromJs;
 use boa_engine::{
@@ -6,12 +8,9 @@ use boa_engine::{
 };
 use boa_interop::{ContextData, IntoJsFunctionCopied, IntoJsModule};
 use either::Either;
-
 use golem_ui::application::menu;
 use golem_ui::application::panels::password::enter_password;
 use golem_ui::application::panels::prompt::prompt;
-
-use crate::HostData;
 
 mod filesystem;
 
@@ -170,7 +169,7 @@ struct UiMenuOptions {
 fn text_menu_(
     mut options: UiMenuOptions,
     ContextData(host_defined): ContextData<HostData>,
-    context: &mut Context,
+    mut context: &mut Context,
 ) -> JsResult<JsPromise> {
     let app = host_defined.app_mut();
 
@@ -212,7 +211,11 @@ fn text_menu_(
                 &options.title.clone().unwrap_or_default(),
                 options.items.as_slice(),
                 menu_options,
-            );
+                &mut (host_defined.command_map_mut(), &mut context),
+                |app, id, (command_map, context)| -> JsResult<()> {
+                    maybe_call_command(app, id, *command_map, *context)
+                },
+            )?;
             state = new_state;
             result
         };

@@ -18,6 +18,7 @@ mod video;
 mod globals;
 
 pub use commands::CommandMap;
+pub use globals::classes::*;
 
 pub(super) fn register_modules(
     loader: Rc<GolemModuleLoader>,

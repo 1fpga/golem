@@ -6,7 +6,7 @@ use crate::module_loader::GolemModuleLoader;
 
 mod golem;
 
-pub use golem::CommandMap;
+pub use golem::*;
 
 pub(super) fn register_modules(
     loader: Rc<GolemModuleLoader>,

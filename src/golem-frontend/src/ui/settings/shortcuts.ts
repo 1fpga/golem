@@ -1,18 +1,18 @@
 import * as ui from "@:golem/ui";
-import { BaseCommand, Commands } from "$/services";
+import { Command, Commands } from "$/services";
 
-function markerForCommand(cmd: BaseCommand<unknown>) {
+function markerForCommand(cmd: Command) {
   const shortcuts = cmd.shortcuts;
 
   return shortcuts.length === 0 ? "" : `${shortcuts.length}`;
 }
 
-async function shortcutCommandMenu(c: BaseCommand<unknown>) {
+async function shortcutCommandMenu(c: Command) {
   let done = false;
   let highlighted: number | undefined;
   while (!done) {
     done = await ui.textMenu({
-      title: c.name,
+      title: c.label,
       back: true,
       highlighted,
       items: [
@@ -22,7 +22,7 @@ async function shortcutCommandMenu(c: BaseCommand<unknown>) {
             highlighted = undefined;
             const shortcut = await ui.promptShortcut(
               "Enter a new shortcut",
-              c.name,
+              c.label,
             );
 
             if (shortcut) {
@@ -55,7 +55,7 @@ async function shortcutCommandMenu(c: BaseCommand<unknown>) {
 
 export async function shortcutsMenu() {
   const commands = await Commands.list();
-  const byCategory = new Map<string, BaseCommand<unknown>[]>();
+  const byCategory = new Map<string, Command[]>();
   for (const c of commands) {
     const category = byCategory.get(c.category) ?? [];
     category.push(c);
@@ -69,14 +69,21 @@ export async function shortcutsMenu() {
     items.push("-");
 
     for (const c of commands) {
-      items.push({
-        label: ` ${c.name}`,
-        marker: markerForCommand(c),
-        select: async (item) => {
-          await shortcutCommandMenu(c);
-          item.marker = markerForCommand(c);
-        },
-      });
+      const labels = (await c.labels()).sort();
+      let last = undefined;
+      for (const label in labels) {
+        if (label !== last) {
+          last = label;
+        }
+        items.push({
+          label: ` ${label}`,
+          marker: markerForCommand(c),
+          select: async (item) => {
+            await shortcutCommandMenu(c);
+            item.marker = markerForCommand(c);
+          },
+        });
+      }
     }
   }
   items.splice(0, 1);

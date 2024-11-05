@@ -1,6 +1,7 @@
 import * as ui from "@:golem/ui";
 import { Games, GameSortOrder } from "$/services/database/games";
 import { Commands } from "$/services";
+import { StartGameCommand } from "$/commands/games";
 
 const PAGE_SIZE = 100;
 
@@ -110,13 +111,11 @@ async function showGameDetailsMenu(
   name: string,
   gameArray: Games[],
 ): Promise<Games | null> {
-  const shortcuts = await Commands.list(StartGameCommand);
+  const shortcuts = (
+    await Commands.get(StartGameCommand)
+  )?.shortcutsWithMeta.filter((s) => s.meta.gameId === gameArray[0].id);
 
-  const shortcuts = (await Commands.list()).filter(
-    (s) =>
-      s.key === "startSpecificGame" &&
-      s.shortcutsWithMeta[1]?.gameId === gameArray[0].id,
-  );
+  console.log(shortcuts);
 
   const result = await ui.textMenu<Games | 0>({
     title: name,
@@ -151,7 +150,28 @@ async function showGameDetailsMenu(
           ]),
       "-",
       "Shortcuts",
-      "-",
+      ...(shortcuts ?? []).map((s) => ({
+        label: ` ${s.shortcut}`,
+        select: async () => {
+          const command = await Commands.get(StartGameCommand);
+          if (command) {
+            await command.deleteShortcut(s.shortcut);
+          }
+        },
+      })),
+      {
+        label: "Add shortcut...",
+        select: async () => {
+          const shortcut = await ui.promptShortcut(name, "Enter the shortcut:");
+          if (!shortcut) {
+            return;
+          }
+          const command = await Commands.get(StartGameCommand);
+          if (command) {
+            await command.addShortcut(shortcut, { gameId: gameArray[0].id });
+          }
+        },
+      },
     ],
   });
 

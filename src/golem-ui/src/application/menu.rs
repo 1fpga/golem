@@ -9,6 +9,7 @@ use embedded_layout::View;
 use embedded_menu::selection_indicator::AnimatedPosition;
 use embedded_menu::{Menu, MenuState};
 use sdl3::keyboard::Keycode;
+use std::fmt::Debug;
 use tracing::info;
 use u8g2_fonts::types::{HorizontalAlignment, VerticalPosition};
 
@@ -24,6 +25,7 @@ use crate::application::widgets::opt::OptionalView;
 use crate::application::widgets::text::FontRendererView;
 use crate::application::widgets::EmptyView;
 use crate::application::GoLEmApp;
+use crate::input::commands::CommandId;
 
 pub mod filesystem;
 pub mod item;
@@ -78,12 +80,14 @@ pub fn bottom_bar<'a>(
     .arrange()
 }
 
-pub fn text_menu<'a, R: MenuReturn + Copy>(
+pub fn text_menu<'a, C, R: MenuReturn + Copy, E: Debug>(
     app: &mut GoLEmApp,
     title: &str,
     items: &'a [impl IntoTextMenuItem<'a, R>],
     options: TextMenuOptions<'a, R>,
-) -> (R, GolemMenuState<R>) {
+    context: &mut C,
+    mut shortcut_handler: impl FnMut(&mut GoLEmApp, CommandId, &mut C) -> Result<(), E>,
+) -> Result<(R, GolemMenuState<R>), E> {
     let TextMenuOptions {
         show_back_menu,
         back_label,
@@ -236,7 +240,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
         .with_alignment(horizontal::Left)
         .arrange();
 
-        let (result, new_state) = app.draw_loop(|_, state| {
+        let (result, new_state) = app.draw_loop(|app, state| {
             let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
             let _ = buffer.clear(Rgb888::BLACK.into());
 
@@ -263,17 +267,19 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                 if let Some(action) = menu.interact(ev.clone()) {
                     match action {
                         SdlMenuAction::Back => {
-                            return R::back().map(|b| (Some(*&b), menu.state().clone()))
+                            return R::back().map(|b| Ok((Some(*&b), menu.state().clone())))
                         }
                         SdlMenuAction::Select(result) => {
-                            return Some((Some(result), menu.state().clone()))
+                            return Some(Ok((Some(result), menu.state().clone())));
                         }
                         SdlMenuAction::ChangeSort => {
-                            return R::sort().map(|r| (Some(r), menu.state().clone()));
+                            return R::sort().map(|r| Ok((Some(r), menu.state().clone())));
                         }
                         SdlMenuAction::ShowOptions => {
                             if let SdlMenuAction::Select(r) = menu.selected_value() {
-                                return r.into_details().map(|r| (Some(r), menu.state().clone()));
+                                return r
+                                    .into_details()
+                                    .map(|r| Ok((Some(r), menu.state().clone())));
                             }
                         }
                         SdlMenuAction::KeyPress(Keycode::Backspace)
@@ -281,7 +287,7 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                             filter.pop();
 
                             info!("filter: {}", filter);
-                            return Some((None, menu.state().clone()));
+                            return Some(Ok((None, menu.state().clone())));
                         }
                         SdlMenuAction::TextInput(text) => {
                             for c in text.iter() {
@@ -290,18 +296,24 @@ pub fn text_menu<'a, R: MenuReturn + Copy>(
                                 }
                                 filter.push(*c);
                             }
-                            return Some((None, menu.state().clone()));
+                            return Some(Ok((None, menu.state().clone())));
                         }
                         _ => {}
                     }
                 }
             }
 
+            if let Some(c) = state.shortcut {
+                if let Err(e) = shortcut_handler(app, c, context) {
+                    return Some(Err(e));
+                }
+            }
+
             None
-        });
+        })?;
 
         if let Some(r) = result {
-            return (r, new_state);
+            return Ok((r, new_state));
         }
         menu_state = new_state;
     }

@@ -1,6 +1,6 @@
+use crate::commands::maybe_call_command;
 use crate::modules::golem::globals::classes::JsImage;
 use crate::HostData;
-use boa_engine::class::Class;
 use boa_engine::object::builtins::{JsFunction, JsUint8Array};
 use boa_engine::value::TryFromJs;
 use boa_engine::{js_error, Context, JsError, JsResult, JsString, JsValue};
@@ -14,7 +14,7 @@ use one_fpga::core::SettingId;
 use one_fpga::{Core, GolemCore};
 use std::cell::RefCell;
 use std::rc::Rc;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 #[derive(Debug, Clone, Trace, Finalize, TryFromJs)]
 struct LoopOptions {}
@@ -73,22 +73,8 @@ impl JsCore {
             app,
             &mut core,
             &mut (command_map, context),
-            |_, core, id, (command_map, context)| -> JsResult<()> {
-                if let Some(command) = command_map.get(id) {
-                    let core = JsValue::Object(
-                        JsCore::from_data(JsCore::new(core.clone()), context).unwrap(),
-                    );
-                    let result = command.call(&JsValue::undefined(), &[core], context)?;
-
-                    // If the command returns a promise, wait for it to resolve (or reject).
-                    if let Some(p) = result.as_promise() {
-                        debug!("Waiting for promise to resolve...");
-                        p.await_blocking(context).map_err(JsError::from_opaque)?;
-                    }
-                    Ok(())
-                } else {
-                    Ok(())
-                }
+            |app, _core, id, (command_map, context)| -> JsResult<()> {
+                maybe_call_command(app, id, command_map, context)
             },
             |_app, _core, screenshot, slot, savestate, (_, context)| {
                 for handler in events.borrow()[Events::SaveState].iter() {

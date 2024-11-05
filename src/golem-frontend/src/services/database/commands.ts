@@ -21,7 +21,7 @@ interface ShortcutRow {
   user_id: number;
   key: string;
   shortcut: string;
-  meta: any;
+  meta: string;
 }
 
 export type GeneralCommandHandler<T> = (
@@ -34,34 +34,77 @@ export type CoreCommandHandler<T> = (
   meta: T,
 ) => void | Promise<void>;
 
-export interface CommandDef<T> {
-  type: "general" | "core";
-  key: string;
-  name: string;
-  category: string;
-  default?: string;
-  validator?: (v: unknown) => v is T;
-  labelOf?: (meta: T) => string | Promise<string>;
+/**
+ * The implementation of a command handler. This will only be created
+ * once per command (not per shortcut), and should not contain any
+ * internal state.
+ */
+export abstract class CommandImpl<T> {
+  /**
+   * The default shortcut for this command. This will be used when the user
+   * first logs in and the command is created for the first time.
+   */
+  default: string | undefined = undefined;
+
+  /**
+   * The key that identifies this command in the database.
+   * This MUST be unique.
+   */
+  abstract get key(): string;
+
+  /**
+   * A human-readable label for this command.
+   */
+  label: string | undefined = undefined;
+
+  /**
+   * The category that this command belongs to. This will be used to group
+   * commands in the UI. It is case-sensitive and free form.
+   */
+  abstract get category(): string;
+
+  validate(v: unknown): v is T {
+    return v === undefined || v === null;
+  }
+
+  async labelOf(v: T): Promise<string> {
+    if (this.label === undefined) {
+      throw new Error("Label not set for command.");
+    }
+    return this.label;
+  }
+
+  /**
+   * Inner version of execute.
+   * @param core
+   * @param v
+   */
+  abstract execute_(core: core.GolemCore | undefined, v: T): Promise<void>;
 }
 
-export interface GeneralCommandDef<T> extends CommandDef<T> {
-  type: "general";
-  handler: GeneralCommandHandler<T>;
+export abstract class CoreCommandImpl<T = undefined> extends CommandImpl<T> {
+  execute_(core: core.GolemCore | undefined, v: T): Promise<void> {
+    if (core) {
+      return this.execute(core, v);
+    }
+    return Promise.resolve();
+  }
+
+  abstract execute(core: core.GolemCore, v: T): Promise<void>;
 }
 
-export interface CoreCommandDef<T> extends CommandDef<T> {
-  type: "core";
-  handler: CoreCommandHandler<T>;
+export abstract class GeneralCommandImpl<T = undefined> extends CommandImpl<T> {
+  execute_(core: core.GolemCore | undefined, v: T): Promise<void> {
+    return this.execute(core, v);
+  }
+
+  abstract execute(core: core.GolemCore | undefined, v: T): Promise<void>;
 }
 
 class Shortcuts {
-  public static async listForCommand<
-    Json,
-    C extends BaseCommand<Json, CommandDef<Json>> = BaseCommand<
-      Json,
-      CommandDef<Json>
-    >,
-  >(command: C): Promise<Shortcuts[]> {
+  public static async listForCommand<Json>(
+    command: CommandImpl<Json>,
+  ): Promise<Shortcuts[]> {
     const user = User.loggedInUser(true);
     const rows = await sql<ShortcutRow>`
             SELECT *
@@ -69,16 +112,15 @@ class Shortcuts {
             WHERE user_id = ${user.id}
               AND key = ${command.key}
         `;
-    return rows.map((row) => new Shortcuts(row, command, row.meta));
+    return rows.map((row) => new Shortcuts(row, command, JSON.parse(row.meta)));
   }
 
-  public static async create<
-    Json,
-    C extends BaseCommand<Json, CommandDef<Json>> = BaseCommand<
-      Json,
-      CommandDef<Json>
-    >,
-  >(user: User, command: C, shortcut: string, meta: unknown) {
+  public static async create<Json>(
+    user: User,
+    command: CommandImpl<Json>,
+    shortcut: string,
+    meta: unknown,
+  ) {
     // First, verify that meta fits the validator.
     if (!command.validate(meta)) {
       throw new Error(
@@ -100,10 +142,10 @@ class Shortcuts {
 
   private constructor(
     private readonly row_: ShortcutRow,
-    public readonly command: BaseCommand<any, CommandDef<any>>,
+    public readonly command: CommandImpl<unknown>,
     meta: unknown,
   ) {
-    commands.createShortcut(row_.shortcut, (c) => command.execute(c, meta));
+    commands.createShortcut(row_.shortcut, (c) => command.execute_(c, meta));
   }
 
   public get shortcut(): string {
@@ -124,48 +166,71 @@ class Shortcuts {
   }
 }
 
-export abstract class BaseCommand<T, Def extends CommandDef<T>> {
-  protected constructor(
-    protected readonly def_: Def,
-    protected shortcuts_: Shortcuts[],
+/**
+ * A command that links shortcuts to a command implementation.
+ */
+export class Command<T = unknown> {
+  public static async create<T>(
+    def: CommandImpl<T>,
+    firstTime = false,
+  ): Promise<Command<T>> {
+    const user = User.loggedInUser(true);
+    const c = new Command(def, []);
+    const shortcuts = await Shortcuts.listForCommand<T>(def);
+    if (firstTime && shortcuts.length == 0 && def.default) {
+      shortcuts.push(
+        await Shortcuts.create<T>(user, def, def.default, undefined),
+      );
+    }
+    c.shortcuts_.push(...shortcuts);
+
+    return c;
+  }
+
+  private constructor(
+    private readonly def_: CommandImpl<T>,
+    private readonly shortcuts_: Shortcuts[],
   ) {}
+
+  public is(Class: { new (): CommandImpl<T> }): boolean {
+    return this.def_ instanceof Class;
+  }
 
   get key(): string {
     return this.def_.key;
   }
 
-  get name(): string {
-    return this.def_.name;
+  get label(): string | undefined {
+    return this.def_.label;
   }
 
   get category(): string {
     return this.def_.category;
   }
 
-  /**
-   * Get a list of all shortcuts related to this command.
-   */
+  async labels() {
+    return await Promise.all(
+      this.shortcuts_.map((s) => s.command.labelOf(s.meta)),
+    );
+  }
+
   get shortcuts(): string[] {
     return this.shortcuts_.map((s) => s.shortcut);
   }
 
-  public get shortcutsWithMeta(): [string, T][] {
-    return this.shortcuts_.map((s) => [s.shortcut, s.meta]);
+  get shortcutsWithMeta(): { shortcut: string; meta: T }[] {
+    return this.shortcuts_.map((s) => ({ shortcut: s.shortcut, meta: s.meta }));
   }
 
-  public validate(v: unknown): v is T {
-    if (this.def_.validator) {
-      return this.def_.validator(v);
+  public async addShortcut(shortcut: string, meta?: T): Promise<void> {
+    if (!this.def_.validate(meta)) {
+      throw new Error("Meta does not match the command schema.");
     }
-    return v === undefined || v === null;
-  }
 
-  async addShortcut(shortcut: string, meta: T): Promise<void> {
-    const user = User.loggedInUser(true);
     this.shortcuts_.push(
-      await Shortcuts.create<T, BaseCommand<T, CommandDef<T>>>(
-        user,
-        this,
+      await Shortcuts.create(
+        User.loggedInUser(true),
+        this.def_,
         shortcut,
         meta,
       ),
@@ -173,94 +238,24 @@ export abstract class BaseCommand<T, Def extends CommandDef<T>> {
   }
 
   public async deleteShortcut(shortcut: string) {
-    const maybeShortcut = this.shortcuts_.find((s) => s.shortcut === shortcut);
+    const i = this.shortcuts_.findIndex((s) => s.shortcut === shortcut);
+    const maybeShortcut = this.shortcuts_[i];
     if (!maybeShortcut) {
       return;
     }
     await maybeShortcut.delete();
-    this.shortcuts_ = this.shortcuts_.filter((s) => s.shortcut !== shortcut);
+    this.shortcuts_.splice(i, 1);
   }
 
-  abstract execute(core: core.GolemCore | undefined, meta: T): void;
-}
-
-export class GeneralCommand<T> extends BaseCommand<T, GeneralCommandDef<T>> {
-  public static async create<T>(
-    user: User,
-    def: GeneralCommandDef<T>,
-    firstTime: boolean,
-  ): Promise<GeneralCommand<T>> {
-    const c = new GeneralCommand(def, []);
-    let shortcuts = await Shortcuts.listForCommand<T>(c);
-    if (firstTime && shortcuts.length == 0 && def.default) {
-      shortcuts.push(await Shortcuts.create<T>(user, c, def.default, {}));
-    }
-    c.shortcuts_ = shortcuts;
-
-    return c;
-  }
-
-  public execute(core: core.GolemCore | undefined, meta: T) {
-    this.def_.handler(core, meta);
-  }
-}
-
-export class CoreCommand<T> extends BaseCommand<T, CoreCommandDef<T>> {
-  public static async create<T>(
-    user: User,
-    def: CoreCommandDef<T>,
-    firstTime: boolean,
-  ): Promise<CoreCommand<T>> {
-    const c = new CoreCommand(def, []);
-    let shortcuts = await Shortcuts.listForCommand<T>(c);
-    if (firstTime && shortcuts.length == 0 && def.default) {
-      shortcuts.push(await Shortcuts.create<T>(user, c, def.default, {}));
-    }
-    c.shortcuts_ = shortcuts;
-    return c;
-  }
-
-  public execute(core: core.GolemCore | undefined, meta: T) {
-    if (core) {
-      this.def_.handler(core, meta);
-    }
+  public async execute(core: core.GolemCore | undefined, meta: T) {
+    await this.def_.execute_(core, meta);
   }
 }
 
 export class Commands {
-  private static def: Map<string, CommandDef<any>> = new Map();
-
-  private static commands: Map<
-    string,
-    BaseCommand<unknown, CommandDef<unknown>>
-  > = new Map();
+  private static def: Map<string, CommandImpl<unknown>> = new Map();
+  private static commands: Map<string, Command<unknown>> = new Map();
   private static isInit: boolean = false;
-
-  private static async createCommandFromDef<T>(
-    user: User,
-    key: string,
-    def: CommandDef<T>,
-    firstTime: boolean,
-  ) {
-    switch (def.type) {
-      case "general":
-        Commands.commands.set(
-          key,
-          await GeneralCommand.create(
-            user,
-            def as GeneralCommandDef<any>,
-            firstTime,
-          ),
-        );
-        break;
-      case "core":
-        Commands.commands.set(
-          key,
-          await CoreCommand.create(user, def as CoreCommandDef<any>, firstTime),
-        );
-        break;
-    }
-  }
 
   /**
    * Initialize the command subsystem;
@@ -278,7 +273,7 @@ export class Commands {
     await (await import("$/commands")).init();
     Commands.isInit = true;
     for (const [key, def] of Commands.def) {
-      await Commands.createCommandFromDef(user, key, def, firstTime);
+      Commands.commands.set(key, await Command.create(def, firstTime));
     }
   }
 
@@ -302,13 +297,10 @@ export class Commands {
 
   /**
    * Register a new command. Add the shortcuts to the system, if any.
-   * @param key The key that will be used to identify the shortcut in the database. This MUST be
-   *            unique.
-   * @param def The definition of the command.
+   * @param Class The class of command to register.
    */
-  public static register<Json>(def: GeneralCommandDef<Json>): Promise<void>;
-  public static register<Json>(def: CoreCommandDef<Json>): Promise<void>;
-  public static async register<Json>(def: CommandDef<Json>) {
+  public static async register<Json>(Class: { new (): CommandImpl<Json> }) {
+    const def = new Class();
     if (Commands.def.has(def.key)) {
       throw new Error(
         `Command with key ${JSON.stringify(def.key)} already exists.`,
@@ -318,14 +310,22 @@ export class Commands {
 
     if (Commands.isInit) {
       const user = User.loggedInUser(true);
-      await Commands.createCommandFromDef(user, def.key, def, false);
+      Commands.commands.set(def.key, await Command.create(def, false));
     }
   }
 
   /**
    * List all commands.
    */
-  public static async list<T>(): Promise<BaseCommand<T, CommandDef<T>>[]> {
-    return Array.from(Commands.commands.values());
+  public static async list<T>(): Promise<Command<T>[]> {
+    return Array.from(Commands.commands.values()) as Command<T>[];
+  }
+
+  public static async get<T>(Class: {
+    new (): CommandImpl<T>;
+  }): Promise<Command<T> | undefined> {
+    return Array.from(Commands.commands.values()).find((c) => c.is(Class)) as
+      | Command<T>
+      | undefined;
   }
 }

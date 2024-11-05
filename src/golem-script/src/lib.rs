@@ -13,6 +13,7 @@ use tracing::{debug, error, info};
 
 mod module_loader;
 
+mod commands;
 mod console;
 mod modules;
 
