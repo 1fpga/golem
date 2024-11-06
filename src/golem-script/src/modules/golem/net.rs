@@ -11,7 +11,6 @@ use std::net::IpAddr;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::trace;
 
 #[derive(Debug)]
 pub struct NetworkInterface {
@@ -120,7 +119,6 @@ impl NetworkInterface {
 fn interfaces_(ctx: &mut Context) -> JsResult<JsPromise> {
     let addrs = nix::ifaddrs::getifaddrs().map_err(JsError::from_rust)?;
     let result = addrs
-        .inspect(|addr| trace!("Interface: {:#?}", addr))
         .map(|addr| NetworkInterface::from(addr))
         .filter(|i| i.family.is_some() || i.address.is_some())
         .collect::<Vec<_>>();
