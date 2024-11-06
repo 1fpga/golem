@@ -7,5 +7,6 @@ pre-build = [
     #    "apt-get install --assume-yes clang:$CROSS_DEB_ARCH clang-10:$CROSS_DEB_ARCH lld:$CROSS_DEB_ARCH",
     "apt-get install --assume-yes libsqlite3-dev:$CROSS_DEB_ARCH fbi",
     "apt-get install --assume-yes linux-tools-common:$CROSS_DEB_ARCH linux-tools-generic:$CROSS_DEB_ARCH",
+    "apt-get install --assume-yes libdbus-1-dev:$CROSS_DEB_ARCH",
 ]
 
