@@ -98,7 +98,7 @@ const driver: SqlTagDriver<undefined, never> = {
   },
   async query(sql: string, params: any[]): Promise<[any[], undefined]> {
     if (environment === "development") {
-      console.log(sql, params);
+      console.log(sql, "|", JSON.stringify(params));
     }
 
     let db = await getDb();
@@ -124,7 +124,7 @@ export async function transaction(): Promise<SqlTransactionTag> {
     ...driver,
     async query(sql: string, params: any[]): Promise<[any[], undefined]> {
       if (environment === "development") {
-        console.log("tx", sql, params);
+        console.log("tx", sql, "|", JSON.stringify(params));
       }
       let { rows } = await db.query(sql, params);
       return [rows, undefined];

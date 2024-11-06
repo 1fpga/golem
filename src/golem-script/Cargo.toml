@@ -17,10 +17,11 @@ de10-nano = { path = "../de10-nano" }
 directories = "5.0.1"
 either = "1"
 enum-map = { version = "3.0.0-beta.2", features = ["derive"] }
-include_dir = "0.7.4"
-one-fpga = { workspace = true }
 golem-ui = { path = "../golem-ui", default-features = false }
+include_dir = "0.7.4"
 mister-fpga = { path = "../mister-fpga" }
+nix = { version = "0.29.0", features = ["net"] }
+one-fpga = { workspace = true }
 ouroboros.workspace = true
 ping = "0.5.2"
 regex = "1.10.4"

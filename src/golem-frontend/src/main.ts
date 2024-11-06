@@ -1,5 +1,4 @@
 // The root file being executed by Golem by default.
-import environment from "consts:environment";
 import * as ui from "@:golem/ui";
 import {
   Catalog,
@@ -115,6 +114,12 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
           marker: downloadMarker,
           select: async () => await downloadCenterMenu(),
         },
+        {
+          label: "Controllers...",
+          select: async () => {
+            await ui.alert("Controllers", "Not implemented yet.");
+          },
+        },
         "---",
         { label: "About", select: about },
         ...((await settings.getDevTools())
@@ -227,7 +232,6 @@ async function mainInner(): Promise<boolean> {
 export async function main() {
   console.log("Golem frontend started: ", JSON.stringify(ONE_FPGA));
   let quit = false;
-  console.log(environment);
 
   while (!quit) {
     quit = await mainInner();

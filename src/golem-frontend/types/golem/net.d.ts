@@ -5,10 +5,24 @@
  * JSON data or files from URLs.
  */
 declare module "@:golem/net" {
+  export interface NetworkInterface {
+    status: "Loopback" | "Up" | "Down";
+    flags: string[];
+    name: string;
+    address?: string;
+    netmask?: string;
+    family?: "IPv4" | "IPv6";
+  }
+
   /**
    * Returns true if an Internet connection is available.
    */
   export function isOnline(): Promise<boolean>;
+
+  /**
+   * Returns a list of network interfaces and their details.
+   */
+  export function interfaces(): Promise<NetworkInterface[]>;
 
   /**
    * Download a JSON file from a URL. Returns the parsed JSON.

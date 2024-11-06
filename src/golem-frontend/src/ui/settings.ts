@@ -11,6 +11,7 @@ import {
   UserSettings,
 } from "$/services";
 import { accountsSettingsMenu } from "$/ui/settings/accounts";
+import { networkSettingsMenu } from "./settings/network";
 
 const UPDATE_FREQUENCY_LABELS = {
   [CatalogCheckFrequency.Manually]: "Manually",
@@ -443,6 +444,10 @@ export async function settingsMenu() {
     items: [
       ...(user.admin
         ? [
+            {
+              label: "Network...",
+              select: () => networkSettingsMenu(),
+            },
             {
               label: "UI...",
               select: async () => {
