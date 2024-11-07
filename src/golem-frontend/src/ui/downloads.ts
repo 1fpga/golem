@@ -140,14 +140,14 @@ export async function downloadCenterMenu() {
           select: async () => {
             await Catalog.checkForUpdates();
             refresh = true;
-            return false;
           },
         },
         {
           label: "Update All...",
           select: async () => {
-            refresh = refresh || (await Catalog.updateAll());
-            return false;
+            if (await Catalog.updateAll()) {
+              refresh = true;
+            }
           },
         },
         "-",
@@ -155,19 +155,24 @@ export async function downloadCenterMenu() {
           label: c.name,
           marker: c.updatePending ? "!" : "",
           select: async () => {
-            refresh = refresh || (await catalogDetails(c));
+            if (await catalogDetails(c)) {
+              refresh = true;
+            }
           },
         })),
         "-",
         {
           label: "Add a new Catalog...",
           select: async () => {
-            refresh = refresh || (await addNewCatalog());
+            if (await addNewCatalog()) {
+              refresh = true;
+              return false;
+            }
           },
         },
       ],
     });
   }
 
-  return refresh;
+  return refresh ? true : undefined;
 }

@@ -27,7 +27,15 @@ export enum GameSortOrder {
 }
 
 export interface GamesListFilter {
+  /**
+   * The sort order.
+   */
   sort?: GameSortOrder;
+
+  /**
+   * Merge games with the same game identification.
+   */
+  mergeByGameId?: boolean;
   includeUnplayed?: boolean;
   includeUnfavorites?: boolean;
   system?: string;
@@ -57,6 +65,10 @@ const GAMES_FROM_JOIN = oneLine`
     LEFT JOIN cores_systems ON cores.id = cores_systems.core_id OR games.core_id = cores_systems.core_id OR systems_2.id = cores_systems.system_id
     LEFT JOIN systems ON games_identification.system_id = systems.id OR cores_systems.system_id = systems.id
     LEFT JOIN user_games ON user_games.games_id = games.id
+`;
+
+const GROUP_BY_GAME_ID = oneLine`
+    GROUP BY IFNULL(rbf_path, games_identification.id)
 `;
 
 function where(filter: GamesListFilter): SqlExpression {
@@ -131,6 +143,7 @@ export class Games {
             SELECT COUNT(*) as count
             FROM ${sql.raw(GAMES_FROM_JOIN)}
             WHERE ${where(filter)}
+                      ${filter.mergeByGameId ? GROUP_BY_GAME_ID : undefined}
         `;
     return count;
   }

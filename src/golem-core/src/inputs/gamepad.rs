@@ -55,7 +55,29 @@ impl Button {
 
 impl From<sdl3::gamepad::Button> for Button {
     fn from(button: sdl3::gamepad::Button) -> Self {
-        Self::from_repr(button as u8).unwrap()
+        match button {
+            sdl3::gamepad::Button::A => Button::A,
+            sdl3::gamepad::Button::B => Button::B,
+            sdl3::gamepad::Button::X => Button::X,
+            sdl3::gamepad::Button::Y => Button::Y,
+            sdl3::gamepad::Button::Back => Button::Back,
+            sdl3::gamepad::Button::Guide => Button::Guide,
+            sdl3::gamepad::Button::Start => Button::Start,
+            sdl3::gamepad::Button::LeftStick => Button::LeftStick,
+            sdl3::gamepad::Button::RightStick => Button::RightStick,
+            sdl3::gamepad::Button::LeftShoulder => Button::LeftShoulder,
+            sdl3::gamepad::Button::RightShoulder => Button::RightShoulder,
+            sdl3::gamepad::Button::DPadUp => Button::DPadUp,
+            sdl3::gamepad::Button::DPadDown => Button::DPadDown,
+            sdl3::gamepad::Button::DPadLeft => Button::DPadLeft,
+            sdl3::gamepad::Button::DPadRight => Button::DPadRight,
+            sdl3::gamepad::Button::Misc1 => Button::Misc1,
+            sdl3::gamepad::Button::Paddle1 => Button::Paddle1,
+            sdl3::gamepad::Button::Paddle2 => Button::Paddle2,
+            sdl3::gamepad::Button::Paddle3 => Button::Paddle3,
+            sdl3::gamepad::Button::Paddle4 => Button::Paddle4,
+            sdl3::gamepad::Button::Touchpad => Button::Touchpad,
+        }
     }
 }
 
