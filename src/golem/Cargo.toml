@@ -6,6 +6,7 @@ build = "build.rs"
 
 [dependencies]
 image.workspace = true
+sdl3.workspace = true
 strum.workspace = true
 
 anyhow = "1.0.75"
@@ -46,7 +47,6 @@ one-fpga = { workspace = true }
 parking_lot = "0.12.1"
 qrcode = { version = "0.14.0", features = ["image"] }
 regex = "1.9.3"
-sdl3 = { version = "0.5.0", features = ["bundled"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde-hex = "0.1.0"
 serde_with = { version = "3.0.0", features = ["hex"] }
