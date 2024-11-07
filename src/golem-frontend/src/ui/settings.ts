@@ -446,7 +446,9 @@ export async function settingsMenu() {
         ? [
             {
               label: "Network...",
-              select: () => networkSettingsMenu(),
+              select: async () => {
+                await networkSettingsMenu();
+              },
             },
             {
               label: "UI...",
