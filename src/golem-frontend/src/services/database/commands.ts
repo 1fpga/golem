@@ -53,9 +53,9 @@ export abstract class CommandImpl<T> {
   abstract get key(): string;
 
   /**
-   * A human-readable label for this command.
+   * A human-readable label for this command, generally.
    */
-  label: string | undefined = undefined;
+  abstract get label(): string;
 
   /**
    * The category that this command belongs to. This will be used to group
@@ -79,26 +79,32 @@ export abstract class CommandImpl<T> {
    * @param core
    * @param v
    */
-  abstract execute_(core: core.GolemCore | undefined, v: T): Promise<void>;
+  abstract execute_(
+    core: core.GolemCore | undefined,
+    v: T,
+  ): void | Promise<void>;
 }
 
 export abstract class CoreCommandImpl<T = undefined> extends CommandImpl<T> {
-  execute_(core: core.GolemCore | undefined, v: T): Promise<void> {
+  execute_(core: core.GolemCore | undefined, v: T) {
     if (core) {
       return this.execute(core, v);
     }
     return Promise.resolve();
   }
 
-  abstract execute(core: core.GolemCore, v: T): Promise<void>;
+  abstract execute(core: core.GolemCore, v: T): void | Promise<void>;
 }
 
 export abstract class GeneralCommandImpl<T = undefined> extends CommandImpl<T> {
-  execute_(core: core.GolemCore | undefined, v: T): Promise<void> {
+  execute_(core: core.GolemCore | undefined, v: T) {
     return this.execute(core, v);
   }
 
-  abstract execute(core: core.GolemCore | undefined, v: T): Promise<void>;
+  abstract execute(
+    core: core.GolemCore | undefined,
+    v: T,
+  ): void | Promise<void>;
 }
 
 class Shortcuts {
@@ -196,7 +202,7 @@ export class Command<T = unknown> {
     return this.def_.key;
   }
 
-  get label(): string | undefined {
+  get label(): string {
     return this.def_.label;
   }
 
@@ -325,9 +331,9 @@ export class Commands {
     return Array.from(Commands.commands.values()) as Command<T>[];
   }
 
-  public static async get<T>(Class: {
+  public static get<T>(Class: {
     new (): CommandImpl<T>;
-  }): Promise<Command<T> | undefined> {
+  }): Command<T> | undefined {
     return Array.from(Commands.commands.values()).find((c) => c.is(Class)) as
       | Command<T>
       | undefined;

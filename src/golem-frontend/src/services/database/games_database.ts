@@ -190,11 +190,7 @@ export class GamesIdentification {
           ]);
 
           if (sources.length > 0) {
-            await Promise.all([
-              ...sources.map((source) =>
-                sql1.db.execute(sourceGamesIdStatement, source),
-              ),
-            ]);
+            await sql1.db.executeMany(sourceGamesIdStatement, sources);
           }
         }
       },

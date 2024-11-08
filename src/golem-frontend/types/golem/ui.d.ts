@@ -16,9 +16,11 @@ declare module "@:golem/ui" {
     marker?: string;
     select?: (
       item: TextMenuItem<R>,
+      index: number,
     ) => undefined | void | R | Promise<undefined | void | R>;
     details?: (
       item: TextMenuItem<R>,
+      index: number,
     ) => undefined | void | R | Promise<undefined | void | R>;
   }
 

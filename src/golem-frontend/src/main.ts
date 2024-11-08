@@ -84,7 +84,7 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
 
   // There are no back menu, but we still need to loop sometimes (when selecting a game, for example).
   while (!(quit || logout)) {
-    const nbGames = await Games.count({});
+    const nbGames = await Games.count({ mergeByGameId: true });
     const nbCores = await Core.count();
 
     const gamesMarker = nbGames > 0 ? `(${nbGames})` : "";

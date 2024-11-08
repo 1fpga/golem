@@ -1,6 +1,8 @@
 import * as core from "@:golem/core";
 import * as ui from "@:golem/ui";
 import { Core } from "$/services/database/core";
+import { ShowCoreMenuCommand } from "$/commands/basic";
+import { Commands } from "$/services";
 
 async function selectCoreFile() {
   let f = await ui.selectFile("Select Core", "/media/fat", {
@@ -13,9 +15,8 @@ async function selectCoreFile() {
     let c = core.load({
       core: { type: "Path", path: f },
     });
-    c.showOsd(async () =>
-      (await import("$/ui/menus/core_osd")).coreOsdMenu(c, null),
-    );
+
+    await Commands.get(ShowCoreMenuCommand)?.execute(c, undefined);
     c.loop();
   }
 }

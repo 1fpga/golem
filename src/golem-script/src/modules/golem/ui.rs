@@ -224,16 +224,20 @@ fn text_menu_(
         };
 
         fn call_callable(
-            item: Option<&mut TextMenuItem>,
+            item: Option<(&mut TextMenuItem, usize)>,
             maybe_callable: JsValue,
             context: &mut Context,
         ) -> JsResult<Option<JsValue>> {
             if let Some(callable) = maybe_callable.as_callable() {
-                let result = if let Some(item) = item {
+                let result = if let Some((item, index)) = item {
                     let js_item = item.clone().try_js_into(context)?;
+                    let js_index = JsValue::from(index);
 
-                    let mut result =
-                        callable.call(&JsValue::undefined(), &[js_item.clone()], context)?;
+                    let mut result = callable.call(
+                        &JsValue::undefined(),
+                        &[js_item.clone(), js_index],
+                        context,
+                    )?;
                     while let Some(p) = result.as_promise() {
                         result = p.await_blocking(context).map_err(JsError::from_opaque)?;
                     }
@@ -265,14 +269,18 @@ fn text_menu_(
         match result {
             MenuAction::Select(i) => {
                 if let Some(select) = options.items[i].select.clone() {
-                    if let Some(v) = call_callable(Some(&mut options.items[i]), select, context)? {
+                    if let Some(v) =
+                        call_callable(Some((&mut options.items[i], i)), select, context)?
+                    {
                         return Ok(JsPromise::resolve(v, context));
                     }
                 }
             }
             MenuAction::Details(i) => {
                 if let Some(details) = options.items[i].details.clone() {
-                    if let Some(v) = call_callable(Some(&mut options.items[i]), details, context)? {
+                    if let Some(v) =
+                        call_callable(Some((&mut options.items[i], i)), details, context)?
+                    {
                         return Ok(JsPromise::resolve(v, context));
                     }
                 }

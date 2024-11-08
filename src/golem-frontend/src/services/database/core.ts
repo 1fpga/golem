@@ -6,7 +6,6 @@ import * as ui from "@:golem/ui";
 import { Catalog } from "./catalog";
 import { System } from "./system";
 import { sql } from "$/utils";
-import { coreOsdMenu } from "$/ui/menus/core_osd";
 
 export interface CoreRow extends Row {
   id: number;
@@ -203,6 +202,9 @@ export class Core {
     return this.row.rbf_path;
   }
 
+  /**
+   * Launch the core, and the core loop. Does not show the menu.
+   */
   public async launch() {
     if (!this.rbfPath) {
       throw new Error("Core does not have an RBF path");
@@ -214,20 +216,6 @@ export class Core {
       let c = core.load({
         core: { type: "Path", path: this.rbfPath },
       });
-
-      let error = undefined;
-      c.showOsd(async () => {
-        try {
-          return await coreOsdMenu(c, this);
-        } catch (e) {
-          error = e;
-          return true;
-        }
-      });
-      if (error) {
-        throw error;
-      }
-
       c.loop();
     } finally {
       Core.setRunning(null);

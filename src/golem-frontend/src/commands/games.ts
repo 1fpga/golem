@@ -8,6 +8,7 @@ interface GameDef {
 
 export class StartGameCommand extends GeneralCommandImpl<GameDef> {
   key = "startSpecificGame";
+  label = "Launch a specific game";
   category = "Core";
 
   validate(v: unknown): v is GameDef {
@@ -20,7 +21,7 @@ export class StartGameCommand extends GeneralCommandImpl<GameDef> {
 
   async labelOf(game: GameDef) {
     const g = await Games.byId(game.gameId);
-    return `Game ${g.name}`;
+    return `Launch "${g.name}"`;
   }
 
   async execute(_: core.GolemCore, game: GameDef) {

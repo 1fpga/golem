@@ -1,54 +1,85 @@
 import * as ui from "@:golem/ui";
 import { Command, Commands } from "$/services";
 
-function markerForCommand(cmd: Command) {
-  const shortcuts = cmd.shortcuts;
-
-  return shortcuts.length === 0 ? "" : `${shortcuts.length}`;
-}
-
 async function shortcutCommandMenu(c: Command) {
   let done = false;
   let highlighted: number | undefined;
   while (!done) {
-    done = await ui.textMenu({
-      title: c.label,
-      back: true,
-      highlighted,
-      items: [
-        {
-          label: "Add a new shortcut...",
-          select: async () => {
-            highlighted = undefined;
-            const shortcut = await ui.promptShortcut(
-              "Enter a new shortcut",
-              c.label,
-            );
+    // Group by same labels.
+    let maps = new Map<string, { meta: unknown; shortcuts: string[] }>();
+    for (const { shortcut, meta } of c.shortcutsWithMeta) {
+      const label = await c.labelOf(meta);
+      if (maps.has(label)) {
+        maps.get(label)!.shortcuts.push(shortcut);
+      } else {
+        maps.set(label, { meta, shortcuts: [shortcut] });
+      }
+    }
 
-            if (shortcut) {
-              await c.addShortcut(shortcut, undefined);
-              return false;
-            }
-          },
+    if (maps.size === 0) {
+      const shortcut = await ui.promptShortcut(
+        "Enter a new shortcut",
+        await c.labelOf(undefined),
+      );
+      if (shortcut) {
+        await c.addShortcut(shortcut, undefined);
+        continue;
+      } else {
+        return;
+      }
+    }
+
+    const alone = maps.size === 1;
+    const ident = alone ? "" : "  ";
+
+    const items: (string | ui.TextMenuItem<boolean>)[] = [];
+    for (const [label, { meta, shortcuts }] of maps.entries()) {
+      if (items.length > 0) {
+        items.push("-");
+      }
+      if (!alone) {
+        items.push(`${label}`);
+      }
+      items.push({
+        label: `${ident}Add a new shortcut...`,
+        select: async (_, i) => {
+          highlighted = undefined;
+          const shortcut = await ui.promptShortcut(
+            "Enter a new shortcut",
+            await c.labelOf(meta),
+          );
+
+          if (shortcut) {
+            await c.addShortcut(shortcut, meta);
+            highlighted = i;
+            return false;
+          }
         },
-        "-",
-        "Delete shortcut:",
-        ...c.shortcuts.map((s, i) => ({
-          label: ` ${s}`,
-          select: async () => {
+      });
+      for (const s of shortcuts) {
+        items.push({
+          label: `${ident}Delete ${s}...`,
+          select: async (_, i) => {
             const confirm = await ui.alert({
-              title: "Deleting shortcut",
+              title: `Deleting shortcut`,
               message: `Are you sure you want to delete this shortcut?\n${s}`,
               choices: ["Cancel", "Delete shortcut"],
             });
             if (confirm === 1) {
-              highlighted = 3 + i;
               await c.deleteShortcut(s);
-              return false;
+              highlighted = i;
+              return c.shortcuts.length == 0;
             }
           },
-        })),
-      ],
+        });
+      }
+    }
+
+    done = await ui.textMenu({
+      title: c.label,
+      back: true,
+      highlighted,
+      items,
     });
   }
 }
@@ -69,21 +100,14 @@ export async function shortcutsMenu() {
     items.push("-");
 
     for (const c of commands) {
-      const labels = (await c.labels()).sort();
-      let last = undefined;
-      for (const label in labels) {
-        if (label !== last) {
-          last = label;
-        }
-        items.push({
-          label: ` ${label}`,
-          marker: markerForCommand(c),
-          select: async (item) => {
-            await shortcutCommandMenu(c);
-            item.marker = markerForCommand(c);
-          },
-        });
-      }
+      items.push({
+        label: `${c.label}...`,
+        marker: `${c.shortcuts.length === 0 ? "" : c.shortcuts.length}`,
+        select: async (item) => {
+          await shortcutCommandMenu(c);
+          item.marker = `${c.shortcuts.length === 0 ? "" : c.shortcuts.length}`;
+        },
+      });
     }
   }
   items.splice(0, 1);
@@ -91,6 +115,6 @@ export async function shortcutsMenu() {
   await ui.textMenu({
     title: "Shortcuts",
     back: 0,
-    items: [...items],
+    items,
   });
 }

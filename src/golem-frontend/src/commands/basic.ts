@@ -1,6 +1,7 @@
 import * as core from "@:golem/core";
 import { coreOsdMenu } from "$/ui/menus/core_osd";
-import { Commands, Core, CoreCommandImpl } from "$/services";
+import { Commands, CoreCommandImpl } from "$/services/database/commands";
+import { Core } from "$/services/database/core";
 
 export class ShowCoreMenuCommand extends CoreCommandImpl {
   key = "showCoreMenu";
@@ -12,7 +13,7 @@ export class ShowCoreMenuCommand extends CoreCommandImpl {
   shown = false;
 
   async execute(core: core.GolemCore) {
-    if (!this.shown && Core.running() !== null) {
+    if (!this.shown) {
       try {
         this.shown = true;
         const coreDb = Core.running();
@@ -41,7 +42,7 @@ export class QuitCoreCommand extends CoreCommandImpl {
   category = "Core";
   default = "'F10'";
 
-  async execute(core: core.GolemCore) {
+  execute(core: core.GolemCore) {
     core.quit();
   }
 }
@@ -49,10 +50,10 @@ export class QuitCoreCommand extends CoreCommandImpl {
 export class ShowDebugLogCommand extends CoreCommandImpl {
   key = "showDebugLog";
   label = "Show a debug log";
-  category = "Debug";
+  category = "Developer";
   default = "Ctrl + 'D'";
 
-  async execute() {
+  execute() {
     console.log("Debug log.");
   }
 }

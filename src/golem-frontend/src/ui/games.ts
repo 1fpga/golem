@@ -43,16 +43,12 @@ export async function pickGame(
   let index = 0;
 
   async function buildItems(): Promise<ui.TextMenuItem<Games | string>[]> {
-    const { total, games } = await Games.list(
-      {
-        sort: Object.values(sortOptions)[currentSort],
-        system: options.system,
-        includeUnplayed,
-      },
-      {
-        limit: PAGE_SIZE,
-      },
-    );
+    const { total, games } = await Games.list({
+      system: options.system,
+      includeUnplayed,
+      sort: Object.values(sortOptions)[currentSort],
+      limit: PAGE_SIZE,
+    });
 
     const gameSet: Map<String, Games[]> = games.reduce((acc, game) => {
       if (!acc.has(game.name)) {
