@@ -22,11 +22,30 @@ declare module "@:golem/upgrade" {
   /**
    * Perform a firmware upgrade.
    *
+   * @param name The name of the binary to upgrade. For now this is always "1fpga".
    * @param path The path of the firmware file to upgrade to.
    * @param signature The signature of the firmware file. If not provided,
    *                  the firmware will require the user to validate the upgrade
    *                  manually before proceeding.
    * @throws If the upgrade fails.
    */
-  export function upgrade(path: string, signature?: Uint8Array): Promise<void>;
+  export function upgrade(
+    name: string,
+    path: string,
+    signature?: Uint8Array,
+  ): Promise<void>;
+
+  /**
+   * Verify a firmware file. This is a convenience to check if the firmware
+   * file is valid before attempting to upgrade.
+   *
+   * @param path The path of the firmware file to verify.
+   * @param signature The signature of the firmware file. This must be provided.
+   * @throws string If the file path is wrong or the signature is the invalid
+   *                format. This will not throw if the signature is invalid.
+   */
+  export function verifySignature(
+    path: string,
+    signature: Uint8Array,
+  ): Promise<boolean>;
 }

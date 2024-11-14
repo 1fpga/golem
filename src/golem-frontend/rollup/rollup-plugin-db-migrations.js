@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
-import { globSync } from "glob";
+import {globSync} from "glob";
+import {stripIndent} from "common-tags";
 
 /**
  * Simplify the SQL content by removing comments and extra whitespace.
@@ -23,15 +24,34 @@ export default function (baseDir = process.cwd()) {
     async load(id) {
       if (id.startsWith("@:migrations")) {
         const files = globSync("migrations/**/up.sql");
-        const output = Object.create(null);
+        let output = "{";
         for (const file of files) {
           const content = fs.readFileSync(file, "utf8");
           const version = path.basename(path.dirname(file));
-          output[version] = simplifySql(content);
+          let applyUpPath = path.join(path.dirname(file), "apply.ts");
+          if (!fs.existsSync(applyUpPath)) {
+            applyUpPath = undefined;
+          }
+
+          output += stripIndent`
+            ${JSON.stringify(version)}: {
+              up: {
+                sql: ${JSON.stringify(simplifySql(content))},
+                ${
+                  applyUpPath
+                    ? `apply: async (a, b, c, d, e) => {
+                  await (await import(${JSON.stringify(applyUpPath)})).up(a, b, c, d, e);
+                },`
+                    : ""
+                }
+              },
+            },
+          `;
         }
+        output += "}";
 
         return `
-          export const up = ${JSON.stringify(output)};
+          export const migrations = ${output};
         `;
       }
       return null;

@@ -1,5 +1,16 @@
 import * as ui from "@:golem/ui";
-import { Catalog, RemoteCatalog, WellKnownCatalogs } from "$/services";
+import {
+  Binary,
+  Catalog,
+  KnownBinary,
+  RemoteCatalog,
+  User,
+  WellKnownCatalogs,
+} from "$/services";
+
+const BINARY_LABELS: { [name: string]: string } = {
+  [KnownBinary.OneFpga]: "Update 1FPGA firmware...",
+};
 
 async function catalogDetails(c: Catalog) {
   return false;
@@ -55,82 +66,55 @@ async function addNewCatalog() {
 
 export async function installCoresFromCatalog(catalog: Catalog) {
   throw new Error("Not implemented");
-  // let selected = new Set<string>();
-  // let systems = await catalog.listSystems();
-  //
-  // let shouldInstall = await ui.textMenu({
-  //   title: "Choose Systems to install",
-  //   back: false,
-  //   items: [
-  //     ...(
-  //       await Promise.all(
-  //         Object.entries(systems).map(async ([_key, system]) => {
-  //           const remote = await system.fetchRemote();
-  //           const cores = Object.values(await remote.fetchCores());
-  //           const coreSize = cores.reduce(
-  //             (a, b) =>
-  //               a + b.latestRelease.files.reduce((a, b) => a + b.size, 0),
-  //             0,
-  //           );
-  //           return [
-  //             {
-  //               label: system.name,
-  //               marker: selected.has(system.uniqueName) ? "install" : "",
-  //               select: (item: ui.TextMenuItem<boolean>) => {
-  //                 if (selected.has(system.uniqueName)) {
-  //                   selected.delete(system.uniqueName);
-  //                   item.marker = "";
-  //                 } else {
-  //                   selected.add(system.uniqueName);
-  //                   item.marker = "install";
-  //                 }
-  //               },
-  //             },
-  //             ...(cores.length > 1
-  //               ? [
-  //                   {
-  //                     label: "  - Cores:",
-  //                     marker: "" + cores.length,
-  //                   },
-  //                 ]
-  //               : []),
-  //             {
-  //               label: "  - Size:",
-  //               marker: filesize(remote.size + coreSize),
-  //             },
-  //           ];
-  //         }),
-  //       )
-  //     ).flat(),
-  //     "-",
-  //     { label: "Install selected systems", select: () => true },
-  //   ],
-  // });
-  //
-  // if (shouldInstall) {
-  //   for (const system of Object.values(systems)) {
-  //     if (selected.has(system.uniqueName)) {
-  //       await system.installAll(catalog);
-  //     }
-  //   }
-  //   return true;
-  // } else {
-  //   await ui.alert(
-  //     "Warning",
-  //     stripIndents`
-  //       Skipping core installation. This may cause some games to not work.
-  //       You can always install cores later in the Download Center.
-  //     `,
-  //   );
-  //   return false;
-  // }
+}
+
+async function performBinaryUpdate(b: Binary) {
+  const remoteBinary = await b.fetchRemote();
+  const release = remoteBinary.latestVersion();
+  if (!release) {
+    throw new Error("No release found");
+  }
+
+  const update = await ui.alert({
+    title: `Update ${b.name}`,
+    message: `Do you want to update ${b.name} to version ${release.version}?`,
+    choices: ["Cancel", "Update and Restart"],
+  });
+
+  if (update !== 1) {
+    return undefined;
+  }
+
+  await release.doUpgrade();
+  return false;
 }
 
 export async function downloadCenterMenu() {
-  const catalogs = await Catalog.listCatalogs();
+  if (!User.loggedInUser(true).admin) {
+    return undefined;
+  }
+
   let done = false;
   let refresh = false;
   while (!done) {
+    const catalogs = await Catalog.listCatalogs();
+
+    // List the binaries to update.
+    let binaries = [];
+    for (const b of await Binary.listBinaries()) {
+      if (!b.updatePending) {
+        continue;
+      }
+
+      binaries.push({
+        label: BINARY_LABELS[b.name] ?? `Update the ${b.name} binary...`,
+        marker: b.updatePending ? "!" : "",
+        select: async () => {
+          return await performBinaryUpdate(b);
+        },
+      });
+    }
+
     done = await ui.textMenu({
       title: "Download Center",
       back: true,
@@ -138,8 +122,11 @@ export async function downloadCenterMenu() {
         {
           label: "Check for updates...",
           select: async () => {
-            await Catalog.checkForUpdates();
-            refresh = true;
+            refresh = await Catalog.checkForUpdates();
+            if (await Binary.checkForUpdates()) {
+              refresh = true;
+            }
+            return refresh ? false : undefined;
           },
         },
         {
@@ -147,16 +134,20 @@ export async function downloadCenterMenu() {
           select: async () => {
             if (await Catalog.updateAll()) {
               refresh = true;
+              return false;
             }
           },
         },
+        ...(binaries.length > 0 ? ["-", ...binaries] : []),
         "-",
+        "Catalogs:",
         ...catalogs.map((c) => ({
-          label: c.name,
+          label: `  ${c.name}`,
           marker: c.updatePending ? "!" : "",
           select: async () => {
             if (await catalogDetails(c)) {
               refresh = true;
+              return false;
             }
           },
         })),

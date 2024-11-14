@@ -1,3 +1,4 @@
+export * from "./binary";
 export * from "./catalog";
 export * from "./core";
 export * from "./games";

@@ -1,11 +1,11 @@
 import * as core from "@:golem/core";
-import { compareVersions, RemoteCore } from "../remote";
+import { RemoteCore } from "../remote";
 import { Row } from "@:golem/db";
 import * as net from "@:golem/net";
 import * as ui from "@:golem/ui";
 import { Catalog } from "./catalog";
 import { System } from "./system";
-import { sql } from "$/utils";
+import { compareVersions, sql } from "$/utils";
 
 export interface CoreRow extends Row {
   id: number;

@@ -16,7 +16,6 @@ import { StartGameAction } from "$/actions/start_game";
 import { MainMenuAction } from "$/actions/main_menu";
 import { gamesMenu } from "$/ui/games";
 import { coresMenu } from "$/ui/cores"; // Import the basic commands.
-import "./commands/basic";
 import { settingsMenu } from "$/ui/settings";
 import { login } from "$/ui/login";
 import { downloadCenterMenu } from "$/ui/downloads";
@@ -48,7 +47,11 @@ async function debugMenu() {
   });
 }
 
-async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
+async function mainMenu(
+  user: User,
+  startOn: StartOnSetting,
+  settings: UserSettings,
+) {
   let quit = false;
   let logout = false;
 
@@ -109,11 +112,15 @@ async function mainMenu(startOn: StartOnSetting, settings: UserSettings) {
           label: "Settings...",
           select: async () => await settingsMenu(),
         },
-        {
-          label: "Download Center...",
-          marker: downloadMarker,
-          select: async () => await downloadCenterMenu(),
-        },
+        ...(user.admin
+          ? [
+              {
+                label: "Download Center...",
+                marker: downloadMarker,
+                select: async () => await downloadCenterMenu(),
+              },
+            ]
+          : []),
         {
           label: "Controllers...",
           select: async () => {
@@ -195,7 +202,7 @@ async function mainInner(): Promise<boolean> {
   while (true) {
     try {
       if (action === undefined) {
-        return await mainMenu(startOn, settings);
+        return await mainMenu(user, startOn, settings);
       } else if (action instanceof StartGameAction) {
         await action.game.launch();
       }

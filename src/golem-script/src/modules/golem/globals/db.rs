@@ -486,6 +486,10 @@ impl JsDbTransaction {
             .execute_many(Some(self.tx_id), query, bindings, context)
     }
 
+    pub fn execute_raw(&self, query: String) -> JsResult<()> {
+        self.inner.borrow().execute_raw(Some(self.tx_id), query)
+    }
+
     pub fn commit(&mut self, context: &mut Context) -> JsPromise {
         JsPromise::new(
             move |fns, context| {
@@ -545,6 +549,10 @@ js_class! {
 
         fn execute_many as "executeMany"(this: JsClass<JsDbTransaction>, query: String, bindings: Vec<Vec<SqlValue>>, context: &mut Context) -> JsResult<usize> {
             this.borrow().execute_many(&query, bindings, context)
+        }
+
+        fn execute_raw as "executeRaw"(this: JsClass<JsDbTransaction>, query: String) -> JsResult<()> {
+            this.borrow().execute_raw(query)
         }
 
         fn commit(this: JsClass<JsDbTransaction>, context: &mut Context) -> JsPromise {

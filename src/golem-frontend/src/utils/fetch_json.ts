@@ -44,7 +44,7 @@ export async function fetchJsonAndValidate<T>(
       }
 
       let message = (e as any)?.message ?? `${e}`;
-      if (message === "[object Object]" || !message) {
+      if (message.toString() == "[object Object]" || !message) {
         message = JSON.stringify(e);
       }
 

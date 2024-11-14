@@ -80,15 +80,19 @@ fn create_context(
         let minor = (env!("CARGO_PKG_VERSION_MINOR"))
             .parse::<u32>()
             .expect("Invalid major version");
+        let patch = (env!("CARGO_PKG_VERSION_PATCH"))
+            .parse::<u32>()
+            .expect("Invalid major version");
 
         let version = JsObject::with_null_proto();
         version.set(js_str!("major"), major, false, &mut context)?;
         version.set(js_str!("minor"), minor, false, &mut context)?;
+        version.set(js_str!("patch"), patch, false, &mut context)?;
         version
     };
 
     let one_fpga = JsObject::default();
-    one_fpga.set(js_str!("name"), js_string!("OneFPGA"), false, &mut context)?;
+    one_fpga.set(js_str!("name"), js_string!("1FPGA"), false, &mut context)?;
     one_fpga.set(js_str!("version"), version, false, &mut context)?;
 
     context.register_global_property(js_str!("ONE_FPGA"), one_fpga, Attribute::ENUMERABLE)?;

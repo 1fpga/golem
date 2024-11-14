@@ -92,6 +92,7 @@ export default {
     "@:golem/settings",
     "@:golem/storage",
     "@:golem/ui",
+    "@:golem/upgrade",
     "@:golem/utils",
   ],
   onLog(level, log, handler) {

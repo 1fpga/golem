@@ -81,7 +81,7 @@ export class System {
     const remoteCatalog = await RemoteCatalog.fetch(
       (await this.getCatalog()).url,
     );
-    console.log(1, JSON.stringify(remoteCatalog.schema));
+
     let systems = await remoteCatalog.fetchSystems(
       (uniqueName) => this.uniqueName === uniqueName,
     );

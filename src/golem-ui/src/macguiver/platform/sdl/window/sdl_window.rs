@@ -6,7 +6,6 @@ use sdl3::pixels::PixelFormatEnum;
 use sdl3::rect::Point;
 use sdl3::render::{Canvas, Texture, TextureCreator};
 use sdl3::video::WindowContext;
-use std::convert::TryFrom;
 
 pub struct SdlWindow {
     canvas: Canvas<sdl3::video::Window>,
