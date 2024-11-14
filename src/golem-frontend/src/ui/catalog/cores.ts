@@ -26,7 +26,7 @@ export interface SelectCoresResult {
 export async function selectCoresFromRemoteCatalog(
   catalog: RemoteCatalog,
   options: SelectCoresOptions = {},
-) {
+): Promise<SelectCoresResult> {
   const predicate = options.predicate ?? (() => true);
   const installAll = options.installAll ?? false;
   let selected = new Set<string>();
@@ -41,10 +41,11 @@ export async function selectCoresFromRemoteCatalog(
   }
 
   const items: (ui.TextMenuItem<boolean> | string)[] = [];
-
-  for (const [name, system] of Object.entries(systems).sort(([a], [b]) =>
+  const sortedSystems = Object.entries(systems).sort(([a], [b]) =>
     a.localeCompare(b),
-  )) {
+  );
+
+  for (const [name, system] of sortedSystems) {
     const systemCores = Object.entries(cores).filter(([_name, core]) => {
       return core.systems.includes(name);
     });
@@ -61,7 +62,7 @@ export async function selectCoresFromRemoteCatalog(
         if (items.length > 0) {
           items.push("-");
         }
-        items.push({ label: system.name, marker: name });
+        items.push({ label: system.name });
         indent = "  ";
         if (system.size > 0) {
           coreStartSize = 0;

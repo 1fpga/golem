@@ -1,3 +1,4 @@
+import production from "consts:production";
 import * as ui from "@:golem/ui";
 import { oneLine } from "common-tags";
 
@@ -18,10 +19,12 @@ export async function partitionAndProgress<T>(
     const partition = array.slice(i, i + partitionSize);
     await progress(partition);
 
-    console.log(oneLine`
+    if (!production) {
+      console.log(oneLine`
         Processed ${Math.min(partitionSize, total)} items in ${+new Date() - last}ms,
         current index: ${Math.min(i + partitionSize, total)}
-    `);
+      `);
+    }
     last = +new Date();
   }
 }

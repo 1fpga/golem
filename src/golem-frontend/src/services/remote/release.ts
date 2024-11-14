@@ -162,6 +162,8 @@ export class RemoteRelease {
       stripIndents`
         Please wait while the upgrade is performed.
         
+        Do not power off or restart your device.
+        
         The system will restart automatically after the upgrade is completed.
       `,
     );

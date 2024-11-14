@@ -60,11 +60,11 @@ fn upgrade_(
         let choice = alert(
             host_data.app_mut(),
             "No signature provided",
-            r#"\
+            "\
                 1FPGA cannot verify the upgrade. \
                 Make sure you trust the source.\n\n\
                 Do you want to continue with the upgrade?
-            "#,
+            ",
             &["Cancel the upgrade", "Trust the source and continue"],
         );
 

@@ -76,8 +76,8 @@ export class GamesIdentification {
 
     await partitionAndProgress(
       files,
-      100,
-      "Adding games",
+      10,
+      "Adding ROMs to the database...",
       (current, total) => `Adding games: ${current}/${total}`,
       async (partition) => {
         const shas = await fs.sha256(partition);

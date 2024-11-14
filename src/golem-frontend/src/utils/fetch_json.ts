@@ -36,10 +36,13 @@ export async function fetchJsonAndValidate<T>(
       if (validate(response)) {
         return response;
       } else {
-        throw new ValidationError((validate as any).errors ?? []);
+        const e = (validate as any).errors ?? [];
+        console.warn(`Validation error: ${JSON.stringify(e)}`);
+        throw new ValidationError(e);
       }
     } catch (e) {
       if (!(options?.allowRetry ?? true)) {
+        console.warn(`Error fetching JSON: ${e}`);
         throw e;
       }
 

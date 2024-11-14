@@ -16,6 +16,12 @@ import constants from "./rollup/rollup-plugin-consts.js";
 const production =
   !("NODE_ENV" in process.env) || process.env.NODE_ENV === "production";
 
+const gitSha = require("child_process")
+  .execSync("git rev-parse HEAD")
+  .toString()
+  .trim();
+const gitRev = 
+
 export default {
   input: "src/main.ts",
   output: {
@@ -30,7 +36,9 @@ export default {
       preferBuiltins: false,
     }),
     constants({
-      environment: production ? "production" : "development",
+      environment: process.env.NODE_ENV,
+      production,
+      rev: gitRev,
     }),
     typescript({
       exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],
