@@ -66,6 +66,23 @@ declare module "@:golem/db" {
      * @returns The first column of the first row returned from the query, or `null` if no rows are returned.
      */
     execute(query: string, bindings?: SqlValue[]): Promise<number>;
+
+    /**
+     * Executes many SQL query and returns the number of rows affected. This is useful for
+     * `INSERT`, `UPDATE`, and `DELETE` queries. One query per binding will be executed, as
+     * fast as possible.
+     * @param query
+     * @param bindings
+     */
+    executeMany(query: string, bindings: SqlValue[][]): Promise<number>;
+
+    /**
+     * Executes a raw SQL query. This is useful for executing queries that do not return any rows,
+     * such as `CREATE TABLE` or `INSERT INTO`. Be careful with this function, as it does not
+     * support bindings and is susceptible to SQL injection.
+     * @param query The SQL query to execute.
+     */
+    executeRaw(query: string): Promise<void>;
   }
 
   export interface Transaction extends Queryable {
@@ -91,13 +108,5 @@ declare module "@:golem/db" {
      * modifying the database until the transaction is committed or rolled back.
      */
     beginTransaction(): Promise<Transaction>;
-
-    /**
-     * Executes a raw SQL query. This is useful for executing queries that do not return any rows,
-     * such as `CREATE TABLE` or `INSERT INTO`. Be careful with this function, as it does not
-     * support bindings and is susceptible to SQL injection.
-     * @param query The SQL query to execute.
-     */
-    executeRaw(query: string): Promise<void>;
   }
 }

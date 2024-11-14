@@ -1,16 +1,43 @@
 import * as ui from "@:golem/ui";
 import { Games, GameSortOrder } from "$/services/database/games";
-import { Commands } from "$/services";
+import { Commands, UserSettings } from "$/services";
 import { StartGameCommand } from "$/commands/games";
 
 const PAGE_SIZE = 100;
 
+const SORT_LABEL = {
+  [GameSortOrder.NameAsc]: "Name (A-Z)",
+  [GameSortOrder.NameDesc]: "Name (Z-A)",
+  [GameSortOrder.SystemAsc]: "System (A-Z)",
+  [GameSortOrder.LastPlayed]: "Last Played",
+  [GameSortOrder.Favorites]: "Favorites",
+};
+
 export interface PickGameOptions {
+  /**
+   * The title of the game selection menu.
+   */
   title?: string;
-  sort?: GameSortOrder;
+
+  /**
+   * Whether to include unplayed games in the list.
+   */
   includeUnplayed?: boolean;
+
+  /**
+   * Whether to allow the player to show details on a game.
+   */
   details?: boolean;
+
+  /**
+   * The system to filter the games by.
+   */
   system?: string;
+
+  /**
+   * Whether to allow the player to load a ROM directly.
+   */
+  allowFile?: boolean;
 }
 
 function ellipses(max: number, end = false) {
@@ -29,30 +56,24 @@ function ellipses(max: number, end = false) {
 export async function pickGame(
   options: PickGameOptions = {},
 ): Promise<Games | null> {
-  const sortOptions = {
-    "Name (A-Z)": GameSortOrder.NameAsc,
-    "Name (Z-A)": GameSortOrder.NameDesc,
-    "System (A-Z)": GameSortOrder.SystemAsc,
-    "Last Played": GameSortOrder.LastPlayed,
-    Favorites: GameSortOrder.Favorites,
-  };
-  let currentSort = Object.keys(sortOptions).indexOf(
-    options.sort ?? GameSortOrder.NameAsc,
-  );
+  const settings = await UserSettings.forLoggedInUser();
+  const sort = await settings.getGameSort();
+  console.log("sort", sort);
+  let currentSort = Object.keys(SORT_LABEL).indexOf(sort);
+  if (currentSort === -1) {
+    currentSort = 0;
+  }
+
   let includeUnplayed = options.includeUnplayed ?? true;
   let index = 0;
 
   async function buildItems(): Promise<ui.TextMenuItem<Games | string>[]> {
-    const { total, games } = await Games.list(
-      {
-        sort: Object.values(sortOptions)[currentSort],
-        system: options.system,
-        includeUnplayed,
-      },
-      {
-        limit: PAGE_SIZE,
-      },
-    );
+    const { total, games } = await Games.list({
+      system: options.system,
+      includeUnplayed,
+      sort: Object.keys(SORT_LABEL)[currentSort] as GameSortOrder,
+      limit: PAGE_SIZE,
+    });
 
     const gameSet: Map<String, Games[]> = games.reduce((acc, game) => {
       if (!acc.has(game.name)) {
@@ -99,13 +120,14 @@ export async function pickGame(
     selected = await ui.textMenu<string | Games>({
       title: options.title ?? "",
       back: "back",
-      sort_label: Object.keys(sortOptions)[currentSort],
+      sort_label: Object.keys(SORT_LABEL)[currentSort],
       sort: async () => {
-        currentSort = (currentSort + 1) % Object.keys(sortOptions).length;
+        currentSort = (currentSort + 1) % Object.keys(SORT_LABEL).length;
         index = 0;
+        await settings.setGameSort(Object.values(GameSortOrder)[currentSort]);
 
         return {
-          sort_label: Object.keys(sortOptions)[currentSort],
+          sort_label: Object.keys(SORT_LABEL)[currentSort],
           items: await buildItems(),
         };
       },
@@ -120,7 +142,7 @@ async function showGameDetailsMenu(
   name: string,
   gameArray: Games[],
 ): Promise<Games | null> {
-  let highlighted: number | undefined;
+  let highlighted: number | undefined = undefined;
 
   while (true) {
     const result = await showGameDetailsMenuInner(name, gameArray, highlighted);
@@ -254,14 +276,12 @@ async function showGameDetailsMenuInner(
     ],
   });
 
-  console.log(result);
-
   return result;
 }
 
 export async function gamesMenu() {
   while (true) {
-    const game = await pickGame({ title: "Game Library" });
+    const game = await pickGame({ title: "Game Library", allowFile: true });
     if (game) {
       await game.launch();
     } else {

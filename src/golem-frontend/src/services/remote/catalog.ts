@@ -12,58 +12,21 @@ import type {
 import type { Core as CoreSchema } from "$schemas:catalog/core";
 import { RemoteGamesDb } from "$/services/remote/games_database";
 import { fetchJsonAndValidate, ValidationError } from "$/utils";
+import { RemoteBinary, RemoteReleases } from "$/services/remote/release";
+import { compareVersions } from "$/utils/versions";
 
 export enum WellKnownCatalogs {
+  // The basic stable 1FPGA catalog.
   OneFpga = "https://catalog.1fpga.cloud/",
-  // The BETA is not available yet.
+
+  // The BETA 1FPGA catalog (not yet available).
   OneFpgaBeta = "https://catalog.1fpga.cloud/beta.json",
+
+  // Only exists in development mode.
   LocalTest = "http://catalog.local:8081/catalog.json",
 }
 
 const CATALOG_CACHE: { [url: string]: RemoteCatalog } = {};
-
-/**
- * Compare two versions in the catalog JSONs.
- * @param a The first version.
- * @param b The second version.
- * @returns -1 if a < b, 0 if a == b, 1 if a > b.
- */
-export function compareVersions(
-  a: string | number | null,
-  b: string | number | null,
-): number {
-  if (a === null) {
-    return b === null ? 0 : 1;
-  } else if (b === null) {
-    return -1;
-  } else if (typeof a === "number") {
-    if (typeof b === "number") {
-      return a - b;
-    } else {
-      a = a.toString();
-    }
-  } else {
-    b = b.toString();
-  }
-
-  const aParts = a.split(".");
-  const bParts = b.split(".");
-
-  for (let i = 0; i < aParts.length || i < bParts.length; i++) {
-    const aPart = aParts[i];
-    const bPart = bParts[i];
-    if (aPart === undefined) {
-      return bPart === undefined ? 0 : -1;
-    }
-
-    const maybeResult = aPart.localeCompare(bPart);
-    if (maybeResult !== 0) {
-      return maybeResult;
-    }
-  }
-
-  return 0;
-}
 
 /**
  * A remote system array. This is a `systems.json` that is fetched from the internet,
@@ -76,7 +39,11 @@ export class RemoteSystems {
    */
   private systems_: { [k: string]: RemoteSystem } = Object.create(null);
 
-  public static async fetch(url: string, catalog: RemoteCatalog, deep = false) {
+  public static async fetch(
+    url: string,
+    catalog: RemoteCatalog,
+    _deep = false,
+  ) {
     const systemsUrl = new URL(url, catalog.url).toString();
     const systems = await fetchJsonAndValidate(
       systemsUrl,
@@ -115,7 +82,11 @@ export class RemoteCores {
    */
   private cores_: { [k: string]: RemoteCore } = Object.create(null);
 
-  public static async fetch(url: string, catalog: RemoteCatalog, deep = false) {
+  public static async fetch(
+    url: string,
+    catalog: RemoteCatalog,
+    _deep = false,
+  ) {
     const coresUrl = new URL(url, catalog.url).toString();
     const cores = await fetchJsonAndValidate(
       coresUrl,
@@ -130,7 +101,7 @@ export class RemoteCores {
     public readonly catalog: RemoteCatalog,
   ) {}
 
-  public async fetchCore(key: string, deep = false) {
+  public async fetchCore(key: string, _deep = false) {
     if (!this.cores_[key]) {
       this.cores_[key] = await RemoteCore.fetch(
         key,
@@ -235,7 +206,7 @@ export class RemoteSystem {
     key: string,
     url: string,
     systems: RemoteSystems,
-    deep = false,
+    _deep = false,
   ): Promise<RemoteSystem> {
     const u = new URL(url, systems.url).toString();
 
@@ -301,6 +272,13 @@ export class RemoteSystem {
 export class RemoteCatalog {
   private systems_: RemoteSystems | undefined;
   private cores_: RemoteCores | undefined;
+  private releases_: RemoteReleases | undefined;
+
+  public static async clearCache() {
+    for (const key of Object.keys(CATALOG_CACHE)) {
+      delete CATALOG_CACHE[key];
+    }
+  }
 
   public static async fetchWellKnown(
     wellKnown: WellKnownCatalogs,
@@ -436,8 +414,27 @@ export class RemoteCatalog {
     );
   }
 
+  public async fetchReleases(
+    predicate: (name: string) => boolean = () => true,
+  ): Promise<{
+    [name: string]: RemoteBinary;
+  }> {
+    if (this.schema.releases === undefined) {
+      return {};
+    }
+    if (this.releases_ === undefined) {
+      this.releases_ = await RemoteReleases.fetch(
+        this.schema.releases.url,
+        this,
+      );
+    }
+
+    return this.releases_.asObject(predicate);
+  }
+
   public async fetchDeep() {
     await Promise.all([
+      this.fetchReleases(() => true),
       this.fetchSystems(() => true, true),
       this.fetchCores(() => true, true),
     ]);

@@ -76,8 +76,8 @@ export class GamesIdentification {
 
     await partitionAndProgress(
       files,
-      100,
-      "Adding games",
+      10,
+      "Adding ROMs to the database...",
       (current, total) => `Adding games: ${current}/${total}`,
       async (partition) => {
         const shas = await fs.sha256(partition);
@@ -190,11 +190,7 @@ export class GamesIdentification {
           ]);
 
           if (sources.length > 0) {
-            await Promise.all([
-              ...sources.map((source) =>
-                sql1.db.execute(sourceGamesIdStatement, source),
-              ),
-            ]);
+            await sql1.db.executeMany(sourceGamesIdStatement, sources);
           }
         }
       },

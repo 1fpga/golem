@@ -1,6 +1,6 @@
-import { sql } from "$/utils";
+import { compareVersions, sql } from "$/utils";
 import { Row } from "@:golem/db";
-import { compareVersions, RemoteCatalog, WellKnownCatalogs } from "../remote";
+import { RemoteCatalog, WellKnownCatalogs } from "../remote";
 import { System } from "./system";
 import { Core } from "$/services/database/core";
 
@@ -66,7 +66,9 @@ export class Catalog {
    * Check for updates in catalogs that do not have update pendings, updating
    * the `update_pending` field in the database for those who have new updates.
    */
-  public static async checkForUpdates(): Promise<void> {
+  public static async checkForUpdates(): Promise<boolean> {
+    await RemoteCatalog.clearCache();
+
     const catalogs = await Catalog.listCatalogs({ updatePending: false });
     const shouldUpdate: Catalog[] = (
       await Promise.all(
@@ -82,6 +84,7 @@ export class Catalog {
                     "id",
                     shouldUpdate.map((c) => c.id),
                   )}`;
+    return shouldUpdate.length > 0;
   }
 
   public static async listCatalogs(
@@ -179,20 +182,7 @@ export class Catalog {
   private async checkForUpdates(): Promise<RemoteCatalog | null> {
     const remote = await RemoteCatalog.fetch(this.url);
     const shouldUpdate = compareVersions(remote.version, this.version) > 0;
-    console.debug(
-      "Checking for updates...",
-      this.name,
-      JSON.stringify({
-        current: this.version,
-        remote: remote.version,
-        shouldUpdate,
-      }),
-    );
-    if (shouldUpdate) {
-      return remote;
-    } else {
-      return null;
-    }
+    return shouldUpdate ? remote : null;
   }
 
   /**
@@ -232,5 +222,12 @@ export class Catalog {
     const systems = await remote.fetchSystems(() => true);
 
     return true;
+  }
+
+  /**
+   * Fetch the remote catalog for this catalog.
+   */
+  public async fetchRemote(): Promise<RemoteCatalog> {
+    return await RemoteCatalog.fetch(this.url);
   }
 }

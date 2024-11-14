@@ -8,7 +8,8 @@ interface UserRow {
 }
 
 export async function login(): Promise<User | null> {
-  let rows = await sql<UserRow>`SELECT * FROM users`;
+  const rows = await sql<UserRow>`SELECT *
+                                    FROM users`;
 
   // Check if there's no user in the database. If so, return null.
   if (rows.length === 0) {

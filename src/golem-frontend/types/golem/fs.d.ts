@@ -25,7 +25,16 @@ declare module "@:golem/fs" {
     options?: { extensions?: string[] },
   ): Promise<string[]>;
 
+  /**
+   * Get the SHA-256 hash of a file.
+   * @param path The path to the file.
+   */
   export function sha256(path: string): Promise<string>;
+
+  /**
+   * Get the SHA-256 hash of multiple files.
+   * @param path The paths to the files.
+   */
   export function sha256(path: string[]): Promise<string[]>;
 
   export function fileSize(path: string): Promise<number>;

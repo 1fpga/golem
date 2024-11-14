@@ -63,15 +63,20 @@
                   "description": "Size of the file",
                   "type": "integer"
                 },
-                "sha1": {
-                  "description": "SHA1 of the file",
+                "sha256": {
+                  "description": "SHA256 of the file",
                   "type": "string",
-                  "minLength": 40,
-                  "maxLength": 40,
+                  "minLength": 64,
+                  "maxLength": 64,
                   "pattern": "^[0-9a-fA-Z]+$"
                 }
               },
-              "required": ["url", "type", "size", "sha1"]
+              "required": [
+                "url",
+                "type",
+                "size",
+                "sha256"
+              ]
             }
           },
           "tags": {
@@ -86,7 +91,10 @@
             "$ref": "defs.json#/definitions/version"
           }
         },
-        "required": ["files", "version"]
+        "required": [
+          "files",
+          "version"
+        ]
       }
     },
     "systems": {
@@ -106,5 +114,10 @@
       ]
     }
   },
-  "required": ["name", "uniqueName", "systems", "releases"]
+  "required": [
+    "name",
+    "uniqueName",
+    "systems",
+    "releases"
+  ]
 }

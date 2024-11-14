@@ -1,14 +1,23 @@
-import environment from "consts:environment";
+import production from "consts:production";
 import * as golemDb from "@:golem/db";
 import { SqlTag, type SqlTagDriver } from "@sqltags/core";
+import { MigrationDetails } from "@:migrations";
 
 async function applyMigrations(db: golemDb.Db, _name: string, latest: string) {
-  const migrations = await import("@:migrations");
-  const allMigrations = Object.getOwnPropertyNames(migrations.up)
-    .filter((m) => m.localeCompare(latest) > 0)
-    .sort();
+  const migrations = (await import("@:migrations")).migrations;
+  const allMigrations: [string, MigrationDetails][] =
+    Object.getOwnPropertyNames(migrations)
+      .filter((m) => m.localeCompare(latest) > 0)
+      .sort()
+      .map(
+        (m) =>
+          migrations[m].up &&
+          ([m, migrations[m].up] as [string, MigrationDetails]),
+      )
+      .filter((m) => m !== undefined);
 
   if (allMigrations.length === 0) {
+    console.debug(`Latest migration: ${latest}, no migrations to apply.`);
     return;
   }
 
@@ -16,16 +25,31 @@ async function applyMigrations(db: golemDb.Db, _name: string, latest: string) {
     `Latest migration: ${latest}, applying ${allMigrations.length} migrations...`,
   );
 
-  for (const migration of allMigrations) {
-    let sqlUp = migrations.up[migration];
-    await db.executeRaw(sqlUp);
-    await sql`INSERT INTO __1fpga_settings ${sql.insertValues({
+  const sql1 = await transaction();
+  for (const [name, up] of allMigrations) {
+    console.debug(`Applying ${name}...`);
+    const { sql, apply } = up;
+
+    // Start a transaction so everything is in a single transaction.
+    try {
+      await sql1.db.executeRaw(sql);
+      if (apply) {
+        await apply(sql1);
+      }
+    } catch (e) {
+      await sql1.rollback();
+      console.error(`Error applying migration ${name}: ${e}`);
+      throw e;
+    }
+
+    await sql1`INSERT INTO __1fpga_settings ${sql1.insertValues({
       key: "latest_migration",
-      value: migration,
+      value: name,
     })}
-                  ON CONFLICT (key)
+                   ON CONFLICT (key)
         DO UPDATE SET value = excluded.value`;
   }
+  await sql1.commit();
 
   console.log(
     "Migrations applied. Latest migration: ",
@@ -97,7 +121,7 @@ const driver: SqlTagDriver<undefined, never> = {
     return "?";
   },
   async query(sql: string, params: any[]): Promise<[any[], undefined]> {
-    if (environment === "development") {
+    if (!production) {
       console.log(sql, "|", JSON.stringify(params));
     }
 
@@ -123,7 +147,7 @@ export async function transaction(): Promise<SqlTransactionTag> {
   const tag = new SqlTag({
     ...driver,
     async query(sql: string, params: any[]): Promise<[any[], undefined]> {
-      if (environment === "development") {
+      if (!production) {
         console.log("tx", sql, "|", JSON.stringify(params));
       }
       let { rows } = await db.query(sql, params);

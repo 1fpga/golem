@@ -13,7 +13,7 @@ use embedded_graphics::Drawable;
 use sdl3::event::Event;
 use sdl3::gamepad::Gamepad;
 use std::collections::HashMap;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace, warn};
 
 pub mod menu;
 
@@ -164,6 +164,8 @@ impl GoLEmApp {
 
             let mut check_shortcuts = false;
             for event in events.iter() {
+                trace!(?event, "Event received");
+
                 match event {
                     Event::Quit { .. } => {
                         info!("Quit event received. Quitting...");

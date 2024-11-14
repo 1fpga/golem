@@ -22,10 +22,19 @@ export async function about() {
     }
   }
 
+  const oneFpga = ONE_FPGA.version;
+  const version = `${oneFpga.major}.${oneFpga.minor}.${oneFpga.patch}`;
+
   await ui.textMenu({
     title: "About",
     back: true,
     items: [
+      {
+        label: "1FPGA Version",
+        marker: version,
+        select: () => {},
+      },
+      "-",
       {
         label: "< Join the GoLEm FPGA Patreon >",
         marker: "...",

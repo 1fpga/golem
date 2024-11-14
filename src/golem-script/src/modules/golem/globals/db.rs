@@ -97,12 +97,12 @@ impl From<SqlValue> for Value {
 
 fn build_query_<'a>(
     connection: &'a Connection,
-    query: String,
+    query: &String,
     bindings: Option<Vec<SqlValue>>,
     _ctx: &mut Context,
 ) -> JsResult<Statement<'a>> {
     let mut q = connection
-        .prepare(&query)
+        .prepare(query)
         .map_err(|e| js_error!("SQL Error: {}", e))?;
 
     if let Some(bindings) = bindings {
@@ -227,7 +227,7 @@ impl JsDbInner {
     pub fn query(
         &self,
         tx: Option<u32>,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsPromise {
@@ -250,7 +250,7 @@ impl JsDbInner {
     pub fn query_one(
         &self,
         tx: Option<u32>,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -264,7 +264,7 @@ impl JsDbInner {
     pub fn execute(
         &self,
         tx: Option<u32>,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsResult<usize> {
@@ -283,6 +283,38 @@ impl JsDbInner {
             .execute_batch(&query)
             .map_err(|e| js_error!("SQL Error: {}", e));
         result
+    }
+
+    pub fn execute_many(
+        &self,
+        tx: Option<u32>,
+        query: &String,
+        bindings: Vec<Vec<SqlValue>>,
+        _context: &mut Context,
+    ) -> JsResult<usize> {
+        let connection = self.connection(tx)?;
+        let mut statement = connection
+            .prepare(query)
+            .map_err(|e| js_error!("SQL Error: {}", e))?;
+        let mut total = 0;
+
+        for binding in bindings {
+            for (i, b) in binding
+                .into_iter()
+                .map(|v| -> Value { v.into() })
+                .enumerate()
+            {
+                statement
+                    .raw_bind_parameter(i + 1, b)
+                    .map_err(|e| js_error!("SQL Error: {}", e))?;
+            }
+
+            total += statement
+                .raw_execute()
+                .map_err(|e| js_error!("SQL Error: {}", e))?;
+        }
+
+        Ok(total)
     }
 }
 
@@ -307,7 +339,7 @@ impl JsDb {
 
     pub fn query(
         &self,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsPromise {
@@ -316,7 +348,7 @@ impl JsDb {
 
     pub fn query_one(
         &self,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -327,7 +359,7 @@ impl JsDb {
 
     pub fn execute(
         &self,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsResult<usize> {
@@ -336,6 +368,17 @@ impl JsDb {
 
     pub fn execute_raw(&self, query: String) -> JsResult<()> {
         self.inner.borrow().execute_raw(None, query)
+    }
+
+    pub fn execute_many(
+        &self,
+        query: &String,
+        bindings: Vec<Vec<SqlValue>>,
+        context: &mut Context,
+    ) -> JsResult<usize> {
+        self.inner
+            .borrow()
+            .execute_many(None, query, bindings, context)
     }
 
     pub fn begin_transaction(&self, context: &mut Context) -> JsPromise {
@@ -369,19 +412,23 @@ js_class! {
         }
 
         fn query(this: JsClass<JsDb>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsPromise {
-            this.borrow().query(query, bindings, context)
+            this.borrow().query(&query, bindings, context)
         }
 
         fn query_one as "queryOne"(this: JsClass<JsDb>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsResult<JsValue> {
-            this.borrow().query_one(query, bindings, context)
+            this.borrow().query_one(&query, bindings, context)
         }
 
         fn execute(this: JsClass<JsDb>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsResult<usize> {
-            this.borrow().execute(query, bindings, context)
+            this.borrow().execute(&query, bindings, context)
         }
 
         fn execute_raw as "executeRaw"(this: JsClass<JsDb>, query: String) -> JsResult<()> {
             this.borrow().execute_raw(query)
+        }
+
+        fn execute_many as "executeMany"(this: JsClass<JsDb>, query: String, bindings: Vec<Vec<SqlValue>>, context: &mut Context) -> JsResult<usize> {
+            this.borrow().execute_many(&query, bindings, context)
         }
     }
 }
@@ -397,7 +444,7 @@ pub struct JsDbTransaction {
 impl JsDbTransaction {
     pub fn query(
         &self,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsPromise {
@@ -408,7 +455,7 @@ impl JsDbTransaction {
 
     pub fn query_one(
         &self,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -419,13 +466,24 @@ impl JsDbTransaction {
 
     pub fn execute(
         &self,
-        query: String,
+        query: &String,
         bindings: Option<Vec<SqlValue>>,
         context: &mut Context,
     ) -> JsResult<usize> {
         self.inner
             .borrow()
             .execute(Some(self.tx_id), query, bindings, context)
+    }
+
+    pub fn execute_many(
+        &self,
+        query: &String,
+        bindings: Vec<Vec<SqlValue>>,
+        context: &mut Context,
+    ) -> JsResult<usize> {
+        self.inner
+            .borrow()
+            .execute_many(Some(self.tx_id), query, bindings, context)
     }
 
     pub fn execute_raw(&self, query: String) -> JsResult<()> {
@@ -478,18 +536,22 @@ js_class! {
         }
 
         fn query(this: JsClass<JsDbTransaction>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsPromise {
-            this.borrow().query(query, bindings, context)
+            this.borrow().query(&query, bindings, context)
         }
 
         fn query_one as "queryOne"(this: JsClass<JsDbTransaction>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsResult<JsValue> {
-            this.borrow().query_one(query, bindings, context)
+            this.borrow().query_one(&query, bindings, context)
         }
 
         fn execute(this: JsClass<JsDbTransaction>, query: String, bindings: Option<Vec<SqlValue>>, context: &mut Context) -> JsResult<usize> {
-            this.borrow().execute(query, bindings, context)
+            this.borrow().execute(&query, bindings, context)
         }
 
-        fn execute_raw(this: JsClass<JsDbTransaction>, query: String) -> JsResult<()> {
+        fn execute_many as "executeMany"(this: JsClass<JsDbTransaction>, query: String, bindings: Vec<Vec<SqlValue>>, context: &mut Context) -> JsResult<usize> {
+            this.borrow().execute_many(&query, bindings, context)
+        }
+
+        fn execute_raw as "executeRaw"(this: JsClass<JsDbTransaction>, query: String) -> JsResult<()> {
             this.borrow().execute_raw(query)
         }
 

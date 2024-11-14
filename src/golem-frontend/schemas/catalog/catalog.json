@@ -49,6 +49,26 @@
         "version"
       ]
     },
+    "releases": {
+      "description": "List of releases in the catalog, their URL and latest version.",
+      "$id": "releases",
+      "type": "object",
+      "properties": {
+        "url": {
+          "description": "URL of the release metadata",
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "version": {
+          "description": "Version of the release metadata",
+          "$ref": "defs.json#/definitions/version"
+        }
+      },
+      "required": [
+        "url",
+        "version"
+      ]
+    },
     "lastUpdated": {
       "description": "Date of the last update",
       "type": "string",

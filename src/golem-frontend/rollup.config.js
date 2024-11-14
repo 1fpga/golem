@@ -1,3 +1,4 @@
+import * as child_process from "node:child_process";
 import typescript from "@rollup/plugin-typescript";
 import terser from "@rollup/plugin-terser";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
@@ -16,6 +17,12 @@ import constants from "./rollup/rollup-plugin-consts.js";
 const production =
   !("NODE_ENV" in process.env) || process.env.NODE_ENV === "production";
 
+const gitRev = child_process
+  .execSync("git describe --all --always --dirty")
+  .toString()
+  .trim()
+  .replace(/^.*\//, "");
+
 export default {
   input: "src/main.ts",
   output: {
@@ -30,7 +37,9 @@ export default {
       preferBuiltins: false,
     }),
     constants({
-      environment: production ? "production" : "development",
+      environment: process.env.NODE_ENV,
+      production,
+      revision: gitRev,
     }),
     typescript({
       exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],
@@ -92,6 +101,7 @@ export default {
     "@:golem/settings",
     "@:golem/storage",
     "@:golem/ui",
+    "@:golem/upgrade",
     "@:golem/utils",
   ],
   onLog(level, log, handler) {

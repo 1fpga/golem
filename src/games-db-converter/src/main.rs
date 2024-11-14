@@ -208,9 +208,6 @@ struct File {
     #[serde(alias = "@size")]
     pub size: u32,
 
-    #[serde(alias = "@sha1")]
-    pub sha1: String,
-
     #[serde(alias = "@sha256")]
     pub sha256: String,
 
@@ -256,7 +253,7 @@ fn convert_htgb<R: BufRead>(reader: R) -> Datafile {
     for result in csv.records() {
         let record = result.expect("Could not read CSV record");
 
-        let (sha256, path, sha1, _md5, _crc32, size) = match record.len() {
+        let (sha256, path, _sha1, _md5, _crc32, size) = match record.len() {
             6 => (
                 record.get(0).unwrap().to_string(),
                 record.get(1).unwrap().to_string(),
@@ -292,7 +289,6 @@ fn convert_htgb<R: BufRead>(reader: R) -> Datafile {
                 id: 0,
                 extension: ext,
                 size,
-                sha1,
                 sha256,
                 header: None,
             }],

@@ -112,10 +112,6 @@
           "description": "MD5 checksum of the file",
           "type": "string"
         },
-        "sha1": {
-          "description": "SHA-1 checksum of the file",
-          "type": "string"
-        },
         "sha256": {
           "description": "SHA-256 checksum of the file",
           "type": "string"

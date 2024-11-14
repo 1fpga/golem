@@ -2,7 +2,6 @@ import * as golemCore from "@:golem/core";
 import * as fs from "@:golem/fs";
 import { sql } from "$/utils";
 import { oneLine } from "common-tags";
-import { SqlExpression } from "@sqltags/core";
 import { User } from "../user";
 import { PickGameOptions } from "$/ui/games";
 import { Core } from "$/services/database/core";
@@ -26,22 +25,29 @@ export enum GameSortOrder {
   Favorites = "user_games.favorite DESC, user_games.last_played_at DESC",
 }
 
-export interface GamesListFilter {
+export interface GamesListOptions {
+  /**
+   * The sort order.
+   */
   sort?: GameSortOrder;
+
+  limit?: number;
+
+  index?: number;
+
+  /**
+   * Merge games with the same game identification.
+   */
+  mergeByGameId?: boolean;
   includeUnplayed?: boolean;
   includeUnfavorites?: boolean;
   system?: string;
 }
 
-export interface GamesListOptions {
-  limit?: number;
-  index?: number;
-}
-
 const GAMES_FIELDS = oneLine`
   games.id AS id,
   games.path AS rom_path,
-  cores.rbf_path AS rbf_path,
+  IFNULL(cores_2.rbf_path, cores.rbf_path) AS rbf_path,
   IFNULL(games_identification.name, games.name) AS name,
   systems.unique_name AS system_name,
   user_games.favorite,
@@ -53,26 +59,37 @@ const GAMES_FROM_JOIN = oneLine`
   games
     LEFT JOIN games_identification ON games.games_id = games_identification.id
     LEFT JOIN systems AS systems_2 ON games_identification.system_id = systems_2.id
-    LEFT JOIN cores ON games.core_id = cores.id
-    LEFT JOIN cores_systems ON cores.id = cores_systems.core_id OR games.core_id = cores_systems.core_id OR systems_2.id = cores_systems.system_id
+    LEFT JOIN cores AS cores_2 ON games.core_id = cores_2.id
+    LEFT JOIN cores_systems ON cores_2.id = cores_systems.core_id OR games.core_id = cores_systems.core_id OR systems_2.id = cores_systems.system_id
+    LEFT JOIN cores ON games.core_id = cores.id OR cores_systems.core_id = cores.id
     LEFT JOIN systems ON games_identification.system_id = systems.id OR cores_systems.system_id = systems.id
     LEFT JOIN user_games ON user_games.games_id = games.id
 `;
 
-function where(filter: GamesListFilter): SqlExpression {
-  return sql.and(
-    true,
-    filter.system
-      ? sql`systems.unique_name =
-                ${filter.system}`
-      : undefined,
-    (filter.includeUnplayed ?? true)
-      ? undefined
-      : sql`user_games.last_played_at IS NOT NULL`,
-    (filter.includeUnfavorites ?? true)
-      ? undefined
-      : sql`user_games.favorite = true`,
-  );
+const GROUP_BY_GAME_ID = oneLine`
+    GROUP BY IFNULL(games_identification.id, cores.rbf_path)
+`;
+
+function buildSqlQuery(options: GamesListOptions) {
+  return sql`
+        SELECT ${sql.raw(GAMES_FIELDS)}
+        FROM ${sql.raw(GAMES_FROM_JOIN)}
+        WHERE ${sql.and(
+          true,
+          options.system
+            ? sql`systems.unique_name =
+                        ${options.system}`
+            : undefined,
+          (options.includeUnplayed ?? true)
+            ? undefined
+            : sql`user_games.last_played_at IS NOT NULL`,
+          (options.includeUnfavorites ?? true)
+            ? undefined
+            : sql`user_games.favorite = true`,
+        )}
+        ORDER BY ${sql.raw(options.sort ?? GameSortOrder.NameAsc)}
+        LIMIT ${options.limit ?? 100} OFFSET ${options.index ?? 0}
+    `;
 }
 
 interface SaveStateRow {
@@ -126,11 +143,10 @@ export class Games {
     return await (await import("$/ui/games")).pickGame(options);
   }
 
-  public static async count(filter: GamesListFilter): Promise<number> {
+  public static async count(options: GamesListOptions): Promise<number> {
     const [{ count }] = await sql<{ count: number }>`
             SELECT COUNT(*) as count
-            FROM ${sql.raw(GAMES_FROM_JOIN)}
-            WHERE ${where(filter)}
+            FROM (${buildSqlQuery(options)})
         `;
     return count;
   }
@@ -165,17 +181,10 @@ export class Games {
   }
 
   public static async list(
-    filter: GamesListFilter,
     options: GamesListOptions = {},
   ): Promise<{ total: number; games: Games[] }> {
-    const games = await sql<GamesCoreRow>`
-            SELECT ${sql.raw(GAMES_FIELDS)}
-            FROM ${sql.raw(GAMES_FROM_JOIN)}
-            WHERE ${where(filter)}
-            ORDER BY ${sql.raw(filter.sort ?? GameSortOrder.NameAsc)}
-            LIMIT ${options.limit ?? 100} OFFSET ${options.index ?? 0}
-        `;
-    const total = await Games.count(filter);
+    const games = await sql<GamesCoreRow>`${buildSqlQuery(options)}`;
+    const total = await Games.count(options);
 
     return { total, games: games.map(Games.fromGamesCoreRow) };
   }
@@ -226,7 +235,7 @@ export class Games {
   }
 
   async launch() {
-    console.log("Launching game: ", this.row_.name);
+    console.log("Launching game: ", JSON.stringify(this.row_));
 
     // Insert last played time at.
     await sql`INSERT INTO user_games
@@ -243,7 +252,7 @@ export class Games {
       Core.setRunning(await Core.getById(this.row_.cores_id));
       const core = golemCore.load({
         core: { type: "Path", path: this.row_.rbf_path },
-        ...(this.row_.rom_path !== null
+        ...(this.row_.rom_path
           ? { game: { type: "RomPath", path: this.row_.rom_path } }
           : {}),
       });

@@ -6,6 +6,8 @@ build = "build.rs"
 
 [dependencies]
 image.workspace = true
+sdl3.workspace = true
+strum.workspace = true
 
 anyhow = "1.0.75"
 chrono = "0.4.26"
@@ -45,13 +47,10 @@ one-fpga = { workspace = true }
 parking_lot = "0.12.1"
 qrcode = { version = "0.14.0", features = ["image"] }
 regex = "1.9.3"
-sdl3 = { version = "0.5.0", features = ["bundled"] }
 serde = { version = "1.0.164", features = ["derive"] }
 serde-hex = "0.1.0"
 serde_with = { version = "3.0.0", features = ["hex"] }
-sha1 = "0.10.6"
 sha2 = "0.10.8"
-strum = { version = "0.25.0", features = ["derive"] }
 tempdir = "0.3.7"
 thiserror = "1.0.40"
 tinybmp = "0.5.0"

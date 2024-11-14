@@ -1,15 +1,11 @@
 use crate::macguiver::platform::sdl::output::OutputImage;
 use crate::macguiver::platform::sdl::SdlPlatform;
-use embedded_graphics::{
-    pixelcolor::Rgb888,
-    prelude::{PixelColor, Size},
-};
+use embedded_graphics::pixelcolor::Rgb888;
+use embedded_graphics::prelude::{PixelColor, Size};
+use sdl3::pixels::PixelFormatEnum;
 use sdl3::rect::Point;
-use sdl3::{
-    pixels::PixelFormatEnum,
-    render::{Canvas, Texture, TextureCreator},
-    video::WindowContext,
-};
+use sdl3::render::{Canvas, Texture, TextureCreator};
+use sdl3::video::WindowContext;
 
 pub struct SdlWindow {
     canvas: Canvas<sdl3::video::Window>,

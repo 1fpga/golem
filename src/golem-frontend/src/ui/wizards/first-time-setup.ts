@@ -1,7 +1,8 @@
-import environment from "consts:environment";
+import production from "consts:production";
 import * as ui from "@:golem/ui";
 import * as net from "@:golem/net";
 import {
+    Binary,
     Catalog,
     Core,
     DEFAULT_USERNAME,
@@ -252,7 +253,7 @@ const catalogAddStep = repeat(
                   await addWellKnownCatalog(WellKnownCatalogs.OneFpga),
               ),
             ],
-            ...(environment === "development"
+            ...(!production
               ? [
                   [
                     "Add a local test catalog",
@@ -290,7 +291,7 @@ const catalogSetup = sequence(
       const { cores, systems } = await selectCoresFromRemoteCatalog(remote, {
         installAll: true,
       });
-      if (cores.length === 0 || systems.length === 0) {
+      if (cores.length === 0 && systems.length === 0) {
         await ui.alert(
           "Warning",
           stripIndents`
@@ -299,6 +300,15 @@ const catalogSetup = sequence(
             `,
         );
         return;
+      }
+
+      // Update the binaries table to make sure we check for updates.
+      const releases = await remote.fetchReleases();
+      for (const name of Object.getOwnPropertyNames(releases)) {
+        const binary = releases[name];
+        if (binary) {
+          await Binary.create(binary, catalog);
+        }
       }
 
       for (const system of (await catalog.listSystems()).filter((s) =>

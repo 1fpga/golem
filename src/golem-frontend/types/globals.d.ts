@@ -37,6 +37,7 @@ declare global {
     version: {
       major: number;
       minor: number;
+      patch: number;
     };
   }
 

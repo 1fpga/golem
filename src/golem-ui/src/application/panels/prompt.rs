@@ -133,52 +133,28 @@ pub fn prompt(
 
         for ev in state.events() {
             match ev {
-                Event::KeyDown {
-                    keycode: Some(Keycode::Backspace),
-                    ..
-                }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::KpBackspace),
-                    ..
-                } => {
-                    result.pop();
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Return),
-                    ..
-                }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::KpEnter),
-                    ..
-                }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Return2),
-                    ..
-                } => {
-                    return Some(Some(result.clone()));
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    return Some(None);
-                }
+                Event::KeyDown { keycode, .. } => match keycode {
+                    Some(Keycode::Backspace) | Some(Keycode::KpBackspace) => {
+                        result.pop();
+                    }
+                    Some(Keycode::Return) | Some(Keycode::KpEnter) | Some(Keycode::Return2) => {
+                        return Some(Some(result.clone()));
+                    }
+                    Some(Keycode::Escape) => {
+                        return Some(None);
+                    }
+                    _ => {}
+                },
                 Event::TextInput { text, .. } => {
                     if result.len() < max_length as usize {
                         result.push_str(&text);
                     }
                 }
-                Event::ControllerButtonDown {
-                    button: Button::A, ..
-                } => {
-                    return Some(Some(result.clone()));
-                }
-                Event::ControllerButtonDown {
-                    button: Button::B, ..
-                } => {
-                    return Some(None);
-                }
-                Event::ControllerButtonUp { .. } => {}
+                Event::ControllerButtonDown { button, .. } => match button {
+                    Button::A => return Some(Some(result.clone())),
+                    Button::B => return Some(None),
+                    _ => {}
+                },
                 _ => {}
             }
         }

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use static_assertions::const_assert;
-use strum::{Display, EnumCount, EnumIter, EnumString, IntoEnumIterator};
+use strum::{Display, EnumCount, EnumIter, EnumString, FromRepr, IntoEnumIterator};
 
 /// Gamepad buttons.
 #[derive(
@@ -16,6 +16,7 @@ use strum::{Display, EnumCount, EnumIter, EnumString, IntoEnumIterator};
     EnumString,
     Display,
     EnumCount,
+    FromRepr,
 )]
 #[repr(u8)]
 pub enum Button {
@@ -82,29 +83,7 @@ impl From<sdl3::gamepad::Button> for Button {
 
 impl From<Button> for sdl3::gamepad::Button {
     fn from(button: Button) -> Self {
-        match button {
-            Button::A => sdl3::gamepad::Button::A,
-            Button::B => sdl3::gamepad::Button::B,
-            Button::X => sdl3::gamepad::Button::X,
-            Button::Y => sdl3::gamepad::Button::Y,
-            Button::Back => sdl3::gamepad::Button::Back,
-            Button::Guide => sdl3::gamepad::Button::Guide,
-            Button::Start => sdl3::gamepad::Button::Start,
-            Button::LeftStick => sdl3::gamepad::Button::LeftStick,
-            Button::RightStick => sdl3::gamepad::Button::RightStick,
-            Button::LeftShoulder => sdl3::gamepad::Button::LeftShoulder,
-            Button::RightShoulder => sdl3::gamepad::Button::RightShoulder,
-            Button::DPadUp => sdl3::gamepad::Button::DPadUp,
-            Button::DPadDown => sdl3::gamepad::Button::DPadDown,
-            Button::DPadLeft => sdl3::gamepad::Button::DPadLeft,
-            Button::DPadRight => sdl3::gamepad::Button::DPadRight,
-            Button::Misc1 => sdl3::gamepad::Button::Misc1,
-            Button::Paddle1 => sdl3::gamepad::Button::Paddle1,
-            Button::Paddle2 => sdl3::gamepad::Button::Paddle2,
-            Button::Paddle3 => sdl3::gamepad::Button::Paddle3,
-            Button::Paddle4 => sdl3::gamepad::Button::Paddle4,
-            Button::Touchpad => sdl3::gamepad::Button::Touchpad,
-        }
+        button.as_sdl()
     }
 }
 
