@@ -274,6 +274,12 @@ export class RemoteCatalog {
   private cores_: RemoteCores | undefined;
   private releases_: RemoteReleases | undefined;
 
+  public static async clearCache() {
+    for (const key of Object.keys(CATALOG_CACHE)) {
+      delete CATALOG_CACHE[key];
+    }
+  }
+
   public static async fetchWellKnown(
     wellKnown: WellKnownCatalogs,
   ): Promise<RemoteCatalog> {

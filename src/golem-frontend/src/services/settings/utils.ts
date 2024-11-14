@@ -6,15 +6,15 @@ export async function getOrFail<T>(
   d?: T,
   validator?: (v: unknown) => v is T,
 ): Promise<T> {
-  let value = null;
+  let value;
 
   try {
-    value = await storage.get(key, validator);
+    value = await storage.get<T>(key, validator);
   } catch (_) {
     // If anything happens, treat it as a missing value.
   }
 
-  if (value === null) {
+  if (value === undefined) {
     if (d !== undefined) {
       return d;
     }

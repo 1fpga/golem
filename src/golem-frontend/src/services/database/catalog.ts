@@ -67,6 +67,8 @@ export class Catalog {
    * the `update_pending` field in the database for those who have new updates.
    */
   public static async checkForUpdates(): Promise<boolean> {
+    await RemoteCatalog.clearCache();
+
     const catalogs = await Catalog.listCatalogs({ updatePending: false });
     const shouldUpdate: Catalog[] = (
       await Promise.all(

@@ -2,6 +2,7 @@ import { DbStorage } from "../storage";
 import { User } from "../user";
 import type { StartOn as StartOnSchema } from "$schemas:settings/start-on";
 import { getOrFail } from "$/services/settings/utils";
+import { GameSortOrder } from "$/services/database/games";
 
 export type StartOnSetting = StartOnSchema;
 
@@ -18,6 +19,7 @@ export enum StartOnKind {
 
 const START_ON_KEY = "startOn";
 const DEV_TOOLS_KEY = "devTools";
+const GAME_SORT_KEY = "gameSort";
 
 export class UserSettings {
   public static async forLoggedInUser(): Promise<UserSettings> {
@@ -58,5 +60,13 @@ export class UserSettings {
 
   public async toggleDevTools(): Promise<void> {
     await this.setDevTools(!(await this.getDevTools()));
+  }
+
+  public async getGameSort(): Promise<GameSortOrder> {
+    return await getOrFail(this.storage_, GAME_SORT_KEY, GameSortOrder.NameAsc);
+  }
+
+  public async setGameSort(value: GameSortOrder): Promise<void> {
+    await this.storage_.set(GAME_SORT_KEY, value);
   }
 }

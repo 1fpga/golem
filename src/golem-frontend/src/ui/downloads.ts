@@ -2,11 +2,13 @@ import * as ui from "@:golem/ui";
 import {
   Binary,
   Catalog,
+  Core,
   KnownBinary,
   RemoteCatalog,
   User,
   WellKnownCatalogs,
 } from "$/services";
+import { selectCoresFromRemoteCatalog } from "$/ui/catalog/cores";
 
 const BINARY_LABELS: { [name: string]: string } = {
   [KnownBinary.OneFpga]: "Update 1FPGA firmware...",
@@ -23,7 +25,7 @@ async function addCustomUrl() {
   }
   const remote = await RemoteCatalog.fetch(url);
   const catalog = await Catalog.create(remote, 0);
-  await installCoresFromCatalog(catalog);
+  await installCoresFromCatalog(remote, catalog);
   return true;
 }
 
@@ -54,7 +56,7 @@ async function addNewCatalog() {
           WellKnownCatalogs.OneFpga,
         );
         const catalog = await Catalog.create(remote, 0);
-        await installCoresFromCatalog(catalog);
+        await installCoresFromCatalog(remote, catalog);
 
         return true;
       }
@@ -64,8 +66,35 @@ async function addNewCatalog() {
   }
 }
 
-export async function installCoresFromCatalog(catalog: Catalog) {
-  throw new Error("Not implemented");
+export async function installCoresFromCatalog(
+  remote: RemoteCatalog,
+  catalog: Catalog,
+) {
+  const { cores, systems } = await selectCoresFromRemoteCatalog(remote, {
+    installAll: true,
+  });
+
+  if (cores.length === 0 && systems.length === 0) {
+    await ui.alert("No cores or systems to install. Nothing to do.");
+    return;
+  }
+
+  const releases = await remote.fetchReleases();
+  for (const name of Object.getOwnPropertyNames(releases)) {
+    const binary = releases[name];
+    if (binary) {
+      await Binary.create(binary, catalog);
+    }
+  }
+
+  for (const system of (await catalog.listSystems()).filter((s) =>
+    systems.some((r) => r.uniqueName === s.uniqueName),
+  )) {
+    await system.install(catalog);
+  }
+  for (const core of cores) {
+    await Core.install(core, catalog);
+  }
 }
 
 async function performBinaryUpdate(b: Binary) {
@@ -135,10 +164,11 @@ export async function downloadCenterMenu() {
         {
           label: "Update All...",
           select: async () => {
-            if (await Catalog.updateAll()) {
-              refresh = true;
-              return false;
-            }
+            await ui.alert(`Not implemented yet!`);
+            // if (await Catalog.updateAll()) {
+            //   refresh = true;
+            //   return false;
+            // }
           },
         },
         ...(binaries.length > 0 ? ["-", ...binaries] : []),
@@ -148,10 +178,11 @@ export async function downloadCenterMenu() {
           label: `  ${c.name}`,
           marker: c.updatePending ? "!" : "",
           select: async () => {
-            if (await catalogDetails(c)) {
-              refresh = true;
-              return false;
-            }
+            await ui.alert(`Not implemented yet!`);
+            // if (await catalogDetails(c)) {
+            //   refresh = true;
+            //   return false;
+            // }
           },
         })),
         "-",

@@ -291,7 +291,7 @@ const catalogSetup = sequence(
       const { cores, systems } = await selectCoresFromRemoteCatalog(remote, {
         installAll: true,
       });
-      if (cores.length === 0 || systems.length === 0) {
+      if (cores.length === 0 && systems.length === 0) {
         await ui.alert(
           "Warning",
           stripIndents`

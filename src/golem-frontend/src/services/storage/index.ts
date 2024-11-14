@@ -18,7 +18,7 @@ export class DbStorage {
   async get<T>(
     key: string,
     validator?: (v: unknown) => v is T,
-  ): Promise<T | null> {
+  ): Promise<T | undefined> {
     let value: string | undefined;
     if (this.userId === undefined) {
       const rows = await sql<UserStorageRow>`SELECT value
@@ -36,8 +36,8 @@ export class DbStorage {
       value = rows[0]?.value;
     }
 
-    if (value === null || value === undefined) {
-      return null;
+    if (value === undefined) {
+      return undefined;
     }
     const json = JSON.parse(value);
     if (validator && !validator(json)) {
