@@ -85,8 +85,9 @@ pub(crate) enum UserIoCommands {
     UserIoSetGamma = 0x32,
 
     /// Get the info line from the core to show.
-    UserIoGetInfo = 0x36,
+    // UserIoGetInfo = 0x36,
 
+    // Set a custom aspect ratio.
     UserIoSetArCust = 0x3A,
 
     UserIoGetFbParams = 0x40,

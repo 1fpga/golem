@@ -1,5 +1,0 @@
-@startuml
-
-"GoLEm App" --|> "Core Manager"
-
-@enduml

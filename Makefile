@@ -3,29 +3,29 @@ CROSS := $(shell command -v cross 2> /dev/null)
 OPENSSL := $(shell command -v openssl 2> /dev/null)
 MISTER_IP := 192.168.1.79
 
-src/golem-frontend/dist/main.js: $(wildcard src/golem-frontend/schemas/**/* src/golem-frontend/migrations/**/* src/golem-frontend/src/**/* src/golem-frontend/types/**/* src/golem-frontend/*.json src/golem-frontend/*.js src/golem-frontend/rollup/*.js)
+src/frontend/dist/main.js: $(wildcard src/frontend/schemas/**/* src/frontend/migrations/**/* src/frontend/src/**/* src/frontend/types/**/* src/frontend/*.json src/frontend/*.js src/frontend/rollup/*.js)
 ifndef NPM
 	$(error "No `npm` in PATH, please install Node.js and npm, or pass NPM variable with path to npm binary")
 endif
-	$(NPM) run -w src/golem-frontend/ build
+	$(NPM) run -w src/frontend/ build
 
-build-frontend: src/golem-frontend/dist/main.js
+build-frontend: src/frontend/dist/main.js
 
-.PHONY: target/armv7-unknown-linux-gnueabihf/release/golem
-target/armv7-unknown-linux-gnueabihf/release/golem: $(wildcard src/**/*.rs) src/golem-frontend/dist/main.js
+.PHONY: target/armv7-unknown-linux-gnueabihf/release/one_fpga
+target/armv7-unknown-linux-gnueabihf/release/one_fpga: $(wildcard src/**/*.rs) src/frontend/dist/main.js
 ifndef CROSS
 	$(error "No `cross` in PATH, please install Node.js and npm, or pass NPM variable with path to npm binary")
 endif
 	$(CROSS) build \
 		--target armv7-unknown-linux-gnueabihf \
-		--bin golem \
+		--bin one_fpga \
 		--no-default-features \
 		--features=platform_de10 \
 		--release
 
-build-golem: target/armv7-unknown-linux-gnueabihf/release/golem
+build-1fpga: target/armv7-unknown-linux-gnueabihf/release/one_fpga
 
-build: build-frontend build-golem
+build: build-frontend build-1fpga
 
 build-and-sign: build
 ifndef PUBLIC_KEY_PATH
@@ -34,11 +34,11 @@ endif
 	$(OPENSSL) pkeyutl -sign \
 		-inkey $(PUBLIC_KEY_PATH) \
 		-out target/armv7-unknown-linux-gnueabihf/release/signature.bin \
-		-rawin -in target/armv7-unknown-linux-gnueabihf/release/golem
+		-rawin -in target/armv7-unknown-linux-gnueabihf/release/one_fpga
 
 deploy-frontend: build-frontend
-	rsync -raH --delete src/golem-frontend/dist/ root@$(MISTER_IP):/root/frontend
+	rsync -raH --delete src/frontend/dist/ root@$(MISTER_IP):/root/frontend
 
 new-migration:
-	mkdir src/golem-frontend/migrations/1fpga/$(shell date +%Y-%m-%d-%H%M%S)_$(name)
-	@echo "-- Add your migration here. Comments will be removed." >> src/golem-frontend/migrations/1fpga/$(shell date +%Y-%m-%d-%H%M%S)_$(name)/up.sql
+	mkdir src/frontend/migrations/1fpga/$(shell date +%Y-%m-%d-%H%M%S)_$(name)
+	@echo "-- Add your migration here. Comments will be removed." >> src/frontend/migrations/1fpga/$(shell date +%Y-%m-%d-%H%M%S)_$(name)/up.sql

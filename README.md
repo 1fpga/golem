@@ -1,22 +1,23 @@
-# GoLEm FPGA Firmware
+# 1FPGA Firmware
 
-This repo is the main code repo for the GoLEm FPGA Firmware and its companion libraries and binaries.
+This repo is the main code repo for the 1FPGA Firmware and its companion libraries and binaries.
 
 ## Crates
 
 This repo is a monorepo, containing multiple crates.
-The main crate is `GoLEm_firmware`, which is the actual firmware for GoLEm.
+The main crate is `firmware` (binary named `one_fpga`), which is the actual firmware for 1FPGA.
 It is meant as a drop-in replacement for MiSTer.
 
 This repo also contains the twin packages `senior` and `junior`, which are the client and server respectively.
 They are meant to be used together to replace the MiSTer firmware into a client/server architecture to help debug and develop cores and firmware features that don't require user interface.
 Basically, running `junior` on the DE10-Nano, it starts a webserver and does not provide an interactive interface.
 The webserver provides a full REST API to interact with the FPGA, and the `senior` client can be used as a client CLI to interact with it (though not needed).
+
 ## FAQ
 
 ### What is this?
 
-GoLEm wants to be a replacement for the MiSTer Firmware, achieving the same emulation capabilities, but with a better codebase (more maintainable) and an easier, user-focused interface.
+1FPGA wants to be a replacement for the MiSTer Firmware, achieving the same emulation capabilities, but with a better codebase (more maintainable) and an easier, user-focused interface.
 
 From MiSTer's [wiki](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki):
 
@@ -28,7 +29,7 @@ From MiSTer's [wiki](https://github.com/MiSTer-devel/Wiki_MiSTer/wiki):
 The MiSTer code is currently coded in legacy C and C++.
 It is hard to maintain, hard to build, and hard to contribute to.
 
-GoLEm is written in easier-to-maintain (but still Open Source) Rust.
+1FPGA is written in easier-to-maintain (but still Open Source) Rust.
 The design of the application has been made from top down to enable contributions and maintenance.
 It is easier to read this code.
 
@@ -67,27 +68,27 @@ cargo install cross --git https://github.com/cross-rs/cross
 Then, you can build the firmware with the following command:
 
 ```bash
-cross build --bin golem --target=armv7-unknown-linux-gnueabihf --no-default-features --features=platform_de10 --release
+cross build --bin one_fpga --target=armv7-unknown-linux-gnueabihf --no-default-features --features=platform_de10 --release
 ```
 
-If everything goes well, this will output the executable in `./target/armv7-unknown-linux-gnueabihf/release/golem`. Simply copy that binary to your device and execute it.
+If everything goes well, this will output the executable in `./target/armv7-unknown-linux-gnueabihf/release/one_fpga`. Simply copy that binary to your device and execute it.
 
 The following commands can help:
 
 ```bash
-ssh root@$MISTER_IP 'killall MiSTer GoLEm_firmware' # Make sure MiSTer (and GoLEm) is not running
-scp ./target/armv7-unknown-linux-gnueabihf/release/golem root@$MISTER_IP:/media/fat/GoLEm_firmware # Copy the binary to the device
-ssh root@$MISTER_IP 'sync; PATH=/media/fat:$PATH; GoLEm_firmware' # Restart the firmware
+ssh root@$MISTER_IP 'killall MiSTer one_fpga' # Make sure MiSTer (and 1FPGA) is not running
+scp ./target/armv7-unknown-linux-gnueabihf/release/one_fpga root@$MISTER_IP:/media/fat/one_fpga # Copy the binary to the device
+ssh root@$MISTER_IP 'sync; /media/fat/one_fpga' # Restart the firmware
 ```
 
-Running `GoLEm_firmware --help` will show you the available CLI options.
+Running `one_fpga --help` will show you the available CLI options.
 
 ### Desktop Executable
 
 There is a Desktop version of this (that does not support Cores), which can be ran locally in debug mode with:
 
 ```bash
-cargo run --bin golem
+cargo run --bin one_fpga
 ```
 
 This version should help develop some features that don't require an FPGA (like menus and configs).
