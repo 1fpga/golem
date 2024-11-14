@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://schemas.1fpga.cloud/schemas/core.json",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "Name of the core",
+      "type": "string"
+    },
+    "uniqueName": {
+      "description": "Unique short name of the core",
+      "$ref": "defs.json#/definitions/shortName"
+    },
+    "tags": {
+      "description": "List of tags for the system",
+      "type": "array",
+      "items": {
+        "$ref": "defs.json#/definitions/tag"
+      }
+    },
+    "links": {
+      "$ref": "defs.json#/definitions/links"
+    },
+    "description": {
+      "description": "Description of the core",
+      "type": "string"
+    },
+    "icon": {
+      "description": "URL of the icon",
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "image": {
+      "description": "URL of the image for the system",
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "releases": {
+      "$id": "releases",
+      "description": "List of releases for the core",
+      "type": "array",
+      "items": {
+        "$id": "release",
+        "type": "object",
+        "properties": {
+          "files": {
+            "$id": "files",
+            "type": "array",
+            "items": {
+              "$id": "file",
+              "type": "object",
+              "properties": {
+                "url": {
+                  "description": "URL of the file (relative to this file)",
+                  "type": "string",
+                  "format": "uri-reference"
+                },
+                "type": {
+                  "description": "Type of the file",
+                  "type": "string"
+                },
+                "size": {
+                  "description": "Size of the file",
+                  "type": "integer"
+                },
+                "sha256": {
+                  "description": "SHA256 of the file",
+                  "type": "string",
+                  "minLength": 64,
+                  "maxLength": 64,
+                  "pattern": "^[0-9a-fA-Z]+$"
+                }
+              },
+              "required": [
+                "url",
+                "type",
+                "size",
+                "sha256"
+              ]
+            }
+          },
+          "tags": {
+            "description": "List of tags for the release",
+            "type": "array",
+            "items": {
+              "$ref": "defs.json#/definitions/tag"
+            }
+          },
+          "version": {
+            "description": "Version of the release",
+            "$ref": "defs.json#/definitions/version"
+          }
+        },
+        "required": [
+          "files",
+          "version"
+        ]
+      }
+    },
+    "systems": {
+      "description": "The short (and unique) name for the system the core supports. Can support multiple.",
+      "oneOf": [
+        {
+          "type": "string",
+          "$ref": "defs.json#/definitions/shortName"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "$ref": "defs.json#/definitions/shortName"
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "name",
+    "uniqueName",
+    "systems",
+    "releases"
+  ]
+}

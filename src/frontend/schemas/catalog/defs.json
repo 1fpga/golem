@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://schemas.1fpga.cloud/schemas/defs.json",
+  "definitions": {
+    "links": {
+      "type": "object",
+      "properties": {
+        "homepage": {
+          "description": "URL of the homepage",
+          "type": "string",
+          "format": "uri-reference"
+        },
+        "github": {
+          "description": "URL of the github",
+          "type": "string",
+          "format": "uri-reference"
+        }
+      },
+      "additionalProperties": {
+        "type": "string",
+        "format": "uri-reference"
+      }
+    },
+    "shortName": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 32,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "tag": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 32,
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "version": {
+      "oneOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[-0-9a-zA-Z._@()+]+$"
+        }
+      ]
+    }
+  }
+}

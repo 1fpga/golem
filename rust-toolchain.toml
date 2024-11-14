@@ -1,6 +1,6 @@
 [toolchain]
-channel = "1.81"
-components = [ "rustfmt", "rustc", "rust-std", "clippy" ]
-targets = [ "armv7-unknown-linux-gnueabihf" ]
+channel = "1.82"
+components = ["rustfmt", "rustc", "rust-std", "clippy"]
+targets = ["armv7-unknown-linux-gnueabihf"]
 profile = "minimal"
 

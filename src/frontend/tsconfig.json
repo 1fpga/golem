@@ -1,0 +1,41 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "baseUrl": ".",
+    "module": "ESNext",
+    "outDir": "dist",
+    "rootDirs": [
+      "src",
+      "codegen"
+    ],
+    "lib": [
+    ],
+    "strict": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Bundler",
+    "paths": {
+      "$/*": [
+        "src/*"
+      ],
+      "$schemas:*": [
+        "codegen/schemas/*"
+      ],
+      "$schemas-json:*": [
+        "schemas/*"
+      ],
+      "1fpga:*": [
+        "types/1fpga/*"
+      ],
+      "1fpga:consts": [
+        "types/consts"
+      ],
+      "1fpga:migrations": [
+        "types/migrations"
+      ]
+    },
+    "types": [
+      "./types/globals.d.ts"
+    ]
+  }
+}

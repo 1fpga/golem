@@ -257,6 +257,7 @@ impl<M: MemoryMapper> FpgaFramebuffer<M> {
         self.ty_.and_then(|ty| ty.offset_of(index))
     }
 
+    #[allow(unused)]
     pub(crate) fn header(&self, index: u8) -> Option<FbHeader> {
         self.offset_of(index)
             .and_then(|offset| unsafe { self.header_offset(offset) })

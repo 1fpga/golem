@@ -1,7 +1,7 @@
 {
-  "name": "golem-fpga",
+  "name": "one-fpga",
   "workspaces": [
-    "src/golem-frontend",
+    "src/frontend",
     "scripts/patreon"
   ],
   "devDependencies": {

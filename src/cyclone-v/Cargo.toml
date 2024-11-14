@@ -5,11 +5,11 @@ edition = "2018"
 authors = ["Hans Larsen <hans.larsen@gmail.com>"]
 readme = "README.md"
 description = "Cyclone V FPGA programming library for Rust"
-repository = "https://github.com/golem-fpga/golem.git"
+repository = "https://github.com/1fpga/firmware.git"
 license = "MIT"
 keywords = ["fpga", "cyclone-v", "intel", "low-level"]
 categories = ["embedded", "hardware-support"]
-homepage = "https://github.com/golem-fpga/golem"
+homepage = "https://github.com/1fpga/firmware"
 documentation = "https://docs.rs/cyclone-v"
 
 [dependencies]
