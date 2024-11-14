@@ -1,3 +1,4 @@
+import * as child_process from "node:child_process";
 import typescript from "@rollup/plugin-typescript";
 import terser from "@rollup/plugin-terser";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
@@ -16,11 +17,11 @@ import constants from "./rollup/rollup-plugin-consts.js";
 const production =
   !("NODE_ENV" in process.env) || process.env.NODE_ENV === "production";
 
-const gitSha = require("child_process")
-  .execSync("git rev-parse HEAD")
+const gitRev = child_process
+  .execSync("git describe --all --always --dirty")
   .toString()
-  .trim();
-const gitRev = 
+  .trim()
+  .replace(/^.*\//, "");
 
 export default {
   input: "src/main.ts",
@@ -38,7 +39,7 @@ export default {
     constants({
       environment: process.env.NODE_ENV,
       production,
-      rev: gitRev,
+      revision: gitRev,
     }),
     typescript({
       exclude: ["src/**/*.spec.ts", "src/**/*.test.ts"],

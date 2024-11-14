@@ -1,4 +1,6 @@
 // The root file being executed by Golem by default.
+import rev from "consts:revision";
+import production from "consts:revision";
 import * as ui from "@:golem/ui";
 import {
   Catalog,
@@ -237,6 +239,7 @@ async function mainInner(): Promise<boolean> {
 }
 
 export async function main() {
+  console.log(`Build: "${rev}" (${production ? "production" : "development"})`);
   console.log("Golem frontend started: ", JSON.stringify(ONE_FPGA));
   let quit = false;
 
