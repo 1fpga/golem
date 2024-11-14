@@ -165,6 +165,8 @@ export class RemoteRelease {
         The system will restart automatically after the upgrade is completed.
       `,
     );
+
+    // This may not return.
     await upgrade.upgrade(this.binary_.name, path, signature);
 
     return true;

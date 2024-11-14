@@ -80,8 +80,12 @@ export class Binary {
     public readonly catalogId: number,
     public readonly name: string,
     public readonly version: string,
-    public readonly updatePending: boolean,
+    private updatePending_: boolean,
   ) {}
+
+  get updatePending() {
+    return this.updatePending_;
+  }
 
   public async fetchRemote(): Promise<RemoteBinary> {
     const catalog = await this.getCatalog();
@@ -100,5 +104,15 @@ export class Binary {
 
   public getCatalog(): Promise<Catalog | null> {
     return Catalog.getById(this.catalogId);
+  }
+
+  /**
+   * Clean up the version by setting its updatePending to false.
+   */
+  async clean() {
+    await sql`UPDATE catalog_binaries
+                  SET update_pending = false
+                  WHERE id = ${this.id}`;
+    this.updatePending_ = false;
   }
 }

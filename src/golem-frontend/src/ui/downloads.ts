@@ -85,7 +85,10 @@ async function performBinaryUpdate(b: Binary) {
     return undefined;
   }
 
+  await b.clean();
+  // The line below will kill the process and restart it.
   await release.doUpgrade();
+  //
   return false;
 }
 
