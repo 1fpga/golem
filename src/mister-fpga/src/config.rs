@@ -400,13 +400,13 @@ pub struct MisterConfig {
     /// Set to 0-10 (seconds) to display video info on startup/change
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[merge(strategy = merge::option::overwrite_some)]
-    #[validate(custom = "validate::video_info")]
+    #[validate(custom(function = validate::video_info))]
     pub video_info: Option<Duration>,
 
     /// 1-10 (seconds) to display controller's button map upon first time key press
     /// 0 - disable
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
-    #[validate(custom = "validate::controller_info")]
+    #[validate(custom(function = validate::controller_info))]
     #[merge(strategy = merge::option::overwrite_some)]
     pub controller_info: Option<Duration>,
 
@@ -470,7 +470,7 @@ pub struct MisterConfig {
 
     /// 10-30 timeout before autoboot, comment for autoboot without timeout.
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
-    #[validate(custom = "validate::bootcore_timeout")]
+    #[validate(custom(function = validate::bootcore_timeout))]
     #[merge(strategy = merge::option::overwrite_some)]
     bootcore_timeout: Option<Duration>,
 
@@ -490,7 +490,7 @@ pub struct MisterConfig {
     /// 5-3600 timeout (in seconds) for OSD to disappear in Menu core. 0 - never timeout.
     /// Background picture will get darker after double timeout.
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
-    #[validate(custom = "validate::osd_timeout")]
+    #[validate(custom(function = validate::osd_timeout))]
     #[merge(strategy = merge::option::overwrite_some)]
     osd_timeout: Option<Duration>,
 
@@ -681,7 +681,7 @@ pub struct MisterConfig {
     /// output black frame in Menu core after timeout (is seconds). Valid only if osd_timout is non-zero.
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[merge(strategy = merge::option::overwrite_some)]
-    #[validate(custom = "validate::video_off")]
+    #[validate(custom(function = validate::video_off))]
     video_off: Option<Duration>,
 
     #[serde(with = "mister_bool")]

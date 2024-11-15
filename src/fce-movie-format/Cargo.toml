@@ -9,5 +9,5 @@ edition = "2021"
 base64 = "0.22.0"
 encoding = "0.2.33"
 hex = "0.4.3"
-thiserror = "1.0.57"
+thiserror.workspace = true
 tracing = "0.1.40"
