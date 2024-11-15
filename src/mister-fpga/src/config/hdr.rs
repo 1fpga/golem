@@ -1,4 +1,4 @@
-use merge::Merge;
+use merg::Merge;
 use serde::Deserialize;
 
 /// 1 - enable HDR using HLG (recommended for most users)

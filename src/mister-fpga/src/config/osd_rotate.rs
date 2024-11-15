@@ -1,4 +1,4 @@
-use merge::Merge;
+use merg::Merge;
 use serde::Deserialize;
 
 /// Display OSD menu rotated,  0 - no rotation, 1 - rotate right (+90°), 2 - rotate left (-90°)

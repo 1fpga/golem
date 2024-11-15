@@ -33,7 +33,7 @@ i2cdev = "0.6.0"
 itertools = "0.13.0"
 json5 = "0.4.1"
 libc = "0.2.150"
-merge = { git = "https://github.com/hansl/merge-rs.git", rev = "dcaf63c0ef296e93219a5393a8252302170b5e42", features = ["num", "derive"] }
+merg = { version = "0.1", features = ["num", "derive"] }
 nom = "7.1.3"
 nom_locate = "4.2.0"
 num-traits = "0.2.15"

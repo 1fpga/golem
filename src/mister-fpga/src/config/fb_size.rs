@@ -1,4 +1,4 @@
-use merge::Merge;
+use merg::Merge;
 use serde::Deserialize;
 
 /// 0 - automatic, 1 - full size, 2 - 1/2 of resolution, 4 - 1/4 of resolution.

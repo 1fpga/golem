@@ -47,7 +47,6 @@ json5 = "0.4.1"
 json5format = "0.2.6"
 libc = { version = "0.2.150" }
 memmap2 = "0.9.4"
-merge = { git = "https://github.com/hansl/merge-rs.git", rev = "dcaf63c0ef296e93219a5393a8252302170b5e42", features = ["num", "derive"] }
 md5 = "0.7.0"
 mister-fpga = { path = "../mister-fpga", version = "0.1" }
 network-interface = "1.0.1"
