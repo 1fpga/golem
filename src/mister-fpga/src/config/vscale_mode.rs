@@ -1,4 +1,4 @@
-use merge::Merge;
+use merg::Merge;
 use serde::Deserialize;
 
 #[derive(Default, Debug, Clone, Copy, Deserialize, PartialEq, Eq)]

@@ -1,4 +1,4 @@
-use merge::Merge;
+use merg::Merge;
 use num_traits::FloatConst;
 use serde::Deserialize;
 use serde_with::{serde_as, DeserializeFromStr, DurationSeconds};
@@ -318,88 +318,88 @@ mod validate {
 #[derive(Default, Debug, Clone, Deserialize, Merge, Validate)]
 #[serde(default)]
 pub struct MisterConfig {
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub bootcore: Option<BootCoreConfig>,
 
     #[serde(alias = "ypbpr")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub vga_mode: Option<VgaMode>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub ntsc_mode: Option<NtscModeConfig>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub reset_combo: Option<ResetComboConfig>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub hdmi_limited: Option<HdmiLimitedConfig>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(max = 100))]
     pub mouse_throttle: Option<u8>,
 
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub keyrah_mode: Option<u32>,
 
     /// Specify a custom aspect ratio in the format `a:b`. This can be repeated.
     /// They are applied in order, so the first one matching will be the one used.
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     custom_aspect_ratio: Vec<AspectRatio>,
 
     /// Specify a custom aspect ratio, allowing for backward compatibility with older
     /// MiSTer config files. We only need 2 as that's what the previous version supported.
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub custom_aspect_ratio_1: Option<AspectRatio>,
 
     /// Specify a custom aspect ratio, allowing for backward compatibility with older
     /// MiSTer config files. We only need 2 as that's what the previous version supported.
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub custom_aspect_ratio_2: Option<AspectRatio>,
 
     /// Set to 1 to run scandoubler on VGA output always (depends on core).
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub forced_scandoubler: Option<bool>,
 
     /// Set to true to make the MENU key map to RGUI in Minimig (e.g. for Right Amiga).
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub key_menu_as_rgui: Option<bool>,
 
     /// Set to true for composite sync on HSync signal of VGA output.
     #[serde(with = "mister_bool", alias = "csync")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub composite_sync: Option<bool>,
 
     /// Set to true to connect VGA to scaler output.
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub vga_scaler: Option<bool>,
 
     /// Set to true to enable sync on green (needs analog I/O board v6.0 or newer).
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub vga_sog: Option<bool>,
 
     /// Set to true for 96khz/16bit HDMI audio (48khz/16bit otherwise)
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub hdmi_audio_96k: Option<bool>,
 
     /// Set to true for DVI mode. Audio won't be transmitted through HDMI in DVI mode.
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub dvi_mode: Option<bool>,
 
     /// Set to true to enable core video timing over HDMI, use only with VGA converters.
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub direct_video: Option<bool>,
 
     /// Set to 0-10 (seconds) to display video info on startup/change
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(custom(function = validate::video_info))]
     pub video_info: Option<Duration>,
 
@@ -407,7 +407,7 @@ pub struct MisterConfig {
     /// 0 - disable
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[validate(custom(function = validate::controller_info))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub controller_info: Option<Duration>,
 
     /// If you monitor doesn't support either very low (NTSC monitors may not support PAL) or
@@ -415,7 +415,7 @@ pub struct MisterConfig {
     /// parameters, so vsync_adjust won't be applied for refreshes outside specified.
     /// These parameters are valid only when vsync_adjust is non-zero.
     #[validate(range(min = 0.0, max = 150.0))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub refresh_min: Option<f32>,
 
     /// If you monitor doesn't support either very low (NTSC monitors may not support PAL) or
@@ -423,7 +423,7 @@ pub struct MisterConfig {
     /// parameters, so vsync_adjust won't be applied for refreshes outside specified.
     /// These parameters are valid only when vsync_adjust is non-zero.
     #[validate(range(min = 0.0, max = 150.0))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     refresh_max: Option<f32>,
 
     /// Set to 1 for automatic HDMI VSync rate adjust to match original VSync.
@@ -432,16 +432,16 @@ pub struct MisterConfig {
     /// Adjusting is done by changing pixel clock. Not every display supports variable pixel clock.
     /// For proper adjusting and to reduce possible out of range pixel clock, use 60Hz HDMI video
     /// modes as a base even for 50Hz systems.
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vsync_adjust: Option<VsyncAdjustConfig>,
 
     // TODO: figure this out.
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     kbd_nomouse: Option<bool>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     bootscreen: Option<bool>,
 
     /// 0 - scale to fit the screen height.
@@ -450,62 +450,62 @@ pub struct MisterConfig {
     /// 3 - use 0.25 steps of scale.
     /// 4 - integer resolution scaling, use core aspect ratio
     /// 5 - integer resolution scaling, maintain display aspect ratio
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vscale_mode: Option<VideoScaleModeConfig>,
 
     /// Set vertical border for TVs cutting the upper/bottom parts of screen (1-399)
     #[validate(range(min = 0, max = 399))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub vscale_border: Option<u16>,
 
     /// true - hides datecodes from rbf file names. Press F2 for quick temporary toggle
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     rbf_hide_datecode: Option<bool>,
 
     /// 1 - PAL mode for menu core
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     menu_pal: Option<bool>,
 
     /// 10-30 timeout before autoboot, comment for autoboot without timeout.
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[validate(custom(function = validate::bootcore_timeout))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     bootcore_timeout: Option<Duration>,
 
     /// 0 - automatic, 1 - full size, 2 - 1/2 of resolution, 4 - 1/4 of resolution.
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     pub fb_size: Option<FramebufferSizeConfig>,
 
     /// TODO: figure this out.
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     fb_terminal: Option<bool>,
 
     /// Display OSD menu rotated,  0 - no rotation, 1 - rotate right (+90°), 2 - rotate left (-90°)
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     osd_rotate: Option<OsdRotateConfig>,
 
     /// 5-3600 timeout (in seconds) for OSD to disappear in Menu core. 0 - never timeout.
     /// Background picture will get darker after double timeout.
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
     #[validate(custom(function = validate::osd_timeout))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     osd_timeout: Option<Duration>,
 
     /// Defines internal joypad mapping from virtual SNES mapping in main to core mapping
     /// Set to 0 for name mapping (jn) (e.g. A button in SNES core = A button on controller regardless of position on pad)
     /// Set to 1 for positional mapping (jp) (e.g. A button in SNES core = East button on controller regardless of button name)
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     gamepad_defaults: Option<bool>,
 
     /// 1 - enables the recent file loaded/mounted.
     /// WARNING: This option will enable write to SD card on every load/mount which may wear the SD card after many writes to the same place
     ///          There is also higher chance to corrupt the File System if MiSTer will be reset or powered off while writing.
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     recents: Option<bool>,
 
     /// JammaSD/J-PAC/I-PAC keys to joysticks translation
@@ -514,151 +514,151 @@ pub struct MisterConfig {
     /// USB Capable J-PAC with only PS/2 connectors VID=0x04B4/PID=0x0101
     /// JammaSD: VID=0x04D8/PID=0xF3AD
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     jamma_vid: Option<u16>,
 
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     jamma_pid: Option<u16>,
 
     /// Disable merging input devices. Use if only Player1 works.
     /// Leave no_merge_pid empty to apply this to all devices with the same VID.
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     no_merge_vid: Option<u16>,
 
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     no_merge_pid: Option<u16>,
 
     #[serde(with = "mister_hexa_seq")]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     no_merge_vidpid: Vec<u32>,
 
     /// use specific (VID/PID) mouse X movement as a spinner and paddle. Use VID=0xFFFF/PID=0xFFFF to use all mice as spinners.
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     spinner_vid: Option<u16>,
 
     #[serde(with = "mister_hexa")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     spinner_pid: Option<u16>,
 
     // I WAS HERE.
     #[validate(range(min = -10000, max = 10000))]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     spinner_throttle: Option<i32>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     spinner_axis: Option<u8>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     sniper_mode: Option<bool>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     browse_expand: Option<bool>,
 
     /// 0 - disable MiSTer logo in Menu core
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     logo: Option<bool>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     log_file_entry: Option<bool>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     shmask_mode_default: Option<u8>,
 
     /// Automatically disconnect (and shutdown) Bluetooth input device if not use specified amount of time.
     /// Some controllers have no automatic shutdown built in and will keep connection till battery dry out.
     /// 0 - don't disconnect automatically, otherwise it's amount of minutes.
     #[serde_as(as = "Option<DurationMinutes>")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     bt_auto_disconnect: Option<Duration>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     bt_reset_before_pair: Option<bool>,
 
     #[serde(alias = "video_mode")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     video_conf: Option<String>,
 
     #[serde(alias = "video_mode_pal")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     video_conf_pal: Option<String>,
 
     #[serde(alias = "video_mode_ntsc")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     video_conf_ntsc: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     font: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     shared_folder: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     waitmount: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     afilter_default: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vfilter_default: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vfilter_vertical_default: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vfilter_scanlines_default: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     shmask_default: Option<String>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     preset_default: Option<String>,
 
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_controller: Vec<Vec<String>>,
 
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_1_controller: Vec<String>,
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_2_controller: Vec<String>,
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_3_controller: Vec<String>,
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_4_controller: Vec<String>,
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_5_controller: Vec<String>,
     #[serde(default)]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     player_6_controller: Vec<String>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     rumble: Option<bool>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 0, max = 100))]
     wheel_force: Option<u8>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 0, max = 1000))]
     wheel_range: Option<u16>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     hdmi_game_mode: Option<bool>,
 
     /// Variable Refresh Rate control
@@ -666,60 +666,60 @@ pub struct MisterConfig {
     /// 1 - Auto Detect VRR from display EDID.
     /// 2 - Force Enable Freesync
     /// 3 - Force Enable Vesa HDMI Forum VRR
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vrr_mode: Option<VrrModeConfig>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vrr_min_framerate: Option<u8>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vrr_max_framerate: Option<u8>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     vrr_vesa_framerate: Option<u8>,
 
     /// output black frame in Menu core after timeout (is seconds). Valid only if osd_timout is non-zero.
     #[serde_as(as = "Option<DurationSeconds<u64>>")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(custom(function = validate::video_off))]
     video_off: Option<Duration>,
 
     #[serde(with = "mister_bool")]
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     disable_autofire: Option<bool>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 0, max = 100))]
     video_brightness: Option<u8>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 0, max = 100))]
     video_contrast: Option<u8>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 0, max = 100))]
     video_saturation: Option<u8>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 0, max = 360))]
     video_hue: Option<u16>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     video_gain_offset: Option<VideoGainOffsets>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     hdr: Option<HdrConfig>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 100, max = 10000))]
     hdr_max_nits: Option<u16>,
 
-    #[merge(strategy = merge::option::overwrite_some)]
+    #[merge(strategy = merg::option::overwrite_some)]
     #[validate(range(min = 100, max = 10000))]
     hdr_avg_nits: Option<u16>,
 
     #[serde(with = "mister_hexa_seq")]
-    #[merge(strategy = merge::vec::append)]
+    #[merge(strategy = merg::vec::append)]
     controller_unique_mapping: Vec<u32>,
 }
 
@@ -923,7 +923,7 @@ pub struct Config {
 
     /// The `[video=123x456@78]` sections, or core section.
     #[serde(flatten)]
-    #[merge(strategy = merge::hashmap::recurse)]
+    #[merge(strategy = merg::hashmap::recurse)]
     overrides: HashMap<String, MisterConfig>,
 }
 

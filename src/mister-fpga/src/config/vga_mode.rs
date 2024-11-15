@@ -1,4 +1,4 @@
-use merge::Merge;
+use merg::Merge;
 use serde::{Deserialize, Serialize};
 
 #[derive(strum::Display, Default, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

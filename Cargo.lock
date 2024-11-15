@@ -1577,7 +1577,6 @@ dependencies = [
  "libc",
  "md5",
  "memmap2",
- "merge",
  "mister-fpga",
  "network-interface",
  "num-integer",
@@ -3115,18 +3114,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "merge"
+name = "merg"
 version = "0.1.1"
-source = "git+https://github.com/hansl/merge-rs.git?rev=dcaf63c0ef296e93219a5393a8252302170b5e42#dcaf63c0ef296e93219a5393a8252302170b5e42"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "157839faba4f399574db10fe5006ef3c6a73da61c73473cbe6ab2ec2651fbe65"
 dependencies = [
- "merge_derive",
+ "merg_derive",
  "num-traits",
 ]
 
 [[package]]
-name = "merge_derive"
-version = "0.1.0"
-source = "git+https://github.com/hansl/merge-rs.git?rev=dcaf63c0ef296e93219a5393a8252302170b5e42#dcaf63c0ef296e93219a5393a8252302170b5e42"
+name = "merg_derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c313fa79cc1d480c4034b5fd6af9e1d8382734eb600223e4835a455fce5a433d"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -3194,7 +3195,7 @@ dependencies = [
  "itertools 0.13.0",
  "json5",
  "libc",
- "merge",
+ "merg",
  "nom",
  "nom_locate",
  "num-traits",
@@ -3465,7 +3466,6 @@ dependencies = [
  "json5format",
  "libc",
  "md5",
- "merge",
  "mister-fpga",
  "network-interface",
  "num-integer",
