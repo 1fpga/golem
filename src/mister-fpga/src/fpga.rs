@@ -50,7 +50,7 @@ impl From<&FpgaError> for &'static str {
     }
 }
 
-static mut INITIALIZED: AtomicBool = AtomicBool::new(false);
+static INITIALIZED: AtomicBool = AtomicBool::new(false);
 
 // TODO: Remove this when we're done re-writing fpga_io.cpp
 // This is needed for the FFI implementations to work.
@@ -222,7 +222,7 @@ impl MisterFpga {
             }
         }
 
-        return self.regs().stat().mode() == StatusRegisterMode::UserMode;
+        self.regs().stat().mode() == StatusRegisterMode::UserMode
     }
 
     #[inline]

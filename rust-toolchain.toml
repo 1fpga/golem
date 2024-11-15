@@ -1,5 +1,6 @@
 [toolchain]
-channel = "1.82"
+#channel = "1.82"
+channel = "nightly"
 components = ["rustfmt", "rustc", "rust-std", "clippy"]
 targets = ["armv7-unknown-linux-gnueabihf"]
 profile = "minimal"
