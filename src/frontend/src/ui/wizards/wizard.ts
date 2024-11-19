@@ -167,6 +167,11 @@ export interface MessageOptions<T> {
   previous?: string;
   choices?: string[];
   map?: (choice: number) => T | undefined;
+
+  /**
+   * Allow user to cancel or not. If `true`, the user cannot cancel.
+   */
+  noCancel?: boolean;
 }
 
 export function message<T = number>(
@@ -175,6 +180,7 @@ export function message<T = number>(
   options?: MessageOptions<T>,
 ): WizardStep<T | undefined> {
   const choices = options?.choices ?? ["OK"];
+  const noCancel = options?.noCancel ?? false;
   let previous = -1;
   if (options?.previous) {
     if (!choices.includes(options.previous)) {
@@ -185,17 +191,26 @@ export function message<T = number>(
   const mapper = options?.map ?? ((x) => x as unknown as T);
 
   return async (options: StepOptions) => {
-    const result = await ui.alert({
-      title: `${title}`,
-      message,
-      choices,
-    });
+    while (true) {
+      const result = await ui.alert({
+        title: `${title}`,
+        message,
+        choices,
+      });
 
-    if (result === null || result === previous) {
-      await options.previous();
-      return mapper(-1);
-    } else {
-      return mapper(result);
+      // `noCancel` means the user cannot cancel. `ui.alert()` always
+      // allows to cancel, so in this case we just ignore the result
+      // and re-ask.
+      if (noCancel && result === null) {
+        continue;
+      }
+
+      if (result === null || result === previous) {
+        await options.previous();
+        return mapper(-1);
+      } else {
+        return mapper(result);
+      }
     }
   };
 }
