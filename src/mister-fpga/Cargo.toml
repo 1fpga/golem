@@ -44,7 +44,7 @@ serde_with = "3.6.1"
 simple_endian = "0.3.2"
 static_assertions = "1.1"
 thiserror.workspace = true
-tracing = "0.1.40"
+tracing.workspace = true
 typed-builder = "0.20.0"
 validator = { version = "0.19.0", features = ["derive"] }
 

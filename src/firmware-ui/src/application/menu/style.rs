@@ -258,10 +258,10 @@ impl<R: Copy> InputAdapter for SdlMenuInputAdapter<R> {
             }
 
             Event::ControllerButtonDown { button, .. } => match button {
-                Button::A => Interaction::Action(Action::Select).into(),
-                Button::B => Interaction::Action(Action::Return(SdlMenuAction::Back)).into(),
-                Button::X => Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into(),
-                Button::Y => Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into(),
+                Button::East => Interaction::Action(Action::Select).into(),
+                Button::South => Interaction::Action(Action::Return(SdlMenuAction::Back)).into(),
+                Button::North => Interaction::Action(Action::Return(SdlMenuAction::ShowOptions)).into(),
+                Button::West => Interaction::Action(Action::Return(SdlMenuAction::ChangeSort)).into(),
                 Button::DPadUp => Interaction::Navigation(Navigation::Previous).into(),
                 Button::DPadDown => Interaction::Navigation(Navigation::Next).into(),
                 Button::DPadLeft => {
@@ -390,22 +390,22 @@ impl<R: Copy + MenuReturn> InputAdapter for SimpleSdlMenuInputAdapter<R> {
             },
 
             Event::ControllerButtonDown { button, .. } => match button {
-                Button::A => Interaction::Action(Action::Select).into(),
-                Button::B => {
+                Button::East => Interaction::Action(Action::Select).into(),
+                Button::South => {
                     if let Some(b) = R::back() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {
                         InputState::Idle.into()
                     }
                 }
-                Button::X => {
+                Button::North => {
                     if let Some(b) = R::details() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {
                         InputState::Idle.into()
                     }
                 }
-                Button::Y => {
+                Button::West => {
                     if let Some(b) = R::sort() {
                         Interaction::Action(Action::Return(b)).into()
                     } else {

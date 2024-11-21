@@ -29,11 +29,11 @@ build: build-frontend build-1fpga
 
 build-and-sign: build
 ifndef PUBLIC_KEY_PATH
-	PUBLIC_KEY_PATH ?= $(shell read -p "Enter path to public key: " key; echo $$key)
+	$(eval PUBLIC_KEY_PATH = $(shell read -p "Enter path to public key: " key; echo $$key))
 endif
 	$(OPENSSL) pkeyutl -sign \
 		-inkey $(PUBLIC_KEY_PATH) \
-		-out target/armv7-unknown-linux-gnueabihf/release/signature.bin \
+		-out target/armv7-unknown-linux-gnueabihf/release/one_fpga.sig \
 		-rawin -in target/armv7-unknown-linux-gnueabihf/release/one_fpga
 
 deploy-frontend: build-frontend

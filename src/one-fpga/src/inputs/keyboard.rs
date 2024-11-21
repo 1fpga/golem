@@ -18,6 +18,12 @@ impl Scancode {
     pub fn as_repr(&self) -> i32 {
         self.0 as i32
     }
+
+    /// Get a string representation of the key.
+    #[inline]
+    pub fn name(&self) -> &str {
+        self.0.name()
+    }
 }
 
 impl std::str::FromStr for Scancode {

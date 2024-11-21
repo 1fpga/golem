@@ -1,7 +1,6 @@
 use crate::input::shortcut::AxisValue;
 use itertools::Itertools;
-use sdl3::gamepad::{Axis, Button};
-use sdl3::keyboard::Scancode;
+use one_fpga::inputs::{Axis, Button, Scancode};
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 
@@ -35,7 +34,7 @@ impl InputState {
             .gamepads
             .iter()
             .map(|(i, b)| {
-                let buttons = b.iter().map(|b| b.string()).join(", ");
+                let buttons = b.iter().map(|b| b.name()).join(", ");
                 if !buttons.is_empty() {
                     format!("Gamepad {i}: {}", buttons)
                 } else {
@@ -50,7 +49,7 @@ impl InputState {
             .map(|(i, a)| {
                 let axis = a
                     .iter()
-                    .map(|(a, v)| format!("{}: {}", a.string(), v))
+                    .map(|(a, v)| format!("{}: {}", a.name(), v))
                     .join(", ");
                 if !axis.is_empty() {
                     format!("Axis {i}: {}", axis)
@@ -79,23 +78,40 @@ impl InputState {
         self.mice.clear();
     }
 
-    pub fn key_down(&mut self, code: Scancode) {
-        self.keyboard.insert(code);
+    #[inline]
+    pub fn key(&self, code: impl Into<Scancode>) -> bool {
+        self.keyboard.contains(&code.into())
     }
 
-    pub fn key_up(&mut self, code: Scancode) {
-        self.keyboard.remove(&code);
+    #[inline]
+    pub fn key_down(&mut self, code: impl Into<Scancode>) {
+        self.keyboard.insert(code.into());
     }
 
-    pub fn controller_button_down(&mut self, controller: u32, button: Button) {
-        self.gamepads.entry(controller).or_default().insert(button);
+    #[inline]
+    pub fn key_up(&mut self, code: impl Into<Scancode>) {
+        self.keyboard.remove(&code.into());
     }
 
-    pub fn controller_button_up(&mut self, controller: u32, button: Button) {
-        self.gamepads.entry(controller).or_default().remove(&button);
+    #[inline]
+    pub fn controller_button_down(&mut self, controller: u32, button: impl Into<Button>) {
+        self.gamepads
+            .entry(controller)
+            .or_default()
+            .insert(button.into());
     }
 
-    pub fn controller_axis_motion(&mut self, controller: u32, axis: Axis, value: i16) {
+    #[inline]
+    pub fn controller_button_up(&mut self, controller: u32, button: impl Into<Button>) {
+        self.gamepads
+            .entry(controller)
+            .or_default()
+            .remove(&button.into());
+    }
+
+    #[inline]
+    pub fn controller_axis_motion(&mut self, controller: u32, axis: impl Into<Axis>, value: i16) {
+        let axis = axis.into();
         if (-10..10).contains(&value) {
             self.axis.entry(controller).or_default().remove(&axis);
         } else {

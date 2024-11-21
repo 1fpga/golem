@@ -20,10 +20,10 @@ use strum::{Display, EnumCount, EnumIter, EnumString, FromRepr, IntoEnumIterator
 )]
 #[repr(u8)]
 pub enum Button {
-    A = sdl3::gamepad::Button::A as u8,
-    B = sdl3::gamepad::Button::B as u8,
-    X = sdl3::gamepad::Button::X as u8,
-    Y = sdl3::gamepad::Button::Y as u8,
+    A = sdl3::gamepad::Button::East as u8,
+    B = sdl3::gamepad::Button::South as u8,
+    X = sdl3::gamepad::Button::North as u8,
+    Y = sdl3::gamepad::Button::West as u8,
     Back = sdl3::gamepad::Button::Back as u8,
     Guide = sdl3::gamepad::Button::Guide as u8,
     Start = sdl3::gamepad::Button::Start as u8,
@@ -36,10 +36,10 @@ pub enum Button {
     DPadLeft = sdl3::gamepad::Button::DPadLeft as u8,
     DPadRight = sdl3::gamepad::Button::DPadRight as u8,
     Misc1 = sdl3::gamepad::Button::Misc1 as u8,
-    Paddle1 = sdl3::gamepad::Button::Paddle1 as u8,
-    Paddle2 = sdl3::gamepad::Button::Paddle2 as u8,
-    Paddle3 = sdl3::gamepad::Button::Paddle3 as u8,
-    Paddle4 = sdl3::gamepad::Button::Paddle4 as u8,
+    RightPaddle1 = sdl3::gamepad::Button::RightPaddle1 as u8,
+    LeftPaddle1 = sdl3::gamepad::Button::LeftPaddle1 as u8,
+    RightPaddle2 = sdl3::gamepad::Button::RightPaddle2 as u8,
+    LeftPaddle2 = sdl3::gamepad::Button::LeftPaddle2 as u8,
     Touchpad = sdl3::gamepad::Button::Touchpad as u8,
 }
 
@@ -51,15 +51,42 @@ impl Button {
     pub fn as_repr(&self) -> u8 {
         *self as u8
     }
+
+    /// Gets a string representation of the button.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Button::A => "A",
+            Button::B => "B",
+            Button::X => "X",
+            Button::Y => "Y",
+            Button::Back => "Back",
+            Button::Guide => "Guide",
+            Button::Start => "Start",
+            Button::LeftStick => "LeftStick",
+            Button::RightStick => "RightStick",
+            Button::LeftShoulder => "LeftShoulder",
+            Button::RightShoulder => "RightShoulder",
+            Button::DPadUp => "DPadUp",
+            Button::DPadDown => "DPadDown",
+            Button::DPadLeft => "DPadLeft",
+            Button::DPadRight => "DPadRight",
+            Button::Misc1 => "Misc1",
+            Button::RightPaddle1 => "RightPaddle1",
+            Button::LeftPaddle1 => "LeftPaddle1",
+            Button::RightPaddle2 => "RightPaddle2",
+            Button::LeftPaddle2 => "LeftPaddle2",
+            Button::Touchpad => "Touchpad",
+        }
+    }
 }
 
 impl From<sdl3::gamepad::Button> for Button {
     fn from(button: sdl3::gamepad::Button) -> Self {
         match button {
-            sdl3::gamepad::Button::A => Button::A,
-            sdl3::gamepad::Button::B => Button::B,
-            sdl3::gamepad::Button::X => Button::X,
-            sdl3::gamepad::Button::Y => Button::Y,
+            sdl3::gamepad::Button::East => Button::A,
+            sdl3::gamepad::Button::South => Button::B,
+            sdl3::gamepad::Button::North => Button::X,
+            sdl3::gamepad::Button::West => Button::Y,
             sdl3::gamepad::Button::Back => Button::Back,
             sdl3::gamepad::Button::Guide => Button::Guide,
             sdl3::gamepad::Button::Start => Button::Start,
@@ -72,10 +99,10 @@ impl From<sdl3::gamepad::Button> for Button {
             sdl3::gamepad::Button::DPadLeft => Button::DPadLeft,
             sdl3::gamepad::Button::DPadRight => Button::DPadRight,
             sdl3::gamepad::Button::Misc1 => Button::Misc1,
-            sdl3::gamepad::Button::Paddle1 => Button::Paddle1,
-            sdl3::gamepad::Button::Paddle2 => Button::Paddle2,
-            sdl3::gamepad::Button::Paddle3 => Button::Paddle3,
-            sdl3::gamepad::Button::Paddle4 => Button::Paddle4,
+            sdl3::gamepad::Button::RightPaddle1 => Button::RightPaddle1,
+            sdl3::gamepad::Button::LeftPaddle1 => Button::LeftPaddle1,
+            sdl3::gamepad::Button::RightPaddle2 => Button::RightPaddle2,
+            sdl3::gamepad::Button::LeftPaddle2 => Button::LeftPaddle2,
             sdl3::gamepad::Button::Touchpad => Button::Touchpad,
         }
     }
@@ -127,9 +154,16 @@ impl std::fmt::Debug for ButtonSet {
 }
 
 /// Gamepad axes. We reuse the SDL3 type for simplicity, as it is well maintained and complete.
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 #[repr(transparent)]
 pub struct Axis(sdl3::gamepad::Axis);
+
+impl Axis {
+    /// Get a string representation of the axis.
+    pub fn name(&self) -> String {
+        self.0.string()
+    }
+}
 
 impl From<sdl3::gamepad::Axis> for Axis {
     fn from(axis: sdl3::gamepad::Axis) -> Self {

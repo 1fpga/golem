@@ -4,7 +4,7 @@ use image::RgbImage;
 use mister_fpga::core::AsMisterCore;
 use sdl3::event::Event;
 use time::util::local_offset;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use mister_fpga::fpga;
 use mister_fpga::osd::OsdDisplay;
@@ -36,7 +36,9 @@ impl Default for De10Platform {
         let mut platform = SdlPlatform::init(SdlInitState::default());
 
         // Need at least 1 window to get events.
-        let window = platform.window("Title", Size::new(1, 1));
+        info!("Creating window for event pump.");
+        let mut window = platform.window("Title", Size::new(1, 1));
+        window.focus();
 
         let fpga = fpga::MisterFpga::init().unwrap();
         if !fpga.is_ready() {

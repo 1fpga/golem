@@ -108,7 +108,8 @@ pub fn show(app: &mut OneFpgaApp, title: &str, message: &str) {
         .paragraph_spacing(1)
         .build();
 
-    let bounds = app.osd_buffer().bounding_box();
+    let mut bounds = app.osd_buffer().bounding_box();
+    bounds.size.width -= 2;
     let text_box = TextBox::with_textbox_style(message, bounds, character_style, textbox_style);
 
     let layout = LinearLayout::vertical(
@@ -150,7 +151,7 @@ pub fn alert(app: &mut OneFpgaApp, title: &str, message: &str, choices: &[&str])
         .collect::<Vec<_>>();
 
     let menu = SizedMenu::new(
-        Size::new(128, 48),
+        Size::new(display_area.size.width - 12, 32),
         Menu::with_style(
             "",
             style::menu_style_simple(app.ui_settings().menu_style_options()),
@@ -169,7 +170,8 @@ pub fn alert(app: &mut OneFpgaApp, title: &str, message: &str, choices: &[&str])
         .paragraph_spacing(1)
         .build();
 
-    let bounds = app.main_buffer().bounding_box();
+    let mut bounds = app.main_buffer().bounding_box();
+    bounds.size.width -= 2;
     let text_box = TextBox::with_textbox_style(message, bounds, character_style, textbox_style);
 
     let mut layout = LinearLayout::vertical(
@@ -207,7 +209,7 @@ pub fn alert(app: &mut OneFpgaApp, title: &str, message: &str, choices: &[&str])
                 Some(MenuAction::Select(idx)) => return Some(Some(idx)),
             }
         }
-        menu.update(buffer);
+        menu.update();
 
         None
     })

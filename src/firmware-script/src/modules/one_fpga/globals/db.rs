@@ -152,7 +152,7 @@ fn create_row_object_array<'a>(mut statement: Statement, ctx: &mut Context) -> J
     Ok(row_results)
 }
 
-fn db_root() -> PathBuf {
+pub fn db_root() -> PathBuf {
     if cfg!(feature = "platform_de10") {
         PathBuf::from("/media/fat/1fpga")
     } else {
@@ -335,6 +335,13 @@ impl JsDb {
                 HashMap::new()
             }))),
         })
+    }
+
+    pub fn reset(name: &str) -> JsResult<()> {
+        let path = db_root().join(format!("{}.sqlite", name));
+        trace!("Deleting database at {:?}", path);
+        std::fs::remove_file(path).map_err(|e| js_error!("Could not delete database: {}", e))?;
+        Ok(())
     }
 
     pub fn query(

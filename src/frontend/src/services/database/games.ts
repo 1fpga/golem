@@ -72,24 +72,24 @@ const GROUP_BY_GAME_ID = oneLine`
 
 function buildSqlQuery(options: GamesListOptions) {
   return sql`
-        SELECT ${sql.raw(GAMES_FIELDS)}
-        FROM ${sql.raw(GAMES_FROM_JOIN)}
-        WHERE ${sql.and(
-          true,
-          options.system
-            ? sql`systems.unique_name =
-                        ${options.system}`
-            : undefined,
-          (options.includeUnplayed ?? true)
-            ? undefined
-            : sql`user_games.last_played_at IS NOT NULL`,
-          (options.includeUnfavorites ?? true)
-            ? undefined
-            : sql`user_games.favorite = true`,
-        )}
-        ORDER BY ${sql.raw(options.sort ?? GameSortOrder.NameAsc)}
-        LIMIT ${options.limit ?? 100} OFFSET ${options.index ?? 0}
-    `;
+      SELECT ${sql.raw(GAMES_FIELDS)}
+      FROM ${sql.raw(GAMES_FROM_JOIN)}
+      WHERE ${sql.and(
+        true,
+        options.system
+          ? sql`systems.unique_name =
+                      ${options.system}`
+          : undefined,
+        (options.includeUnplayed ?? true)
+          ? undefined
+          : sql`user_games.last_played_at IS NOT NULL`,
+        (options.includeUnfavorites ?? true)
+          ? undefined
+          : sql`user_games.favorite = true`,
+      )}
+      ORDER BY ${sql.raw(options.sort ?? GameSortOrder.NameAsc)}
+      LIMIT ${options.limit ?? 100} OFFSET ${options.index ?? 0}
+  `;
 }
 
 interface SaveStateRow {
@@ -127,7 +127,7 @@ export class SaveState {
         state_path,
         screenshot_path,
       })}
-                                        RETURNING *`;
+                                  RETURNING *`;
     return SaveState.fromRow(row);
   }
 
@@ -145,38 +145,38 @@ export class Games {
 
   public static async count(options: GamesListOptions): Promise<number> {
     const [{ count }] = await sql<{ count: number }>`
-            SELECT COUNT(*) as count
-            FROM (${buildSqlQuery(options)})
-        `;
+        SELECT COUNT(*) as count
+        FROM (${buildSqlQuery(options)})
+    `;
     return count;
   }
 
   public static async byId(id: number): Promise<Games> {
     const [row] = await sql<GamesCoreRow>`
-            SELECT ${sql.raw(GAMES_FIELDS)}
-            FROM ${sql.raw(GAMES_FROM_JOIN)}
-            WHERE games.id = ${id}
-        `;
+        SELECT ${sql.raw(GAMES_FIELDS)}
+        FROM ${sql.raw(GAMES_FROM_JOIN)}
+        WHERE games.id = ${id}
+    `;
     return Games.fromGamesCoreRow(row);
   }
 
   public static async lastPlayed(): Promise<Games | null> {
     const [row] = await sql<GamesCoreRow>`
-            SELECT ${sql.raw(GAMES_FIELDS)}
-            FROM ${sql.raw(GAMES_FROM_JOIN)}
-            WHERE user_games.last_played_at IS NOT NULL
-            ORDER BY user_games.last_played_at DESC
-            LIMIT 1
-        `;
+        SELECT ${sql.raw(GAMES_FIELDS)}
+        FROM ${sql.raw(GAMES_FROM_JOIN)}
+        WHERE user_games.last_played_at IS NOT NULL
+        ORDER BY user_games.last_played_at DESC
+        LIMIT 1
+    `;
     return row ? Games.fromGamesCoreRow(row) : null;
   }
 
   public static async first() {
     const [row] = await sql<GamesCoreRow>`
-            SELECT ${sql.raw(GAMES_FIELDS)}
-            FROM ${sql.raw(GAMES_FROM_JOIN)}
-            LIMIT 1
-        `;
+        SELECT ${sql.raw(GAMES_FIELDS)}
+        FROM ${sql.raw(GAMES_FROM_JOIN)}
+        LIMIT 1
+    `;
     return row ? Games.fromGamesCoreRow(row) : null;
   }
 
@@ -218,14 +218,14 @@ export class Games {
   async setFavorite(favorite: boolean) {
     if (this.row_.favorite !== favorite) {
       await sql`INSERT INTO user_games
-                          ${sql.insertValues({
-                            user_id: User.loggedInUser(true).id,
-                            games_id: this.id,
-                            favorite,
-                          })}
-                      ON CONFLICT
-            DO
-            UPDATE SET favorite = excluded.favorite`;
+                    ${sql.insertValues({
+                      user_id: User.loggedInUser(true).id,
+                      games_id: this.id,
+                      favorite,
+                    })}
+                ON CONFLICT
+      DO
+      UPDATE SET favorite = excluded.favorite`;
     }
     this.row_.favorite = favorite;
   }
@@ -239,14 +239,18 @@ export class Games {
 
     // Insert last played time at.
     await sql`INSERT INTO user_games
-                      ${sql.insertValues({
-                        user_id: User.loggedInUser(true).id,
-                        games_id: this.id,
-                        last_played_at: "" + new Date(),
-                      })}
-                  ON CONFLICT
-        DO
-        UPDATE SET last_played_at = excluded.last_played_at`;
+                  ${sql.insertValues({
+                    user_id: User.loggedInUser(true).id,
+                    games_id: this.id,
+                    last_played_at: "" + new Date(),
+                  })}
+              ON CONFLICT
+    DO
+    UPDATE SET last_played_at = excluded.last_played_at`;
+
+    const settings = await (
+      await import("$/services/settings/user")
+    ).UserSettings.forLoggedInUser();
 
     try {
       Core.setRunning(await Core.getById(this.row_.cores_id));
@@ -259,6 +263,7 @@ export class Games {
 
       if (core) {
         console.log("Starting core: " + core.name);
+        core.volume = await settings.defaultVolume();
         core.on(
           "saveState",
           async (savestate: Uint8Array, screenshot: Image) => {

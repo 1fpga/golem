@@ -33,9 +33,10 @@ unused_crate_dependencies = "warn"
 image = "0.25"
 ouroboros = "0.18"
 reqwest = { version = "0.12", features = ["blocking", "json", "rustls-tls"], default-features = false }
-sdl3 = { version = "0.5.0", features = ["bundled"] }
 strum = { version = "0.26.3", features = ["derive"] }
 thiserror = "2.0.3"
+tracing = { version = "0.1.40" }
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "tracing-log"] }
 time = { version = "0.3", features = ["local-offset"] }
 url = { version = "2.5" }
 
@@ -52,3 +53,9 @@ junior = { path = "src/junior" }
 mister-fpga = { path = "src/mister-fpga" }
 senior = { path = "src/senior" }
 taser = { path = "src/taser" }
+
+[workspace.dependencies.sdl3]
+git = "https://github.com/hansl/sdl3-rs.git"
+branch = "1fpga-firmware"
+features = ["static-link", "build-from-source-static", "build-from-source-unix-console"]
+

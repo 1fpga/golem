@@ -20,6 +20,7 @@ export enum StartOnKind {
 const START_ON_KEY = "startOn";
 const DEV_TOOLS_KEY = "devTools";
 const GAME_SORT_KEY = "gameSort";
+const DEFAULT_VOLUME_KEY = "defaultVolume";
 
 export class UserSettings {
   public static async forLoggedInUser(): Promise<UserSettings> {
@@ -68,5 +69,13 @@ export class UserSettings {
 
   public async setGameSort(value: GameSortOrder): Promise<void> {
     await this.storage_.set(GAME_SORT_KEY, value);
+  }
+
+  public async defaultVolume(): Promise<number> {
+    return await getOrFail(this.storage_, DEFAULT_VOLUME_KEY, 255.0);
+  }
+
+  public async setDefaultVolume(value: number): Promise<void> {
+    await this.storage_.set(DEFAULT_VOLUME_KEY, value);
   }
 }

@@ -151,8 +151,8 @@ pub fn prompt(
                     }
                 }
                 Event::ControllerButtonDown { button, .. } => match button {
-                    Button::A => return Some(Some(result.clone())),
-                    Button::B => return Some(None),
+                    Button::East => return Some(Some(result.clone())),
+                    Button::South => return Some(None),
                     _ => {}
                 },
                 _ => {}

@@ -218,6 +218,11 @@ declare module "1fpga:core" {
     quit(): void;
 
     /**
+     * The volume of the core. This is a number from 0.0-1.0 as a float.
+     */
+    volume: number;
+
+    /**
      * Add an event listener to the core.
      */
     on(event: string, listener: (...args: any[]) => any | Promise<any>): void;

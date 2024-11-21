@@ -360,7 +360,7 @@ const maybeAddGames = ignore(
 const firstMessage = message(
   "First Time Setup",
   "Welcome to 1FPGA. Follow this wizard to get started.\n",
-  { choices: ["Let's Go!"] },
+  { choices: ["Let's Go!"], noCancel: true },
 );
 
 /**

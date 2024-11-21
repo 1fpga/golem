@@ -25,6 +25,10 @@ impl Core for NullCore {
         Ok(())
     }
 
+    fn volume(&self) -> Result<u8, Error> {
+        Ok(0)
+    }
+
     fn set_volume(&mut self, _volume: u8) -> Result<(), Error> {
         Ok(())
     }

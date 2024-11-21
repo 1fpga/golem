@@ -4,8 +4,10 @@ use clap_verbosity_flag::{LogLevel, Verbosity};
 use firmware_ui::application;
 use std::io::Read;
 use std::path::PathBuf;
-use tracing::{info, warn, Level};
+use tracing::{info, warn};
+use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::fmt::Subscriber;
+use tracing_subscriber::EnvFilter;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct NoneLevel;
@@ -49,16 +51,23 @@ fn main() {
     println!(include_str!("../assets/header.txt"), v = v);
 
     let opts = Flags::parse();
+
     // Initialize tracing.
-    let subscriber = Subscriber::builder();
-    let subscriber = match opts.verbose.log_level() {
-        Some(VerbosityLevel::Error) => subscriber.with_max_level(Level::ERROR),
-        Some(VerbosityLevel::Warn) => subscriber.with_max_level(Level::WARN),
-        Some(VerbosityLevel::Info) => subscriber.with_max_level(Level::INFO),
-        Some(VerbosityLevel::Debug) => subscriber.with_max_level(Level::DEBUG),
-        None | Some(VerbosityLevel::Trace) => subscriber.with_max_level(Level::TRACE),
+    let level_filter = match opts.verbose.log_level() {
+        Some(VerbosityLevel::Error) => LevelFilter::ERROR,
+        Some(VerbosityLevel::Warn) => LevelFilter::WARN,
+        Some(VerbosityLevel::Info) => LevelFilter::INFO,
+        Some(VerbosityLevel::Debug) => LevelFilter::DEBUG,
+        None | Some(VerbosityLevel::Trace) => LevelFilter::TRACE,
     };
-    subscriber
+
+    Subscriber::builder()
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(level_filter.into())
+                .from_env_lossy()
+                .add_directive("reqwest=error".parse().unwrap()),
+        )
         .with_ansi(true)
         .with_writer(std::io::stderr)
         .init();

@@ -6,6 +6,7 @@ use boa_macros::js_str;
 use crate::module_loader::OneFpgaModuleLoader;
 
 mod commands;
+mod controllers;
 mod core;
 mod db;
 mod fs;
@@ -27,6 +28,7 @@ pub(super) fn register_modules(
 ) -> JsResult<()> {
     let modules = [
         commands::create_module,
+        controllers::create_module,
         core::create_module,
         db::create_module,
         fs::create_module,

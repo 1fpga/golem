@@ -6,7 +6,7 @@ import { MigrationDetails } from "1fpga:migrations";
 async function applyMigrations(
   db: oneFpgaDb.Db,
   _name: string,
-  latest: string,
+  latest: string
 ) {
   const migrations = (await import("1fpga:migrations")).migrations;
   const allMigrations: [string, MigrationDetails][] =
@@ -16,7 +16,7 @@ async function applyMigrations(
       .map(
         (m) =>
           migrations[m].up &&
-          ([m, migrations[m].up] as [string, MigrationDetails]),
+          ([m, migrations[m].up] as [string, MigrationDetails])
       )
       .filter((m) => m !== undefined);
 
@@ -26,7 +26,7 @@ async function applyMigrations(
   }
 
   console.log(
-    `Latest migration: ${latest}, applying ${allMigrations.length} migrations...`,
+    `Latest migration: ${latest}, applying ${allMigrations.length} migrations...`
   );
 
   const sql1 = await transaction();
@@ -47,8 +47,8 @@ async function applyMigrations(
     }
 
     await sql1`INSERT INTO __1fpga_settings ${sql1.insertValues({
-      key: "latest_migration",
-      value: name,
+        key: "latest_migration",
+        value: name
     })}
                ON CONFLICT (key)
     DO UPDATE SET value = excluded.value`;
@@ -61,13 +61,13 @@ async function applyMigrations(
       await sql<{ value: string }>`SELECT value
                                    FROM __1fpga_settings
                                    WHERE key = 'latest_migration'`
-    )[0]?.value,
+    )[0]?.value
   );
 }
 
 async function createMigrationTable(
   db: oneFpgaDb.Db,
-  name: string,
+  name: string
 ): Promise<void> {
   await sql`CREATE TABLE __1fpga_settings
             (
@@ -101,6 +101,12 @@ async function initDb(db: oneFpgaDb.Db, name: string): Promise<void> {
 
 let db: oneFpgaDb.Db | null = null;
 
+export async function resetDb(): Promise<void> {
+  console.warn("Clearing the database. Be careful!");
+  await oneFpgaDb.reset("1fpga");
+  db = null;
+}
+
 async function getDb(): Promise<oneFpgaDb.Db> {
   if (db === null) {
     db = await oneFpgaDb.load("1fpga");
@@ -114,12 +120,12 @@ const driver: SqlTagDriver<undefined, never> = {
   cursor(
     sql: string,
     params: any[],
-    options: {} | undefined,
+    options: {} | undefined
   ): AsyncIterable<any> {
     throw new Error("Method not implemented.");
   },
   escapeIdentifier(identifier: string): string {
-    return `"${identifier.replace(/"/g, '""')}"`;
+    return `"${identifier.replace(/"/g, "\"\"")}"`;
   },
   parameterizeValue(value: any, paramIndex: number): string {
     return "?";
@@ -132,7 +138,7 @@ const driver: SqlTagDriver<undefined, never> = {
     let db = await getDb();
     let result = await db.query(sql, params);
     return [result.rows, undefined];
-  },
+  }
 };
 
 export const sql = new SqlTag(driver);
@@ -156,7 +162,7 @@ export async function transaction(): Promise<SqlTransactionTag> {
       }
       let { rows } = await db.query(sql, params);
       return [rows, undefined];
-    },
+    }
   }) as SqlTransactionTag;
 
   tag.commit = async () => {

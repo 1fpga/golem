@@ -140,7 +140,7 @@ pub fn text_menu<'a, C, R: MenuReturn + Copy, E: Debug>(
     let menu_size = buffer
         .bounding_box()
         .size
-        .saturating_sub(Size::new(0, bottom_row.height));
+        .saturating_sub(Size::new(2, bottom_row.height));
 
     let show1 = !prefix_items.is_empty();
     let show2 = !items_items.is_empty() && !suffix_items.is_empty();
@@ -241,12 +241,11 @@ pub fn text_menu<'a, C, R: MenuReturn + Copy, E: Debug>(
         .arrange();
 
         let (result, new_state) = app.draw_loop(|app, state| {
-            let menu_bounding_box = Rectangle::new(Point::zero(), menu_size);
             let _ = buffer.clear(Rgb888::BLACK.into());
 
             {
                 let menu = &mut layout.inner_mut().parent.object;
-                menu.update(&menu_bounding_box);
+                menu.update();
             }
             let _ = layout.draw(&mut buffer.color_converted());
 
