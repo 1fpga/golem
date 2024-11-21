@@ -95,6 +95,7 @@ export async function shortcutsMenu() {
 
   const items: (ui.TextMenuItem<number> | string)[] = [];
   for (const [category, commands] of byCategory.entries()) {
+    console.log(category, commands.length);
     items.push("-");
     items.push(category);
     items.push("-");

@@ -59,9 +59,9 @@ export class GamesIdentification {
 
     // Get the extension list from the database.
     const extensions = await sql<Row>`
-            SELECT DISTINCT extension
-            FROM games_identification_files
-        `;
+        SELECT DISTINCT extension
+        FROM games_identification_files
+    `;
 
     const allFiles = await fs.findAllFiles(root, {
       extensions: extensions.map((e) => e.extension),
@@ -76,7 +76,7 @@ export class GamesIdentification {
 
     await partitionAndProgress(
       files,
-      10,
+      5,
       "Adding ROMs to the database...",
       (current, total) => `Adding games: ${current}/${total}`,
       async (partition) => {
@@ -89,11 +89,11 @@ export class GamesIdentification {
           const size = sizes[i];
 
           const [row] = await sql<{ games_id: number }>`
-                        SELECT games_id
-                        FROM games_identification_files
-                        WHERE sha256 = ${sha256}
-                          AND (size = ${size} OR size = 0)
-                    `;
+              SELECT games_id
+              FROM games_identification_files
+              WHERE sha256 = ${sha256}
+                AND (size = ${size} OR size = 0)
+          `;
 
           if (row === undefined) {
             missing.push(path);
@@ -124,17 +124,17 @@ export class GamesIdentification {
     const sql1 = await transaction();
 
     const insertGamesIdStatement = oneLine`
-            INSERT INTO games_identification
-            (system_id, catalog_id, name, shortname, region, languages, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT DO NOTHING
-            RETURNING id
-        `;
+        INSERT INTO games_identification
+        (system_id, catalog_id, name, shortname, region, languages, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT DO NOTHING
+        RETURNING id
+    `;
     const sourceGamesIdStatement = oneLine`
-            INSERT INTO games_identification_files
-                (games_id, catalog_id, extension, size, sha256)
-            VALUES (?, ?, ?, ?, ?)
-        `;
+        INSERT INTO games_identification_files
+            (games_id, catalog_id, extension, size, sha256)
+        VALUES (?, ?, ?, ?, ?)
+    `;
 
     await partitionAndProgress(
       remotes,
@@ -165,10 +165,10 @@ export class GamesIdentification {
 
           if (r === undefined || r === null) {
             const [row] = await sql1<{ id: number }>`
-                            SELECT id
-                            FROM games_identification
-                            WHERE name = ${remote.name}
-                              AND system_id = ${system.id}`;
+                SELECT id
+                FROM games_identification
+                WHERE name = ${remote.name}
+                  AND system_id = ${system.id}`;
             if (row === undefined) {
               throw new Error("Game not found: " + remote.name);
             } else {
@@ -198,6 +198,7 @@ export class GamesIdentification {
       () => sql1.commit(),
       (e) => {
         sql1.rollback();
+        console.error("SQL Error:", e);
         throw e;
       },
     );
@@ -205,9 +206,9 @@ export class GamesIdentification {
 
   public static async fromId(id: number): Promise<GamesIdentification> {
     const [row] = await sql<GamesIdentificationRow>`SELECT *
-                                                        FROM games_identification
-                                                        WHERE id = ${id}
-                                                        LIMIT 1`;
+                                                    FROM games_identification
+                                                    WHERE id = ${id}
+                                                    LIMIT 1`;
 
     return GamesIdentification.fromRow(row);
   }

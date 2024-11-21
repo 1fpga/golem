@@ -29,7 +29,7 @@ build: build-frontend build-1fpga
 
 build-and-sign: build
 ifndef PUBLIC_KEY_PATH
-	$(PUBLIC_KEY_PATH = $(shell read -p "Enter path to public key: " key; echo $$key))
+	$(eval PUBLIC_KEY_PATH = $(shell read -p "Enter path to public key: " key; echo $$key))
 endif
 	$(OPENSSL) pkeyutl -sign \
 		-inkey $(PUBLIC_KEY_PATH) \

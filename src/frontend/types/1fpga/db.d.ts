@@ -22,13 +22,17 @@ declare module "1fpga:db" {
    * Gets a database object for the given database name. This will create the database if it
    * does not exist. Applies migrations if specified.
    * @param name The name of the database.
-   * @param options Optional options for the database.
    * @returns The database object.
    */
   export function load(
     name: string,
-    options?: { migrations?: string },
   ): Promise<Db>;
+
+  /**
+   * Resets the database. This will delete all tables and data in the database.
+   * @param name The name of the database.
+   */
+  export function reset(name: string): Promise<void>;
 
   /**
    * A queryable object that can execute SQL queries.

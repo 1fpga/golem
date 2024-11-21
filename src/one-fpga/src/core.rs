@@ -366,8 +366,11 @@ pub trait Core {
     /// Reset the core, restarting the ROM from the beginning.
     fn reset(&mut self) -> Result<(), Error>;
 
+    /// Read the current volume set in the core.
+    fn volume(&self) -> Result<u8, Error>;
+
     /// Update the volume of a core. This value is to be taken as a linear
-    /// scale from 0-256 requested from the user. If the core takes a
+    /// scale from 0-255 requested from the user. If the core takes a
     /// logarithmic scale, it should convert it to the appropriate value.
     fn set_volume(&mut self, volume: u8) -> Result<(), Error>;
 
@@ -504,6 +507,10 @@ impl Core for OneFpgaCore {
 
     fn reset(&mut self) -> Result<(), Error> {
         unsafe { &mut *self.inner.get() }.reset()
+    }
+
+    fn volume(&self) -> Result<u8, Error> {
+        unsafe { &*self.inner.get() }.volume()
     }
 
     fn set_volume(&mut self, volume: u8) -> Result<(), Error> {

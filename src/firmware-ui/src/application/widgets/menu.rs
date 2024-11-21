@@ -1,5 +1,5 @@
 use embedded_graphics::draw_target::{DrawTarget, DrawTargetExt};
-use embedded_graphics::geometry::{Dimensions, Point, Size};
+use embedded_graphics::geometry::{Point, Size};
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::Drawable;
 use embedded_layout::view_group::ViewGroup;
@@ -71,8 +71,8 @@ where
         self.menu.interact(input)
     }
 
-    pub fn update(&mut self, display: &impl Dimensions) {
-        self.menu.update(display);
+    pub fn update(&mut self) {
+        self.menu.update(&self.rectangle);
     }
 }
 

@@ -40,7 +40,7 @@ impl<C: PixelColor + From<Rgb888> + Into<Rgb888>> Window<C> {
     pub fn new(platform: &mut SdlPlatform<C>, title: &str, size: Size) -> Self
     where
         <<C as PixelColor>::Raw as ToBytes>::Bytes: AsRef<[u8]>,
-        <C as embedded_graphics::prelude::PixelColor>::Raw: From<C>,
+        <C as PixelColor>::Raw: From<C>,
     {
         let framebuffer = OutputImage::new::<C>(size, &platform.init_state.output_settings);
         let inner = SdlWindow::new(platform, title, size);

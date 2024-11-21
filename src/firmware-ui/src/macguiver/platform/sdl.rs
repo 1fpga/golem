@@ -8,6 +8,7 @@ use sdl3::event::Event;
 use sdl3::EventPump;
 use std::cell::RefCell;
 use std::rc::Rc;
+use tracing::info;
 
 pub mod settings;
 pub mod theme;
@@ -38,7 +39,7 @@ pub struct SdlState {
 }
 
 impl SdlState {
-    pub fn events(&self) -> impl Iterator<Item = Event> + '_ {
+    pub fn events(&self) -> impl Iterator<Item=Event> + '_ {
         self.events.iter().cloned()
     }
 }
@@ -48,6 +49,7 @@ pub struct SdlPlatform<C: PixelColor> {
     pub joystick: Rc<RefCell<sdl3::JoystickSubsystem>>,
     pub gamepad: Rc<RefCell<sdl3::GamepadSubsystem>>,
     pub video: Rc<RefCell<sdl3::VideoSubsystem>>,
+    pub keyboard: Rc<RefCell<sdl3::keyboard::KeyboardUtil>>,
 
     has_windows: bool,
     base_window: Option<Window<C>>,
@@ -81,7 +83,7 @@ where
     type Event = sdl3::event::Event;
 
     fn init(init_state: SdlInitState) -> Self {
-        let (joystick, gamepad, event_pump, video) = SDL_CONTEXT.with(|context| {
+        let (joystick, gamepad, keyboard, event_pump, video) = SDL_CONTEXT.with(|context| {
             let ctx = context.borrow();
             // Initialize subsystems.
             let joystick = ctx.joystick().unwrap();
@@ -89,9 +91,15 @@ where
             let gamepad = ctx.gamepad().unwrap();
             let event_pump = ctx.event_pump().unwrap();
             let video = ctx.video().unwrap();
+            let keyboard = ctx.keyboard();
 
-            (joystick, gamepad, event_pump, video)
+            (joystick, gamepad, keyboard, event_pump, video)
         });
+
+        gamepad.add_mapping("030000000d0f00009200000011010000,Hori Pokken Tournament DX Pro,a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,lefttrigger:b6,rightshoulder:b5,righttrigger:b7,start:b9,x:b0,y:b3,").unwrap();
+        gamepad.add_mapping("03004e410d0f00009200000011010000,Hori Pokken Tournament DX Pro,a:b1,b:b2,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,leftshoulder:b4,lefttrigger:b6,rightshoulder:b5,righttrigger:b7,start:b9,x:b0,y:b3,").unwrap();
+
+        info!("Keyboard: Window Id({:?})", keyboard.focused_window_id());
 
         Self {
             init_state,
@@ -99,6 +107,7 @@ where
             joystick: Rc::new(RefCell::new(joystick)),
             gamepad: Rc::new(RefCell::new(gamepad)),
             video: Rc::new(RefCell::new(video)),
+            keyboard: Rc::new(RefCell::new(keyboard)),
             has_windows: false,
             base_window: None,
             phantom: std::marker::PhantomData,
@@ -107,7 +116,10 @@ where
 
     fn window(&mut self, title: &str, size: Size) -> Self::Window {
         self.has_windows = true;
-        Window::new(self, title, size)
+        let w = Window::new(self, title, size);
+        info!("Keyboard: Window Id({:?})", self.keyboard.borrow().focused_window_id());
+
+        w
     }
 
     fn event_loop(&mut self, mut loop_fn: impl FnMut(&mut Self, &Self::State) -> bool) {
@@ -118,8 +130,11 @@ where
         let event_pump = self.event_pump.clone();
 
         'main: loop {
-            event_pump.borrow_mut().pump_events();
-            let events: Vec<Event> = event_pump.borrow_mut().poll_iter().collect();
+            let events: Vec<Event> = {
+                let mut pump = event_pump.borrow_mut();
+                pump.pump_events();
+                pump.poll_iter().collect()
+            };
 
             let state = SdlState { events };
 

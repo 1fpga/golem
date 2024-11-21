@@ -48,40 +48,40 @@ export class Core {
 
   public static async getById(id: number): Promise<Core | null> {
     const [row] = await sql<CoreRow>`SELECT *
-                                         FROM cores
-                                         WHERE id = ${id}
-                                         LIMIT 1`;
+                                     FROM cores
+                                     WHERE id = ${id}
+                                     LIMIT 1`;
     return Core.fromRow(row);
   }
 
   public static async count(system?: System): Promise<number> {
     const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*) as count
-                                                       FROM cores ${
-                                                         system
-                                                           ? sql`WHERE system_id =
-                                                                       ${system.id}`
-                                                           : undefined
-                                                       }`;
+                                                     FROM cores ${
+                                                       system
+                                                         ? sql`WHERE system_id =
+                                                                     ${system.id}`
+                                                         : undefined
+                                                     }`;
 
     return count;
   }
 
   public static async listForCatalogId(catalogId: number): Promise<Core[]> {
     const rows = await sql<CoreRow>`SELECT *
-                                        FROM cores
-                                        WHERE catalog_id = ${catalogId}`;
+                                    FROM cores
+                                    WHERE catalog_id = ${catalogId}`;
 
     return rows.map(Core.fromRow);
   }
 
   public static async list(system?: System): Promise<Core[]> {
     const rows = await sql<CoreRow>`SELECT *
-                                        FROM cores ${
-                                          system
-                                            ? sql`WHERE system_id =
-                                                        ${system.id}`
-                                            : undefined
-                                        }`;
+                                    FROM cores ${
+                                      system
+                                        ? sql`WHERE system_id =
+                                                    ${system.id}`
+                                        : undefined
+                                    }`;
 
     return rows.map(Core.fromRow);
   }
@@ -92,9 +92,9 @@ export class Core {
 
   static async install(core: RemoteCore, catalog: Catalog, version?: string) {
     let [maybeCore] = await sql<CoreRow>`SELECT *
-                                             FROM cores
-                                             WHERE unique_name = ${core.uniqueName}
-                                             LIMIT 1`;
+                                         FROM cores
+                                         WHERE unique_name = ${core.uniqueName}
+                                         LIMIT 1`;
 
     let release = core.latestRelease;
     if (version !== undefined) {
@@ -216,6 +216,10 @@ export class Core {
       let c = core.load({
         core: { type: "Path", path: this.rbfPath },
       });
+      const settings = await (
+        await import("$/services/settings/user")
+      ).UserSettings.forLoggedInUser();
+      c.volume = await settings.defaultVolume();
       c.loop();
     } finally {
       Core.setRunning(null);

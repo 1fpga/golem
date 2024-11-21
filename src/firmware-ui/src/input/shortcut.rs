@@ -121,13 +121,12 @@ pub enum Modifiers {
 /// This is normally paired with a command.
 #[derive(Default, Clone, PartialEq, Eq)]
 pub struct Shortcut {
-    keyboard:
-        BitArray<[u32; (sdl3::sys::SDL_Scancode::SDL_NUM_SCANCODES as usize) / size_of::<u32>()]>,
+    keyboard: BitArray<[u32; (Scancode::Count as usize) / size_of::<u32>()]>,
     keyboard_modifiers: [bool; Modifiers::COUNT],
     gamepad_button: BitArray<
-        [u32; (sdl3::sys::SDL_GamepadButton::SDL_GAMEPAD_BUTTON_MAX as usize) / size_of::<u32>()],
+        [u32; (sdl3::sys::gamepad::SDL_GAMEPAD_BUTTON_COUNT.0 as usize) / size_of::<u32>()],
     >,
-    axis: [AxisValue; sdl3::sys::SDL_GamepadAxis::SDL_GAMEPAD_AXIS_MAX as usize],
+    axis: [AxisValue; sdl3::sys::gamepad::SDL_GAMEPAD_AXIS_COUNT.0 as usize],
 }
 
 impl std::fmt::Debug for Shortcut {
@@ -343,11 +342,7 @@ impl Shortcut {
             .iter()
             .enumerate()
             .filter(|(_, x)| **x)
-            .all(|(i, _)| {
-                state
-                    .keyboard
-                    .contains(&Scancode::from_i32(i as i32).expect("Invalid scancode index?"))
-            })
+            .all(|(i, _)| state.key(Scancode::from_i32(i as i32).expect("Invalid scancode index?")))
             && self
                 .keyboard_modifiers
                 .iter()
@@ -356,21 +351,11 @@ impl Shortcut {
                 .all(
                     |(i, _)| match Modifiers::from_repr(i as u8).expect("Invalid modifier?") {
                         Modifiers::Shift => {
-                            state.keyboard.contains(&Scancode::LShift)
-                                || state.keyboard.contains(&Scancode::RShift)
+                            state.key(Scancode::LShift) || state.key(Scancode::RShift)
                         }
-                        Modifiers::Ctrl => {
-                            state.keyboard.contains(&Scancode::LCtrl)
-                                || state.keyboard.contains(&Scancode::RCtrl)
-                        }
-                        Modifiers::Alt => {
-                            state.keyboard.contains(&Scancode::LAlt)
-                                || state.keyboard.contains(&Scancode::RAlt)
-                        }
-                        Modifiers::Gui => {
-                            state.keyboard.contains(&Scancode::LGui)
-                                || state.keyboard.contains(&Scancode::RGui)
-                        }
+                        Modifiers::Ctrl => state.key(Scancode::LCtrl) || state.key(Scancode::RCtrl),
+                        Modifiers::Alt => state.key(Scancode::LAlt) || state.key(Scancode::RAlt),
+                        Modifiers::Gui => state.key(Scancode::LGui) || state.key(Scancode::RGui),
                     },
                 )
             && self
@@ -380,7 +365,7 @@ impl Shortcut {
                 .filter(|(_, x)| **x)
                 .all(|(i, _)| {
                     let x = index_to_button(i);
-                    state.gamepads.values().any(|gp| gp.contains(&x))
+                    state.gamepads.values().any(|gp| gp.contains(&x.into()))
                 })
             && self
                 .axis
@@ -392,7 +377,7 @@ impl Shortcut {
                     state
                         .axis
                         .values()
-                        .any(|gp| gp.get(&x).map(|x| v.matches(*x)).unwrap_or(false))
+                        .any(|gp| gp.get(&x.into()).map(|x| v.matches(*x)).unwrap_or(false))
                 })
     }
 

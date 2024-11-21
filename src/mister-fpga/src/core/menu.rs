@@ -76,6 +76,10 @@ impl Core for MenuCore {
         Ok(())
     }
 
+    fn volume(&self) -> Result<u8, Error> {
+        self.inner.volume()
+    }
+
     fn set_volume(&mut self, volume: u8) -> Result<(), Error> {
         self.inner.set_volume(volume)
     }

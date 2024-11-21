@@ -13,5 +13,5 @@ fce-movie-format = { path = "../fce-movie-format" }
 humantime = { git = "https://github.com/hansl/humantime.git", rev = "70e660a" }
 mister-fpga = { workspace = true, default-features = true }
 one-fpga = { workspace = true, default-features = true }
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing.workspace = true
+tracing-subscriber.workspace = true

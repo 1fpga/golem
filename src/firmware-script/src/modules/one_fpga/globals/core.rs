@@ -203,6 +203,19 @@ js_class! {
             }
         }
 
+        property volume {
+            fn get(this: JsClass<JsCore>) -> JsResult<f64> {
+                let volume = this.borrow().core.volume().map_err(JsError::from_rust)? as f64;
+
+                Ok(volume / 255.0)
+            }
+
+            fn set(this: JsClass<JsCore>, value: f64) -> JsResult<()> {
+                let value = (value * 255.0) as u8;
+                this.borrow_mut().core.set_volume(value).map_err(JsError::from_rust)
+            }
+        }
+
         constructor(data: ContextData<HostData>) {
             let host_defined = data.0;
             Ok(JsCore::new(host_defined.app_mut().platform_mut().core_manager_mut().get_current_core().unwrap().clone()))

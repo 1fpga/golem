@@ -8,5 +8,8 @@ pre-build = [
     "apt-get install --assume-yes fbi",
     "apt-get install --assume-yes linux-tools-common:$CROSS_DEB_ARCH linux-tools-generic:$CROSS_DEB_ARCH",
     "apt-get install --assume-yes libdbus-1-dev:$CROSS_DEB_ARCH",
+    "apt-get install --assume-yes libusb-dev:$CROSS_DEB_ARCH",
+    "apt-get install --assume-yes libevdev-dev:$CROSS_DEB_ARCH",
+    "apt-get install --assume-yes libudev-dev:$CROSS_DEB_ARCH",
 ]
 

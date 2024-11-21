@@ -81,6 +81,8 @@ pub struct MisterFpgaCore {
     pub io_version: u8,
     config: config_string::Config,
 
+    volume: u8,
+
     // All the images that are mounted. Can only have 16 images at once.
     cards: Box<[Option<SdCard>; 16]>,
 
@@ -136,6 +138,7 @@ impl MisterFpgaCore {
             core_type,
             spi_type,
             io_version,
+            volume: 0,
             config,
             cards: Box::new([NONE; 16]),
             save_states,
@@ -617,7 +620,7 @@ impl Core for MisterFpgaCore {
             switches |= ButtonSwitches::DirectVideo;
         }
 
-        self.spi_mut().execute(switches).unwrap();
+        self.spi_mut().execute(switches)?;
 
         video::init(&options);
         video::init_mode(&options, self, self.is_menu);
@@ -635,7 +638,12 @@ impl Core for MisterFpgaCore {
         Ok(())
     }
 
+    fn volume(&self) -> Result<u8, Error> {
+        Ok(self.volume)
+    }
+
     fn set_volume(&mut self, volume: u8) -> Result<(), Error> {
+        self.volume = volume;
         self.send_volume(Volume::scaled(volume))
             .map_err(Error::Message)?;
         Ok(())

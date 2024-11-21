@@ -11,7 +11,7 @@ import {
   StartOnKind,
   StartOnSetting,
   User,
-  UserSettings,
+  UserSettings
 } from "$/services";
 import { stripIndents } from "common-tags";
 import { StartGameAction } from "$/actions/start_game";
@@ -22,10 +22,11 @@ import { settingsMenu } from "$/ui/settings";
 import { login } from "$/ui/login";
 import { downloadCenterMenu } from "$/ui/downloads";
 import { about } from "$/ui/about";
+import { resetDb } from "$/utils";
 
 // Polyfill for events.
 globalThis.performance = <any>{
-  now: () => Date.now(),
+  now: () => Date.now()
 };
 
 async function debugMenu() {
@@ -37,22 +38,22 @@ async function debugMenu() {
         label: "Reset All...",
         select: async () => {
           await ui.alert("Reset everything");
-        },
+        }
       },
       {
         label: "Input Tester...",
         select: async () => {
           await ui.inputTester();
-        },
-      },
-    ],
+        }
+      }
+    ]
   });
 }
 
 async function mainMenu(
   user: User,
   startOn: StartOnSetting,
-  settings: UserSettings,
+  settings: UserSettings
 ) {
   let quit = false;
   let logout = false;
@@ -62,24 +63,22 @@ async function mainMenu(
     case StartOnKind.GameLibrary:
       await gamesMenu();
       break;
-    case StartOnKind.LastGamePlayed:
-      {
-        const game = await Games.lastPlayed();
-        if (game) {
-          await game.launch();
-        } else {
-          await gamesMenu();
-          break;
-        }
+    case StartOnKind.LastGamePlayed: {
+      const game = await Games.lastPlayed();
+      if (game) {
+        await game.launch();
+      } else {
+        await gamesMenu();
+        break;
       }
+    }
       break;
-    case StartOnKind.SpecificGame:
-      {
-        const game = await Games.byId(startOn.game);
-        if (game) {
-          await game.launch();
-        }
+    case StartOnKind.SpecificGame: {
+      const game = await Games.byId(startOn.game);
+      if (game) {
+        await game.launch();
       }
+    }
       break;
 
     case StartOnKind.MainMenu:
@@ -102,50 +101,50 @@ async function mainMenu(
         {
           label: "Game Library",
           select: async () => await gamesMenu(),
-          marker: gamesMarker,
+          marker: gamesMarker
         },
         {
           label: "Cores",
           select: async () => await coresMenu(),
-          marker: coresMarker,
+          marker: coresMarker
         },
         "---",
         {
           label: "Settings...",
-          select: async () => await settingsMenu(),
+          select: async () => await settingsMenu()
         },
         ...(user.admin
           ? [
-              {
-                label: "Download Center...",
-                marker: downloadMarker,
-                select: async () => await downloadCenterMenu(),
-              },
-            ]
+            {
+              label: "Download Center...",
+              marker: downloadMarker,
+              select: async () => await downloadCenterMenu()
+            }
+          ]
           : []),
         {
           label: "Controllers...",
           select: async () => {
             await ui.alert("Controllers", "Not implemented yet.");
-          },
+          }
         },
         "---",
         { label: "About", select: about },
         ...((await settings.getDevTools())
           ? [
-              "-",
-              {
-                label: "Developer Tools",
-                select: async () => await debugMenu(),
-              },
-            ]
+            "-",
+            {
+              label: "Developer Tools",
+              select: async () => await debugMenu()
+            }
+          ]
           : []),
         "---",
         ...((await User.canLogOut())
           ? [{ label: "Logout", select: () => (logout = true) }]
           : []),
-        { label: "Exit", select: () => (quit = true) },
-      ],
+        { label: "Exit", select: () => (quit = true) }
+      ]
     });
   }
 
@@ -159,10 +158,9 @@ async function mainMenu(
 }
 
 /**
- * Main function of the frontend.
- * @returns `true` if the application should exit.
+ * Initialize the application.
  */
-async function mainInner(): Promise<boolean> {
+async function initAll() {
   // Before setting commands (to avoid commands to interfere with the login menu),
   // we need to initialize the user.
   let user = await login();
@@ -181,9 +179,9 @@ async function mainInner(): Promise<boolean> {
           Please report this issue to the developers.
 
           The application will now exit.
-        `,
+        `
       );
-      return true;
+      return {};
     }
     await Commands.login(user, true);
   } else {
@@ -192,8 +190,34 @@ async function mainInner(): Promise<boolean> {
 
   const [settings, global] = await Promise.all([
     UserSettings.init(user),
-    GlobalSettings.init(),
+    GlobalSettings.init()
   ]);
+
+  return { user, settings, global };
+}
+
+/**
+ * Main function of the frontend.
+ * @returns `true` if the application should exit.
+ */
+async function mainInner(): Promise<boolean> {
+  const { user, settings, global } = await initAll();
+
+  if (!user || !settings || !global) {
+    const choice = await ui.alert({
+      title: "Error",
+      message: "Could not initialize the application. Do you want to reset everything?",
+      choices: ["Reset", "Exit"]
+    });
+    if (choice === 1) {
+      // Clear the database.
+      await resetDb();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   let startOn = await settings.startOn();
 
   console.log("Starting on:", JSON.stringify(startOn));
@@ -228,7 +252,7 @@ async function mainInner(): Promise<boolean> {
         let choice = await ui.alert({
           title: "An error happened",
           message: (e as Error)?.message ?? JSON.stringify(e),
-          choices: ["Restart", "Quit"],
+          choices: ["Restart", "Quit"]
         });
         if (choice === 1) {
           return false;
@@ -240,7 +264,7 @@ async function mainInner(): Promise<boolean> {
 
 export async function main() {
   console.log(`Build: "${rev}" (${production ? "production" : "development"})`);
-  console.log("1FPGA started. ONE_FPGA = %o", ONE_FPGA);
+  console.log("1FPGA started. ONE_FPGA =", JSON.stringify(ONE_FPGA));
   let quit = false;
 
   while (!quit) {

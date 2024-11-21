@@ -2,9 +2,10 @@ use crate::macguiver::platform::sdl::output::OutputImage;
 use crate::macguiver::platform::sdl::SdlPlatform;
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::{PixelColor, Size};
-use sdl3::pixels::PixelFormatEnum;
+use sdl3::pixels::PixelFormat;
 use sdl3::rect::Point;
 use sdl3::render::{Canvas, Texture, TextureCreator};
+use sdl3::sys::pixels::SDL_PIXELFORMAT_RGB24;
 use sdl3::video::WindowContext;
 
 pub struct SdlWindow {
@@ -30,17 +31,17 @@ impl SdlWindow {
                 .unwrap()
         });
 
-        let canvas = window.into_canvas().build().unwrap();
+        let canvas = window.into_canvas();
 
         let window_texture = SdlWindowTextureBuilder {
             texture_creator: canvas.texture_creator(),
             texture_builder: |creator: &TextureCreator<WindowContext>| {
                 creator
-                    .create_texture_streaming(PixelFormatEnum::RGB24, size.width, size.height)
+                    .create_texture_streaming(unsafe { PixelFormat::from_ll(SDL_PIXELFORMAT_RGB24) }, size.width, size.height)
                     .unwrap()
             },
         }
-        .build();
+            .build();
 
         Self {
             canvas,
