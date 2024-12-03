@@ -100,7 +100,7 @@ export default {
     "1fpga:schema",
     "1fpga:settings",
     "1fpga:storage",
-    "1fpga:ui",
+    "1fpga:osd",
     "1fpga:upgrade",
     "1fpga:utils",
   ],

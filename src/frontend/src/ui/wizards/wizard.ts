@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 
 export class WizardCancelError {}
 
@@ -192,13 +192,13 @@ export function message<T = number>(
 
   return async (options: StepOptions) => {
     while (true) {
-      const result = await ui.alert({
+      const result = await osd.alert({
         title: `${title}`,
         message,
         choices,
       });
 
-      // `noCancel` means the user cannot cancel. `ui.alert()` always
+      // `noCancel` means the user cannot cancel. `osd.alert()` always
       // allows to cancel, so in this case we just ignore the result
       // and re-ask.
       if (noCancel && result === null) {
@@ -224,7 +224,7 @@ export function choice<T>(
     let done = false;
     let stepResult: T | undefined;
     while (!done) {
-      const result = await ui.alert({
+      const result = await osd.alert({
         title,
         message,
         choices: choices.map((c) => c[0]),

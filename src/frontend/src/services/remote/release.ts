@@ -1,6 +1,6 @@
 import { Base64 } from "js-base64";
 import * as fs from "1fpga:fs";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import * as upgrade from "1fpga:upgrade";
 import * as net from "1fpga:net";
 import type {
@@ -118,7 +118,7 @@ export class RemoteRelease {
    * @returns True if the upgrade was successful, false if there was a problem.
    */
   public async doUpgrade(force = false): Promise<boolean> {
-    ui.show(
+    osd.show(
       `Downloading ${this.binary_.name}...`,
       `Please wait while the upgrade is performed.`,
     );
@@ -157,7 +157,7 @@ export class RemoteRelease {
     }
 
     const [path, signature] = downloads[0];
-    ui.show(
+    osd.show(
       `Upgrading ${this.binary_.name}...`,
       stripIndents`
         Please wait while the upgrade is performed.

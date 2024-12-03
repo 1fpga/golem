@@ -2,7 +2,7 @@ import * as core from "1fpga:core";
 import { RemoteCore } from "../remote";
 import { Row } from "1fpga:db";
 import * as net from "1fpga:net";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { Catalog } from "./catalog";
 import { System } from "./system";
 import { compareVersions, sql } from "$/utils";
@@ -117,7 +117,7 @@ export class Core {
     // First download the core files
     const root = Core.pathForAsset(core, `${release.version}`);
     const files = release.files;
-    ui.show(
+    osd.show(
       "Downloading core...",
       `Core "${core.name}"\nVersion "${release.version}"`,
     );

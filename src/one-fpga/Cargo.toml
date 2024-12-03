@@ -19,7 +19,6 @@ image.workspace = true
 sdl3.workspace = true
 strum.workspace = true
 
-byteorder = "1.5.0"
 serde = { version = "1.0.198", features = ["derive"] }
 static_assertions = "1.1"
 thiserror.workspace = true

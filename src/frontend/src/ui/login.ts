@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { User } from "$/services";
 import { sql } from "$/utils";
 
@@ -9,7 +9,7 @@ interface UserRow {
 
 export async function login(): Promise<User | null> {
   const rows = await sql<UserRow>`SELECT *
-                                    FROM users`;
+                                  FROM users`;
 
   // Check if there's no user in the database. If so, return null.
   if (rows.length === 0) {
@@ -25,7 +25,7 @@ export async function login(): Promise<User | null> {
   let user: User | null = null;
 
   while (user === null) {
-    user = await ui.textMenu({
+    user = await osd.textMenu({
       title: "Select User",
       items: rows.map((u) => ({
         label: "" + u.username,

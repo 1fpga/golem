@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { Command, Commands } from "$/services";
 
 async function shortcutCommandMenu(c: Command) {
@@ -17,7 +17,7 @@ async function shortcutCommandMenu(c: Command) {
     }
 
     if (maps.size === 0) {
-      const shortcut = await ui.promptShortcut(
+      const shortcut = await osd.promptShortcut(
         "Enter a new shortcut",
         await c.labelOf(undefined),
       );
@@ -32,7 +32,7 @@ async function shortcutCommandMenu(c: Command) {
     const alone = maps.size === 1;
     const ident = alone ? "" : "  ";
 
-    const items: (string | ui.TextMenuItem<boolean>)[] = [];
+    const items: (string | osd.TextMenuItem<boolean>)[] = [];
     for (const [label, { meta, shortcuts }] of maps.entries()) {
       if (items.length > 0) {
         items.push("-");
@@ -44,7 +44,7 @@ async function shortcutCommandMenu(c: Command) {
         label: `${ident}Add a new shortcut...`,
         select: async (_, i) => {
           highlighted = undefined;
-          const shortcut = await ui.promptShortcut(
+          const shortcut = await osd.promptShortcut(
             "Enter a new shortcut",
             await c.labelOf(meta),
           );
@@ -60,7 +60,7 @@ async function shortcutCommandMenu(c: Command) {
         items.push({
           label: `${ident}Delete ${s}...`,
           select: async (_, i) => {
-            const confirm = await ui.alert({
+            const confirm = await osd.alert({
               title: `Deleting shortcut`,
               message: `Are you sure you want to delete this shortcut?\n${s}`,
               choices: ["Cancel", "Delete shortcut"],
@@ -75,7 +75,7 @@ async function shortcutCommandMenu(c: Command) {
       }
     }
 
-    done = await ui.textMenu({
+    done = await osd.textMenu({
       title: c.label,
       back: true,
       highlighted,
@@ -93,7 +93,7 @@ export async function shortcutsMenu() {
     byCategory.set(c.category, category);
   }
 
-  const items: (ui.TextMenuItem<number> | string)[] = [];
+  const items: (osd.TextMenuItem<number> | string)[] = [];
   for (const [category, commands] of byCategory.entries()) {
     console.log(category, commands.length);
     items.push("-");
@@ -113,7 +113,7 @@ export async function shortcutsMenu() {
   }
   items.splice(0, 1);
 
-  await ui.textMenu({
+  await osd.textMenu({
     title: "Shortcuts",
     back: 0,
     items,

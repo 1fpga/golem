@@ -1,5 +1,5 @@
-import * as ui from "1fpga:ui";
-import { sql } from "../utils";
+import * as osd from "1fpga:osd";
+import { sql } from "$/utils";
 
 let loggedInUser: User | null = null;
 
@@ -47,14 +47,14 @@ export class User {
 
   public static async list(): Promise<User[]> {
     const rows = await sql<UserRow>`SELECT *
-                                        FROM users`;
+                                    FROM users`;
     return rows.map((row) => new this(row.id, row.username, !!row.admin));
   }
 
   public static async byUsername(username: string): Promise<User | null> {
     let [user] = await sql<UserRow>`SELECT *
-                                        FROM users
-                                        WHERE username = ${username}`;
+                                    FROM users
+                                    WHERE username = ${username}`;
     if (!user) {
       return null;
     }
@@ -73,8 +73,8 @@ export class User {
     force = false,
   ): Promise<User | null> {
     let [user] = await sql<UserRow>`SELECT *
-                                        FROM users
-                                        WHERE username = ${username}`;
+                                    FROM users
+                                    WHERE username = ${username}`;
 
     if (!user) {
       throw new Error("Invalid username or password");
@@ -83,7 +83,7 @@ export class User {
     if (!force && user.password !== null) {
       let prompt = "";
       while (true) {
-        const password = await ui.promptPassword(
+        const password = await osd.promptPassword(
           "Enter your password:",
           prompt,
           4,
@@ -110,7 +110,7 @@ export class User {
    */
   static async canLogOut() {
     const [{ count }] = await sql<{ count: number }>`SELECT COUNT(*) as count
-                                                       FROM users`;
+                                                     FROM users`;
 
     if (count > 1) {
       return true;
@@ -120,8 +120,8 @@ export class User {
     }
 
     let [user] = await sql<UserRow>`SELECT *
-                                        FROM users
-                                        WHERE username = ${loggedInUser.username}`;
+                                    FROM users
+                                    WHERE username = ${loggedInUser.username}`;
 
     if (!user) {
       return false;
@@ -166,20 +166,20 @@ export class User {
     }
 
     await sql`DELETE
-                  FROM users
-                  WHERE id = ${this.id}`;
+              FROM users
+              WHERE id = ${this.id}`;
   }
 
   public async clearPassword() {
     await sql`UPDATE users
-                  SET password = null
-                  WHERE id = ${this.id}`;
+              SET password = null
+              WHERE id = ${this.id}`;
   }
 
   public async setPassword(password: string[]) {
     await sql`UPDATE users
-                  SET password = ${User.passwordToString(password)}
-                  WHERE id = ${this.id}`;
+              SET password = ${User.passwordToString(password)}
+              WHERE id = ${this.id}`;
   }
 
   public async toggleAdmin() {
@@ -189,7 +189,7 @@ export class User {
 
     this.admin_ = !this.admin;
     await sql`UPDATE users
-                  SET admin = ${this.admin}
-                  WHERE id = ${this.id}`;
+              SET admin = ${this.admin}
+              WHERE id = ${this.id}`;
   }
 }

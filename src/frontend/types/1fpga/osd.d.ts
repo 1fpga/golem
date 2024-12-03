@@ -1,13 +1,13 @@
-// Type definitions for `1fpga:ui` module.
+// Type definitions for `1fpga:osd` module.
 
 /**
  * This module provides functions for creating and managing user interfaces in OSD.
- * This is a very descriptive API, where the JavaScript setup the UI as a single panel,
- * and then give control to the firmware to manage the UI until the User interacts
+ * This is a very descriptive API, where the JavaScript setup the OSD as a single panel,
+ * and then give control to the firmware to manage the OSD until the User interacts
  * with it. For example, the `textMenu` function will create a menu with a list of
  * textual option, and the function will return the index of the selected option.
  */
-declare module "1fpga:ui" {
+declare module "1fpga:osd" {
   /**
    * Represents a textual menu item.
    */
@@ -128,7 +128,7 @@ declare module "1fpga:ui" {
   ): Promise<string[] | null>;
 
   /**
-   * Update the UI but don't let the user interact with it.
+   * Update the OSD with a message but don't let the user interact with it.
    */
   export function show(message: string): void;
   export function show(title: string, message: string): void;

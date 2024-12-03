@@ -1,23 +1,23 @@
 import { DEFAULT_USERNAME, User } from "$/services";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { oneLine } from "common-tags";
 
 async function addUser() {
-  const username = await ui.prompt("Enter the new user's username:");
+  const username = await osd.prompt("Enter the new user's username:");
   if (!username) {
     return;
   }
   if (username === DEFAULT_USERNAME) {
-    await ui.alert("Invalid username");
+    await osd.alert("Invalid username");
     return;
   }
   if ((await User.byUsername(username)) !== null) {
-    await ui.alert("User already exists");
+    await osd.alert("User already exists");
     return;
   }
 
   const user = await User.create(username, null, false);
-  await ui.alert(oneLine`
+  await osd.alert(oneLine`
     User '${username}' created successfully. 
     To set a password, login as the user and change the password.
   `);
@@ -26,12 +26,16 @@ async function addUser() {
 
 async function changePassword(user: User) {
   while (true) {
-    const password = await ui.promptPassword("Enter your new password:", "", 4);
+    const password = await osd.promptPassword(
+      "Enter your new password:",
+      "",
+      4,
+    );
     if (password === null) {
       return;
     }
 
-    const password2 = await ui.promptPassword(
+    const password2 = await osd.promptPassword(
       "Verify your new password:",
       "",
       4,
@@ -41,11 +45,11 @@ async function changePassword(user: User) {
     }
     if (User.passwordToString(password) === User.passwordToString(password2)) {
       await user.setPassword(password);
-      await ui.alert("Password changed successfully");
+      await osd.alert("Password changed successfully");
       return;
     }
 
-    const choice = await ui.alert({
+    const choice = await osd.alert({
       message: "Passwords do not match. Please try again.",
       choices: ["Try Again", "Cancel"],
     });
@@ -56,7 +60,7 @@ async function changePassword(user: User) {
 }
 
 async function manageUser(user: User) {
-  await ui.textMenu({
+  await osd.textMenu({
     title: "Manage User '" + user.username + "'",
     back: false,
     items: [
@@ -64,14 +68,14 @@ async function manageUser(user: User) {
         label: "Clear Password...",
         select: async () => {
           await user.clearPassword();
-          await ui.alert("Password cleared successfully");
+          await osd.alert("Password cleared successfully");
           return false;
         },
       },
       {
         label: "Delete User",
         select: async () => {
-          const choice = await ui.alert({
+          const choice = await osd.alert({
             message: "Are you sure you want to delete this user?",
             choices: ["No", "Yes"],
           });
@@ -79,7 +83,7 @@ async function manageUser(user: User) {
             return;
           }
           await user.delete();
-          await ui.alert("User deleted successfully");
+          await osd.alert("User deleted successfully");
           return false;
         },
       },
@@ -105,7 +109,7 @@ export async function accountsSettingsMenu(): Promise<boolean> {
   const users = (await User.list()).filter(
     (u) => u.id != loggedInUser.id && u.username != DEFAULT_USERNAME,
   );
-  const items: ui.TextMenuItem<boolean>[] = [
+  const items: osd.TextMenuItem<boolean>[] = [
     {
       label: "Clear Password",
       select: async () => {
@@ -147,7 +151,7 @@ export async function accountsSettingsMenu(): Promise<boolean> {
   let done = false;
   let reloadMainMenu = false;
   while (!done) {
-    done = await ui.textMenu({
+    done = await osd.textMenu({
       title: "Accounts",
       back: true,
       items,

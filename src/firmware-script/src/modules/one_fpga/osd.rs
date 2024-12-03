@@ -490,7 +490,7 @@ fn prompt_shortcut_(
 
 pub fn create_module(context: &mut Context) -> JsResult<(JsString, Module)> {
     Ok((
-        js_string!("ui"),
+        js_string!("osd"),
         [
             (js_string!("alert"), alert_.into_js_function_copied(context)),
             (

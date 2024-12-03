@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import * as oneFpgaSettings from "1fpga:settings";
 import { shortcutsMenu } from "./settings/shortcuts";
 import {
@@ -53,7 +53,7 @@ async function startOptionsMenu(settings: UserSettings) {
       maybeGame = await Games.byId(startOn.game);
     }
 
-    done = await ui.textMenu({
+    done = await osd.textMenu({
       back: true,
       title: "Startup Options",
       items: [
@@ -98,7 +98,7 @@ async function startOptionsMenu(settings: UserSettings) {
               {
                 label: "  ",
                 marker: maybeGame?.name ?? "",
-                select: async (item: ui.TextMenuItem<boolean>) => {
+                select: async (item: osd.TextMenuItem<boolean>) => {
                   const game = await Games.select({
                     title: "Select a game",
                   });
@@ -123,7 +123,7 @@ export async function uiSettingsMenu() {
   }
 
   const settings = await GlobalSettings.create();
-  await ui.textMenu({
+  await osd.textMenu({
     title: "UI Settings",
     back: 0,
     items: [
@@ -164,7 +164,7 @@ export async function uiSettingsMenu() {
 
 async function setTimezone() {
   const settings = await GlobalSettings.create();
-  return await ui.textMenu({
+  return await osd.textMenu({
     title: "Pick a Timezone",
     back: null,
     items: [
@@ -197,7 +197,7 @@ async function setDateTimeUi(values: DateTimeMenuValues[]): Promise<boolean> {
     const menu = values[i];
     const choices = menu.choices();
     const currentValue = choices.indexOf(menu.value);
-    const pick = await ui.textMenu({
+    const pick = await osd.textMenu({
       title: menu.title,
       back: -1,
       highlighted: currentValue == -1 ? 0 : currentValue,
@@ -349,14 +349,14 @@ async function settingsMenuDateTime() {
   while (true) {
     const type = await settings.getDateTimeUpdate();
     const d = new Date();
-    let items: ui.TextMenuItem<any>[] = [];
+    let items: osd.TextMenuItem<any>[] = [];
     if (type !== DatetimeUpdate.Automatic) {
       items.push({
         label: "Set TimeZone...",
         marker: await settings.getTimeZone(
           oneFpgaSettings.getTimeZone() ?? "UTC",
         ),
-        select: async (item: ui.TextMenuItem<undefined>) => {
+        select: async (item: osd.TextMenuItem<undefined>) => {
           const newTZ = await setTimezone();
           if (newTZ !== null) {
             item.marker = newTZ;
@@ -403,7 +403,7 @@ async function settingsMenuDateTime() {
         break;
     }
 
-    const result = await ui.textMenu({
+    const result = await osd.textMenu({
       title: "Date and Time",
       back: 0,
       items: [
@@ -438,7 +438,7 @@ export async function settingsMenu() {
   const globals = await GlobalSettings.create();
   let reloadMainMenu = false;
 
-  await ui.textMenu({
+  await osd.textMenu({
     back: 0,
     title: "Settings",
     items: [
@@ -476,7 +476,7 @@ export async function settingsMenu() {
                 UPDATE_FREQUENCY_LABELS[
                   await globals.getCatalogCheckFrequency()
                 ],
-              select: async (item: ui.TextMenuItem<any>) => {
+              select: async (item: osd.TextMenuItem<any>) => {
                 item.marker =
                   UPDATE_FREQUENCY_LABELS[
                     await globals.toggleCatalogCheckFrequency()

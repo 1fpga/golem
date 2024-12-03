@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import {
   Binary,
   Catalog,
@@ -19,7 +19,7 @@ async function catalogDetails(c: Catalog) {
 }
 
 async function addCustomUrl() {
-  const url = await ui.prompt("Enter the URL of the new catalog:");
+  const url = await osd.prompt("Enter the URL of the new catalog:");
   if (url === undefined) {
     return false;
   }
@@ -37,7 +37,7 @@ async function addNewCatalog() {
     "Cancel",
   ];
 
-  const choice = await ui.alert({
+  const choice = await osd.alert({
     title: "Add a new Catalog",
     message:
       "Do you want to add a well known catalog (if available), or enter a URL?",
@@ -75,7 +75,7 @@ export async function installCoresFromCatalog(
   });
 
   if (cores.length === 0 && systems.length === 0) {
-    await ui.alert("No cores or systems to install. Nothing to do.");
+    await osd.alert("No cores or systems to install. Nothing to do.");
     return;
   }
 
@@ -104,7 +104,7 @@ async function performBinaryUpdate(b: Binary) {
     throw new Error("No release found");
   }
 
-  const update = await ui.alert({
+  const update = await osd.alert({
     title: `Update ${b.name}`,
     message: `Do you want to update ${b.name} to version ${release.version}?`,
     choices: ["Cancel", "Update and Restart"],
@@ -147,7 +147,7 @@ export async function downloadCenterMenu() {
       });
     }
 
-    done = await ui.textMenu({
+    done = await osd.textMenu({
       title: "Download Center",
       back: true,
       items: [
@@ -164,7 +164,7 @@ export async function downloadCenterMenu() {
         {
           label: "Update All...",
           select: async () => {
-            await ui.alert(`Not implemented yet!`);
+            await osd.alert(`Not implemented yet!`);
             // if (await Catalog.updateAll()) {
             //   refresh = true;
             //   return false;
@@ -178,7 +178,7 @@ export async function downloadCenterMenu() {
           label: `  ${c.name}`,
           marker: c.updatePending ? "!" : "",
           select: async () => {
-            await ui.alert(`Not implemented yet!`);
+            await osd.alert(`Not implemented yet!`);
             // if (await catalogDetails(c)) {
             //   refresh = true;
             //   return false;

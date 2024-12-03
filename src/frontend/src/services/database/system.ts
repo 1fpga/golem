@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { type Row } from "1fpga:db";
 import { sql } from "$/utils";
 import { RemoteCatalog, RemoteSystem } from "../remote";
@@ -30,8 +30,8 @@ export class System {
 
   public static async listForCatalogId(catalogId: number): Promise<System[]> {
     const rows = await sql<SystemRow>`SELECT *
-                                          FROM systems
-                                          WHERE catalog_id = ${catalogId}`;
+                                      FROM systems
+                                      WHERE catalog_id = ${catalogId}`;
     return rows.map(System.fromRow);
   }
 
@@ -39,24 +39,24 @@ export class System {
     uniqueName: string,
   ): Promise<System | null> {
     const [row] = await sql<SystemRow>`SELECT *
-                                           FROM systems
-                                           WHERE unique_name = ${uniqueName}
-                                           LIMIT 1`;
+                                       FROM systems
+                                       WHERE unique_name = ${uniqueName}
+                                       LIMIT 1`;
     return System.fromRow(row);
   }
 
   public static async getById(id: number): Promise<System | null> {
     const [row] = await sql<SystemRow>`SELECT *
-                                           FROM systems
-                                           WHERE id = ${id}
-                                           LIMIT 1`;
+                                       FROM systems
+                                       WHERE id = ${id}
+                                       LIMIT 1`;
     return System.fromRow(row);
   }
 
   public static async create(system: RemoteSystem, catalogId: number) {
     const id = await sql<{ id: number }>`SELECT id
-                                             FROM systems
-                                             WHERE unique_name = ${system.uniqueName}`;
+                                         FROM systems
+                                         WHERE unique_name = ${system.uniqueName}`;
     if (id.length > 0) {
       throw new Error("System already exists");
     }
@@ -109,7 +109,7 @@ export class System {
     // Game database.
     const db = await remoteSystem.downloadGameDatabase();
     if (db) {
-      ui.show("Installing game database...", `System "${this.name}"`);
+      osd.show("Installing game database...", `System "${this.name}"`);
       await GamesIdentification.createBatch(db.games, this, catalog);
     }
   }
