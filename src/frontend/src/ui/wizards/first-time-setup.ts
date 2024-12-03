@@ -1,5 +1,5 @@
 import production from "consts:production";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import * as net from "1fpga:net";
 import {
   Binary,
@@ -40,7 +40,7 @@ function password(
   length: number,
 ): WizardStep<string[] | undefined> {
   return async (options) => {
-    const password = await ui.promptPassword(title, message, length);
+    const password = await osd.promptPassword(title, message, length);
 
     if (password === null) {
       await options.previous();
@@ -58,7 +58,7 @@ function selectPath(
   options?: { initialDir?: string },
 ): WizardStep<string | undefined> {
   return async (o) => {
-    const path = await ui.selectFile(
+    const path = await osd.selectFile(
       title,
       options?.initialDir ?? "/media/fat",
       {
@@ -94,7 +94,7 @@ function passwordAndVerify(
           User.passwordToString(matches[0]) !==
           User.passwordToString(matches[1])
         ) {
-          const should = await ui.alert({
+          const should = await osd.alert({
             title: "Error",
             message: "Passwords do not match. Please try again.",
             choices: ["OK", "Don't set password"],
@@ -158,7 +158,7 @@ async function addWellKnownCatalog(
     } catch (e) {
       console.error("Could not add 1fpga catalog:", e);
 
-      const should = await ui.alert({
+      const should = await osd.alert({
         title: "Error",
         message: "Could not fetch the catalog. Please try again.",
         choices: ["Retry", "Skip adding catalog", "Back"],
@@ -175,7 +175,7 @@ async function addWellKnownCatalog(
 async function addCustomCatalog(): Promise<Catalog | null | Symbol> {
   let url: string | null = null;
   while (true) {
-    url = (await ui.prompt("Enter the URL of the catalog:")) || null;
+    url = (await osd.prompt("Enter the URL of the catalog:")) || null;
     if (url === null) {
       return null;
     }
@@ -186,7 +186,7 @@ async function addCustomCatalog(): Promise<Catalog | null | Symbol> {
     } catch (e) {
       console.error("Could not add custom catalog:", e);
 
-      const should = await ui.alert({
+      const should = await osd.alert({
         title: "Error",
         message: "Could not fetch the catalog. Please try again.",
         choices: ["Retry", "Skip adding catalog", "Back"],
@@ -292,7 +292,7 @@ const catalogSetup = sequence(
         installAll: true,
       });
       if (cores.length === 0 && systems.length === 0) {
-        await ui.alert(
+        await osd.alert(
           "Warning",
           stripIndents`
               Skipping core installation. This may cause some games to not work.
@@ -383,7 +383,7 @@ export async function firstTimeSetup() {
       ),
     ],
     async (err) => {
-      await ui.alert({
+      await osd.alert({
         title: "Error",
         message: "An unexpected error occurred: " + err.toString(),
       });

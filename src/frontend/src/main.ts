@@ -1,7 +1,7 @@
 // The root file being executed by 1FPGA by default.
 import rev from "consts:revision";
 import production from "consts:revision";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import {
   Catalog,
   Commands,
@@ -11,7 +11,7 @@ import {
   StartOnKind,
   StartOnSetting,
   User,
-  UserSettings
+  UserSettings,
 } from "$/services";
 import { stripIndents } from "common-tags";
 import { StartGameAction } from "$/actions/start_game";
@@ -26,34 +26,34 @@ import { resetDb } from "$/utils";
 
 // Polyfill for events.
 globalThis.performance = <any>{
-  now: () => Date.now()
+  now: () => Date.now(),
 };
 
 async function debugMenu() {
-  await ui.textMenu({
+  await osd.textMenu({
     title: "Debug",
     back: false,
     items: [
       {
         label: "Reset All...",
         select: async () => {
-          await ui.alert("Reset everything");
-        }
+          await osd.alert("Reset everything");
+        },
       },
       {
         label: "Input Tester...",
         select: async () => {
-          await ui.inputTester();
-        }
-      }
-    ]
+          await osd.inputTester();
+        },
+      },
+    ],
   });
 }
 
 async function mainMenu(
   user: User,
   startOn: StartOnSetting,
-  settings: UserSettings
+  settings: UserSettings,
 ) {
   let quit = false;
   let logout = false;
@@ -63,22 +63,24 @@ async function mainMenu(
     case StartOnKind.GameLibrary:
       await gamesMenu();
       break;
-    case StartOnKind.LastGamePlayed: {
-      const game = await Games.lastPlayed();
-      if (game) {
-        await game.launch();
-      } else {
-        await gamesMenu();
-        break;
+    case StartOnKind.LastGamePlayed:
+      {
+        const game = await Games.lastPlayed();
+        if (game) {
+          await game.launch();
+        } else {
+          await gamesMenu();
+          break;
+        }
       }
-    }
       break;
-    case StartOnKind.SpecificGame: {
-      const game = await Games.byId(startOn.game);
-      if (game) {
-        await game.launch();
+    case StartOnKind.SpecificGame:
+      {
+        const game = await Games.byId(startOn.game);
+        if (game) {
+          await game.launch();
+        }
       }
-    }
       break;
 
     case StartOnKind.MainMenu:
@@ -95,56 +97,56 @@ async function mainMenu(
     const coresMarker = nbCores > 0 ? `(${nbCores})` : "";
     const downloadMarker = (await Catalog.count(true)) > 0 ? "!" : "";
 
-    await ui.textMenu({
+    await osd.textMenu({
       title: "",
       items: [
         {
           label: "Game Library",
           select: async () => await gamesMenu(),
-          marker: gamesMarker
+          marker: gamesMarker,
         },
         {
           label: "Cores",
           select: async () => await coresMenu(),
-          marker: coresMarker
+          marker: coresMarker,
         },
         "---",
         {
           label: "Settings...",
-          select: async () => await settingsMenu()
+          select: async () => await settingsMenu(),
         },
         ...(user.admin
           ? [
-            {
-              label: "Download Center...",
-              marker: downloadMarker,
-              select: async () => await downloadCenterMenu()
-            }
-          ]
+              {
+                label: "Download Center...",
+                marker: downloadMarker,
+                select: async () => await downloadCenterMenu(),
+              },
+            ]
           : []),
         {
           label: "Controllers...",
           select: async () => {
-            await ui.alert("Controllers", "Not implemented yet.");
-          }
+            await osd.alert("Controllers", "Not implemented yet.");
+          },
         },
         "---",
         { label: "About", select: about },
         ...((await settings.getDevTools())
           ? [
-            "-",
-            {
-              label: "Developer Tools",
-              select: async () => await debugMenu()
-            }
-          ]
+              "-",
+              {
+                label: "Developer Tools",
+                select: async () => await debugMenu(),
+              },
+            ]
           : []),
         "---",
         ...((await User.canLogOut())
           ? [{ label: "Logout", select: () => (logout = true) }]
           : []),
-        { label: "Exit", select: () => (quit = true) }
-      ]
+        { label: "Exit", select: () => (quit = true) },
+      ],
     });
   }
 
@@ -171,7 +173,7 @@ async function initAll() {
     user = await User.login(undefined, true);
 
     if (user === null) {
-      await ui.alert(
+      await osd.alert(
         "Error",
         stripIndents`
           Could not log in after initial setup. This is a bug.
@@ -179,7 +181,7 @@ async function initAll() {
           Please report this issue to the developers.
 
           The application will now exit.
-        `
+        `,
       );
       return {};
     }
@@ -190,7 +192,7 @@ async function initAll() {
 
   const [settings, global] = await Promise.all([
     UserSettings.init(user),
-    GlobalSettings.init()
+    GlobalSettings.init(),
   ]);
 
   return { user, settings, global };
@@ -204,10 +206,11 @@ async function mainInner(): Promise<boolean> {
   const { user, settings, global } = await initAll();
 
   if (!user || !settings || !global) {
-    const choice = await ui.alert({
+    const choice = await osd.alert({
       title: "Error",
-      message: "Could not initialize the application. Do you want to reset everything?",
-      choices: ["Reset", "Exit"]
+      message:
+        "Could not initialize the application. Do you want to reset everything?",
+      choices: ["Reset", "Exit"],
     });
     if (choice === 1) {
       // Clear the database.
@@ -249,10 +252,10 @@ async function mainInner(): Promise<boolean> {
         }
       } else {
         // Rethrow to show the user the actual error.
-        let choice = await ui.alert({
+        let choice = await osd.alert({
           title: "An error happened",
           message: (e as Error)?.message ?? JSON.stringify(e),
-          choices: ["Restart", "Quit"]
+          choices: ["Restart", "Quit"],
         });
         if (choice === 1) {
           return false;

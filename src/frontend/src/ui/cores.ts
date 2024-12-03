@@ -1,11 +1,11 @@
 import * as core from "1fpga:core";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { Core } from "$/services/database/core";
 import { ShowCoreMenuCommand } from "$/commands/basic";
 import { Commands } from "$/services";
 
 async function selectCoreFile() {
-  let f = await ui.selectFile("Select Core", "/media/fat", {
+  let f = await osd.selectFile("Select Core", "/media/fat", {
     dirFirst: false,
     extensions: ["rbf"],
   });
@@ -24,7 +24,7 @@ async function selectCoreFile() {
 export async function coresMenu() {
   const cores = await Core.list();
 
-  await ui.textMenu({
+  await osd.textMenu({
     title: "Cores",
     back: 0,
     items: [

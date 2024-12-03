@@ -7,7 +7,7 @@ export class ShowCoreMenuCommand extends CoreCommandImpl {
   key = "showCoreMenu";
   label = "Show the core's menu";
   category = "Core";
-  default = "'F12'";
+  default = ["'F12'", "Guide"];
 
   // This is used to prevent the menu from being shown multiple times.
   shown = false;

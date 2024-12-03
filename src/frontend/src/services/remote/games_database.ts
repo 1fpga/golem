@@ -1,5 +1,5 @@
 import * as oneFpgaSchema from "1fpga:schema";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { fetchJsonAndValidate } from "$/utils";
 import type {
   Games as GamesSchema,
@@ -16,7 +16,7 @@ export class RemoteGamesDb {
   public static async fetch(url: string, system: RemoteSystem) {
     const u = new URL(url, system.url).toString();
 
-    ui.show(
+    osd.show(
       "Fetching games database...",
       `Catalog "${system.catalog.name}"\nSystem "${system.name}"\nURL: ${u}`,
     );

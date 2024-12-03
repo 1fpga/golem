@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import * as core from "1fpga:core";
 import { CoreSettingPage } from "1fpga:core";
 import type { Core } from "$/services/database/core";
@@ -26,7 +26,7 @@ export async function coreSettingsMenu(
         ) ?? menu;
     }
 
-    shouldReturn = await ui.textMenu<SettingReturn>({
+    shouldReturn = await osd.textMenu<SettingReturn>({
       title: "Core Settings",
       back: SettingReturn.ReturnContinue,
       items: [
@@ -53,7 +53,7 @@ export async function coreSettingsMenu(
                   label: item.label,
                   marker: item.extensions.join(","),
                   select: async () => {
-                    let path = await ui.selectFile(item.label, "/media/fat", {
+                    let path = await osd.selectFile(item.label, "/media/fat", {
                       extensions: item.extensions,
                     });
                     if (path) {
@@ -74,7 +74,7 @@ export async function coreSettingsMenu(
                 return {
                   label: item.label,
                   marker: item.value ? "[X]" : "[ ]",
-                  select: (menuItem: ui.TextMenuItem<SettingReturn>) => {
+                  select: (menuItem: osd.TextMenuItem<SettingReturn>) => {
                     item.value = core.boolSelect(item.id, !item.value);
                     menuItem.marker = item.value ? "[X]" : "[ ]";
                   },
@@ -83,7 +83,7 @@ export async function coreSettingsMenu(
                 return {
                   label: item.label,
                   marker: item.choices[item.value],
-                  select: (menuItem: ui.TextMenuItem<SettingReturn>) => {
+                  select: (menuItem: osd.TextMenuItem<SettingReturn>) => {
                     item.value = core.intSelect(
                       item.id,
                       (item.value + 1) % item.choices.length,
@@ -123,7 +123,7 @@ export async function coreOsdMenu(
 
   console.log(JSON.stringify(menu));
 
-  return await ui.textMenu({
+  return await osd.textMenu({
     title: "Core Menu",
     back: false,
     items: [
@@ -151,7 +151,7 @@ export async function coreOsdMenu(
         fileMenus.map((item) => ({
           label: item.label,
           select: async () => {
-            let path = await ui.selectFile(item.label, "/media/fat", {
+            let path = await osd.selectFile(item.label, "/media/fat", {
               extensions: item.extensions,
             });
             if (path) {

@@ -1,5 +1,5 @@
 import production from "consts:production";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { oneLine } from "common-tags";
 
 const PARTITION_TOO_LARGE_MSEC = 500;
@@ -33,7 +33,7 @@ export async function partitionAndProgress<T>(
 
   for (let i = 0; i < total; ) {
     const message = progressMessage(i, total);
-    ui.show(title, message);
+    osd.show(title, message);
 
     const partition = array.slice(i, i + partitionSize);
     await progress(partition);

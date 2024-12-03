@@ -1,5 +1,5 @@
 // The about page.
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import p from "1fpga:patrons";
 
 export async function about() {
@@ -25,7 +25,7 @@ export async function about() {
   const oneFpga = ONE_FPGA.version;
   const version = `${oneFpga.major}.${oneFpga.minor}.${oneFpga.patch}`;
 
-  await ui.textMenu({
+  await osd.textMenu({
     title: "About",
     back: true,
     items: [
@@ -39,7 +39,7 @@ export async function about() {
         label: "< Join the 1FPGA Patreon >",
         marker: "...",
         select: () => {
-          ui.qrCode(
+          osd.qrCode(
             "https://patreon.com/golem_fpga/join",
             "Use this code to join our Patreon community",
           );

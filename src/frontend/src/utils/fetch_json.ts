@@ -1,6 +1,6 @@
 import type { ErrorObject, ValidateFunction } from "ajv";
 import * as net from "1fpga:net";
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 
 export class ValidationError extends Error {
   constructor(public readonly errors: ErrorObject[]) {
@@ -51,7 +51,7 @@ export async function fetchJsonAndValidate<T>(
         message = JSON.stringify(e);
       }
 
-      const choice = await ui.alert({
+      const choice = await osd.alert({
         title: "Error fetching JSON",
         message: `URL: ${url}\n\n${(e as any)?.message ?? JSON.stringify(e)}\n`,
         choices: ["Retry fetching", "Cancel"],

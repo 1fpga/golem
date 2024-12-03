@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { Games, GameSortOrder } from "$/services/database/games";
 import { Commands, UserSettings } from "$/services";
 import { StartGameCommand } from "$/commands/games";
@@ -67,7 +67,7 @@ export async function pickGame(
   let includeUnplayed = options.includeUnplayed ?? true;
   let index = 0;
 
-  async function buildItems(): Promise<ui.TextMenuItem<Games | string>[]> {
+  async function buildItems(): Promise<osd.TextMenuItem<Games | string>[]> {
     const { total, games } = await Games.list({
       system: options.system,
       includeUnplayed,
@@ -117,7 +117,7 @@ export async function pickGame(
 
   while (selected === "next") {
     const items = await buildItems();
-    selected = await ui.textMenu<string | Games>({
+    selected = await osd.textMenu<string | Games>({
       title: options.title ?? "",
       back: "back",
       sort_label: Object.values(SORT_LABEL)[currentSort],
@@ -169,7 +169,7 @@ async function showGameDetailsMenuInner(
       return gameArray.some((ga) => ga.id === s.meta.gameId);
     }) ?? [];
 
-  const result = await ui.textMenu<Games | false | number>({
+  const result = await osd.textMenu<Games | false | number>({
     title: name,
     back: false,
     highlighted,
@@ -212,7 +212,7 @@ async function showGameDetailsMenuInner(
               select: async () => {
                 const command = await Commands.get(StartGameCommand);
                 if (command) {
-                  const choice = await ui.alert({
+                  const choice = await osd.alert({
                     title: "Deleting shortcut",
                     message: `Are you sure you want to delete this shortcut?\n${s.shortcut}`,
                     choices: ["Cancel", "Delete shortcut"],
@@ -237,7 +237,7 @@ async function showGameDetailsMenuInner(
       {
         label: "Add new shortcut...",
         select: async () => {
-          const newShortcut = await ui.promptShortcut(
+          const newShortcut = await osd.promptShortcut(
             name,
             "Enter the shortcut:",
           );
@@ -256,7 +256,7 @@ async function showGameDetailsMenuInner(
               );
 
               const labelOf = await maybeCommand.labelOf(meta?.meta);
-              await ui.alert({
+              await osd.alert({
                 title: "Shortcut already exists",
                 message: `The selected shortcut:\n${newShortcut}\nIs already in use by the command:\n${labelOf}`,
               });

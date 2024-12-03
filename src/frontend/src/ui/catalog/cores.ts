@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import { RemoteCatalog, RemoteCore, RemoteSystem } from "$/services";
 import type { Core as CoresCoreSchema } from "$schemas:catalog/cores";
 import { filesize } from "filesize";
@@ -40,7 +40,7 @@ export async function selectCoresFromRemoteCatalog(
     return { cores: [], systems: [] };
   }
 
-  const items: (ui.TextMenuItem<boolean> | string)[] = [];
+  const items: (osd.TextMenuItem<boolean> | string)[] = [];
   const sortedSystems = Object.entries(systems).sort(([a], [b]) =>
     a.localeCompare(b),
   );
@@ -99,7 +99,7 @@ export async function selectCoresFromRemoteCatalog(
     }
   }
 
-  let shouldInstall = await ui.textMenu({
+  let shouldInstall = await osd.textMenu({
     title: "Choose Cores to install",
     back: false,
     items: [

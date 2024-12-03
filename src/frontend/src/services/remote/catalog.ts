@@ -1,4 +1,4 @@
-import * as ui from "1fpga:ui";
+import * as osd from "1fpga:osd";
 import type { Catalog as CatalogSchema } from "$schemas:catalog/catalog";
 import type { System as SystemSchema } from "$schemas:catalog/system";
 import type {
@@ -121,7 +121,7 @@ export class RemoteCore {
   public static async fetch(key: string, url: string, cores: RemoteCores) {
     const u = new URL(url, cores.url).toString();
 
-    ui.show(
+    osd.show(
       "Fetching core...",
       `Catalog "${cores.catalog.name}"\nCore: ${key}\nURL: ${u}`,
     );
@@ -210,7 +210,10 @@ export class RemoteSystem {
   ): Promise<RemoteSystem> {
     const u = new URL(url, systems.url).toString();
 
-    ui.show("Fetching system...", `Catalog ${systems.catalog.name}\nURL: ${u}`);
+    osd.show(
+      "Fetching system...",
+      `Catalog ${systems.catalog.name}\nURL: ${u}`,
+    );
 
     // Dynamic loading to allow for code splitting.
     const json = await fetchJsonAndValidate(
@@ -298,7 +301,7 @@ export class RemoteCatalog {
 
     url = new URL(url).toString();
 
-    ui.show("Fetching catalog...", "URL: " + url);
+    osd.show("Fetching catalog...", "URL: " + url);
 
     // Add protocol to the URL.
     if (!url.startsWith("https://") && !url.startsWith("http://")) {

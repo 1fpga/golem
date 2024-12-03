@@ -44,7 +44,7 @@ export abstract class CommandImpl<T> {
    * The default shortcut for this command. This will be used when the user
    * first logs in and the command is created for the first time.
    */
-  default: string | undefined = undefined;
+  default: string | string[] | undefined = undefined;
 
   /**
    * The key that identifies this command in the database.
@@ -180,9 +180,10 @@ export class Command<T = unknown> {
     const c = new Command(def, []);
     const shortcuts = await Shortcuts.listForCommand<T>(def);
     if (firstTime && shortcuts.length == 0 && def.default) {
-      shortcuts.push(
-        await Shortcuts.create<T>(user, def, def.default, undefined),
-      );
+      const defaults = Array.isArray(def.default) ? def.default : [def.default];
+      for (const d of defaults) {
+        shortcuts.push(await Shortcuts.create<T>(user, def, d, undefined));
+      }
     }
     c.shortcuts_.push(...shortcuts);
 
