@@ -36,24 +36,12 @@ embedded-graphics = "0.8.1"
 embedded-layout = "0.4.1"
 embedded-menu = "0.6.1"
 embedded-text = "0.6.6"
-enum-map = "3.0.0-beta.2"
-fixed-map = "0.9.3"
-framebuffer = "0.3.1"
-hex = "0.4.3"
 humansize = "2.1.3"
-identity-hash = { version = "0.1.0", features = ["std"] }
 itertools = "0.12.0"
-json5 = "0.4.1"
-json5format = "0.2.6"
 libc = { version = "0.2.150" }
-memmap2 = "0.9.4"
-md5 = "0.7.0"
 mister-fpga = { path = "../mister-fpga", version = "0.1" }
 network-interface = "1.0.1"
-num-integer = "0.1.45"
 num-traits = "0.2.15"
-once_cell = "1.18.0"
-parking_lot = "0.12.1"
 qrcode = { version = "0.14.0", features = ["image"] }
 regex = "1.9.3"
 serde = { version = "1.0.164", features = ["derive"] }

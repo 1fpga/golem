@@ -3,7 +3,7 @@ CROSS := $(shell command -v cross 2> /dev/null)
 OPENSSL := $(shell command -v openssl 2> /dev/null)
 MISTER_IP := 192.168.1.79
 
-src/frontend/dist/main.js: $(wildcard src/frontend/schemas/**/* src/frontend/migrations/**/* src/frontend/src/**/* src/frontend/types/**/* src/frontend/*.json src/frontend/*.js src/frontend/rollup/*.js)
+src/frontend/dist/main.js: $(wildcard src/frontend/schemas/**/* src/frontend/migrations/**/* src/frontend/src/**/* src/frontend/src/* src/frontend/types/**/* src/frontend/*.json src/frontend/*.js src/frontend/rollup/*.js)
 ifndef NPM
 	$(error "No `npm` in PATH, please install Node.js and npm, or pass NPM variable with path to npm binary")
 endif

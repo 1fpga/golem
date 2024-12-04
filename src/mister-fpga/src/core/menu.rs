@@ -1,9 +1,9 @@
+use crate::core::video::VideoInfo;
 use crate::core::MisterFpgaCore;
 use crate::fpga::MisterFpga;
 use crate::types::units::UnitConversion;
 use cyclone_v::memory::{DevMemMemoryMapper, MemoryMapper};
-use image::buffer::ConvertBuffer;
-use image::{DynamicImage, Rgba};
+use image::{DynamicImage, GenericImageView, ImageBuffer, Rgba};
 use one_fpga::core::{Bios, CoreSettings, Error, MountedFile, Rom, SaveState, SettingId};
 use one_fpga::inputs::gamepad::ButtonSet;
 use one_fpga::inputs::keyboard::ScancodeSet;
@@ -11,7 +11,6 @@ use one_fpga::inputs::Button;
 use one_fpga::inputs::Scancode;
 use one_fpga::Core;
 use std::time::SystemTime;
-use tracing::warn;
 
 pub struct MenuCore {
     inner: MisterFpgaCore,
@@ -19,13 +18,25 @@ pub struct MenuCore {
 }
 
 impl MenuCore {
+    #[inline]
+    fn image_buffer(&mut self) -> Result<ImageBuffer<Rgba<u8>, &mut [u8]>, String> {
+        let menu_fb_size = self.inner.video_info()?.fb_resolution();
+
+        Ok(ImageBuffer::<Rgba<u8>, _>::from_raw(
+            menu_fb_size.width as u32,
+            menu_fb_size.height as u32,
+            self.menu_fb_mapper.as_mut_range(..),
+        )
+        .unwrap())
+    }
+
     pub fn new(inner: MisterFpga) -> Result<Self, String> {
         let mut inner = MisterFpgaCore::new(inner)?;
         inner.is_menu = true;
 
         let fb_base: usize = cyclone_v::ranges::HOST_MEMORY.start + 32.mebibytes();
         let fb_addr = fb_base + (1920 * 1080) * 4;
-        let menu_fb_mapper = DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4).unwrap();
+        let menu_fb_mapper = DevMemMemoryMapper::create(fb_addr, 1920 * 1080 * 4)?;
 
         Ok(Self {
             inner,
@@ -33,30 +44,22 @@ impl MenuCore {
         })
     }
 
-    pub fn send_to_framebuffer(&mut self, image: &image::RgbImage) -> Result<(), String> {
-        let menu_fb_size = self.inner.video_info()?.fb_resolution();
+    pub fn video_info(&mut self) -> Result<VideoInfo, String> {
+        self.inner.video_info()
+    }
 
-        let mut dest = image::ImageBuffer::<Rgba<u8>, _>::from_raw(
-            menu_fb_size.width as u32,
-            menu_fb_size.height as u32,
-            self.menu_fb_mapper.as_mut_range(..),
-        )
-        .unwrap();
+    pub fn clear_framebuffer(&mut self) -> Result<(), String> {
+        self.image_buffer()?.fill(0);
+        Ok(())
+    }
 
-        if image.width() > menu_fb_size.width as u32 || image.height() > menu_fb_size.height as u32
-        {
-            warn!(
-                "Image size ({}x{}) is larger than framebuffer size ({}x{})",
-                image.width(),
-                image.height(),
-                menu_fb_size.width,
-                menu_fb_size.height
-            );
-        }
-
-        // Don't overlay as it reads the original pixels. It is very slow.
-        image::imageops::replace(&mut dest, &image.convert(), 0, 0);
-
+    pub fn send_to_framebuffer(
+        &mut self,
+        image: &impl GenericImageView<Pixel = Rgba<u8>>,
+        position: (i64, i64),
+    ) -> Result<(), String> {
+        let mut dest = self.image_buffer()?;
+        image::imageops::replace(&mut dest, image, position.0, position.1);
         Ok(())
     }
 }

@@ -2,6 +2,7 @@
 import rev from "consts:revision";
 import production from "consts:revision";
 import * as osd from "1fpga:osd";
+import * as video from "1fpga:video";
 import {
   Catalog,
   Commands,
@@ -269,6 +270,25 @@ export async function main() {
   console.log(`Build: "${rev}" (${production ? "production" : "development"})`);
   console.log("1FPGA started. ONE_FPGA =", JSON.stringify(ONE_FPGA));
   let quit = false;
+
+  const start = Date.now();
+  const resolution = video.getResolution();
+  let image = await Image.embedded("background");
+
+  if (resolution) {
+    console.log("Resolution:", resolution.width, "x", resolution.height);
+    const imageAr = image.width / image.height;
+    const resolutionAr = resolution.width / resolution.height;
+    if (imageAr > resolutionAr) {
+      resolution.width = resolution.height * imageAr;
+    } else if (imageAr < resolutionAr) {
+      resolution.height = resolution.width / imageAr;
+    }
+    image = image.resize(resolution.width, resolution.height);
+  }
+
+  image.sendToBackground({ position: "center", clear: true });
+  console.log("Background set in", Date.now() - start, "ms");
 
   while (!quit) {
     quit = await mainInner();

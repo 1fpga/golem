@@ -85,7 +85,7 @@ impl JsCore {
                         &JsValue::undefined(),
                         &[
                             ss.into(),
-                            image.unwrap_or(JsValue::undefined()),
+                            image.map(JsValue::Object).unwrap_or(JsValue::undefined()),
                             JsValue::from(slot),
                         ],
                         context,

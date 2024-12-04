@@ -103,6 +103,7 @@ export default {
     "1fpga:osd",
     "1fpga:upgrade",
     "1fpga:utils",
+    "1fpga:video",
   ],
   onLog(level, log, handler) {
     if (level === "warn") {
