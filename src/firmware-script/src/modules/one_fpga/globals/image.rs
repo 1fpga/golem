@@ -168,21 +168,13 @@ impl JsImage {
             .unwrap_or(Position::default());
         let clear = options.and_then(|o| o.clear).unwrap_or(false);
 
-        let (width, height) = (image.width(), image.height());
-        let (fb_width, fb_height) = (fb_size.width as u32, fb_size.height as u32);
-
-        eprintln!("Image size: {}x{}", width, height);
-        eprintln!("Framebuffer size: {}x{}", fb_width, fb_height);
+        let (width, height) = (image.width() as i64, image.height() as i64);
+        let (fb_width, fb_height) = (fb_size.width as i64, fb_size.height as i64);
         let (x, y) = match position {
             Position::TopLeft => (0, 0),
-            Position::Center => (
-                (fb_width - width) as i64 / 2,
-                (fb_height - height) as i64 / 2,
-            ),
+            Position::Center => ((fb_width - width) / 2, (fb_height - height) / 2),
             Position::Custom { x, y } => (x, y),
         };
-        eprintln!("Position: {:?}", position);
-        eprintln!("Position (actual): {:?}", (x, y));
 
         if clear {
             let _ = maybe_menu.clear_framebuffer();
