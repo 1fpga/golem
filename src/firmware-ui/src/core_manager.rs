@@ -73,24 +73,7 @@ impl CoreManager {
     pub fn load_menu(&mut self) -> Result<OneFpgaCore, String> {
         info!("Loading menu");
         let bytes = include_bytes!("../assets/menu.rbf");
-
-        let mut core = self.load(bytes, true)?;
-
-        if let Some(core) = core.as_any_mut().downcast_mut::<MenuCore>() {
-            // Send the logo to the framebuffer.
-            let logo = include_bytes!("../assets/logo.png");
-            let image = image::load_from_memory_with_format(logo, image::ImageFormat::Png)
-                .map_err(|e| format!("Could not load logo: {e}"))?;
-
-            let mut fullframe = image::DynamicImage::new_rgba8(1920, 1080);
-            let rgba8 = fullframe.as_mut_rgba8().unwrap();
-            rgba8
-                .pixels_mut()
-                .for_each(|p| *p = image::Rgba([64, 64, 64, 0]));
-            image::imageops::overlay(&mut fullframe, &image, 32, 32);
-            core.send_to_framebuffer(&fullframe.into())?;
-        }
-
+        let core = self.load(bytes, true)?;
         self.fpga_mut().osd_enable();
         Ok(core)
     }

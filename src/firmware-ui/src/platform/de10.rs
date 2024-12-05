@@ -1,7 +1,5 @@
 use embedded_graphics::geometry::Size;
 use embedded_graphics::pixelcolor::{BinaryColor, Rgb888};
-use image::RgbImage;
-use mister_fpga::core::AsMisterCore;
 use sdl3::event::Event;
 use tracing::{debug, error, info};
 
@@ -73,23 +71,6 @@ impl De10Platform {
 
     pub fn update_osd(&mut self, buffer: &DrawBuffer<BinaryColor>) {
         self.osd_display.send(self.core_manager.fpga_mut(), buffer);
-    }
-
-    pub fn update_menu_framebuffer(&mut self) {
-        if let Some(mut c) = self.core_manager_mut().get_current_core() {
-            if let Some(menu) = c.as_menu_core_mut() {
-                let size = self.core_framebuffer.size();
-                let img = RgbImage::from_raw(
-                    size.width,
-                    size.height,
-                    self.core_framebuffer.to_be_bytes(),
-                );
-
-                if let Some(i) = img {
-                    menu.send_to_framebuffer(&i).unwrap();
-                }
-            }
-        }
     }
 
     pub fn toolbar_dimensions(&self) -> Size {
