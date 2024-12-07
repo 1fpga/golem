@@ -15,6 +15,7 @@ mod osd;
 mod schema;
 mod settings;
 mod upgrade;
+mod utils;
 mod video;
 
 mod globals;
@@ -37,6 +38,7 @@ pub(super) fn register_modules(
         settings::create_module,
         osd::create_module,
         upgrade::create_module,
+        utils::create_module,
         video::create_module,
     ];
 
