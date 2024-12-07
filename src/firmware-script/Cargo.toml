@@ -26,6 +26,7 @@ ed25519-dalek = { version = "2.1.1", features = ["pem"] }
 either = "1"
 enum-map = { version = "3.0.0-beta.2", features = ["derive"] }
 firmware-ui.workspace = true
+ips = "0.1.0"
 mister-fpga = { path = "../mister-fpga" }
 nix = { version = "0.29.0", features = ["net"] }
 ping = "0.5.2"
